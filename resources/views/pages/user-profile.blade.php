@@ -1,0 +1,46 @@
+@extends('layouts.marketing')
+
+@section('title', $username . ' | 7th Trade Hub')
+
+@section('content')
+<section class="py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        <section class="glassmorphism rounded-xl border border-white/10 overflow-hidden">
+            <div class="h-32 bg-gradient-to-r from-primary/20 via-primary/40 to-primary/20"></div>
+            <div class="px-8 pb-8 flex flex-col md:flex-row gap-6 items-start -mt-12">
+                <div class="relative">
+                    <div class="size-24 md:size-32 rounded-2xl bg-slate-700 border-4 border-slate-900 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-5xl text-slate-500">person</span>
+                    </div>
+                    <div class="absolute bottom-2 right-2 bg-primary text-white rounded-full p-1 shadow-lg flex items-center justify-center">
+                        <span class="material-symbols-outlined text-sm">verified</span>
+                    </div>
+                </div>
+                <div class="flex-1 pt-14 md:pt-8">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-white">{{ $username }}</h1>
+                                <span class="bg-primary/10 text-primary text-xs font-bold px-2.5 py-1 rounded-full border border-primary/20">TRADER</span>
+                            </div>
+                            <p class="text-slate-400 mt-1 flex items-center gap-1">
+                                <span class="material-symbols-outlined text-sm">person</span>
+                                Public profile
+                            </p>
+                        </div>
+                        @auth
+                            <div class="flex gap-3">
+                                <a href="{{ route('dashboard.messages') }}" class="px-6 py-2.5 bg-primary text-white font-bold rounded-xl hover:bg-accent transition-all shadow-md">Message</a>
+                                <button type="button" class="px-6 py-2.5 bg-slate-800 font-bold rounded-xl hover:bg-slate-700 transition-all border border-slate-700 text-white">Follow</button>
+                            </div>
+                        @endauth
+                    </div>
+                </div>
+            </div>
+        </section>
+        <div class="glassmorphism rounded-xl p-8 border border-white/10">
+            <p class="text-slate-400">Profile and listings for <strong class="text-white">{{ $username }}</strong> will appear here. This page is static until user profiles are fully connected to the database.</p>
+        </div>
+    </div>
+</section>
+@endsection

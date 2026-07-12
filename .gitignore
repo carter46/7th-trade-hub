@@ -1,0 +1,30 @@
+*.log
+.DS_Store
+
+# Environment and secrets (do not commit)
+.env
+.env.backup
+.env.production
+.env.local
+.env.*.local
+.env.testing
+.env.staging
+.phpactor.json
+.phpunit.result.cache
+/.fleet
+/.idea
+/.nova
+/.phpunit.cache
+/.vscode
+/.zed
+/auth.json
+/node_modules
+# /public/build is NOT ignored: built assets are committed for shared hosting (no Node.js on server).
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/vendor
+Homestead.json
+Homestead.yaml
+Thumbs.db

@@ -1,0 +1,116 @@
+<?php
+
+namespace App\Http\Controllers\Auth;
+
+use App\Http\Controllers\Controller;
+use App\Mail\OtpVerificationMail;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
+
+class OtpVerificationController extends Controller
+{
+    private const CODE_LENGTH = 6;
+    private const EXPIRY_MINUTES = 15;
+    private const MAX_ATTEMPTS = 5;
+
+    /**
+     * Show the OTP verification form.
+     */
+    public function show(Request $request): RedirectResponse|View
+    {
+        if ($request->user()->hasVerifiedEmail()) {
+            return redirect()->intended(route('dashboard', absolute: false));
+        }
+
+        return view('auth.verify-email');
+    }
+
+    /**
+     * Verify the OTP and mark email as verified.
+     */
+    public function verify(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'otp' => ['required', 'string', 'size:6'],
+        ]);
+
+        $user = $request->user();
+        if ($user->hasVerifiedEmail()) {
+            return redirect()->intended(route('dashboard', absolute: false));
+        }
+
+        $otp = $request->input('otp');
+        $row = DB::table('email_verification_codes')
+            ->where('user_id', $user->id)
+            ->where('expires_at', '>', now())
+            ->orderByDesc('created_at')
+            ->first();
+
+        if (! $row) {
+            throw ValidationException::withMessages([
+                'otp' => __('The verification code has expired. Please request a new one.'),
+            ]);
+        }
+
+        if ($row->attempts >= self::MAX_ATTEMPTS) {
+            throw ValidationException::withMessages([
+                'otp' => __('Too many attempts. Please request a new code.'),
+            ]);
+        }
+
+        if (! Hash::check($otp, $row->code_hash)) {
+            DB::table('email_verification_codes')
+                ->where('id', $row->id)
+                ->increment('attempts');
+
+            throw ValidationException::withMessages([
+                'otp' => __('The verification code is invalid.'),
+            ]);
+        }
+
+        $user->forceFill(['email_verified_at' => now()])->save();
+        DB::table('email_verification_codes')->where('user_id', $user->id)->delete();
+
+        return redirect()->intended(route('dashboard', absolute: false))->with('status', __('Your email has been verified.'));
+    }
+
+    /**
+     * Resend OTP email.
+     */
+    public function resend(Request $request): RedirectResponse
+    {
+        if ($request->user()->hasVerifiedEmail()) {
+            return redirect()->intended(route('dashboard', absolute: false));
+        }
+
+        $this->createAndSendOtp($request->user());
+
+        return back()->with('status', 'verification-otp-sent');
+    }
+
+    /**
+     * Generate OTP, store hash, and send email.
+     */
+    public static function createAndSendOtp(\App\Models\User $user): void
+    {
+        $code = sprintf('%06d', random_int(0, 999999));
+        $codeHash = Hash::make($code);
+        $expiresAt = now()->addMinutes(self::EXPIRY_MINUTES);
+
+        DB::table('email_verification_codes')->insert([
+            'user_id' => $user->id,
+            'code_hash' => $codeHash,
+            'expires_at' => $expiresAt,
+            'attempts' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        Mail::to($user->email)->send(new OtpVerificationMail($code));
+    }
+}

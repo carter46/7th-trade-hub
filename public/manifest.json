@@ -1,0 +1,23 @@
+{
+    "name": "7th Trade Hub",
+    "short_name": "7thHub",
+    "background_color": "#0F172A",
+    "display": "standalone",
+    "description": "7th Trade Hub \u2014 digital services marketplace (crypto exchange, social growth, templates, listings).",
+    "theme_color": "#0B6A39",
+    "start_url": "/",
+    "icons": [
+        {
+            "src": "/icons/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        }
+    ]
+}
