@@ -10,17 +10,11 @@ This project is deployed on **shared hosting** using **cPanel Git Version Contro
 4. **Server:** In cPanel → Git Version Control, **Pull** the latest changes from the GitHub repository.
 5. **Server:** No `npm install`, no `npm run build`, no `php artisan migrate`. The repo already contains built assets and the database is managed via phpMyAdmin.
 
-## Composer / vendor (required once)
+## Composer / vendor
 
-The server needs `vendor/` to boot Laravel.
+`vendor/` is tracked in the repository for shared hosting (no Composer on the server). After pull, verify `vendor/autoload.php` exists.
 
-- **If cPanel terminal or SSH is available:** run once in the project root:
-  ```bash
-  composer install --no-dev --optimize-autoloader
-  ```
-- **If no terminal:** run `composer install --no-dev` locally and commit the `vendor/` directory (remove `/vendor` from `.gitignore` only for this deployment path).
-
-Verify `vendor/autoload.php` exists after deploy.
+Locally, after changing dependencies: run `composer install --no-dev --optimize-autoloader`, then commit the updated `vendor/` with the lockfile.
 
 ## One-time optimization (if terminal available)
 
