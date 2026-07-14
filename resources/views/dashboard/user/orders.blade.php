@@ -1,40 +1,72 @@
 @extends('layouts.dashboard-user')
-@section('title', 'Orders')
-@section('content')
-<h1 class="text-3xl font-bold text-white">Orders</h1>
-<p class="text-slate-400 mt-1">View and manage your orders.</p>
 
-<div class="glass-card rounded-2xl p-8 mt-6">
-    @if($orders->isEmpty())
-        <p class="text-slate-400">No orders yet.</p>
-    @else
-        <div class="overflow-x-auto">
-            <table class="w-full text-left">
-                <thead>
-                    <tr class="text-slate-400 text-sm border-b border-slate-700">
-                        <th class="pb-3 pr-4">Reference</th>
-                        <th class="pb-3 pr-4">Listing</th>
-                        <th class="pb-3 pr-4">Amount</th>
-                        <th class="pb-3 pr-4">Status</th>
-                        <th class="pb-3">Date</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($orders as $order)
-                    <tr class="border-b border-slate-800 text-white">
-                        <td class="py-3 pr-4 font-mono text-sm">{{ $order->reference }}</td>
-                        <td class="py-3 pr-4">{{ $order->listing?->title ?? '—' }}</td>
-                        <td class="py-3 pr-4">${{ number_format($order->amount, 2) }}</td>
-                        <td class="py-3 pr-4"><span class="px-2 py-0.5 rounded text-xs {{ $order->status === 'completed' ? 'bg-green-500/20 text-green-400' : ($order->status === 'cancelled' ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400') }}">{{ $order->status }}</span></td>
-                        <td class="py-3">{{ $order->created_at->format('M j, Y H:i') }}</td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-        <div class="mt-6">
-            {{ $orders->links() }}
-        </div>
-    @endif
-</div>
+@section('title', 'Orders')
+
+@section('content')
+<x-layout.page title="Orders" subtitle="View and manage your purchases." width="full">
+    <x-ui.table
+        :empty="$orders->isEmpty()"
+        empty-title="No orders yet"
+        empty-description="When you buy from the marketplace, your orders will appear here."
+        empty-icon="orders"
+        :empty-action="['href' => route('marketplace'), 'label' => 'Browse marketplace']"
+        striped
+    >
+        <x-slot:head>
+            <x-ui.th>Reference</x-ui.th>
+            <x-ui.th>Listing</x-ui.th>
+            <x-ui.th>Amount</x-ui.th>
+            <x-ui.th>Status</x-ui.th>
+            <x-ui.th>Escrow</x-ui.th>
+            <x-ui.th>Date</x-ui.th>
+            <x-ui.th>Actions</x-ui.th>
+        </x-slot:head>
+        @foreach ($orders as $order)
+            <tr class="hover:bg-muted/50">
+                <x-ui.td class="font-mono text-sm">{{ $order->reference }}</x-ui.td>
+                <x-ui.td>{{ $order->listing?->title ?? '—' }}</x-ui.td>
+                <x-ui.td>₦{{ number_format($order->amount, 2) }}</x-ui.td>
+                <x-ui.td>
+                    <x-ui.badge :status="$order->status === 'cancelled' ? 'danger' : $order->status">
+                        {{ $order->status }}
+                    </x-ui.badge>
+                </x-ui.td>
+                <x-ui.td class="text-text-secondary text-sm">{{ $order->escrow?->status ?? '—' }}</x-ui.td>
+                <x-ui.td class="text-text-secondary text-sm">{{ $order->created_at->format('M j, Y H:i') }}</x-ui.td>
+                <x-ui.td>
+                    @if ($order->status === 'processing' && $order->escrow?->status === 'locked')
+                        <x-ui.button type="button" size="xs" variant="success" @click="$dispatch('open-modal', 'confirm-delivery-{{ $order->id }}')">
+                            Confirm delivery
+                        </x-ui.button>
+                        <x-ui.modal
+                            name="confirm-delivery-{{ $order->id }}"
+                            title="Confirm delivery?"
+                            confirm-label="Confirm delivery"
+                            :form-action="route('dashboard.orders.confirm', $order)"
+                        >
+                            Confirm delivery and release escrow to the seller?
+                        </x-ui.modal>
+                    @elseif ($order->status === 'completed' && ! $order->review)
+                        <form method="POST" action="{{ route('dashboard.orders.review', $order) }}" class="flex flex-col gap-2 max-w-[10rem]" x-data="{ submitting: false }" @submit="submitting = true">
+                            @csrf
+                            <x-ui.select name="rating" required>
+                                @for ($i = 5; $i >= 1; $i--)
+                                    <option value="{{ $i }}">{{ $i }} ★</option>
+                                @endfor
+                            </x-ui.select>
+                            <x-ui.input name="comment" placeholder="Optional comment" />
+                            <x-ui.button type="submit" size="xs" variant="warning" x-bind:disabled="submitting">Submit review</x-ui.button>
+                        </form>
+                    @elseif ($order->review)
+                        <span class="text-text-muted text-xs">Reviewed ★{{ $order->review->rating }}</span>
+                    @endif
+                </x-ui.td>
+            </tr>
+        @endforeach
+    </x-ui.table>
+
+    <x-slot:pagination>
+        <x-ui.pagination :paginator="$orders" />
+    </x-slot:pagination>
+</x-layout.page>
 @endsection

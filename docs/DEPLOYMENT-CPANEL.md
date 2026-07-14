@@ -10,6 +10,36 @@ This project is deployed on **shared hosting** using **cPanel Git Version Contro
 4. **Server:** In cPanel → Git Version Control, **Pull** the latest changes from the GitHub repository.
 5. **Server:** No `npm install`, no `npm run build`, no `php artisan migrate`. The repo already contains built assets and the database is managed via phpMyAdmin.
 
+## Composer / vendor (required once)
+
+The server needs `vendor/` to boot Laravel.
+
+- **If cPanel terminal or SSH is available:** run once in the project root:
+  ```bash
+  composer install --no-dev --optimize-autoloader
+  ```
+- **If no terminal:** run `composer install --no-dev` locally and commit the `vendor/` directory (remove `/vendor` from `.gitignore` only for this deployment path).
+
+Verify `vendor/autoload.php` exists after deploy.
+
+## One-time optimization (if terminal available)
+
+```bash
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
+
+## Production seeder (once)
+
+```bash
+php artisan db:seed --class=ProductionSeeder
+```
+
+Requires `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env`. **Never** run full `db:seed` in production (demo data).
+
+See [PRODUCTION-ENV-CHECKLIST.md](PRODUCTION-ENV-CHECKLIST.md) and [LAUNCH-CHECKLIST.md](LAUNCH-CHECKLIST.md).
+
 ## Repository requirements
 
 - **`public/build/`** is **committed** to the repo (it is **not** in `.gitignore`). The server serves these files as-is.
@@ -27,7 +57,8 @@ This project is deployed on **shared hosting** using **cPanel Git Version Contro
    - `APP_URL=https://yourdomain.com` (no trailing slash)
    - `DB_CONNECTION=mysql`, `DB_HOST`, `DB_PORT=3306`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`
    - `MAIL_*` for SMTP if you need email (OTP, etc.)
-   - `SESSION_SECURE_COOKIE=true` when using HTTPS
+   - `SESSION_SECURE_COOKIE=true`, `SESSION_ENCRYPT=true` when using HTTPS
+   - `QUEUE_CONNECTION=sync` on shared hosting unless a queue worker is configured
 5. **Permissions:** Ensure `storage/` and `bootstrap/cache/` are writable by the web server (e.g. 755 or 775 and correct owner). Use cPanel File Manager or FTP.
 6. **PWA (optional):** Add `public/icons/icon-192x192.png` and `public/icons/icon-512x512.png` so the PWA install icon is correct (see `public/icons/README.md`).
 

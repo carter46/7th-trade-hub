@@ -10,8 +10,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Public+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -19,17 +18,13 @@
             background-color: #0F172A;
             background-image: radial-gradient(circle at top right, rgba(22, 163, 74, 0.1), transparent),
                 radial-gradient(circle at bottom left, rgba(22, 163, 74, 0.05), transparent);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
-        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
     </style>
 </head>
-<body class="p-4 sm:p-8 auth-body font-sans text-slate-100 antialiased">
-    {{ $slot }}
+<body class="p-4 sm:p-8 auth-body min-h-screen flex items-center justify-center bg-surface font-sans text-text-primary antialiased">
+    @yield('content')
 
+    <x-ui.toast />
     @RegisterServiceWorkerScript
 </body>
 </html>

@@ -1,39 +1,69 @@
 @extends('layouts.dashboard-user')
-@section('title', 'Website Listings')
-@section('content')
-<h1 class="text-3xl font-bold text-white">Website Listings</h1>
-<p class="text-slate-400 mt-1">Browse active marketplace listings.</p>
 
-<div class="mt-6">
-    @if($listings->isEmpty())
-        <div class="glass-card rounded-2xl p-8">
-            <p class="text-slate-400">No active listings at the moment.</p>
-        </div>
-    @else
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            @foreach($listings as $listing)
-            <div class="glass-card rounded-2xl p-6 flex flex-col">
-                <div class="flex items-center gap-3 mb-3">
-                    @if($listing->icon_class)
-                        <span class="material-symbols-outlined text-primary text-2xl">{{ $listing->icon_class }}</span>
-                    @endif
-                    <h2 class="text-lg font-bold text-white">{{ $listing->title }}</h2>
-                </div>
-                @if($listing->description)
-                    <p class="text-slate-400 text-sm flex-1 line-clamp-2">{{ Str::limit($listing->description, 100) }}</p>
-                @endif
-                <div class="mt-4 flex items-center justify-between">
-                    <span class="text-primary font-bold">${{ number_format($listing->price, 2) }}</span>
-                    @if($listing->category)
-                        <span class="text-slate-500 text-sm">{{ $listing->category }}</span>
-                    @endif
-                </div>
-            </div>
-            @endforeach
-        </div>
-        <div class="mt-6">
-            {{ $listings->links() }}
-        </div>
-    @endif
-</div>
+@section('title', 'My Listings')
+
+@section('content')
+<x-layout.page title="My Listings" subtitle="Create, submit, and track your marketplace listings." width="full">
+    <x-slot:actions>
+        <x-ui.button :href="route('dashboard.listings.create')" icon="plus">Create Listing</x-ui.button>
+    </x-slot:actions>
+
+    <x-ui.table
+        :empty="$listings->isEmpty()"
+        empty-title="You have no listings yet"
+        empty-description="Create a draft listing, then submit it for admin review."
+        empty-icon="listings"
+        :empty-action="['href' => route('dashboard.listings.create'), 'label' => 'Create your first listing']"
+        striped
+    >
+        <x-slot:head>
+            <x-ui.th>Title</x-ui.th>
+            <x-ui.th>Price</x-ui.th>
+            <x-ui.th>Status</x-ui.th>
+            <x-ui.th>Updated</x-ui.th>
+            <x-ui.th>Actions</x-ui.th>
+        </x-slot:head>
+        @foreach ($listings as $listing)
+            <tr class="hover:bg-muted/50">
+                <x-ui.td class="font-medium">{{ $listing->title }}</x-ui.td>
+                <x-ui.td>₦{{ number_format($listing->price, 2) }}</x-ui.td>
+                <x-ui.td>
+                    @php
+                        $badgeStatus = match ($listing->status) {
+                            'published' => 'completed',
+                            'pending_review' => 'pending',
+                            'rejected' => 'rejected',
+                            default => 'default',
+                        };
+                    @endphp
+                    <x-ui.badge :status="$badgeStatus">{{ str_replace('_', ' ', $listing->status) }}</x-ui.badge>
+                </x-ui.td>
+                <x-ui.td class="text-text-secondary">{{ $listing->updated_at->format('M j, Y') }}</x-ui.td>
+                <x-ui.td>
+                    <div class="flex flex-wrap gap-2">
+                        @if (in_array($listing->status, ['draft', 'rejected']))
+                            <x-ui.button :href="route('dashboard.listings.edit', $listing)" variant="link" size="xs">Edit</x-ui.button>
+                            <form method="POST" action="{{ route('dashboard.listings.submit', $listing) }}" class="inline" x-data="{ submitting: false }" @submit="submitting = true">
+                                @csrf
+                                <x-ui.button type="submit" variant="link" size="xs" x-bind:disabled="submitting">Submit</x-ui.button>
+                            </form>
+                        @elseif ($listing->status === 'published')
+                            <x-ui.button :href="route('marketplace.show', $listing->slug)" variant="link" size="xs">View live</x-ui.button>
+                            <form method="POST" action="{{ route('dashboard.listings.revision', $listing) }}" class="inline" x-data="{ submitting: false }" @submit="submitting = true">
+                                @csrf
+                                <x-ui.button type="submit" variant="ghost" size="xs" x-bind:disabled="submitting">New revision</x-ui.button>
+                            </form>
+                        @else
+                            <span class="text-text-muted text-xs">Awaiting admin</span>
+                        @endif
+                    </div>
+                </x-ui.td>
+            </tr>
+        @endforeach
+    </x-ui.table>
+
+    <x-slot:pagination>
+        <x-ui.pagination :paginator="$listings" />
+    </x-slot:pagination>
+</x-layout.page>
 @endsection

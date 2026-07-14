@@ -2,30 +2,41 @@
 
 namespace App\Models;
 
+use App\Enums\WalletType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Wallet extends Model
 {
-    protected $fillable = [
-        'user_id',
-        'balance_usd',
-        'crypto_btc',
-        'crypto_eth',
-        'balance_change_label',
-    ];
+    protected $guarded = ['id'];
 
     protected function casts(): array
     {
         return [
-            'balance_usd' => 'decimal:2',
-            'crypto_btc' => 'decimal:8',
-            'crypto_eth' => 'decimal:8',
+            'balance' => 'decimal:2',
+            'locked_balance' => 'decimal:2',
+            'type' => WalletType::class,
         ];
     }
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function fundings(): HasMany
+    {
+        return $this->hasMany(WalletFunding::class);
+    }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(Transaction::class);
+    }
+
+    public function availableBalance(): float
+    {
+        return (float) $this->balance;
     }
 }

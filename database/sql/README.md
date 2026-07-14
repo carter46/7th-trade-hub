@@ -17,11 +17,13 @@ This folder holds the schema file for deployment when the server **does not run*
 When you add or change tables (new migrations locally):
 
 1. Run `php artisan migrate` locally so your local DB is up to date.
-2. Export the schema (e.g. from your local MySQL):  
-   `php artisan schema:dump`  
-   That writes to `database/schema/mysql-schema.sql` (Laravel 11+). Copy or merge the relevant parts into `database/sql/migration.sql`, or replace `migration.sql` with a full export.
-3. Commit the updated `database/sql/migration.sql`.
-4. On the server, either re-import `migration.sql` into a fresh database or run only the new `CREATE TABLE` / `ALTER TABLE` statements in phpMyAdmin.
+2. Update `database/sql/migration.sql` to match (or run new statements from migrations in phpMyAdmin on existing DBs).
+3. Commit the updated SQL file.
+4. On the server, re-import on a fresh database, or run only the new `CREATE` / `ALTER` statements.
+
+**Default roles** are seeded at the end of `migration.sql` (`admin`, `user`). Registration requires these rows.
+
+**Production admin:** use `php artisan db:seed --class=ProductionSeeder` or `seed_production_admin.sql.example` in phpMyAdmin.
 
 ## Reference
 

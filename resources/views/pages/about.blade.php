@@ -18,7 +18,7 @@
         </div>
     </section>
 
-    <section class="py-32 px-6 max-w-7xl mx-auto">
+    <section class="py-32 px-6 max-w-marketing mx-auto">
         <div class="grid lg:grid-cols-2 gap-20 items-center">
             <div class="order-2 lg:order-1">
                 <h3 class="text-accent font-bold text-xs uppercase tracking-widest mb-4">Our Mission</h3>
@@ -29,7 +29,7 @@
                 <div class="space-y-6">
                     <div class="flex items-start gap-5 p-6 rounded-2xl bg-card-dark/40 border border-white/5 backdrop-blur-sm hover:border-accent/30 transition-all duration-300">
                         <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
-                            <span class="material-symbols-outlined text-accent">security</span>
+                            <x-ui.icon name="lock" class="w-5 h-5 text-accent" />
                         </div>
                         <div>
                             <h4 class="font-display font-bold text-text-primary mb-1">Institutional Security</h4>
@@ -38,7 +38,7 @@
                     </div>
                     <div class="flex items-start gap-5 p-6 rounded-2xl bg-card-dark/40 border border-white/5 backdrop-blur-sm hover:border-accent/30 transition-all duration-300">
                         <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
-                            <span class="material-symbols-outlined text-accent">speed</span>
+                            <x-ui.icon name="monitoring" class="w-5 h-5 text-accent" />
                         </div>
                         <div>
                             <h4 class="font-display font-bold text-text-primary mb-1">Lightning Execution</h4>

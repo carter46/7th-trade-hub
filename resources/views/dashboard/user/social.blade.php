@@ -1,17 +1,23 @@
 @extends('layouts.dashboard-user')
+
 @section('title', 'Social Services')
+
 @section('content')
-<h1 class="text-3xl font-bold text-white">Social Services</h1>
-<p class="text-slate-400 mt-1">Manage your social media services.</p>
-<div class="glass-card rounded-2xl p-8 mt-6">
-    @if(isset($items) && $items->isNotEmpty())
-        <ul class="space-y-3">
-            @foreach($items as $item)
-                <li class="text-white">{{ $item->name ?? $item['name'] ?? '—' }}</li>
-            @endforeach
-        </ul>
-    @else
-        <p class="text-slate-400">No social services linked yet. When this feature is enabled, your connected accounts will appear here.</p>
-    @endif
-</div>
+<x-layout.page title="Social Services" subtitle="Manage your social media services." width="content">
+    <x-ui.card :padding="false">
+        @if (isset($items) && $items->isNotEmpty())
+            <ul class="divide-y divide-border-default">
+                @foreach ($items as $item)
+                    <li class="px-6 py-4 text-text-primary">{{ $item->name ?? $item['name'] ?? '—' }}</li>
+                @endforeach
+            </ul>
+        @else
+            <x-ui.empty
+                icon="group"
+                title="No social services linked yet"
+                description="When this feature is enabled, your connected accounts will appear here."
+            />
+        @endif
+    </x-ui.card>
+</x-layout.page>
 @endsection

@@ -55,7 +55,7 @@ class DemoDataSeeder extends Seeder
         foreach ($listings as $item) {
             Listing::firstOrCreate(
                 ['slug' => $item['slug']],
-                array_merge($item, ['is_active' => true])
+                array_merge($item, ['is_active' => true, 'status' => 'published'])
             );
         }
     }
@@ -78,6 +78,7 @@ class DemoDataSeeder extends Seeder
                     'username' => $d['username'],
                     'password' => Hash::make('password'),
                     'email_verified_at' => now(),
+                    'kyc_level' => 1,
                 ]
             );
             if (! $user->hasRole('user')) {
@@ -92,10 +93,10 @@ class DemoDataSeeder extends Seeder
     private function seedWallets(array $users): void
     {
         $defaults = [
-            ['balance_usd' => 42560.80, 'crypto_btc' => 2.45, 'crypto_eth' => 0, 'balance_change_label' => '+12.5% from last month'],
-            ['balance_usd' => 18500.00, 'crypto_btc' => 0.5, 'crypto_eth' => 2.0, 'balance_change_label' => '+5.2% from last month'],
-            ['balance_usd' => 9200.00, 'crypto_btc' => 0.1, 'crypto_eth' => 0, 'balance_change_label' => '-2.1% from last month'],
-            ['balance_usd' => 67800.00, 'crypto_btc' => 1.2, 'crypto_eth' => 5.0, 'balance_change_label' => '+18% from last month'],
+            ['balance' => 42560.80, 'locked_balance' => 0, 'currency' => 'NGN', 'status' => 'active'],
+            ['balance' => 18500.00, 'locked_balance' => 0, 'currency' => 'NGN', 'status' => 'active'],
+            ['balance' => 9200.00, 'locked_balance' => 0, 'currency' => 'NGN', 'status' => 'active'],
+            ['balance' => 67800.00, 'locked_balance' => 0, 'currency' => 'NGN', 'status' => 'active'],
         ];
 
         foreach (array_values($users) as $i => $user) {

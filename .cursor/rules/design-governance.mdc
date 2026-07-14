@@ -1,0 +1,24 @@
+---
+description: Design system governance — use x-ui components, never raw Tailwind for shared UI
+globs:
+  - resources/views/**
+  - resources/css/**
+  - tailwind.config.js
+---
+
+# Design governance
+
+When editing Blade views or styles for 7th Trade Hub:
+
+1. **Never** add raw Tailwind classes on shared UI elements (buttons, cards, tables, badges, inputs, alerts, modals, empty states, pagination, nav links, stat cards, skeletons, breadcrumbs).
+2. **Always** use `<x-ui.*>` components from `resources/views/components/ui/`.
+3. **Never** use Material Symbols or icon fonts — use `<x-ui.icon name="...">` with SVGs in `resources/icons/`.
+4. **Never** use `onsubmit="return confirm(...)"` — use `<x-ui.modal>`.
+5. **Never** add inline session flash `<p class="text-green-400">` — flashes are handled by `<x-ui.toast>` in layouts.
+6. Page structure: `<x-layout.page>` with `title`/`subtitle`; no raw `<h1>` for page titles.
+7. Page widths: `width` prop on `<x-layout.page>` only — no ad-hoc `max-w-5xl` etc.
+8. Empty lists: `<x-ui.empty>` — never bare "No items found".
+9. New shared components: add to `/dev/ui` styleguide before using on pages.
+10. Semantic tokens (`bg-surface`, `text-secondary`, `border-default`) — not raw `bg-slate-900`.
+
+See `docs/DESIGN-SYSTEM.md` for the full catalog.

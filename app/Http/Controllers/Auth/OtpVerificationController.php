@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -52,12 +53,23 @@ class OtpVerificationController extends Controller
             ->first();
 
         if (! $row) {
+            Log::warning('OTP verification failed: expired or missing code', [
+                'user_id' => $user->id,
+                'ip' => $request->ip(),
+            ]);
+
             throw ValidationException::withMessages([
                 'otp' => __('The verification code has expired. Please request a new one.'),
             ]);
         }
 
         if ($row->attempts >= self::MAX_ATTEMPTS) {
+            Log::warning('OTP verification blocked: max attempts', [
+                'user_id' => $user->id,
+                'ip' => $request->ip(),
+                'attempts' => $row->attempts,
+            ]);
+
             throw ValidationException::withMessages([
                 'otp' => __('Too many attempts. Please request a new code.'),
             ]);
@@ -67,6 +79,12 @@ class OtpVerificationController extends Controller
             DB::table('email_verification_codes')
                 ->where('id', $row->id)
                 ->increment('attempts');
+
+            Log::warning('OTP verification failed: invalid code', [
+                'user_id' => $user->id,
+                'ip' => $request->ip(),
+                'attempts' => $row->attempts + 1,
+            ]);
 
             throw ValidationException::withMessages([
                 'otp' => __('The verification code is invalid.'),

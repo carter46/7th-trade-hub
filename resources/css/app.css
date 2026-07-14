@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+[x-cloak] {
+    display: none !important;
+}
+
 @layer utilities {
     .glassmorphism {
         background: rgba(30, 41, 59, 0.6);
@@ -27,8 +31,15 @@
     }
 
     .sidebar-link-active {
-        background-color: #0B6A39;
-        color: white;
+        @apply bg-primary text-white;
+    }
+
+    .focus-ring {
+        @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface;
+    }
+
+    .gap-section {
+        @apply gap-6;
     }
 
     .animate-glow {

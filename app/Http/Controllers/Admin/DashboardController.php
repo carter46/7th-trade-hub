@@ -22,8 +22,8 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
-        $totalSales = Transaction::where('status', 'completed')->where('currency', 'USD')->sum('amount');
-        $pendingCrypto = Transaction::where('status', 'pending')->whereNotNull('asset_type')->sum('amount');
+        $totalSales = Transaction::where('status', 'completed')->where('currency', 'NGN')->where('amount', '>', 0)->sum('amount');
+        $pendingCrypto = Transaction::where('status', 'pending')->where('type', 'funding')->count();
 
         return view('dashboard.admin.overview', [
             'userCount' => $userCount,
@@ -54,21 +54,10 @@ class DashboardController extends Controller
         ]);
     }
 
-    public function tickets(): View
-    {
-        $tickets = SupportTicket::with('user')
-            ->orderByDesc('created_at')
-            ->paginate(20);
-
-        return view('dashboard.admin.tickets', [
-            'tickets' => $tickets,
-        ]);
-    }
-
     public function analytics(): View
     {
         $userCount = User::count();
-        $totalSales = Transaction::where('status', 'completed')->where('currency', 'USD')->sum('amount');
+        $totalSales = Transaction::where('status', 'completed')->where('currency', 'NGN')->where('amount', '>', 0)->sum('amount');
         $transactionCount = Transaction::count();
         $ordersByStatus = Order::selectRaw('status, count(*) as count')->groupBy('status')->pluck('count', 'status');
         $listingCount = Listing::where('is_active', true)->count();

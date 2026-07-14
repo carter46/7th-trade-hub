@@ -1,31 +1,35 @@
 @php
     $menu = config('menus.admin', []);
 @endphp
-<aside class="w-full lg:w-64 flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark p-4 gap-4">
-    <div class="flex flex-col gap-1">
-        <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Main Menu</p>
+<aside
+    class="w-64 flex flex-col border-r border-border-default bg-elevated p-4 gap-4 fixed inset-y-0 left-0 z-50 transform transition-transform duration-200 lg:static lg:translate-x-0 lg:h-auto"
+    :class="open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
+>
+    <div class="flex items-center justify-between lg:hidden mb-2">
+        <p class="text-sm font-semibold">Menu</p>
+        <button type="button" class="p-2 rounded-lg focus-ring text-text-secondary" @click="close()" aria-label="Close menu">
+            <x-ui.icon name="x" class="w-5 h-5" />
+        </button>
+    </div>
+    <div class="flex flex-col gap-1 overflow-y-auto">
+        <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-text-muted mb-2">Main Menu</p>
         @foreach ($menu as $item)
             @php
                 $url = \Illuminate\Support\Facades\Route::has($item['route']) ? route($item['route']) : '#';
                 $active = request()->routeIs($item['route']) || request()->routeIs($item['route'] . '*');
             @endphp
-            <a href="{{ $url }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl {{ $active ? 'bg-primary text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors' }}">
-                <span class="material-symbols-outlined text-[22px]">{{ $item['icon'] }}</span>
-                <span class="text-sm font-medium">{{ $item['label'] }}</span>
-            </a>
+            <x-ui.nav-link :href="$url" :icon="$item['icon']" :active="$active" @click="close()">
+                {{ $item['label'] }}
+            </x-ui.nav-link>
         @endforeach
     </div>
-    <div class="mt-auto pt-6 flex flex-col gap-1 border-t border-slate-100 dark:border-slate-800">
-        <a href="{{ route('profile.edit') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-            <span class="material-symbols-outlined text-[22px]">settings</span>
-            <span class="text-sm font-medium">Settings</span>
-        </a>
-        <form method="POST" action="{{ route('logout') }}" class="contents">
+    <div class="mt-auto pt-6 flex flex-col gap-1 border-t border-border-default">
+        <x-ui.nav-link :href="route('profile.edit')" icon="settings" @click="close()">Settings</x-ui.nav-link>
+        <form method="POST" action="{{ route('logout') }}">
             @csrf
-            <button type="submit" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors w-full text-left">
-                <span class="material-symbols-outlined text-[22px]">logout</span>
-                <span class="text-sm font-medium">Sign Out</span>
-            </button>
+            <x-ui.button type="submit" variant="ghost" icon="logout" class="w-full !justify-start">
+                Sign Out
+            </x-ui.button>
         </form>
     </div>
 </aside>

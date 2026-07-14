@@ -3,8 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Listing;
-use App\Models\Transaction;
-use App\Models\Wallet;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -14,19 +13,8 @@ class DashboardController extends Controller
         $user = auth()->user();
         $wallet = $user->wallet;
 
-        if (! $wallet) {
-            $wallet = Wallet::create([
-                'user_id' => $user->id,
-                'balance_usd' => 0,
-                'crypto_btc' => 0,
-                'crypto_eth' => 0,
-                'balance_change_label' => '+0% from last month',
-            ]);
-        }
-
-        $balanceUsd = $wallet ? (float) $wallet->balance_usd : 0;
-        $cryptoBtc = $wallet ? (float) $wallet->crypto_btc : 0;
-        $balanceChangeLabel = $wallet?->balance_change_label ?? '+0% from last month';
+        $balanceNgn = $wallet ? (float) $wallet->balance : 0;
+        $lockedNgn = $wallet ? (float) $wallet->locked_balance : 0;
 
         $activeOrdersCount = $user->orders()->whereIn('status', ['pending', 'processing'])->count();
         $ordersAwaiting = $user->orders()->where('status', 'processing')->count();
@@ -36,23 +24,25 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
-        $recommendedListings = Listing::where('is_active', true)
+        $recommendedListings = Listing::published()
             ->orderBy('id')
             ->limit(6)
             ->get();
 
-        $messagesCount = 0; // TODO: when messages table exists, count unread
+        $messagesCount = Message::where('to_user_id', $user->id)->whereNull('read_at')->count();
+        $myListingsCount = $user->listings()->count();
 
         return view('dashboard.user.overview', [
             'wallet' => $wallet,
-            'balanceUsd' => $balanceUsd,
-            'cryptoBtc' => $cryptoBtc,
-            'balanceChangeLabel' => $balanceChangeLabel,
+            'balanceNgn' => $balanceNgn,
+            'lockedNgn' => $lockedNgn,
             'activeOrdersCount' => $activeOrdersCount,
             'ordersAwaitingLabel' => $ordersAwaiting > 0 ? "{$ordersAwaiting} awaiting delivery" : 'All caught up',
             'messagesCount' => $messagesCount,
+            'myListingsCount' => $myListingsCount,
             'transactions' => $transactions,
             'recommendedListings' => $recommendedListings,
+            'kycLevel' => $user->kyc_level,
         ]);
     }
 
@@ -60,16 +50,6 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
         $wallet = $user->wallet;
-
-        if (! $wallet) {
-            $wallet = Wallet::create([
-                'user_id' => $user->id,
-                'balance_usd' => 0,
-                'crypto_btc' => 0,
-                'crypto_eth' => 0,
-                'balance_change_label' => '+0% from last month',
-            ]);
-        }
 
         $transactions = $user->transactions()
             ->orderByDesc('created_at')
@@ -79,12 +59,14 @@ class DashboardController extends Controller
         return view('dashboard.user.wallet', [
             'wallet' => $wallet,
             'transactions' => $transactions,
+            'kycLevel' => $user->kyc_level,
         ]);
     }
 
     public function listings(): View
     {
-        $listings = Listing::where('is_active', true)
+        $listings = auth()->user()
+            ->listings()
             ->orderByDesc('updated_at')
             ->paginate(12);
 
@@ -97,7 +79,7 @@ class DashboardController extends Controller
     {
         $orders = auth()->user()
             ->orders()
-            ->with('listing')
+            ->with(['listing', 'escrow', 'review'])
             ->orderByDesc('created_at')
             ->paginate(15);
 
@@ -106,44 +88,22 @@ class DashboardController extends Controller
         ]);
     }
 
-    public function exchange(): View
+    public function exchange(): RedirectResponse
     {
-        $user = auth()->user();
-        $wallet = $user->wallet;
-
-        if (! $wallet) {
-            $wallet = Wallet::create([
-                'user_id' => $user->id,
-                'balance_usd' => 0,
-                'crypto_btc' => 0,
-                'crypto_eth' => 0,
-                'balance_change_label' => '+0% from last month',
-            ]);
-        }
-
-        return view('dashboard.user.exchange', [
-            'wallet' => $wallet,
-        ]);
+        return redirect()->route('dashboard.crypto-sell.index');
     }
 
     public function social(): View
     {
-        return view('dashboard.user.social', [
-            'items' => collect(),
-        ]);
+        $items = Listing::published()->where('category', 'social')->limit(12)->get();
+
+        return view('dashboard.user.social', ['items' => $items]);
     }
 
     public function documents(): View
     {
-        return view('dashboard.user.documents', [
-            'templates' => collect(),
-        ]);
-    }
+        $templates = Listing::published()->where('category', 'document')->limit(12)->get();
 
-    public function messages(): View
-    {
-        return view('dashboard.user.messages', [
-            'messages' => collect(),
-        ]);
+        return view('dashboard.user.documents', ['templates' => $templates]);
     }
 }

@@ -25,7 +25,7 @@
     <section class="relative overflow-hidden py-24 lg:py-32">
         <div class="absolute top-0 right-0 -z-10 w-[600px] h-[600px] bg-primary/20 blur-[140px] rounded-full"></div>
         <div class="absolute bottom-0 left-0 -z-10 w-[500px] h-[500px] bg-accent/10 blur-[120px] rounded-full"></div>
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-marketing mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid lg:grid-cols-2 gap-16 items-center">
                 <div class="text-center lg:text-left">
                     <div class="inline-block px-4 py-1.5 mb-6 glassmorphism rounded-full border border-accent/20">
@@ -50,7 +50,7 @@
                 <div class="glassmorphism p-8 rounded-[2.5rem] border-white/10 relative">
                     <div class="absolute -top-4 -right-4 w-20 h-20 bg-accent/20 blur-2xl rounded-full"></div>
                     <h3 class="text-2xl font-bold mb-6 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-accent">currency_exchange</span>
+                        <x-ui.icon name="transactions" class="w-6 h-6 text-accent" />
                         Crypto to Cash
                     </h3>
                     <div class="space-y-4">
@@ -67,7 +67,7 @@
                         </div>
                         <div class="flex justify-center -my-2">
                             <div class="w-10 h-10 bg-accent rounded-full flex items-center justify-center shadow-lg z-10">
-                                <span class="material-symbols-outlined text-white">swap_vert</span>
+                                <x-ui.icon name="swap" class="w-5 h-5 text-white" />
                             </div>
                         </div>
                         <div>
@@ -92,7 +92,7 @@
     </section>
 
     <section class="py-24 relative overflow-hidden">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-marketing mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid lg:grid-cols-2 gap-16 items-center">
                 <div class="relative">
                     <div class="aspect-square glassmorphism rounded-3xl p-2 relative overflow-hidden">
@@ -102,7 +102,7 @@
                     <div class="absolute -bottom-6 -right-6 glassmorphism p-6 rounded-2xl border-accent/20 hidden md:block">
                         <div class="flex items-center gap-4">
                             <div class="w-12 h-12 bg-accent rounded-full flex items-center justify-center">
-                                <span class="material-symbols-outlined text-white">verified_user</span>
+                                <x-ui.icon name="kyc" class="w-6 h-6 text-white" />
                             </div>
                             <div>
                                 <div class="text-sm font-bold">Secured by Escrow</div>
@@ -122,19 +122,19 @@
                     </p>
                     <div class="grid grid-cols-2 gap-6">
                         <div class="flex items-start gap-3">
-                            <span class="material-symbols-outlined text-accent">check_circle</span>
+                            <x-ui.icon name="check" class="w-5 h-5 text-accent" />
                             <span class="text-sm font-semibold">Decentralized Trust</span>
                         </div>
                         <div class="flex items-start gap-3">
-                            <span class="material-symbols-outlined text-accent">check_circle</span>
+                            <x-ui.icon name="check" class="w-5 h-5 text-accent" />
                             <span class="text-sm font-semibold">24/7 Expert Support</span>
                         </div>
                         <div class="flex items-start gap-3">
-                            <span class="material-symbols-outlined text-accent">check_circle</span>
+                            <x-ui.icon name="check" class="w-5 h-5 text-accent" />
                             <span class="text-sm font-semibold">Global Compliance</span>
                         </div>
                         <div class="flex items-start gap-3">
-                            <span class="material-symbols-outlined text-accent">check_circle</span>
+                            <x-ui.icon name="check" class="w-5 h-5 text-accent" />
                             <span class="text-sm font-semibold">Lightning Fast Trade</span>
                         </div>
                     </div>
@@ -144,7 +144,7 @@
     </section>
 
     <section class="py-24 bg-slate-900/30">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-marketing mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-20">
                 <h2 class="text-4xl font-bold mb-4 font-display">Core Ecosystem</h2>
                 <p class="text-slate-400 text-lg max-w-2xl mx-auto">Discover the four pillars of our platform designed to empower your digital journey.</p>
@@ -152,7 +152,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div class="glassmorphism p-10 rounded-[2.5rem] hover:border-accent/40 transition-all group flex flex-col md:flex-row gap-8">
                     <div class="w-16 h-16 shrink-0 bg-accent/10 rounded-2xl flex items-center justify-center text-accent group-hover:bg-accent group-hover:text-white transition-all">
-                        <span class="material-symbols-outlined text-4xl">currency_bitcoin</span>
+                        <x-ui.icon name="bitcoin" class="w-10 h-10" />
                     </div>
                     <div>
                         <h3 class="text-2xl font-bold mb-4">Crypto Cash Exchange</h3>
@@ -162,14 +162,14 @@
                             <li class="flex items-center gap-2"><div class="w-1 h-1 bg-accent rounded-full"></div> SEPA, Swift, and Mobile Money</li>
                         </ul>
                         <a class="text-accent font-bold flex items-center gap-2 group/link" href="{{ route('services') }}">
-                            Learn More <span class="material-symbols-outlined group-hover/link:translate-x-1 transition-transform">arrow_forward</span>
+                            Learn More <x-ui.icon name="arrow-right" class="w-5 h-5 group-hover/link:translate-x-1 transition-transform" />
                         </a>
                     </div>
                 </div>
 
                 <div class="glassmorphism p-10 rounded-[2.5rem] hover:border-accent/40 transition-all group flex flex-col md:flex-row gap-8">
                     <div class="w-16 h-16 shrink-0 bg-accent/10 rounded-2xl flex items-center justify-center text-accent group-hover:bg-accent group-hover:text-white transition-all">
-                        <span class="material-symbols-outlined text-4xl">trending_up</span>
+                        <x-ui.icon name="analytics" class="w-10 h-10" />
                     </div>
                     <div>
                         <h3 class="text-2xl font-bold mb-4">Social Media Growth</h3>
@@ -179,14 +179,14 @@
                             <li class="flex items-center gap-2"><div class="w-1 h-1 bg-accent rounded-full"></div> Multi-platform Campaign Suite</li>
                         </ul>
                         <a class="text-accent font-bold flex items-center gap-2 group/link" href="{{ route('services') }}">
-                            Learn More <span class="material-symbols-outlined group-hover/link:translate-x-1 transition-transform">arrow_forward</span>
+                            Learn More <x-ui.icon name="arrow-right" class="w-5 h-5 group-hover/link:translate-x-1 transition-transform" />
                         </a>
                     </div>
                 </div>
 
                 <div class="glassmorphism p-10 rounded-[2.5rem] hover:border-accent/40 transition-all group flex flex-col md:flex-row gap-8">
                     <div class="w-16 h-16 shrink-0 bg-accent/10 rounded-2xl flex items-center justify-center text-accent group-hover:bg-accent group-hover:text-white transition-all">
-                        <span class="material-symbols-outlined text-4xl">description</span>
+                        <x-ui.icon name="listings" class="w-10 h-10" />
                     </div>
                     <div>
                         <h3 class="text-2xl font-bold mb-4">Doc &amp; Template Gen</h3>
@@ -196,14 +196,14 @@
                             <li class="flex items-center gap-2"><div class="w-1 h-1 bg-accent rounded-full"></div> AI-Powered Personalization</li>
                         </ul>
                         <a class="text-accent font-bold flex items-center gap-2 group/link" href="{{ route('document-templates') }}">
-                            Learn More <span class="material-symbols-outlined group-hover/link:translate-x-1 transition-transform">arrow_forward</span>
+                            Learn More <x-ui.icon name="arrow-right" class="w-5 h-5 group-hover/link:translate-x-1 transition-transform" />
                         </a>
                     </div>
                 </div>
 
                 <div class="glassmorphism p-10 rounded-[2.5rem] hover:border-accent/40 transition-all group flex flex-col md:flex-row gap-8">
                     <div class="w-16 h-16 shrink-0 bg-accent/10 rounded-2xl flex items-center justify-center text-accent group-hover:bg-accent group-hover:text-white transition-all">
-                        <span class="material-symbols-outlined text-4xl">domain</span>
+                        <x-ui.icon name="inventory" class="w-10 h-10" />
                     </div>
                     <div>
                         <h3 class="text-2xl font-bold mb-4">Website Listings</h3>
@@ -213,7 +213,7 @@
                             <li class="flex items-center gap-2"><div class="w-1 h-1 bg-accent rounded-full"></div> Secure Escrow Transfers</li>
                         </ul>
                         <a class="text-accent font-bold flex items-center gap-2 group/link" href="{{ route('website-listings') }}">
-                            Learn More <span class="material-symbols-outlined group-hover/link:translate-x-1 transition-transform">arrow_forward</span>
+                            Learn More <x-ui.icon name="arrow-right" class="w-5 h-5 group-hover/link:translate-x-1 transition-transform" />
                         </a>
                     </div>
                 </div>
@@ -222,7 +222,7 @@
     </section>
 
     <section class="py-20 border-y border-white/5 bg-slate-900/50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-marketing mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
                 <div>
                     <div class="text-4xl font-extrabold text-white mb-2 font-display">15k+</div>
@@ -245,7 +245,7 @@
     </section>
 
     <section class="py-24">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-marketing mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-16">
                 <h2 class="text-4xl font-bold mb-4 font-display">Trusted by Founders</h2>
                 <p class="text-slate-400">Join a community of successful digital entrepreneurs.</p>
@@ -253,7 +253,7 @@
             <div class="grid md:grid-cols-3 gap-8">
                 <div class="glassmorphism p-8 rounded-3xl relative">
                     <div class="text-accent mb-6">
-                        <span class="material-symbols-outlined">format_quote</span>
+                        <x-ui.icon name="quote" class="w-6 h-6" />
                     </div>
                     <p class="text-slate-300 italic mb-8">"The crypto-to-cash exchange is the fastest I've ever used. Funds were in my account within minutes. Highly recommended for any digital nomad."</p>
                     <div class="flex items-center gap-4">
@@ -266,7 +266,7 @@
                 </div>
                 <div class="glassmorphism p-8 rounded-3xl relative border-accent/30">
                     <div class="text-accent mb-6">
-                        <span class="material-symbols-outlined">format_quote</span>
+                        <x-ui.icon name="quote" class="w-6 h-6" />
                     </div>
                     <p class="text-slate-300 italic mb-8">"Found an amazing SaaS property on their listings. The escrow process was professional and smooth. A total game changer for my portfolio."</p>
                     <div class="flex items-center gap-4">
@@ -279,7 +279,7 @@
                 </div>
                 <div class="glassmorphism p-8 rounded-3xl relative">
                     <div class="text-accent mb-6">
-                        <span class="material-symbols-outlined">format_quote</span>
+                        <x-ui.icon name="quote" class="w-6 h-6" />
                     </div>
                     <p class="text-slate-300 italic mb-8">"Their social growth tools helped us scale our Instagram from 5k to 50k in under three months. The engagement quality is unmatched."</p>
                     <div class="flex items-center gap-4">
@@ -304,7 +304,7 @@
                 <details class="group glassmorphism rounded-2xl overflow-hidden border-white/5" open>
                     <summary class="flex items-center justify-between p-6 cursor-pointer hover:bg-white/5 list-none">
                         <span class="font-bold text-lg">How secure are the crypto transactions?</span>
-                        <span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+                        <x-ui.icon name="chevron-down" class="w-5 h-5 transition-transform group-open:rotate-180" />
                     </summary>
                     <div class="px-6 pb-6 text-slate-400 leading-relaxed">
                         We use military-grade encryption and multi-sig cold storage for all assets. Every transaction is backed by our internal escrow system, ensuring funds are only released when both parties fulfill their obligations.
@@ -313,7 +313,7 @@
                 <details class="group glassmorphism rounded-2xl overflow-hidden border-white/5">
                     <summary class="flex items-center justify-between p-6 cursor-pointer hover:bg-white/5 list-none">
                         <span class="font-bold text-lg">How long do service deliveries take?</span>
-                        <span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+                        <x-ui.icon name="chevron-down" class="w-5 h-5 transition-transform group-open:rotate-180" />
                     </summary>
                     <div class="px-6 pb-6 text-slate-400 leading-relaxed">
                         Crypto swaps are typically processed within 5-15 minutes. Social growth services begin within 24 hours of ordering, while document templates are available for instant download.
@@ -322,7 +322,7 @@
                 <details class="group glassmorphism rounded-2xl overflow-hidden border-white/5">
                     <summary class="flex items-center justify-between p-6 cursor-pointer hover:bg-white/5 list-none">
                         <span class="font-bold text-lg">Is there a verification process for listings?</span>
-                        <span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+                        <x-ui.icon name="chevron-down" class="w-5 h-5 transition-transform group-open:rotate-180" />
                     </summary>
                     <div class="px-6 pb-6 text-slate-400 leading-relaxed">
                         Yes, every website listing goes through a rigorous vetting process where we verify domain ownership, traffic statistics via Analytics, and revenue through Stripe or PayPal integrations.
@@ -333,7 +333,7 @@
     </section>
 
     <section class="py-24">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-marketing mx-auto px-4 sm:px-6 lg:px-8">
             <div class="glassmorphism p-12 lg:p-20 rounded-[3rem] text-center border-accent/20 relative overflow-hidden">
                 <div class="absolute -top-24 -left-24 w-64 h-64 bg-primary/20 blur-3xl rounded-full"></div>
                 <div class="absolute -bottom-24 -right-24 w-64 h-64 bg-accent/20 blur-3xl rounded-full"></div>

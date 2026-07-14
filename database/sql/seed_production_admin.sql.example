@@ -1,0 +1,12 @@
+-- Example: create production admin via phpMyAdmin (when artisan db:seed is unavailable)
+-- 1. Generate password hash locally: php artisan tinker --execute="echo bcrypt('YOUR_SECURE_PASSWORD');"
+-- 2. Replace placeholders below, then run in phpMyAdmin.
+
+-- INSERT INTO `users` (`name`, `username`, `email`, `email_verified_at`, `password`, `kyc_level`, `created_at`, `updated_at`) VALUES
+-- ('Admin', 'admin', 'admin@yourdomain.com', NOW(), '$2y$12$REPLACE_WITH_BCRYPT_HASH', 1, NOW(), NOW());
+
+-- SET @admin_id = LAST_INSERT_ID();
+-- SET @role_id = (SELECT `id` FROM `roles` WHERE `name` = 'admin' AND `guard_name` = 'web' LIMIT 1);
+
+-- INSERT INTO `model_has_roles` (`role_id`, `model_type`, `model_id`) VALUES
+-- (@role_id, 'App\\Models\\User', @admin_id);

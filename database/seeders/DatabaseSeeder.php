@@ -6,14 +6,12 @@ use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        $this->call([
-            RoleSeeder::class,
-            DemoDataSeeder::class,
-        ]);
+        $this->call([RoleSeeder::class, CategorySeeder::class]);
+
+        if (app()->environment('local') || env('SEED_DEMO_DATA', false)) {
+            $this->call([DemoDataSeeder::class]);
+        }
     }
 }

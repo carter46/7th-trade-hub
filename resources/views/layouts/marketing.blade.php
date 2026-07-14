@@ -5,18 +5,24 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
         <title>@yield('title', '7th Trade Hub')</title>
+        <meta name="description" content="@yield('meta_description', '7th Trade Hub — NGN wallet marketplace. Deposit, buy with escrow, sell digital products and services.')">
+        <link rel="canonical" href="{{ url()->current() }}">
+        <meta property="og:title" content="@yield('title', '7th Trade Hub')">
+        <meta property="og:description" content="@yield('meta_description', 'NGN wallet marketplace with escrow-protected purchases.')">
+        <meta property="og:url" content="{{ url()->current() }}">
+        <meta property="og:type" content="website">
+        <meta name="twitter:card" content="summary">
         @PwaHead
 
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="bg-dark text-slate-100 font-sans selection:bg-accent selection:text-white">
         <header class="fixed top-0 w-full z-50 glassmorphism border-b border-white/10">
-            <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <nav class="max-w-marketing mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
                 <a class="flex items-center gap-2" href="{{ route('home') }}">
                     <div class="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center font-bold text-xl shadow-lg">7</div>
                     <span class="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400 font-display">7th Trade Hub</span>
@@ -49,7 +55,7 @@
         </main>
 
         <footer class="bg-slate-950 pt-20 pb-10 border-t border-white/5">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="max-w-marketing mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
                     <div>
                         <div class="flex items-center gap-2 mb-6">

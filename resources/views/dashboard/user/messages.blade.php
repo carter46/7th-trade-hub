@@ -1,17 +1,41 @@
 @extends('layouts.dashboard-user')
+
 @section('title', 'Messages')
+
 @section('content')
-<h1 class="text-3xl font-bold text-white">Messages</h1>
-<p class="text-slate-400 mt-1">Your inbox and conversations.</p>
-<div class="glass-card rounded-2xl p-8 mt-6">
-    @if(isset($messages) && $messages->isNotEmpty())
-        <ul class="space-y-3">
-            @foreach($messages as $msg)
-                <li class="text-white">{{ $msg->subject ?? $msg['subject'] ?? 'Message' }}</li>
-            @endforeach
-        </ul>
-    @else
-        <p class="text-slate-400">No messages yet. When you have conversations, they will appear here.</p>
-    @endif
-</div>
+<x-layout.page title="Messages" subtitle="Your inbox and conversations." width="content">
+    <x-slot:actions>
+        <x-ui.button :href="route('dashboard.messages.create')" icon="plus">New message</x-ui.button>
+    </x-slot:actions>
+
+    <x-ui.card :padding="false">
+        @if ($messages->isEmpty())
+            <x-ui.empty
+                icon="messages"
+                title="No messages yet"
+                description="Start a conversation with another user on the platform."
+                :action="['href' => route('dashboard.messages.create'), 'label' => 'New message']"
+            />
+        @else
+            <ul class="divide-y divide-border-default">
+                @foreach ($messages as $msg)
+                    <li>
+                        <a href="{{ route('dashboard.messages.show', $msg) }}" class="block px-6 py-4 hover:bg-muted/40 transition-colors">
+                            <p class="text-text-primary font-medium {{ $msg->to_user_id === auth()->id() && ! $msg->read_at ? 'font-bold' : '' }}">{{ $msg->subject }}</p>
+                            <p class="text-text-muted text-xs mt-1">
+                                {{ $msg->from_user_id === auth()->id() ? 'To' : 'From' }}:
+                                {{ $msg->from_user_id === auth()->id() ? $msg->toUser?->email : $msg->fromUser?->email }}
+                                — {{ $msg->created_at->diffForHumans() }}
+                            </p>
+                        </a>
+                    </li>
+                @endforeach
+            </ul>
+        @endif
+    </x-ui.card>
+
+    <x-slot:pagination>
+        <x-ui.pagination :paginator="$messages" />
+    </x-slot:pagination>
+</x-layout.page>
 @endsection

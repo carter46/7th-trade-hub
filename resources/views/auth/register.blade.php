@@ -1,52 +1,31 @@
-<x-guest-layout>
-    <form method="POST" action="{{ route('register') }}">
-        @csrf
-
-        <!-- Name -->
-        <div>
-            <x-input-label for="name" :value="__('Name')" />
-            <x-text-input id="name" class="block mt-1 w-full" type="text" name="name" :value="old('name')" required autofocus autocomplete="name" />
-            <x-input-error :messages="$errors->get('name')" class="mt-2" />
+<x-layouts.auth>
+    <main class="w-full max-w-auth mx-auto">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-text-primary tracking-tight">7th Trade Hub</h1>
+            <p class="text-text-secondary mt-2">Create your free account.</p>
         </div>
 
-        <!-- Email Address -->
-        <div class="mt-4">
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
-        </div>
+        <x-ui.card class="p-8">
+            <header class="mb-6">
+                <h2 class="text-2xl font-semibold text-text-primary">Join the Hub</h2>
+                <p class="text-text-secondary text-sm">Get started with your free account today.</p>
+            </header>
 
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
+            <form method="POST" action="{{ route('register') }}" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
+                @csrf
 
-            <x-text-input id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="new-password" />
+                <x-ui.input label="Name" name="name" type="text" id="name" :value="old('name')" required autofocus autocomplete="name" />
+                <x-ui.input label="Email" name="email" type="email" id="email" :value="old('email')" required autocomplete="username" />
+                <x-ui.input label="Password" name="password" type="password" id="password" required autocomplete="new-password" />
+                <x-ui.input label="Confirm Password" name="password_confirmation" type="password" id="password_confirmation" required autocomplete="new-password" />
 
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-        </div>
-
-        <!-- Confirm Password -->
-        <div class="mt-4">
-            <x-input-label for="password_confirmation" :value="__('Confirm Password')" />
-
-            <x-text-input id="password_confirmation" class="block mt-1 w-full"
-                            type="password"
-                            name="password_confirmation" required autocomplete="new-password" />
-
-            <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
-        </div>
-
-        <div class="flex items-center justify-end mt-4">
-            <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('login') }}">
-                {{ __('Already registered?') }}
-            </a>
-
-            <x-primary-button class="ms-4">
-                {{ __('Register') }}
-            </x-primary-button>
-        </div>
-    </form>
-</x-guest-layout>
+                <div class="flex items-center justify-between gap-4 pt-2">
+                    <a class="text-sm text-text-secondary hover:text-accent transition-colors" href="{{ route('login') }}">
+                        Already registered?
+                    </a>
+                    <x-ui.button type="submit" x-bind:loading="submitting">Register</x-ui.button>
+                </div>
+            </form>
+        </x-ui.card>
+    </main>
+</x-layouts.auth>

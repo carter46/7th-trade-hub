@@ -1,43 +1,57 @@
 @extends('layouts.dashboard-admin')
+
 @section('title', 'Analytics')
+
 @section('content')
-<h1 class="text-3xl font-black leading-tight tracking-tight text-slate-900 dark:text-white">Analytics</h1>
-<p class="text-slate-500 dark:text-slate-400 text-base mt-1">Platform analytics and reports.</p>
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
-    <div class="bg-white dark:bg-slate-900 rounded-xl p-6 border border-slate-200 dark:border-slate-800">
-        <span class="text-slate-500 dark:text-slate-400 text-sm">Total users</span>
-        <div class="text-2xl font-bold text-slate-900 dark:text-white mt-1">{{ number_format($userCount ?? 0) }}</div>
+<x-layout.page title="Analytics" subtitle="Platform analytics and reports." width="full">
+    <x-ui.stat-grid>
+        <x-ui.stat-card
+            label="Total users"
+            :value="number_format($userCount ?? 0)"
+            icon="group"
+        />
+        <x-ui.stat-card
+            label="Total sales (NGN)"
+            :value="'₦' . number_format($totalSales ?? 0, 2)"
+            icon="paid"
+        />
+        <x-ui.stat-card
+            label="Transactions"
+            :value="number_format($transactionCount ?? 0)"
+            icon="transactions"
+        />
+        <x-ui.stat-card
+            label="Active listings"
+            :value="number_format($listingCount ?? 0)"
+            icon="listings"
+        />
+    </x-ui.stat-grid>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <x-ui.card variant="solid">
+            <h2 class="text-lg font-semibold text-text-primary mb-4">Orders by status</h2>
+            @if (isset($ordersByStatus) && $ordersByStatus->isNotEmpty())
+                <ul class="space-y-2">
+                    @foreach ($ordersByStatus as $status => $count)
+                        <li class="flex justify-between text-sm text-text-secondary">
+                            <span>{{ $status }}</span>
+                            <span class="font-medium text-text-primary">{{ $count }}</span>
+                        </li>
+                    @endforeach
+                </ul>
+            @else
+                <x-ui.empty
+                    icon="orders"
+                    title="No orders yet."
+                />
+            @endif
+        </x-ui.card>
+
+        <x-ui.card variant="solid">
+            <h2 class="text-lg font-semibold text-text-primary mb-4">Support</h2>
+            <p class="text-sm text-text-secondary">Total tickets: <span class="font-medium text-text-primary">{{ $ticketCount ?? 0 }}</span></p>
+            <p class="text-sm text-text-secondary mt-1">Open: <span class="font-medium text-text-primary">{{ $openTickets ?? 0 }}</span></p>
+        </x-ui.card>
     </div>
-    <div class="bg-white dark:bg-slate-900 rounded-xl p-6 border border-slate-200 dark:border-slate-800">
-        <span class="text-slate-500 dark:text-slate-400 text-sm">Total sales (USD)</span>
-        <div class="text-2xl font-bold text-slate-900 dark:text-white mt-1">${{ number_format($totalSales ?? 0, 2) }}</div>
-    </div>
-    <div class="bg-white dark:bg-slate-900 rounded-xl p-6 border border-slate-200 dark:border-slate-800">
-        <span class="text-slate-500 dark:text-slate-400 text-sm">Transactions</span>
-        <div class="text-2xl font-bold text-slate-900 dark:text-white mt-1">{{ number_format($transactionCount ?? 0) }}</div>
-    </div>
-    <div class="bg-white dark:bg-slate-900 rounded-xl p-6 border border-slate-200 dark:border-slate-800">
-        <span class="text-slate-500 dark:text-slate-400 text-sm">Active listings</span>
-        <div class="text-2xl font-bold text-slate-900 dark:text-white mt-1">{{ number_format($listingCount ?? 0) }}</div>
-    </div>
-</div>
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-    <div class="bg-white dark:bg-slate-900 rounded-xl p-6 border border-slate-200 dark:border-slate-800">
-        <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-4">Orders by status</h2>
-        @if(isset($ordersByStatus) && $ordersByStatus->isNotEmpty())
-            <ul class="space-y-2">
-                @foreach($ordersByStatus as $status => $count)
-                    <li class="flex justify-between text-slate-700 dark:text-slate-300"><span>{{ $status }}</span><span>{{ $count }}</span></li>
-                @endforeach
-            </ul>
-        @else
-            <p class="text-slate-500 dark:text-slate-400">No orders yet.</p>
-        @endif
-    </div>
-    <div class="bg-white dark:bg-slate-900 rounded-xl p-6 border border-slate-200 dark:border-slate-800">
-        <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-4">Support</h2>
-        <p class="text-slate-700 dark:text-slate-300">Total tickets: <strong>{{ $ticketCount ?? 0 }}</strong></p>
-        <p class="text-slate-700 dark:text-slate-300 mt-1">Open: <strong>{{ $openTickets ?? 0 }}</strong></p>
-    </div>
-</div>
+</x-layout.page>
 @endsection

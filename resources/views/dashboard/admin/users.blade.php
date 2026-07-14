@@ -1,59 +1,76 @@
 @extends('layouts.dashboard-admin')
-@section('title', 'User Management')
-@section('content')
-<h1 class="text-3xl font-black leading-tight tracking-tight text-slate-900 dark:text-white">User Management</h1>
-<p class="text-slate-500 dark:text-slate-400 text-base mt-1">Manage platform users and roles.</p>
 
-<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden mt-6">
-    <div class="overflow-x-auto">
-        <table class="w-full text-left">
-            <thead class="bg-slate-50 dark:bg-background-dark/50 text-slate-500 text-xs uppercase font-bold">
-                <tr>
-                    <th class="px-6 py-4">Name</th>
-                    <th class="px-6 py-4">Username</th>
-                    <th class="px-6 py-4">Email</th>
-                    <th class="px-6 py-4">Role</th>
-                    <th class="px-6 py-4">Verified</th>
-                    <th class="px-6 py-4">Joined</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                @forelse($users ?? [] as $u)
-                    <tr>
-                        <td class="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">{{ $u->name }}</td>
-                        <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{{ $u->username ?? '—' }}</td>
-                        <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">{{ $u->email }}</td>
-                        <td class="px-6 py-4">
-                            @php $roles = $u->roles->pluck('name'); @endphp
-                            @if($roles->isNotEmpty())
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $roles->contains('admin') ? 'bg-primary/20 text-primary' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400' }}">
-                                    {{ $roles->join(', ') }}
-                                </span>
-                            @else
-                                <span class="text-slate-400 text-xs">—</span>
-                            @endif
-                        </td>
-                        <td class="px-6 py-4">
-                            @if($u->email_verified_at)
-                                <span class="text-emerald-600 dark:text-emerald-500 text-sm">Yes</span>
-                            @else
-                                <span class="text-slate-400 text-sm">No</span>
-                            @endif
-                        </td>
-                        <td class="px-6 py-4 text-slate-500 text-xs">{{ $u->created_at->format('M j, Y') }}</td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="6" class="px-6 py-8 text-center text-slate-500 text-sm">No users yet. Run <code class="text-slate-600">php artisan db:seed</code> to load demo data.</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
-    @if(isset($users) && $users->hasPages())
-        <div class="px-6 py-4 border-t border-slate-200 dark:border-slate-800">
-            {{ $users->links() }}
-        </div>
-    @endif
-</div>
+@section('title', 'User Management')
+
+@section('content')
+@php
+    $userRows = $users ?? collect();
+@endphp
+<x-layout.page title="User Management" subtitle="Manage platform users and roles." width="full">
+    <x-ui.table
+        :empty="$userRows->isEmpty()"
+        empty-title="No users yet"
+        empty-description="Registered accounts will appear here."
+        empty-icon="users"
+        striped
+    >
+        <x-slot:head>
+            <x-ui.th>Name</x-ui.th>
+            <x-ui.th>Email</x-ui.th>
+            <x-ui.th>Role</x-ui.th>
+            <x-ui.th>Status</x-ui.th>
+            <x-ui.th>Joined</x-ui.th>
+            <x-ui.th>Actions</x-ui.th>
+        </x-slot:head>
+
+        @foreach ($userRows as $u)
+            <tr class="hover:bg-muted/50">
+                <x-ui.td class="font-medium">{{ $u->name }}</x-ui.td>
+                <x-ui.td class="text-text-secondary">{{ $u->email }}</x-ui.td>
+                <x-ui.td>
+                    @if ($u->id !== auth()->id())
+                        <form method="POST" action="{{ route('admin.users.role', $u) }}" class="flex gap-2 items-end" x-data="{ submitting: false }" @submit="submitting = true">
+                            @csrf
+                            <x-ui.select name="role" size="sm">
+                                @foreach ($roles as $role)
+                                    <option value="{{ $role->name }}" @selected($u->hasRole($role->name))>{{ $role->name }}</option>
+                                @endforeach
+                            </x-ui.select>
+                            <x-ui.button type="submit" variant="link" size="xs" x-bind:disabled="submitting">Set</x-ui.button>
+                        </form>
+                    @else
+                        <span class="text-xs text-text-muted">{{ $u->roles->pluck('name')->join(', ') ?: '—' }}</span>
+                    @endif
+                </x-ui.td>
+                <x-ui.td>
+                    <x-ui.badge :status="$u->is_suspended ? 'suspended' : 'active'" />
+                </x-ui.td>
+                <x-ui.td class="text-text-muted text-xs">{{ $u->created_at->format('M j, Y') }}</x-ui.td>
+                <x-ui.td>
+                    @if ($u->id !== auth()->id())
+                        <form method="POST" action="{{ route('admin.users.suspend', $u) }}" x-data="{ submitting: false }" @submit="submitting = true">
+                            @csrf
+                            <x-ui.button
+                                type="submit"
+                                size="xs"
+                                :variant="$u->is_suspended ? 'success' : 'danger'"
+                                x-bind:disabled="submitting"
+                            >
+                                {{ $u->is_suspended ? 'Unsuspend' : 'Suspend' }}
+                            </x-ui.button>
+                        </form>
+                    @else
+                        <span class="text-xs text-text-muted">You</span>
+                    @endif
+                </x-ui.td>
+            </tr>
+        @endforeach
+    </x-ui.table>
+
+    <x-slot:pagination>
+        @if (isset($users))
+            <x-ui.pagination :paginator="$users" />
+        @endif
+    </x-slot:pagination>
+</x-layout.page>
 @endsection

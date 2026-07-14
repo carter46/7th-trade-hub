@@ -4,7 +4,7 @@
 
 @section('content')
 <section class="py-16">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="max-w-marketing mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
             <div class="max-w-2xl">
                 <h1 class="text-4xl font-extrabold text-white tracking-tight mb-3">Document Templates</h1>
@@ -12,7 +12,7 @@
             </div>
             @auth
                 <a href="{{ route('dashboard.documents') }}" class="inline-flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-xl font-bold hover:bg-accent transition-all shadow-lg shadow-primary/20">
-                    <span class="material-symbols-outlined">add_circle</span>
+                    <x-ui.icon name="plus" class="w-5 h-5" />
                     Custom Draft
                 </a>
             @else

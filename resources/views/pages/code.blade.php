@@ -4,11 +4,11 @@
 
 @section('content')
 <section class="py-16 lg:py-24">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="max-w-marketing mx-auto px-4 sm:px-6 lg:px-8">
         <div class="glassmorphism rounded-3xl p-10 lg:p-16 border border-white/10">
             <div class="flex items-center gap-4 mb-8">
                 <div class="size-14 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
-                    <span class="material-symbols-outlined text-4xl">code</span>
+                    <x-ui.icon name="code" class="w-10 h-10" />
                 </div>
                 <div>
                     <h1 class="text-3xl lg:text-4xl font-bold text-white font-display">Code &amp; API</h1>
@@ -21,12 +21,12 @@
             @auth
                 <a href="{{ route('dashboard') }}" class="inline-flex items-center gap-2 bg-primary hover:bg-accent text-white px-6 py-3 rounded-xl font-bold transition-all">
                     Go to Dashboard
-                    <span class="material-symbols-outlined">arrow_forward</span>
+                    <x-ui.icon name="arrow-right" class="w-5 h-5" />
                 </a>
             @else
                 <a href="{{ route('register') }}" class="inline-flex items-center gap-2 bg-primary hover:bg-accent text-white px-6 py-3 rounded-xl font-bold transition-all">
                     Get Started
-                    <span class="material-symbols-outlined">arrow_forward</span>
+                    <x-ui.icon name="arrow-right" class="w-5 h-5" />
                 </a>
             @endauth
         </div>

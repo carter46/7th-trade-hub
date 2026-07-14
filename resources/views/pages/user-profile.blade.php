@@ -10,10 +10,10 @@
             <div class="px-8 pb-8 flex flex-col md:flex-row gap-6 items-start -mt-12">
                 <div class="relative">
                     <div class="size-24 md:size-32 rounded-2xl bg-slate-700 border-4 border-slate-900 flex items-center justify-center">
-                        <span class="material-symbols-outlined text-5xl text-slate-500">person</span>
+                        <x-ui.icon name="user" class="w-12 h-12 text-slate-500" />
                     </div>
                     <div class="absolute bottom-2 right-2 bg-primary text-white rounded-full p-1 shadow-lg flex items-center justify-center">
-                        <span class="material-symbols-outlined text-sm">verified</span>
+                        <x-ui.icon name="verified" class="w-4 h-4" />
                     </div>
                 </div>
                 <div class="flex-1 pt-14 md:pt-8">
@@ -24,7 +24,7 @@
                                 <span class="bg-primary/10 text-primary text-xs font-bold px-2.5 py-1 rounded-full border border-primary/20">TRADER</span>
                             </div>
                             <p class="text-slate-400 mt-1 flex items-center gap-1">
-                                <span class="material-symbols-outlined text-sm">person</span>
+                                <x-ui.icon name="user" class="w-4 h-4" />
                                 Public profile
                             </p>
                         </div>
