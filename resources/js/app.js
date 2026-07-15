@@ -43,23 +43,120 @@ document.addEventListener('alpine:init', () => {
         startX: 0,
         scrollLeft: 0,
         mq: null,
+        active: 0,
+        dotCount: 1,
+        didAutoStep: false,
+        observer: null,
 
         init() {
             this.mq = window.matchMedia('(min-width: 768px)');
-            this.$el.addEventListener('pointerdown', (e) => this.onPointerDown(e));
-            this.$el.addEventListener('pointermove', (e) => this.onPointerMove(e));
-            this.$el.addEventListener('pointerup', (e) => this.onPointerUp(e));
-            this.$el.addEventListener('pointercancel', (e) => this.onPointerUp(e));
-            this.$el.addEventListener('pointerleave', (e) => this.onPointerUp(e));
-            this.$el.addEventListener(
-                'wheel',
-                (e) => this.onWheel(e),
-                { passive: false },
+            this.onResize = () => this.updateDots();
+
+            this.$nextTick(() => {
+                const track = this.trackEl;
+                if (!track) {
+                    return;
+                }
+                this.updateDots();
+                track.addEventListener('scroll', () => this.onScroll(), { passive: true });
+                track.addEventListener('pointerdown', (e) => this.onPointerDown(e));
+                track.addEventListener('pointermove', (e) => this.onPointerMove(e));
+                track.addEventListener('pointerup', (e) => this.onPointerUp(e));
+                track.addEventListener('pointercancel', (e) => this.onPointerUp(e));
+                track.addEventListener('pointerleave', (e) => this.onPointerUp(e));
+                track.addEventListener('wheel', (e) => this.onWheel(e), { passive: false });
+            });
+
+            window.addEventListener('resize', this.onResize);
+
+            this.observer = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach((entry) => {
+                        if (entry.isIntersecting && !this.didAutoStep && !this.isDesktop()) {
+                            this.didAutoStep = true;
+                            window.setTimeout(() => this.slideOneStep(), 350);
+                        }
+                    });
+                },
+                { threshold: 0.45 },
             );
+            this.observer.observe(this.$el);
+        },
+
+        destroy() {
+            this.observer?.disconnect();
+            if (this.onResize) {
+                window.removeEventListener('resize', this.onResize);
+            }
+        },
+
+        get trackEl() {
+            return this.$refs.track;
         },
 
         isDesktop() {
             return this.mq?.matches ?? window.innerWidth >= 768;
+        },
+
+        stepWidth() {
+            const track = this.trackEl;
+            if (!track) {
+                return 0;
+            }
+            const card = track.querySelector(':scope > div');
+            if (!card) {
+                return track.clientWidth / 2;
+            }
+            const styles = window.getComputedStyle(track);
+            const gap = parseFloat(styles.columnGap || styles.gap || '0') || 0;
+            return card.getBoundingClientRect().width + gap;
+        },
+
+        updateDots() {
+            const track = this.trackEl;
+            if (!track || this.isDesktop()) {
+                this.dotCount = 1;
+                this.active = 0;
+                return;
+            }
+            const cards = track.querySelectorAll(':scope > div').length;
+            const visible = 2;
+            this.dotCount = Math.max(1, cards - visible + 1);
+            this.onScroll();
+        },
+
+        onScroll() {
+            const track = this.trackEl;
+            if (!track || this.isDesktop()) {
+                return;
+            }
+            const step = this.stepWidth();
+            if (step <= 0) {
+                return;
+            }
+            const maxIndex = Math.max(0, this.dotCount - 1);
+            this.active = Math.min(maxIndex, Math.max(0, Math.round(track.scrollLeft / step)));
+        },
+
+        goTo(index) {
+            const track = this.trackEl;
+            if (!track || this.isDesktop()) {
+                return;
+            }
+            const maxIndex = Math.max(0, this.dotCount - 1);
+            const next = Math.min(maxIndex, Math.max(0, index));
+            track.scrollTo({ left: next * this.stepWidth(), behavior: 'smooth' });
+            this.active = next;
+        },
+
+        slideOneStep() {
+            if (this.isDesktop()) {
+                return;
+            }
+            const next = Math.min(this.dotCount - 1, this.active + 1);
+            if (next !== this.active) {
+                this.goTo(next);
+            }
         },
 
         onPointerDown(e) {
@@ -68,8 +165,8 @@ document.addEventListener('alpine:init', () => {
             }
             this.dragging = true;
             this.startX = e.clientX;
-            this.scrollLeft = this.$el.scrollLeft;
-            this.$el.setPointerCapture?.(e.pointerId);
+            this.scrollLeft = this.trackEl.scrollLeft;
+            this.trackEl.setPointerCapture?.(e.pointerId);
         },
 
         onPointerMove(e) {
@@ -78,7 +175,7 @@ document.addEventListener('alpine:init', () => {
             }
             e.preventDefault();
             const walk = e.clientX - this.startX;
-            this.$el.scrollLeft = this.scrollLeft - walk;
+            this.trackEl.scrollLeft = this.scrollLeft - walk;
         },
 
         onPointerUp(e) {
@@ -87,10 +184,11 @@ document.addEventListener('alpine:init', () => {
             }
             this.dragging = false;
             try {
-                this.$el.releasePointerCapture?.(e.pointerId);
+                this.trackEl.releasePointerCapture?.(e.pointerId);
             } catch (_) {
                 // ignore
             }
+            this.onScroll();
         },
 
         onWheel(e) {
@@ -102,17 +200,18 @@ document.addEventListener('alpine:init', () => {
             if (delta === 0) {
                 return;
             }
-            const atStart = this.$el.scrollLeft <= 0 && delta < 0;
+            const track = this.trackEl;
+            const atStart = track.scrollLeft <= 0 && delta < 0;
             const atEnd =
-                this.$el.scrollLeft + this.$el.clientWidth >= this.$el.scrollWidth - 1 &&
-                delta > 0;
+                track.scrollLeft + track.clientWidth >= track.scrollWidth - 1 && delta > 0;
             if (atStart || atEnd) {
                 return;
             }
             e.preventDefault();
-            this.$el.scrollBy({ left: delta, behavior: 'auto' });
+            track.scrollBy({ left: delta, behavior: 'auto' });
         },
     }));
 });
+
 
 Alpine.start();

@@ -8,47 +8,110 @@
             [
                 'icon' => 'bitcoin',
                 'title' => 'Crypto Cash Exchange',
-                'body' => 'Secure crypto-to-cash with competitive spreads and fast payouts to bank accounts or e-wallets.',
+                'body' => 'Turn crypto into cash fast. Safe swaps and quick payouts.',
                 'href' => route('services'),
             ],
             [
                 'icon' => 'analytics',
                 'title' => 'Social Media Growth',
-                'body' => 'High-retention engagement and campaign tools to grow brands and audiences across platforms.',
+                'body' => 'Grow followers and reach with real engagement tools.',
                 'href' => route('services'),
             ],
             [
                 'icon' => 'listings',
-                'title' => 'Doc & Template Gen',
-                'body' => 'Industry-ready templates for agreements, contractor forms, and digital-business disclosures.',
+                'title' => 'Docs & Templates',
+                'body' => 'Ready-made business docs you can download and use.',
                 'href' => route('document-templates'),
             ],
             [
                 'icon' => 'inventory',
                 'title' => 'Website Listings',
-                'body' => 'Buy and sell verified digital assets with escrow-backed transfers and revenue reporting.',
+                'body' => 'Buy or sell websites with escrow to protect both sides.',
                 'href' => route('website-listings'),
+            ],
+        ];
+
+        $faqs = [
+            [
+                'q' => 'What can I do on 7th Trade Hub?',
+                'a' => 'You can fund your NGN wallet, buy or sell digital services, swap crypto to cash, grow social accounts, download templates, and buy or sell websites — all in one place.',
+            ],
+            [
+                'q' => 'How does the NGN wallet work?',
+                'a' => 'Your wallet holds Naira balance for marketplace buys. Fund it by bank transfer or crypto sell, then pay for orders from your available balance.',
+            ],
+            [
+                'q' => 'How do I deposit money?',
+                'a' => 'Go to Deposit, pick bank transfer or crypto sell, follow the steps, and wait for approval. Funds show in your wallet when confirmed.',
+            ],
+            [
+                'q' => 'How do withdrawals work?',
+                'a' => 'Request a withdrawal from your wallet, add your bank details, and submit. We review it and send the funds when approved.',
+            ],
+            [
+                'q' => 'What is escrow and why do I need it?',
+                'a' => 'Escrow holds the buyer’s money until the seller delivers. It protects both sides on marketplace deals.',
+            ],
+            [
+                'q' => 'How do I buy from the marketplace?',
+                'a' => 'Open a listing, click buy, and pay from your wallet. Funds go into escrow until you confirm delivery.',
+            ],
+            [
+                'q' => 'How do I sell my own listing?',
+                'a' => 'Create a listing in your dashboard, wait for review if needed, then buyers can order. You get paid after delivery is confirmed.',
+            ],
+            [
+                'q' => 'Do I need KYC to use the platform?',
+                'a' => 'Basic browsing is open. Wallet actions, higher limits, and some features need KYC. Submit ID from the KYC page in your dashboard.',
+            ],
+            [
+                'q' => 'How does crypto-to-cash work?',
+                'a' => 'Start a crypto sell request, send the amount we quote, and after confirmation we credit NGN to your wallet.',
+            ],
+            [
+                'q' => 'What social growth services do you offer?',
+                'a' => 'We offer tools and packages to grow reach and engagement on major social platforms. Check Services for what is available now.',
+            ],
+            [
+                'q' => 'Are document templates ready to use?',
+                'a' => 'Yes. Browse templates, buy if paid, then download. Most are ready right after purchase.',
+            ],
+            [
+                'q' => 'How do website listings work?',
+                'a' => 'Sellers list sites with details and price. Buyers pay through escrow. Ownership transfer completes after both sides finish their steps.',
+            ],
+            [
+                'q' => 'Are website listings verified?',
+                'a' => 'Listings go through review. We check ownership claims and key details before they go live when review is required.',
+            ],
+            [
+                'q' => 'How do fees work?',
+                'a' => 'Fees depend on the service — exchange, marketplace, or withdrawal. You will see the fee before you confirm any payment.',
+            ],
+            [
+                'q' => 'How do I contact support?',
+                'a' => 'Open a support ticket from your dashboard, or use the Contact / Help pages. We reply as soon as we can.',
             ],
         ];
     @endphp
 
-    <section class="relative overflow-hidden py-14 sm:py-20 lg:py-28">
+    <section class="relative overflow-hidden pt-24 pb-14 sm:pt-24 sm:pb-20 lg:py-28">
         <div class="absolute top-0 right-0 -z-10 w-[600px] h-[600px] bg-primary/20 blur-[140px] rounded-full"></div>
         <div class="absolute bottom-0 left-0 -z-10 w-[500px] h-[500px] bg-accent/10 blur-[120px] rounded-full"></div>
         <div class="max-w-marketing mx-auto px-5 sm:px-6">
             <div class="mx-auto max-w-3xl text-center">
-                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 sm:mb-8 tracking-tight text-white leading-[1.1] font-display">
+                <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold mb-5 sm:mb-7 tracking-tight text-white leading-[1.15] font-display">
                     The Ultimate <span class="text-transparent bg-clip-text bg-gradient-to-r from-accent to-primary">Digital Service</span> Marketplace
                 </h1>
-                <p class="mx-auto max-w-2xl text-slate-400 text-base sm:text-lg lg:text-xl mb-8 sm:mb-12 leading-relaxed">
-                    Scale your digital presence with elite social services, secure crypto-to-cash exchanges, professional document templates, and premium website listings all in one hub.
+                <p class="mx-auto max-w-xl text-slate-400 text-sm sm:text-base lg:text-lg mb-8 sm:mb-10 leading-relaxed">
+                    Buy and sell digital services, swap crypto to cash, grow social accounts, and get ready-made templates — all in one hub.
                 </p>
-                <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                    <a class="px-8 py-4 bg-primary hover:bg-accent text-white font-bold rounded-xl shadow-2xl transition-all hover:scale-105 animate-glow" href="{{ route('register') }}">
+                <div class="mx-auto grid max-w-sm grid-cols-2 gap-3">
+                    <a class="px-3 py-3 text-center text-sm sm:text-base bg-primary hover:bg-accent text-white font-bold rounded-xl shadow-xl transition-all hover:scale-[1.02] animate-glow" href="{{ route('register') }}">
                         Get Started
                     </a>
-                    <a class="px-8 py-4 glassmorphism hover:bg-white/10 text-white font-bold rounded-xl border border-white/20 transition-all" href="{{ route('marketplace') }}">
-                        Explore Marketplace
+                    <a class="px-3 py-3 text-center text-sm sm:text-base glassmorphism hover:bg-white/10 text-white font-bold rounded-xl border border-white/20 transition-all" href="{{ route('marketplace') }}">
+                        Marketplace
                     </a>
                 </div>
             </div>
@@ -58,26 +121,41 @@
     <section class="py-16 sm:py-20 lg:py-24 bg-slate-900/30">
         <div class="max-w-marketing mx-auto px-5 sm:px-6">
             <div class="text-center mb-10 sm:mb-14">
-                <h2 class="text-3xl sm:text-4xl font-bold mb-4 font-display">Core Ecosystem</h2>
-                <p class="text-slate-400 text-base sm:text-lg max-w-2xl mx-auto">Discover the four pillars of our platform designed to empower your digital journey.</p>
+                <h2 class="text-3xl sm:text-4xl font-bold mb-3 font-display">What we do</h2>
+                <p class="text-slate-400 text-base sm:text-lg max-w-xl mx-auto">Crypto, social growth, docs, and website deals — simple tools that help you trade and grow.</p>
             </div>
 
-            <div
-                x-data="ecosystemSlider"
-                class="flex gap-4 overflow-x-auto scrollbar-hide overscroll-x-contain cursor-grab active:cursor-grabbing md:cursor-default md:grid md:grid-cols-3 lg:grid-cols-4 md:gap-5 md:overflow-visible"
-            >
-                @foreach ($ecosystemItems as $item)
-                    <div class="glassmorphism w-[calc(50%-0.5rem)] shrink-0 p-5 sm:p-6 rounded-2xl hover:border-accent/40 transition-all group flex flex-col md:w-auto md:shrink md:min-w-0">
-                        <div class="w-12 h-12 mb-4 bg-accent/10 rounded-2xl flex items-center justify-center text-accent group-hover:bg-accent group-hover:text-white transition-all">
-                            <x-ui.icon :name="$item['icon']" class="w-6 h-6" />
+            <div x-data="ecosystemSlider" class="relative">
+                <div
+                    x-ref="track"
+                    class="flex gap-4 overflow-x-auto scrollbar-hide overscroll-x-contain cursor-grab active:cursor-grabbing md:cursor-default md:grid md:grid-cols-3 lg:grid-cols-4 md:gap-5 md:overflow-visible"
+                >
+                    @foreach ($ecosystemItems as $item)
+                        <div class="glassmorphism w-[calc(50%-0.5rem)] shrink-0 p-5 sm:p-6 rounded-2xl hover:border-accent/40 transition-all group flex flex-col md:w-auto md:shrink md:min-w-0">
+                            <div class="w-12 h-12 mb-4 bg-accent/10 rounded-2xl flex items-center justify-center text-accent group-hover:bg-accent group-hover:text-white transition-all">
+                                <x-ui.icon :name="$item['icon']" class="w-6 h-6" />
+                            </div>
+                            <h3 class="text-base sm:text-lg font-bold mb-2">{{ $item['title'] }}</h3>
+                            <p class="text-slate-400 text-sm leading-relaxed mb-5 flex-1">{{ $item['body'] }}</p>
+                            <a class="text-accent font-bold text-sm flex items-center gap-2 group/link mt-auto" href="{{ $item['href'] }}">
+                                Learn More <x-ui.icon name="arrow-right" class="w-4 h-4 group-hover/link:translate-x-1 transition-transform" />
+                            </a>
                         </div>
-                        <h3 class="text-lg font-bold mb-2">{{ $item['title'] }}</h3>
-                        <p class="text-slate-400 text-sm leading-relaxed mb-5 flex-1">{{ $item['body'] }}</p>
-                        <a class="text-accent font-bold text-sm flex items-center gap-2 group/link mt-auto" href="{{ $item['href'] }}">
-                            Learn More <x-ui.icon name="arrow-right" class="w-4 h-4 group-hover/link:translate-x-1 transition-transform" />
-                        </a>
-                    </div>
-                @endforeach
+                    @endforeach
+                </div>
+
+                <div class="mt-6 flex items-center justify-center gap-2 md:hidden" aria-label="Slide position">
+                    <template x-for="i in dotCount" :key="i">
+                        <button
+                            type="button"
+                            class="h-2 rounded-full transition-all duration-300"
+                            :class="active === (i - 1) ? 'w-6 bg-accent' : 'w-2 bg-white/25 hover:bg-white/40'"
+                            :aria-label="'Go to slide ' + i"
+                            :aria-current="active === (i - 1) ? 'true' : 'false'"
+                            @click="goTo(i - 1)"
+                        ></button>
+                    </template>
+                </div>
             </div>
         </div>
     </section>
@@ -110,36 +188,29 @@
             <div class="mx-auto max-w-3xl">
                 <div class="text-center mb-12 sm:mb-16">
                     <h2 class="text-3xl sm:text-4xl font-bold mb-4 font-display">Common Questions</h2>
-                    <p class="text-slate-400">Everything you need to know about the 7th Trade Hub ecosystem.</p>
+                    <p class="text-slate-400">Quick answers about wallets, marketplace, crypto, social, docs, and more.</p>
                 </div>
-                <div class="space-y-4">
-                    <details class="group glassmorphism rounded-2xl overflow-hidden border-white/5" open>
-                        <summary class="flex items-center justify-between p-6 cursor-pointer hover:bg-white/5 list-none">
-                            <span class="font-bold text-lg">How secure are the crypto transactions?</span>
-                            <x-ui.icon name="chevron-down" class="w-5 h-5 transition-transform group-open:rotate-180" />
-                        </summary>
-                        <div class="px-6 pb-6 text-slate-400 leading-relaxed">
-                            We use military-grade encryption and multi-sig cold storage for all assets. Every transaction is backed by our internal escrow system, ensuring funds are only released when both parties fulfill their obligations.
-                        </div>
-                    </details>
-                    <details class="group glassmorphism rounded-2xl overflow-hidden border-white/5">
-                        <summary class="flex items-center justify-between p-6 cursor-pointer hover:bg-white/5 list-none">
-                            <span class="font-bold text-lg">How long do service deliveries take?</span>
-                            <x-ui.icon name="chevron-down" class="w-5 h-5 transition-transform group-open:rotate-180" />
-                        </summary>
-                        <div class="px-6 pb-6 text-slate-400 leading-relaxed">
-                            Crypto swaps are typically processed within 5-15 minutes. Social growth services begin within 24 hours of ordering, while document templates are available for instant download.
-                        </div>
-                    </details>
-                    <details class="group glassmorphism rounded-2xl overflow-hidden border-white/5">
-                        <summary class="flex items-center justify-between p-6 cursor-pointer hover:bg-white/5 list-none">
-                            <span class="font-bold text-lg">Is there a verification process for listings?</span>
-                            <x-ui.icon name="chevron-down" class="w-5 h-5 transition-transform group-open:rotate-180" />
-                        </summary>
-                        <div class="px-6 pb-6 text-slate-400 leading-relaxed">
-                            Yes, every website listing goes through a rigorous vetting process where we verify domain ownership, traffic statistics via Analytics, and revenue through Stripe or PayPal integrations.
-                        </div>
-                    </details>
+                <div class="space-y-3">
+                    @foreach ($faqs as $index => $faq)
+                        <details class="group glassmorphism rounded-2xl overflow-hidden border-white/5" @if($index === 0) open @endif>
+                            <summary class="flex items-center justify-between gap-3 p-4 sm:p-5 cursor-pointer hover:bg-white/5 list-none">
+                                <span class="font-bold text-sm sm:text-base text-left">{{ $faq['q'] }}</span>
+                                <x-ui.icon name="chevron-down" class="w-5 h-5 shrink-0 transition-transform group-open:rotate-180" />
+                            </summary>
+                            <div class="px-4 sm:px-5 pb-4 sm:pb-5 text-slate-400 text-sm leading-relaxed">
+                                {{ $faq['a'] }}
+                            </div>
+                        </details>
+                    @endforeach
+                </div>
+                <div class="mt-8 text-center">
+                    <a
+                        href="{{ route('help') }}"
+                        class="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-white/15 text-sm font-bold text-white hover:bg-white/5 hover:border-accent/40 transition-all"
+                    >
+                        See more
+                        <x-ui.icon name="arrow-right" class="w-4 h-4" />
+                    </a>
                 </div>
             </div>
         </div>
