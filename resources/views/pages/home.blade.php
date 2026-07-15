@@ -104,13 +104,14 @@
             style="background-image: url('{{ asset('assets/images/Image_ro410gro410gro41.png') }}')"
             aria-hidden="true"
         ></div>
+        {{-- Dark wash over photo — keep texture visible, not blank --}}
         <div
             class="pointer-events-none absolute inset-0 z-[1]"
-            style="background: linear-gradient(180deg, rgba(15, 23, 42, 0.97) 0%, rgba(15, 23, 42, 0.94) 45%, rgba(15, 23, 42, 0.98) 100%), rgba(15, 23, 42, 0.82);"
+            style="background: linear-gradient(180deg, rgba(15, 23, 42, 0.78) 0%, rgba(15, 23, 42, 0.72) 50%, rgba(15, 23, 42, 0.82) 100%);"
             aria-hidden="true"
         ></div>
-        <div class="pointer-events-none absolute top-0 right-0 z-[1] w-[600px] h-[600px] bg-primary/10 blur-[140px] rounded-full" aria-hidden="true"></div>
-        <div class="pointer-events-none absolute bottom-0 left-0 z-[1] w-[500px] h-[500px] bg-accent/8 blur-[120px] rounded-full" aria-hidden="true"></div>
+        <div class="pointer-events-none absolute top-0 right-0 z-[1] w-[600px] h-[600px] bg-primary/15 blur-[140px] rounded-full" aria-hidden="true"></div>
+        <div class="pointer-events-none absolute bottom-0 left-0 z-[1] w-[500px] h-[500px] bg-accent/10 blur-[120px] rounded-full" aria-hidden="true"></div>
         <div class="relative z-10 w-full max-w-marketing mx-auto px-5 sm:px-6">
             <div class="mx-auto max-w-3xl text-center">
                 <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold mb-5 sm:mb-7 tracking-tight text-white leading-[1.15] font-display">
