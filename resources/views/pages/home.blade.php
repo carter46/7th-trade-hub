@@ -97,19 +97,17 @@
         $faqs = array_slice($faqs, 0, 5);
     @endphp
 
-    <section class="relative overflow-hidden pt-28 pb-20 sm:pt-32 sm:pb-24 lg:min-h-[calc(100vh-5rem)] lg:flex lg:items-center lg:pt-36 lg:pb-36">
-        {{-- Subtle photo under dark overlay --}}
-        <div class="pointer-events-none absolute inset-0 -z-20" aria-hidden="true">
-            <img
-                src="{{ asset('assets/images/Image_ro410gro410gro41.png') }}"
-                alt=""
-                class="h-full w-full object-cover opacity-[0.18]"
-            >
-        </div>
-        <div class="pointer-events-none absolute inset-0 -z-10 bg-dark/88" aria-hidden="true"></div>
-        <div class="absolute top-0 right-0 -z-10 w-[600px] h-[600px] bg-primary/20 blur-[140px] rounded-full"></div>
-        <div class="absolute bottom-0 left-0 -z-10 w-[500px] h-[500px] bg-accent/10 blur-[120px] rounded-full"></div>
-        <div class="relative w-full max-w-marketing mx-auto px-5 sm:px-6">
+    <section class="relative isolate overflow-hidden pt-28 pb-20 sm:pt-32 sm:pb-24 lg:min-h-[calc(100dvh-5rem)] lg:flex lg:items-center lg:pt-36 lg:pb-36">
+        {{-- Fill the viewport section; image uses cover (does not drive height) --}}
+        <div
+            class="pointer-events-none absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
+            style="background-image: url('{{ asset('assets/images/Image_ro410gro410gro41.png') }}')"
+            aria-hidden="true"
+        ></div>
+        <div class="pointer-events-none absolute inset-0 z-[1] bg-[#0F172A]/94" aria-hidden="true"></div>
+        <div class="pointer-events-none absolute top-0 right-0 z-[1] w-[600px] h-[600px] bg-primary/15 blur-[140px] rounded-full" aria-hidden="true"></div>
+        <div class="pointer-events-none absolute bottom-0 left-0 z-[1] w-[500px] h-[500px] bg-accent/10 blur-[120px] rounded-full" aria-hidden="true"></div>
+        <div class="relative z-10 w-full max-w-marketing mx-auto px-5 sm:px-6">
             <div class="mx-auto max-w-3xl text-center">
                 <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold mb-5 sm:mb-7 tracking-tight text-white leading-[1.15] font-display">
                     The Ultimate <span class="text-transparent bg-clip-text bg-gradient-to-r from-accent to-primary">Digital Service</span> Marketplace

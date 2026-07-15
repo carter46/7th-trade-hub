@@ -14,24 +14,26 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="relative p-4 sm:p-8 min-h-screen flex items-center justify-center bg-surface font-sans text-text-primary antialiased overflow-x-hidden">
-    <div class="pointer-events-none absolute inset-0 -z-20" aria-hidden="true">
-        <img
-            src="{{ asset('assets/images/Image_ro410gro410gro41.png') }}"
-            alt=""
-            class="h-full w-full object-cover opacity-[0.22]"
-        >
-    </div>
-    <div class="pointer-events-none absolute inset-0 -z-10 bg-[#0F172A]/90" aria-hidden="true"></div>
+<body class="relative isolate min-h-screen flex items-center justify-center bg-[#0F172A] font-sans text-text-primary antialiased overflow-x-hidden p-4 sm:p-8">
     <div
-        class="pointer-events-none absolute inset-0 -z-10"
+        class="pointer-events-none absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
+        style="background-image: url('{{ asset('assets/images/Image_ro410gro410gro41.png') }}')"
         aria-hidden="true"
-        style="background-image: radial-gradient(circle at top right, rgba(22, 163, 74, 0.12), transparent), radial-gradient(circle at bottom left, rgba(22, 163, 74, 0.06), transparent);"
+    ></div>
+    <div class="pointer-events-none absolute inset-0 z-[1] bg-[#0F172A]/94" aria-hidden="true"></div>
+    <div
+        class="pointer-events-none absolute inset-0 z-[1]"
+        aria-hidden="true"
+        style="background-image: radial-gradient(circle at top right, rgba(22, 163, 74, 0.10), transparent), radial-gradient(circle at bottom left, rgba(22, 163, 74, 0.05), transparent);"
     ></div>
 
-    @yield('content')
+    <div class="relative z-10 w-full">
+        @yield('content')
+    </div>
 
-    <x-ui.toast />
+    <div class="relative z-10">
+        <x-ui.toast />
+    </div>
     @RegisterServiceWorkerScript
 </body>
 </html>
