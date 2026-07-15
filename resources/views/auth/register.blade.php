@@ -1,7 +1,9 @@
 <x-layouts.auth>
     <main class="w-full max-w-auth mx-auto">
         <div class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-text-primary tracking-tight">7th Trade Hub</h1>
+            <a href="{{ route('home') }}" class="inline-block group">
+                <h1 class="text-3xl font-bold text-text-primary tracking-tight group-hover:text-accent transition-colors">7th Trade Hub</h1>
+            </a>
             <p class="text-text-secondary mt-2">Create your free account.</p>
         </div>
 
