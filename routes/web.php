@@ -55,7 +55,6 @@ Route::view('/exchange', 'pages.exchange')->name('exchange');
 Route::view('/templates', 'pages.templates')->name('templates');
 Route::view('/document-templates', 'pages.document-templates')->name('document-templates');
 Route::view('/website-listings', 'pages.website-listings')->name('website-listings');
-Route::view('/code', 'pages.code')->name('code');
 Route::get('/support', fn () => redirect()->route('login'))->name('support');
 Route::get('/u/{username}', function (string $username) {
     $user = \App\Models\User::where('username', $username)->firstOrFail();

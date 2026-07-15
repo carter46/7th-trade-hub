@@ -35,7 +35,6 @@
                     <a class="hover:text-accent transition-colors" href="{{ route('services') }}">Services</a>
                     <a class="hover:text-accent transition-colors" href="{{ route('templates') }}">Templates</a>
                     <a class="hover:text-accent transition-colors" href="{{ route('website-listings') }}">Website Listings</a>
-                    <a class="hover:text-accent transition-colors" href="{{ route('code') }}">Code</a>
                     <a class="hover:text-accent transition-colors" href="{{ route('help') }}">Help</a>
                 </div>
 
@@ -117,7 +116,6 @@
                     <a class="px-4 py-3 rounded-xl text-sm font-medium text-slate-200 hover:bg-primary/15 hover:text-accent transition-colors" href="{{ route('services') }}" @click="close()">Services</a>
                     <a class="px-4 py-3 rounded-xl text-sm font-medium text-slate-200 hover:bg-primary/15 hover:text-accent transition-colors" href="{{ route('templates') }}" @click="close()">Templates</a>
                     <a class="px-4 py-3 rounded-xl text-sm font-medium text-slate-200 hover:bg-primary/15 hover:text-accent transition-colors" href="{{ route('website-listings') }}" @click="close()">Website Listings</a>
-                    <a class="px-4 py-3 rounded-xl text-sm font-medium text-slate-200 hover:bg-primary/15 hover:text-accent transition-colors" href="{{ route('code') }}" @click="close()">Code</a>
                     <a class="px-4 py-3 rounded-xl text-sm font-medium text-slate-200 hover:bg-primary/15 hover:text-accent transition-colors" href="{{ route('help') }}" @click="close()">Help</a>
 
                     @auth
@@ -152,7 +150,6 @@
                             <li><a class="hover:text-accent transition-colors" href="{{ route('marketplace.web-services') }}">Web Services</a></li>
                             <li><a class="hover:text-accent transition-colors" href="{{ route('exchange') }}">Crypto Exchange</a></li>
                             <li><a class="hover:text-accent transition-colors" href="{{ route('templates') }}">Templates</a></li>
-                            <li><a class="hover:text-accent transition-colors" href="{{ route('code') }}">Code &amp; API</a></li>
                         </ul>
                     </div>
                     <div>
