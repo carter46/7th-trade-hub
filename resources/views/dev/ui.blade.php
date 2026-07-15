@@ -8,7 +8,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-surface text-text-primary font-sans min-h-screen">
-    <div class="max-w-marketing mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-16">
+    <div class="max-w-marketing mx-auto px-5 sm:px-6 py-10 space-y-16">
         <header class="space-y-2">
             <p class="text-xs uppercase tracking-widest text-text-muted">Local only · /dev/ui</p>
             <h1 class="text-3xl font-bold">Design system showcase</h1>

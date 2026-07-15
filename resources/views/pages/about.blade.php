@@ -18,7 +18,7 @@
         </div>
     </section>
 
-    <section class="py-32 px-6 max-w-marketing mx-auto">
+    <section class="py-32 max-w-marketing mx-auto px-5 sm:px-6">
         <div class="grid lg:grid-cols-2 gap-20 items-center">
             <div class="order-2 lg:order-1">
                 <h3 class="text-accent font-bold text-xs uppercase tracking-widest mb-4">Our Mission</h3>

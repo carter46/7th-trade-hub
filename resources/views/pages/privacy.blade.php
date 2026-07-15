@@ -4,8 +4,8 @@
 
 @section('content')
     <!-- Based on prototype-archive/privacy_policy.html -->
-    <section class="py-16 px-4 md:px-8">
-        <div class="max-w-4xl mx-auto glassmorphism rounded-3xl p-8 md:p-12 border border-white/10">
+    <section class="py-16 max-w-marketing mx-auto px-5 sm:px-6">
+        <div class="max-w-3xl mx-auto glassmorphism rounded-3xl p-8 md:p-12 border border-white/10">
             <h1 class="text-3xl md:text-5xl font-black font-display mb-6">Privacy Policy</h1>
             <p class="text-slate-400 mb-10">This policy will be migrated fully from the prototype text and updated for production compliance.</p>
 

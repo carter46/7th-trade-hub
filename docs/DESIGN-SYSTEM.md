@@ -59,6 +59,9 @@ Brand: `primary`, `accent`, `success`, `warning`, `danger`.
 | `full` | `max-w-content-full` | Data tables |
 | `form` | `max-w-form` | Create/edit forms |
 | `auth` | `max-w-auth` | Login, OTP |
+| *(marketing shell)* | `max-w-marketing` (1150px / `71.875rem`) | Marketing header, footer, and public pages |
+
+Marketing containers use `max-w-marketing mx-auto` with horizontal padding `px-5 sm:px-6` (~20–24px) so content never touches screen edges. Do not invent a second marketing width token.
 
 ---
 

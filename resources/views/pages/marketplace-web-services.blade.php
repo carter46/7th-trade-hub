@@ -4,7 +4,7 @@
 
 @section('content')
 <section class="relative overflow-hidden py-20 lg:py-32">
-    <div class="max-w-marketing mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="max-w-marketing mx-auto px-5 sm:px-6">
         <div class="grid lg:grid-cols-2 gap-12 items-center">
             <div class="flex flex-col gap-8">
                 <span class="text-primary font-bold tracking-widest text-xs uppercase">Premium Digital Solutions</span>
@@ -34,7 +34,7 @@
     </div>
 </section>
 <section class="py-20 bg-slate-900/50">
-    <div class="max-w-marketing mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="max-w-marketing mx-auto px-5 sm:px-6">
         <div class="text-center mb-16">
             <h2 class="text-3xl font-bold text-white mb-4">Tailored Digital Solutions</h2>
             <p class="text-slate-400 max-w-2xl mx-auto">Web development, templates, and marketplace listings in one place.</p>

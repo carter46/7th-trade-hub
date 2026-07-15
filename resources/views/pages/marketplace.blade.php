@@ -2,7 +2,7 @@
 @section('title', 'Marketplace')
 @section('meta_description', 'Browse and buy digital products and services on 7th Trade Hub. Escrow-protected NGN payments.')
 @section('content')
-<section class="max-w-marketing mx-auto px-4 sm:px-6 lg:px-8 py-16">
+<section class="max-w-marketing mx-auto px-5 sm:px-6 py-16">
     <h1 class="text-4xl font-bold text-text-primary mb-8">Marketplace</h1>
 
     <form method="GET" class="mb-8">

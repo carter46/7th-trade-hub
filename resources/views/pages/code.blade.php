@@ -4,7 +4,7 @@
 
 @section('content')
 <section class="py-16 lg:py-24">
-    <div class="max-w-marketing mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="max-w-marketing mx-auto px-5 sm:px-6">
         <div class="glassmorphism rounded-3xl p-10 lg:p-16 border border-white/10">
             <div class="flex items-center gap-4 mb-8">
                 <div class="size-14 rounded-xl bg-primary/20 flex items-center justify-center text-primary">

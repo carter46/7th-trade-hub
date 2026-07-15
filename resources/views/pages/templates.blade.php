@@ -4,7 +4,7 @@
 
 @section('content')
 <section class="py-16">
-    <div class="max-w-marketing mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="max-w-marketing mx-auto px-5 sm:px-6">
         <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
             <div class="max-w-2xl">
                 <h1 class="text-4xl font-extrabold text-white tracking-tight mb-3">Document Templates</h1>

@@ -8,7 +8,7 @@
         <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary rounded-full blur-[120px]"></div>
         <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600 rounded-full blur-[120px]"></div>
     </div>
-    <div class="max-w-marketing mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+    <div class="max-w-marketing mx-auto px-5 sm:px-6 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
         <div class="flex flex-col gap-6">
             <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-wider w-fit">
                 <span class="relative flex h-2 w-2">
@@ -74,7 +74,7 @@
     </div>
 </section>
 <section class="py-20 bg-slate-900/50" id="how-it-works">
-    <div class="max-w-marketing mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="max-w-marketing mx-auto px-5 sm:px-6">
         <div class="text-center mb-16">
             <h2 class="font-display text-3xl font-bold mb-4">How it Works</h2>
             <p class="text-slate-400 max-w-xl mx-auto">Three simple steps to convert your crypto into cash.</p>

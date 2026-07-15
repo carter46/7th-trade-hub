@@ -23,7 +23,7 @@ export default {
                 'content-full': '100%',
                 'form': '32rem',
                 'auth': '28rem',
-                'marketing': '80rem',
+                'marketing': '71.875rem', // 1150px
             },
             spacing: {
                 'section': '1.5rem',

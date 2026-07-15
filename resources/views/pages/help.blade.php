@@ -15,7 +15,7 @@
         </div>
     </section>
 
-    <section class="max-w-marketing mx-auto px-4 py-16">
+    <section class="max-w-marketing mx-auto px-5 sm:px-6 py-16">
         <h2 class="text-2xl font-bold mb-8 text-text-primary">Browse Categories</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <div class="p-6 bg-card-dark border border-slate-800 rounded-2xl hover:border-primary/50 transition-colors group cursor-pointer shadow-lg shadow-black/20">

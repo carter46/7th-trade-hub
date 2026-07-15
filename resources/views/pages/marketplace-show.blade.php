@@ -1,7 +1,8 @@
 @extends('layouts.marketing')
 @section('title', $listing->title)
 @section('content')
-<section class="max-w-content-sm mx-auto px-4 sm:px-6 py-16">
+<section class="max-w-marketing mx-auto px-5 sm:px-6 py-16">
+<div class="max-w-content-sm">
     <h1 class="text-4xl font-bold text-text-primary">{{ $listing->title }}</h1>
     @if($listing->listingCategory)
         <p class="text-text-muted text-sm mt-2">{{ $listing->listingCategory->name }}</p>
@@ -51,5 +52,6 @@
             @endforeach
         </div>
     @endif
+</div>
 </section>
 @endsection
