@@ -38,6 +38,69 @@ document.addEventListener('alpine:init', () => {
         },
     }));
 
+    Alpine.data('listingCategoryForm', (parents = [], parentId = 0, categoryId = 0) => ({
+        parents,
+        parentId,
+        categoryId,
+        submitting: false,
+        get children() {
+            const parent = this.parents.find((p) => Number(p.id) === Number(this.parentId));
+            return parent ? parent.children : [];
+        },
+        init() {
+            this.$watch('parentId', () => {
+                if (!this.children.some((c) => Number(c.id) === Number(this.categoryId))) {
+                    this.categoryId = this.children[0]?.id || 0;
+                }
+            });
+        },
+    }));
+
+    Alpine.data('exchangeCalc', (rates = {}) => ({
+        rates,
+        asset: Object.keys(rates)[0] || 'USDT',
+        amount: 1,
+        get receive() {
+            const row = this.rates[this.asset];
+            if (!row) return 0;
+            return (Number(this.amount) || 0) * Number(row.sell || 0);
+        },
+        get receiveFormatted() {
+            return new Intl.NumberFormat('en-NG', { maximumFractionDigits: 2 }).format(this.receive);
+        },
+        get hint() {
+            const row = this.rates[this.asset];
+            if (!row) return '';
+            const parts = [];
+            if (row.min) parts.push('Min ' + row.min);
+            if (row.max) parts.push('Max ' + row.max);
+            if (row.time) parts.push(row.time);
+            return parts.join(' · ');
+        },
+    }));
+
+    Alpine.data('platformCheckout', (variants = [], options = {}) => ({
+        variants,
+        variantId: options.defaultVariantId
+            ?? variants.find((v) => v.is_default)?.id
+            ?? variants[0]?.id
+            ?? null,
+        qty: 1,
+        domainMode: 'none',
+        basePrice: Number(options.basePrice || 0),
+        get unit() {
+            const row = this.variants.find((v) => Number(v.id) === Number(this.variantId));
+            if (row) return Number(row.price);
+            return this.basePrice;
+        },
+        get total() {
+            return this.unit * (Number(this.qty) || 1);
+        },
+        get totalFormatted() {
+            return new Intl.NumberFormat('en-NG', { maximumFractionDigits: 2 }).format(this.total);
+        },
+    }));
+
     Alpine.data('ecosystemSlider', () => ({
         dragging: false,
         startX: 0,

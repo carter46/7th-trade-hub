@@ -32,6 +32,10 @@ php artisan db:seed --class=ProductionSeeder
 
 Requires `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env`. **Never** run full `db:seed` in production (demo data).
 
+`ProductionSeeder` also loads marketplace/platform category trees, platform catalog products (≈6 per type), and exchange rates. Demo marketplace listings only run when `SEED_DEMO_DATA=true`. Catalog seeders use `firstOrCreate` by slug so re-runs do not overwrite admin edits.
+
+After a **schema upgrade** on an existing DB, import/run the Phase 1 tables plus the Phase 1.1 upgrade notes in `database/sql/migration.sql` (or `php artisan migrate`), then re-run `ProductionSeeder` if needed.
+
 See [PRODUCTION-ENV-CHECKLIST.md](PRODUCTION-ENV-CHECKLIST.md) and [LAUNCH-CHECKLIST.md](LAUNCH-CHECKLIST.md).
 
 ## Repository requirements

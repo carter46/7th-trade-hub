@@ -147,7 +147,8 @@
                         <h4 class="text-white font-bold mb-6 font-display">Platform</h4>
                         <ul class="space-y-4 text-slate-500 text-sm">
                             <li><a class="hover:text-accent transition-colors" href="{{ route('marketplace') }}">Marketplace</a></li>
-                            <li><a class="hover:text-accent transition-colors" href="{{ route('marketplace.web-services') }}">Web Services</a></li>
+                            <li><a class="hover:text-accent transition-colors" href="{{ route('services') }}">Services</a></li>
+                            <li><a class="hover:text-accent transition-colors" href="{{ route('website-listings') }}">Website Listings</a></li>
                             <li><a class="hover:text-accent transition-colors" href="{{ route('exchange') }}">Crypto Exchange</a></li>
                             <li><a class="hover:text-accent transition-colors" href="{{ route('templates') }}">Templates</a></li>
                         </ul>
@@ -182,6 +183,8 @@
                 </div>
             </div>
         </footer>
+
+        <x-ui.toast />
 
         @RegisterServiceWorkerScript
     </body>

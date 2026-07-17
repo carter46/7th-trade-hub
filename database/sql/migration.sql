@@ -170,15 +170,20 @@ CREATE TABLE IF NOT EXISTS `transactions` (
 
 CREATE TABLE IF NOT EXISTS `orders` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `source` varchar(20) NOT NULL DEFAULT 'marketplace',
   `user_id` bigint unsigned NOT NULL,
   `listing_id` bigint unsigned DEFAULT NULL,
   `reference` varchar(32) NOT NULL,
-  `amount` decimal(12,2) NOT NULL,
+  `idempotency_key` varchar(64) DEFAULT NULL,
+  `amount` decimal(18,2) NOT NULL,
+  `total_amount` decimal(18,2) DEFAULT NULL,
   `status` varchar(20) NOT NULL DEFAULT 'pending',
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `orders_reference_unique` (`reference`),
+  UNIQUE KEY `orders_idempotency_key_unique` (`idempotency_key`),
+  KEY `orders_source_index` (`source`),
   CONSTRAINT `orders_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `orders_listing_id_foreign` FOREIGN KEY (`listing_id`) REFERENCES `listings` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -299,14 +304,18 @@ CREATE TABLE IF NOT EXISTS `kyc_submissions` (
 
 CREATE TABLE IF NOT EXISTS `categories` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `parent_id` bigint unsigned DEFAULT NULL,
   `name` varchar(255) NOT NULL,
   `slug` varchar(255) NOT NULL,
   `type` varchar(30) NOT NULL DEFAULT 'marketplace',
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `sort_order` int unsigned NOT NULL DEFAULT 0,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `categories_slug_unique` (`slug`)
+  UNIQUE KEY `categories_slug_unique` (`slug`),
+  KEY `categories_parent_id_foreign` (`parent_id`),
+  CONSTRAINT `categories_parent_id_foreign` FOREIGN KEY (`parent_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `listing_versions` (
@@ -531,5 +540,167 @@ CREATE TABLE IF NOT EXISTS `gateway_operations` (
   CONSTRAINT `gateway_operations_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `gateway_operations_wallet_id_foreign` FOREIGN KEY (`wallet_id`) REFERENCES `wallets` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------- Two-catalog Phase 1 ----------
+CREATE TABLE IF NOT EXISTS `platform_categories` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `parent_id` bigint unsigned DEFAULT NULL,
+  `name` varchar(255) NOT NULL,
+  `slug` varchar(255) NOT NULL,
+  `product_type` varchar(40) NOT NULL,
+  `sort_order` int unsigned NOT NULL DEFAULT 0,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `platform_categories_slug_unique` (`slug`),
+  KEY `platform_categories_parent_id_foreign` (`parent_id`),
+  CONSTRAINT `platform_categories_parent_id_foreign` FOREIGN KEY (`parent_id`) REFERENCES `platform_categories` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `platform_products` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `platform_category_id` bigint unsigned DEFAULT NULL,
+  `product_type` varchar(40) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `slug` varchar(255) NOT NULL,
+  `short_description` varchar(500) DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'draft',
+  `is_featured` tinyint(1) NOT NULL DEFAULT 0,
+  `sort_order` int unsigned NOT NULL DEFAULT 0,
+  `hero_image` varchar(255) DEFAULT NULL,
+  `demo_url` varchar(255) DEFAULT NULL,
+  `demo_username` varchar(255) DEFAULT NULL,
+  `demo_password` varchar(255) DEFAULT NULL,
+  `industry` varchar(255) DEFAULT NULL,
+  `framework` varchar(255) DEFAULT NULL,
+  `is_responsive` tinyint(1) NOT NULL DEFAULT 1,
+  `is_seo_ready` tinyint(1) NOT NULL DEFAULT 0,
+  `support_period` varchar(255) DEFAULT NULL,
+  `features` json DEFAULT NULL,
+  `requirements` json DEFAULT NULL,
+  `whats_included` json DEFAULT NULL,
+  `faqs` json DEFAULT NULL,
+  `support_text` text DEFAULT NULL,
+  `base_price` decimal(18,2) NOT NULL DEFAULT 0.00,
+  `meta` json DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `platform_products_slug_unique` (`slug`),
+  KEY `platform_products_product_type_status_index` (`product_type`,`status`),
+  KEY `platform_products_is_featured_status_index` (`is_featured`,`status`),
+  KEY `platform_products_platform_category_id_foreign` (`platform_category_id`),
+  CONSTRAINT `platform_products_platform_category_id_foreign` FOREIGN KEY (`platform_category_id`) REFERENCES `platform_categories` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `platform_product_images` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `platform_product_id` bigint unsigned NOT NULL,
+  `path` varchar(255) NOT NULL,
+  `alt` varchar(255) DEFAULT NULL,
+  `sort_order` int unsigned NOT NULL DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `platform_product_images_platform_product_id_foreign` (`platform_product_id`),
+  CONSTRAINT `platform_product_images_platform_product_id_foreign` FOREIGN KEY (`platform_product_id`) REFERENCES `platform_products` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `platform_product_variants` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `platform_product_id` bigint unsigned NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `label` varchar(255) DEFAULT NULL,
+  `sku` varchar(255) DEFAULT NULL,
+  `duration_months` int unsigned DEFAULT NULL,
+  `price` decimal(18,2) NOT NULL,
+  `sort_order` int unsigned NOT NULL DEFAULT 0,
+  `is_default` tinyint(1) NOT NULL DEFAULT 0,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `platform_product_variants_sku_unique` (`sku`),
+  KEY `platform_product_variants_platform_product_id_foreign` (`platform_product_id`),
+  CONSTRAINT `platform_product_variants_platform_product_id_foreign` FOREIGN KEY (`platform_product_id`) REFERENCES `platform_products` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `exchange_rates` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `asset` varchar(20) NOT NULL,
+  `buy_rate_ngn` decimal(18,2) NOT NULL,
+  `sell_rate_ngn` decimal(18,2) NOT NULL,
+  `minimum_amount` decimal(18,8) DEFAULT NULL,
+  `maximum_amount` decimal(18,8) DEFAULT NULL,
+  `processing_time` varchar(255) DEFAULT NULL,
+  `is_featured` tinyint(1) NOT NULL DEFAULT 0,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `sort_order` int unsigned NOT NULL DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `exchange_rates_asset_unique` (`asset`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `order_items` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `order_id` bigint unsigned NOT NULL,
+  `item_type` varchar(40) NOT NULL,
+  `item_id` bigint unsigned NOT NULL,
+  `quantity` int unsigned NOT NULL DEFAULT 1,
+  `unit_price` decimal(18,2) NOT NULL,
+  `line_total` decimal(18,2) NOT NULL,
+  `platform_product_variant_id` bigint unsigned DEFAULT NULL,
+  `options` json DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `order_items_item_type_item_id_index` (`item_type`,`item_id`),
+  KEY `order_items_order_id_foreign` (`order_id`),
+  KEY `order_items_platform_product_variant_id_foreign` (`platform_product_variant_id`),
+  CONSTRAINT `order_items_order_id_foreign` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `order_items_platform_product_variant_id_foreign` FOREIGN KEY (`platform_product_variant_id`) REFERENCES `platform_product_variants` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `favorites` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` bigint unsigned NOT NULL,
+  `favoritable_type` varchar(255) NOT NULL,
+  `favoritable_id` bigint unsigned NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `favorites_user_favoritable_unique` (`user_id`,`favoritable_type`,`favoritable_id`),
+  CONSTRAINT `favorites_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `product_reviews` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` bigint unsigned NOT NULL,
+  `platform_product_id` bigint unsigned NOT NULL,
+  `rating` tinyint unsigned NOT NULL,
+  `comment` text DEFAULT NULL,
+  `is_approved` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `product_reviews_user_id_platform_product_id_unique` (`user_id`,`platform_product_id`),
+  KEY `product_reviews_platform_product_id_foreign` (`platform_product_id`),
+  CONSTRAINT `product_reviews_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `product_reviews_platform_product_id_foreign` FOREIGN KEY (`platform_product_id`) REFERENCES `platform_products` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------- Phase 1.1 upgrade (existing DBs that already imported older schema) ----------
+-- Safe to run on live DBs; ignore duplicate column/index errors if already applied.
+-- ALTER TABLE `categories` ADD COLUMN `parent_id` bigint unsigned DEFAULT NULL AFTER `id`;
+-- ALTER TABLE `categories` ADD COLUMN `sort_order` int unsigned NOT NULL DEFAULT 0 AFTER `is_active`;
+-- ALTER TABLE `orders` ADD COLUMN `source` varchar(20) NOT NULL DEFAULT 'marketplace' AFTER `id`;
+-- ALTER TABLE `orders` ADD COLUMN `total_amount` decimal(18,2) DEFAULT NULL AFTER `amount`;
+-- ALTER TABLE `orders` ADD COLUMN `idempotency_key` varchar(64) DEFAULT NULL AFTER `reference`;
+-- ALTER TABLE `orders` MODIFY `amount` decimal(18,2) NOT NULL;
+-- ALTER TABLE `orders` ADD UNIQUE KEY `orders_idempotency_key_unique` (`idempotency_key`);
+-- ALTER TABLE `orders` ADD KEY `orders_source_index` (`source`);
 
 COMMIT;

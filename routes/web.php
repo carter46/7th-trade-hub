@@ -47,14 +47,26 @@ Route::view('/terms', 'pages.terms')->name('terms');
 Route::view('/privacy', 'pages.privacy')->name('privacy');
 
 Route::get('/marketplace', [MarketplaceController::class, 'index'])->name('marketplace');
+Route::redirect('/marketplace/web-services', '/services')->name('marketplace.web-services');
 Route::get('/marketplace/{slug}', [MarketplaceController::class, 'show'])->name('marketplace.show');
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
-Route::view('/marketplace/web-services', 'pages.marketplace-web-services')->name('marketplace.web-services');
-Route::view('/services', 'pages.services')->name('services');
-Route::view('/exchange', 'pages.exchange')->name('exchange');
-Route::view('/templates', 'pages.templates')->name('templates');
-Route::view('/document-templates', 'pages.document-templates')->name('document-templates');
-Route::view('/website-listings', 'pages.website-listings')->name('website-listings');
+
+Route::get('/services', [\App\Modules\Catalog\Http\Controllers\ServiceController::class, 'index'])->name('services');
+Route::get('/services/{slug}', [\App\Modules\Catalog\Http\Controllers\ServiceController::class, 'show'])->name('services.show');
+Route::get('/exchange', \App\Modules\Catalog\Http\Controllers\ExchangePageController::class)->name('exchange');
+Route::get('/templates', [\App\Modules\Catalog\Http\Controllers\TemplateController::class, 'index'])->name('templates');
+Route::get('/templates/{slug}', [\App\Modules\Catalog\Http\Controllers\TemplateController::class, 'show'])->name('templates.show');
+Route::redirect('/document-templates', '/templates')->name('document-templates');
+Route::get('/website-listings', [\App\Modules\Catalog\Http\Controllers\WebsiteListingController::class, 'index'])->name('website-listings');
+Route::get('/website-listings/{slug}', [\App\Modules\Catalog\Http\Controllers\WebsiteListingController::class, 'show'])->name('website-listings.show');
+Route::get('/checkout/platform/{slug}', [\App\Modules\Catalog\Http\Controllers\PlatformCheckoutController::class, 'show'])
+    ->name('checkout.platform.show');
+Route::post('/checkout/platform/{slug}', [\App\Modules\Catalog\Http\Controllers\PlatformCheckoutController::class, 'store'])
+    ->middleware(['auth', 'verified', 'has_wallet', 'throttle:10,1'])
+    ->name('checkout.platform.store');
+Route::post('/favorites/toggle', [\App\Modules\Catalog\Http\Controllers\FavoriteController::class, 'toggle'])
+    ->middleware(['auth', 'verified', 'throttle:30,1'])
+    ->name('favorites.toggle');
 Route::get('/support', fn () => redirect()->route('login'))->name('support');
 Route::get('/u/{username}', function (string $username) {
     $user = \App\Models\User::where('username', $username)->firstOrFail();
@@ -80,7 +92,9 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
         Route::get('/withdrawal/create', [WithdrawalController::class, 'create'])->name('.withdrawal.create');
         Route::post('/withdrawal', [WithdrawalController::class, 'store'])->name('.withdrawal.store');
         Route::get('/history', [HistoryController::class, 'index'])->name('.history');
-        Route::post('/checkout/{listing}', [CheckoutController::class, 'store'])->name('.checkout.store');
+        Route::post('/checkout/{listing}', [CheckoutController::class, 'store'])
+            ->middleware('throttle:10,1')
+            ->name('.checkout.store');
     });
     Route::get('/exchange', [DashboardController::class, 'exchange'])->name('.exchange');
     Route::get('/social', [DashboardController::class, 'social'])->name('.social');
@@ -150,6 +164,21 @@ Route::middleware(['auth', 'verified', 'role:admin', 'throttle:60,1'])->prefix('
     Route::get('/wallet-adjustment', [WalletAdjustmentController::class, 'create'])->name('.wallet-adjustment');
     Route::post('/wallet-adjustment', [WalletAdjustmentController::class, 'store'])->name('.wallet-adjustment.store');
     Route::get('/analytics', [AdminDashboardController::class, 'analytics'])->name('.analytics');
+    Route::get('/platform-products', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'index'])->name('.platform-products');
+    Route::get('/platform-products/create', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'create'])->name('.platform-products.create');
+    Route::post('/platform-products', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'store'])->name('.platform-products.store');
+    Route::get('/platform-products/{platformProduct}/edit', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'edit'])->name('.platform-products.edit');
+    Route::put('/platform-products/{platformProduct}', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'update'])->name('.platform-products.update');
+    Route::delete('/platform-products/{platformProduct}', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'destroy'])->name('.platform-products.destroy');
+    Route::get('/marketplace-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'marketplaceCategories'])->name('.marketplace-categories');
+    Route::post('/marketplace-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'storeMarketplaceCategory'])->name('.marketplace-categories.store');
+    Route::post('/marketplace-categories/{category}/toggle', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'toggleMarketplaceCategory'])->name('.marketplace-categories.toggle');
+    Route::get('/platform-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'platformCategories'])->name('.platform-categories');
+    Route::post('/platform-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'storePlatformCategory'])->name('.platform-categories.store');
+    Route::post('/platform-categories/{platformCategory}/toggle', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'togglePlatformCategory'])->name('.platform-categories.toggle');
+    Route::get('/exchange-rates', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'exchangeRates'])->name('.exchange-rates');
+    Route::post('/exchange-rates', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'storeExchangeRate'])->name('.exchange-rates.store');
+    Route::delete('/exchange-rates/{exchangeRate}', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'destroyExchangeRate'])->name('.exchange-rates.destroy');
 });
 
 Route::middleware('auth')->group(function () {

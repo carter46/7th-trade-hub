@@ -13,11 +13,14 @@ A real marketplace and investment platform where users hold a **platform wallet 
 ## Module boundaries
 
 - **Marketplace** — listings, orders, reviews, categories, search, messages
+- **Catalog** — admin-owned platform products (services, templates, website packages), exchange rates, platform checkout
 - **Wallet** — wallet, fundings (deposits), withdrawals, ledger, escrows, crypto sell OTC, KYC
-- **Admin** — users, approvals, reports, settings, audit
+- **Admin** — users, approvals, reports, settings, audit, platform catalog CRUD
 - **Support** — tickets (categorized), replies, notifications
 
 Modules interact via services and events only.
+
+**Two catalogs:** Platform Products ≠ Marketplace Listings. See [TWO-CATALOG.md](TWO-CATALOG.md).
 
 ## Core user journey (v1)
 

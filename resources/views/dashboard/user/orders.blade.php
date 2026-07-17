@@ -7,14 +7,14 @@
     <x-ui.table
         :empty="$orders->isEmpty()"
         empty-title="No orders yet"
-        empty-description="When you buy from the marketplace, your orders will appear here."
+        empty-description="When you buy from Services or the marketplace, your orders will appear here."
         empty-icon="orders"
-        :empty-action="['href' => route('marketplace'), 'label' => 'Browse marketplace']"
+        :empty-action="['href' => route('services'), 'label' => 'Browse services']"
         striped
     >
         <x-slot:head>
             <x-ui.th>Reference</x-ui.th>
-            <x-ui.th>Listing</x-ui.th>
+            <x-ui.th>Item</x-ui.th>
             <x-ui.th>Amount</x-ui.th>
             <x-ui.th>Status</x-ui.th>
             <x-ui.th>Escrow</x-ui.th>
@@ -22,10 +22,34 @@
             <x-ui.th>Actions</x-ui.th>
         </x-slot:head>
         @foreach ($orders as $order)
+            @php
+                $item = $order->items->first();
+                $title = $order->listing?->title
+                    ?? ($item?->options['product_title'] ?? null)
+                    ?? ($item ? ucfirst(str_replace('_', ' ', $item->item_type)).' #'.$item->item_id : null)
+                    ?? '—';
+                $meta = [];
+                if ($item && $item->quantity > 1) {
+                    $meta[] = 'Qty '.$item->quantity;
+                }
+                if (! empty($item?->options['variant_label'])) {
+                    $meta[] = $item->options['variant_label'];
+                } elseif ($item?->variant) {
+                    $meta[] = $item->variant->displayLabel();
+                }
+                if ($order->source === 'platform') {
+                    $meta[] = 'Platform';
+                }
+            @endphp
             <tr class="hover:bg-muted/50">
                 <x-ui.td class="font-mono text-sm">{{ $order->reference }}</x-ui.td>
-                <x-ui.td>{{ $order->listing?->title ?? '—' }}</x-ui.td>
-                <x-ui.td>₦{{ number_format($order->amount, 2) }}</x-ui.td>
+                <x-ui.td>
+                    <div>{{ $title }}</div>
+                    @if($meta)
+                        <div class="text-xs text-text-muted mt-0.5">{{ implode(' · ', $meta) }}</div>
+                    @endif
+                </x-ui.td>
+                <x-ui.td>₦{{ number_format($order->total_amount ?? $order->amount, 2) }}</x-ui.td>
                 <x-ui.td>
                     <x-ui.badge :status="$order->status === 'cancelled' ? 'danger' : $order->status">
                         {{ $order->status }}
@@ -46,7 +70,7 @@
                         >
                             Confirm delivery and release escrow to the seller?
                         </x-ui.modal>
-                    @elseif ($order->status === 'completed' && ! $order->review)
+                    @elseif ($order->status === 'completed' && ! $order->review && $order->source === 'marketplace')
                         <form method="POST" action="{{ route('dashboard.orders.review', $order) }}" class="flex flex-col gap-2 max-w-[10rem]" x-data="{ submitting: false }" @submit="submitting = true">
                             @csrf
                             <x-ui.select name="rating" required>
@@ -59,6 +83,8 @@
                         </form>
                     @elseif ($order->review)
                         <span class="text-text-muted text-xs">Reviewed ★{{ $order->review->rating }}</span>
+                    @elseif ($order->source === 'platform' && $order->status === 'paid')
+                        <span class="text-text-muted text-xs">Paid</span>
                     @endif
                 </x-ui.td>
             </tr>

@@ -10,10 +10,13 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Order extends Model
 {
     protected $fillable = [
+        'source',
         'user_id',
         'listing_id',
         'reference',
+        'idempotency_key',
         'amount',
+        'total_amount',
         'status',
     ];
 
@@ -21,6 +24,7 @@ class Order extends Model
     {
         return [
             'amount' => 'decimal:2',
+            'total_amount' => 'decimal:2',
         ];
     }
 
@@ -32,6 +36,11 @@ class Order extends Model
     public function listing(): BelongsTo
     {
         return $this->belongsTo(Listing::class);
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
     }
 
     public function escrow(): HasOne

@@ -25,6 +25,8 @@ When you add or change tables (new migrations locally):
 
 **Production admin:** use `php artisan db:seed --class=ProductionSeeder` or `seed_production_admin.sql.example` in phpMyAdmin.
 
+**Two-catalog Phase 1** tables (`platform_*`, `exchange_rates`, `order_items`, `favorites`, `product_reviews`) and enriched `orders` / `categories` columns are included in `migration.sql`. Catalog seed data comes from `ProductionSeeder` — see `docs/TWO-CATALOG.md`.
+
 ## Reference
 
 See `../7th_trade_hub.sql` in the parent folder for a commented reference of all platform tables (auth, app, Spatie, Laravel system).

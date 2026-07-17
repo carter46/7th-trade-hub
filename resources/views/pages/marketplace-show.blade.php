@@ -21,6 +21,7 @@
                 @if(auth()->user()->hasVerifiedEmail() && auth()->user()->wallet)
                     <form method="POST" action="{{ route('dashboard.checkout.store', $listing) }}">
                         @csrf
+                        <input type="hidden" name="idempotency_key" value="{{ (string) Illuminate\Support\Str::uuid() }}">
                         <x-ui.button type="submit" size="lg">Buy Now</x-ui.button>
                     </form>
                 @elseif(! auth()->user()->hasVerifiedEmail())

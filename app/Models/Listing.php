@@ -62,6 +62,11 @@ class Listing extends Model
         return $this->hasMany(Watchlist::class);
     }
 
+    public function favorites(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    {
+        return $this->morphMany(Favorite::class, 'favoritable');
+    }
+
     public function scopePublished($query)
     {
         return $query->where('status', 'published')->where('is_active', true);

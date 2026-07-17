@@ -19,12 +19,20 @@ class CheckoutController extends Controller
         private NotificationService $notifications
     ) {}
 
-    public function store(Listing $listing): RedirectResponse
+    public function store(Listing $listing, \Illuminate\Http\Request $request): RedirectResponse
     {
         $this->authorize('purchase', $listing);
 
+        $data = $request->validate([
+            'idempotency_key' => ['nullable', 'string', 'uuid', 'max:64'],
+        ]);
+
         try {
-            $order = $this->checkoutService->purchase(auth()->user(), $listing);
+            $order = $this->checkoutService->purchase(
+                auth()->user(),
+                $listing,
+                $data['idempotency_key'] ?? null
+            );
         } catch (\InvalidArgumentException $e) {
             $message = $e->getMessage();
 
@@ -33,6 +41,15 @@ class CheckoutController extends Controller
             }
 
             return redirect()->route('marketplace.show', $listing->slug)->with('error', $message);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Marketplace checkout failed', [
+                'listing_id' => $listing->id,
+                'user_id' => auth()->id(),
+                'message' => $e->getMessage(),
+            ]);
+
+            return redirect()->route('marketplace.show', $listing->slug)
+                ->with('error', __('Checkout failed. Please try again.'));
         }
 
         $listing->load('user');

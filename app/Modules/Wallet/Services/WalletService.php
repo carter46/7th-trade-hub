@@ -91,6 +91,50 @@ class WalletService
         });
     }
 
+    public function debitForPlatformPurchase(Wallet $wallet, Order $order, float $amount): Transaction
+    {
+        return DB::transaction(function () use ($wallet, $order, $amount) {
+            $amountStr = number_format((float) $amount, 2, '.', '');
+
+            $wallet = Wallet::where('id', $wallet->id)->lockForUpdate()->firstOrFail();
+
+            if (bccomp((string) $wallet->balance, $amountStr, 2) < 0) {
+                throw new InvalidArgumentException('Insufficient wallet balance.');
+            }
+
+            $wallet->balance = bcsub((string) $wallet->balance, $amountStr, 2);
+            $wallet->save();
+
+            $buyerTxn = $this->createLedgerEntry($wallet, [
+                'user_id' => $wallet->user_id,
+                'order_id' => $order->id,
+                'type' => TransactionType::Purchase->value,
+                'label' => 'Platform purchase',
+                'description' => 'Paid for order '.$order->reference,
+                'amount' => -((float) $amountStr),
+                'currency' => 'NGN',
+                'status' => 'completed',
+            ]);
+
+            $platformWallet = Wallet::where('id', $this->getPlatformWallet()->id)->lockForUpdate()->firstOrFail();
+            $platformWallet->balance = bcadd((string) $platformWallet->balance, $amountStr, 2);
+            $platformWallet->save();
+
+            $this->createLedgerEntry($platformWallet, [
+                'user_id' => $platformWallet->user_id,
+                'order_id' => $order->id,
+                'type' => TransactionType::Purchase->value,
+                'label' => 'Platform product sale',
+                'description' => 'Revenue from order '.$order->reference,
+                'amount' => (float) $amountStr,
+                'currency' => 'NGN',
+                'status' => 'completed',
+            ]);
+
+            return $buyerTxn;
+        });
+    }
+
     public function releaseEscrow(Escrow $escrow, ?int $releasedBy = null, float $feePercent = 0): void
     {
         DB::transaction(function () use ($escrow, $releasedBy, $feePercent) {

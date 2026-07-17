@@ -10,6 +10,7 @@ enum TransactionType: string
     case EscrowRelease = 'escrow_release';
     case Refund = 'refund';
     case PlatformFee = 'platform_fee';
+    case Purchase = 'purchase';
     case AdminAdjustment = 'admin_adjustment';
     case Reversal = 'reversal';
     case WithdrawalUnlock = 'withdrawal_unlock';

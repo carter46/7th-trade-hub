@@ -15,8 +15,15 @@ class ListingController extends Controller
 {
     public function create(): View
     {
+        $parents = Category::query()
+            ->where('is_active', true)
+            ->whereNull('parent_id')
+            ->with(['children' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')])
+            ->orderBy('sort_order')
+            ->get();
+
         return view('dashboard.user.listings-create', [
-            'categories' => Category::where('is_active', true)->orderBy('name')->get(),
+            'parents' => $parents,
         ]);
     }
 
@@ -26,16 +33,22 @@ class ListingController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'price' => ['required', 'numeric', 'min:1'],
-            'category_id' => ['nullable', 'exists:categories,id'],
+            'category_id' => ['required', 'exists:categories,id'],
         ]);
+
+        $category = Category::with('children')->findOrFail($validated['category_id']);
+        if ($category->children->isNotEmpty()) {
+            return back()->withInput()->withErrors(['category_id' => 'Select a subcategory (leaf), not a parent group.']);
+        }
 
         $listing = Listing::create([
             'user_id' => auth()->id(),
-            'category_id' => $validated['category_id'] ?? null,
+            'category_id' => $validated['category_id'],
             'title' => $validated['title'],
             'slug' => Str::slug($validated['title']).'-'.Str::random(6),
             'description' => $validated['description'],
             'price' => $validated['price'],
+            'category' => $category->slug,
             'status' => 'draft',
             'is_active' => false,
         ]);
@@ -62,10 +75,24 @@ class ListingController extends Controller
                 ->with('error', __('Create a new revision before editing a published listing.'));
         }
 
+        $parents = Category::query()
+            ->where('is_active', true)
+            ->whereNull('parent_id')
+            ->with(['children' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')])
+            ->orderBy('sort_order')
+            ->get();
+
+        $selectedCategory = $listing->category_id
+            ? Category::with('parent')->find($listing->category_id)
+            : null;
+        $parentId = $selectedCategory?->parent_id ?? $selectedCategory?->id ?? 0;
+
         return view('dashboard.user.listings-edit', [
             'listing' => $listing,
             'version' => $version,
-            'categories' => Category::where('is_active', true)->orderBy('name')->get(),
+            'parents' => $parents,
+            'selectedParentId' => (int) $parentId,
+            'selectedCategoryId' => (int) ($listing->category_id ?? 0),
         ]);
     }
 
@@ -82,8 +109,13 @@ class ListingController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'price' => ['required', 'numeric', 'min:1'],
-            'category_id' => ['nullable', 'exists:categories,id'],
+            'category_id' => ['required', 'exists:categories,id'],
         ]);
+
+        $category = Category::with('children')->findOrFail($validated['category_id']);
+        if ($category->children->isNotEmpty()) {
+            return back()->withInput()->withErrors(['category_id' => 'Select a subcategory (leaf), not a parent group.']);
+        }
 
         $version->update([
             'title' => $validated['title'],
@@ -93,13 +125,17 @@ class ListingController extends Controller
 
         if ($listing->status !== 'published') {
             $listing->update([
-                'category_id' => $validated['category_id'] ?? null,
+                'category_id' => $validated['category_id'],
+                'category' => $category->slug,
                 'title' => $validated['title'],
                 'description' => $validated['description'],
                 'price' => $validated['price'],
             ]);
         } else {
-            $listing->update(['category_id' => $validated['category_id'] ?? $listing->category_id]);
+            $listing->update([
+                'category_id' => $validated['category_id'],
+                'category' => $category->slug,
+            ]);
         }
 
         return redirect()->route('dashboard.listings')->with('status', __('Listing draft updated.'));

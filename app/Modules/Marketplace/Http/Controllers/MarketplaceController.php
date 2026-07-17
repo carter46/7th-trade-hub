@@ -22,8 +22,17 @@ class MarketplaceController extends Controller
             });
         }
 
-        if ($categoryId = $request->get('category')) {
-            $query->where('category_id', $categoryId);
+        if ($categoryId = $request->integer('category') ?: null) {
+            $category = Category::with('children')->find($categoryId);
+            if ($category) {
+                $ids = $category->children->isNotEmpty()
+                    ? $category->children->pluck('id')->all()
+                    : [$category->id];
+                $query->whereIn('category_id', $ids);
+            }
+        } elseif ($parentId = $request->integer('parent') ?: null) {
+            $childIds = Category::where('parent_id', $parentId)->pluck('id');
+            $query->whereIn('category_id', $childIds);
         }
 
         if ($request->boolean('featured')) {
@@ -37,9 +46,24 @@ class MarketplaceController extends Controller
             default => $query->orderByDesc('created_at'),
         };
 
+        $parents = Category::query()
+            ->where('is_active', true)
+            ->whereNull('parent_id')
+            ->with(['children' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')])
+            ->orderBy('sort_order')
+            ->get();
+
         return view('pages.marketplace', [
             'listings' => $query->paginate(12)->withQueryString(),
-            'categories' => Category::where('is_active', true)->get(),
+            'parents' => $parents,
+            'categories' => Category::where('is_active', true)->whereNotNull('parent_id')->orderBy('sort_order')->get(),
+            'filters' => [
+                'q' => $request->get('q'),
+                'category' => $request->get('category'),
+                'parent' => $request->get('parent'),
+                'sort' => $sort,
+                'featured' => $request->boolean('featured'),
+            ],
         ]);
     }
 
