@@ -38,10 +38,11 @@ document.addEventListener('alpine:init', () => {
         },
     }));
 
-    Alpine.data('listingCategoryForm', (parents = [], parentId = 0, categoryId = 0) => ({
+    Alpine.data('listingCategoryForm', (parents = [], parentId = 0, categoryId = 0, filtersOpen = false) => ({
         parents,
         parentId,
         categoryId,
+        filtersOpen: Boolean(filtersOpen),
         submitting: false,
         get children() {
             const parent = this.parents.find((p) => Number(p.id) === Number(this.parentId));
