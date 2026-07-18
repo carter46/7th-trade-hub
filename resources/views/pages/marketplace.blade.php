@@ -37,8 +37,8 @@
         sort: @js($filters['sort'] ?? 'newest'),
         featured: {{ !empty($filters['featured']) ? 'true' : 'false' }},
         filtersOpen: {{ $filtersExpanded ? 'true' : 'false' }},
-        indexUrl: @js(route('marketplace')),
-        suggestUrl: @js(route('marketplace.suggestions')),
+        indexUrl: @js(url('/marketplace')),
+        suggestUrl: @js(url('/marketplace/suggestions')),
     })"
 >
     <form method="GET" action="{{ route('marketplace') }}" class="mb-8" x-ref="filterForm" @submit="applyFilters($event)">

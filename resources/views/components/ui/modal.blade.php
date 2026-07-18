@@ -67,7 +67,7 @@
                     </button>
                 </div>
 
-                @if ($slot->isNotEmpty())
+                @if (isset($slot) && trim((string) $slot) !== '')
                     <div class="mt-4 text-sm text-slate-600">{{ $slot }}</div>
                 @endif
 
