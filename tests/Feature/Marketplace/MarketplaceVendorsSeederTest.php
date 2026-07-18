@@ -21,8 +21,10 @@ class MarketplaceVendorsSeederTest extends TestCase
         $this->get(route('marketplace'))
             ->assertOk()
             ->assertSee('Discover digital products and online services from trusted vendors')
-            ->assertSee('Want to be a vendor?')
             ->assertSee('Sell Now')
-            ->assertSee('NextGen Media');
+            ->assertSee('Explore the platform')
+            ->assertSee('VPN Services')
+            ->assertSee('NextGen Media')
+            ->assertSee('View details');
     }
 }

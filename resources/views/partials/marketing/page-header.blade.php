@@ -3,20 +3,30 @@
     $title = $title ?? '';
     $subtitle = $subtitle ?? null;
     $image = $image ?? null;
-    $cta = $cta ?? null; // optional ['label' => '', 'href' => '']
+    $cta = $cta ?? null;
+    $defaultHero = asset('assets/images/Image_ro410gro410gro41.png');
 @endphp
-<header class="relative overflow-hidden rounded-2xl border border-white/10 mb-8 sm:mb-10">
-    <div class="absolute inset-0">
+{{-- Full-bleed compact page hero (not viewport-tall). Content stays in max-w-marketing. --}}
+<header class="relative isolate overflow-hidden border-b border-white/10 pt-24 sm:pt-28 pb-10 sm:pb-12 mb-8 sm:mb-10">
+    <div
+        class="pointer-events-none absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
         @if($image)
-            <img src="{{ asset($image) }}" alt="" class="h-full w-full object-cover">
+            style="background-image: url('{{ asset($image) }}')"
         @else
-            <div class="h-full w-full marketing-page-hero-bg" aria-hidden="true"></div>
+            style="background-image: url('{{ $defaultHero }}')"
         @endif
-        <div class="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/80 to-slate-950/55"></div>
-        <div class="absolute inset-0 bg-primary/20"></div>
-    </div>
+        aria-hidden="true"
+    ></div>
+    <div class="pointer-events-none absolute inset-0 z-0 marketing-page-hero-bg opacity-90 mix-blend-normal" aria-hidden="true"></div>
+    <div
+        class="pointer-events-none absolute inset-0 z-[1]"
+        style="background: linear-gradient(180deg, rgba(15, 23, 42, 0.82) 0%, rgba(15, 23, 42, 0.75) 50%, rgba(15, 23, 42, 0.88) 100%);"
+        aria-hidden="true"
+    ></div>
+    <div class="pointer-events-none absolute top-0 right-0 z-[1] w-[420px] h-[420px] bg-primary/20 blur-[120px] rounded-full" aria-hidden="true"></div>
+    <div class="pointer-events-none absolute bottom-0 left-0 z-[1] w-[320px] h-[320px] bg-accent/10 blur-[100px] rounded-full" aria-hidden="true"></div>
 
-    <div class="relative px-5 sm:px-8 py-8 sm:py-10">
+    <div class="relative z-10 max-w-marketing mx-auto px-5 sm:px-6">
         @if(count($breadcrumbs))
             <nav class="mb-3 text-sm text-slate-300" aria-label="Breadcrumb">
                 <ol class="flex flex-wrap items-center gap-1.5">
@@ -36,15 +46,15 @@
             </nav>
         @endif
 
-        <h1 class="text-2xl sm:text-3xl font-bold font-display text-white tracking-tight">{{ $title }}</h1>
+        <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold font-display text-white tracking-tight">{{ $title }}</h1>
         @if($subtitle)
-            <p class="mt-2 text-slate-200/90 max-w-2xl text-sm sm:text-base leading-relaxed">{{ $subtitle }}</p>
+            <p class="mt-2 text-slate-300 max-w-2xl text-sm sm:text-base leading-relaxed">{{ $subtitle }}</p>
         @endif
 
         @if(!empty($cta['href']) && !empty($cta['label']))
             <div class="mt-5">
                 <a href="{{ $cta['href'] }}"
-                   class="inline-flex items-center justify-center rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 hover:bg-accent hover:text-white transition-colors">
+                   class="inline-flex items-center justify-center rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 hover:bg-accent hover:text-white transition-colors shadow-lg">
                     {{ $cta['label'] }}
                 </a>
             </div>

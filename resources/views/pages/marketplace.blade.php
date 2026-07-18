@@ -9,22 +9,21 @@
         'children' => $p->children->map(fn ($c) => ['id' => $c->id, 'name' => $c->name])->values(),
     ])->values();
 @endphp
-<section class="max-w-marketing mx-auto px-5 sm:px-6 py-8 sm:py-12">
-    @include('partials.marketing.page-header', [
-        'breadcrumbs' => [
-            ['label' => 'Home', 'href' => route('home')],
-            ['label' => 'Marketplace'],
-        ],
-        'title' => 'Marketplace',
-        'subtitle' => 'Discover digital products and online services from trusted vendors. Every eligible purchase is protected through our secure escrow system.',
-        'cta' => [
-            'label' => 'Sell Now',
-            'href' => route('dashboard.listings.create'),
-        ],
-    ])
 
-    <p class="text-sm text-slate-400 mb-4 -mt-2">Want to be a vendor? Use Sell Now to create your first listing.</p>
+@include('partials.marketing.page-header', [
+    'breadcrumbs' => [
+        ['label' => 'Home', 'href' => route('home')],
+        ['label' => 'Marketplace'],
+    ],
+    'title' => 'Marketplace',
+    'subtitle' => 'Discover digital products and online services from trusted vendors. Every eligible purchase is protected through our secure escrow system.',
+    'cta' => [
+        'label' => 'Sell Now',
+        'href' => route('dashboard.listings.create'),
+    ],
+])
 
+<section class="max-w-marketing mx-auto px-5 sm:px-6 pb-12 sm:pb-16">
     <form method="GET" class="mb-8" x-data="listingCategoryForm(@js($tree), {{ (int) ($filters['parent'] ?? 0) }}, {{ (int) ($filters['category'] ?? 0) }})">
         <x-ui.card>
             <div class="flex flex-wrap gap-3 items-end">
@@ -65,21 +64,27 @@
         </x-ui.card>
     </form>
 
-    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        @forelse($listings as $listing)
-            @include('partials.marketplace.listing-card', ['listing' => $listing])
-        @empty
-            <div class="sm:col-span-2 lg:col-span-3">
-                <x-ui.empty
-                    icon="listings"
-                    title="No listings match your filters"
-                    description="Try a different search or clear filters to see more results."
-                />
+    <div class="lg:grid lg:grid-cols-12 lg:gap-8 lg:items-start">
+        <div class="lg:col-span-8 xl:col-span-9 min-w-0">
+            <div class="space-y-3">
+                @forelse($listings as $listing)
+                    @include('partials.marketplace.listing-card', ['listing' => $listing])
+                @empty
+                    <x-ui.empty
+                        icon="listings"
+                        title="No listings match your filters"
+                        description="Try a different search or clear filters to see more results."
+                    />
+                @endforelse
             </div>
-        @endforelse
-    </div>
-    <div class="mt-8">
-        <x-ui.pagination :paginator="$listings" />
+            <div class="mt-8">
+                <x-ui.pagination :paginator="$listings" />
+            </div>
+        </div>
+
+        <div class="mt-10 lg:mt-0 lg:col-span-4 xl:col-span-3 lg:sticky lg:top-24">
+            @include('partials.marketplace.platform-sidebar')
+        </div>
     </div>
 </section>
 @endsection
