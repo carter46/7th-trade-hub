@@ -22,6 +22,7 @@
             'breadcrumbs' => $crumbs,
             'title' => $product->title,
             'subtitle' => $product->product_type->label(),
+            'image' => $product->hero_image,
         ])
 
         <div class="grid lg:grid-cols-2 gap-10">

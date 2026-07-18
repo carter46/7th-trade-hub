@@ -21,7 +21,7 @@
                     <input id="services-q" type="search" name="q" value="{{ $q }}" placeholder="Search services (e.g. TikTok, VPN…)"
                            class="w-full rounded-xl border border-white/10 bg-slate-900/50 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-accent/50 focus:outline-none focus:ring-1 focus:ring-accent/40">
                 </div>
-                <button type="submit" class="px-6 py-3 rounded-xl bg-primary hover:bg-accent font-semibold text-sm transition-colors">Search</button>
+                <button type="submit" class="px-6 py-3 rounded-xl bg-white text-slate-900 hover:bg-accent hover:text-white font-semibold text-sm transition-colors">Search</button>
             </div>
         </form>
 

@@ -1,36 +1,38 @@
 @php
     /** @var array $card */
-    $count = (int) ($card['count'] ?? 0);
-    $from = $card['from_price'] ?? null;
     $href = $card['href'] ?? '#';
     $label = $card['label'] ?? '';
     $desc = $card['short_description'] ?? '';
     $image = $card['card_image'] ?? null;
     $icon = $card['icon'] ?? 'grid';
+    $initials = strtoupper(mb_substr(preg_replace('/[^A-Za-z0-9]/', '', $label) ?: 'S', 0, 2));
+    $ctaLabel = $card['cta'] ?? 'Explore';
 @endphp
-<a href="{{ $href }}" class="glassmorphism rounded-2xl overflow-hidden hover:border-accent/40 transition-all flex flex-col h-full group">
-    <div class="aspect-[16/9] bg-slate-900/70 overflow-hidden flex items-center justify-center">
+<a href="{{ $href }}" class="group glassmorphism rounded-2xl overflow-hidden hover:border-accent/50 transition-all flex flex-col h-full">
+    <div class="relative aspect-[2/1] bg-slate-900 overflow-hidden">
         @if($image)
-            <img src="{{ asset($image) }}" alt="" class="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300">
+            <img src="{{ asset($image) }}" alt="" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]">
         @else
-            <x-ui.icon :name="$icon" class="w-12 h-12 text-accent" />
+            <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/40 via-slate-900 to-slate-950">
+                <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 border border-white/15 text-white font-bold text-lg font-display" aria-hidden="true">
+                    {{ $initials }}
+                </span>
+            </div>
+            <div class="absolute bottom-3 right-3 opacity-40">
+                <x-ui.icon :name="$icon" class="w-6 h-6 text-accent" />
+            </div>
         @endif
     </div>
-    <div class="p-5 flex flex-col flex-1">
-        <h3 class="font-bold text-lg mb-1.5">{{ $label }}</h3>
+    <div class="p-4 sm:p-5 flex flex-col flex-1 text-left">
+        <h3 class="font-bold text-base sm:text-lg text-white leading-snug">{{ $label }}</h3>
         @if($desc)
-            <p class="text-sm text-slate-400 mb-4 flex-1 line-clamp-2">{{ $desc }}</p>
+            <p class="mt-1.5 text-sm text-slate-400 line-clamp-2 flex-1">{{ $desc }}</p>
         @else
-            <div class="flex-1 mb-4"></div>
+            <div class="flex-1"></div>
         @endif
-        <div class="flex flex-wrap items-center justify-between gap-2 text-sm mb-4">
-            <span class="text-slate-300">{{ $count }} {{ \Illuminate\Support\Str::plural('Service', $count) }}</span>
-            @if($from !== null)
-                <span class="font-semibold text-white">From ₦{{ number_format($from, 0) }}</span>
-            @else
-                <span class="text-slate-500">—</span>
-            @endif
-        </div>
-        <span class="inline-flex items-center justify-center w-full px-4 py-2.5 rounded-xl bg-primary/90 group-hover:bg-accent font-semibold text-sm transition-colors">Explore</span>
+        <span class="mt-4 inline-flex w-fit items-center gap-1.5 rounded-lg bg-white px-3.5 py-2 text-sm font-semibold text-slate-900 group-hover:bg-accent group-hover:text-white transition-colors">
+            {{ $ctaLabel }}
+            <span aria-hidden="true">→</span>
+        </span>
     </div>
 </a>

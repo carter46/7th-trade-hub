@@ -26,13 +26,8 @@
             'breadcrumbs' => $crumbs,
             'title' => $content['hero_title'] ?? $content['label'],
             'subtitle' => $content['hero_subtitle'] ?? $content['short_description'],
+            'image' => $content['banner_image'] ?? null,
         ])
-
-        @if(!empty($content['banner_image']))
-            <div class="rounded-2xl overflow-hidden max-h-40 sm:max-h-48">
-                <img src="{{ asset($content['banner_image']) }}" alt="" class="w-full h-40 sm:h-48 object-cover">
-            </div>
-        @endif
 
         @if($content['short_description'] && ($content['short_description'] !== ($content['hero_subtitle'] ?? null)))
             <p class="text-slate-300 max-w-3xl">{{ $content['short_description'] }}</p>

@@ -13,6 +13,7 @@
             ],
             'title' => $content['hero_title'] ?? $content['label'],
             'subtitle' => $content['hero_subtitle'] ?? $content['short_description'],
+            'image' => $content['banner_image'] ?? null,
         ])
 
         @if(!empty($content['benefits']))
