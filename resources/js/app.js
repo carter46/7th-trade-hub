@@ -57,6 +57,105 @@ document.addEventListener('alpine:init', () => {
         },
     }));
 
+    Alpine.data('marketplaceBrowse', (config = {}) => ({
+        parents: config.parents || [],
+        parentId: Number(config.parentId || 0),
+        categoryId: Number(config.categoryId || 0),
+        q: config.q || '',
+        sort: config.sort || 'newest',
+        featured: Boolean(config.featured),
+        filtersOpen: Boolean(config.filtersOpen),
+        loading: false,
+        suggestions: [],
+        keywords: [],
+        showSuggest: false,
+        suggestTimer: null,
+        get children() {
+            const parent = this.parents.find((p) => Number(p.id) === Number(this.parentId));
+            return parent ? parent.children : [];
+        },
+        init() {
+            this.$watch('parentId', () => {
+                if (!this.children.some((c) => Number(c.id) === Number(this.categoryId))) {
+                    this.categoryId = this.children[0]?.id || 0;
+                }
+            });
+        },
+        queryParams() {
+            const params = new URLSearchParams();
+            if (this.q) params.set('q', this.q);
+            if (Number(this.parentId) > 0) params.set('parent', String(this.parentId));
+            if (Number(this.categoryId) > 0) params.set('category', String(this.categoryId));
+            if (this.sort && this.sort !== 'newest') params.set('sort', this.sort);
+            if (this.featured) params.set('featured', '1');
+            return params;
+        },
+        async applyFilters(event) {
+            if (event) event.preventDefault();
+            this.showSuggest = false;
+            this.loading = true;
+            try {
+                const params = this.queryParams();
+                params.set('ajax', '1');
+                const url = `${config.indexUrl}?${params.toString()}`;
+                const res = await fetch(url, {
+                    headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                });
+                if (!res.ok) throw new Error('Filter failed');
+                const data = await res.json();
+                const target = document.getElementById('marketplace-results');
+                if (target && data.html) {
+                    target.innerHTML = data.html;
+                }
+                const clean = new URL(window.location.href);
+                clean.search = this.queryParams().toString();
+                window.history.replaceState({}, '', clean.pathname + (clean.search ? `?${clean.search}` : ''));
+            } catch (e) {
+                // Fallback to full navigation if AJAX fails
+                const form = this.$refs.filterForm;
+                if (form) form.submit();
+            } finally {
+                this.loading = false;
+            }
+        },
+        onSearchInput() {
+            clearTimeout(this.suggestTimer);
+            const term = (this.q || '').trim();
+            if (term.length < 2) {
+                this.suggestions = [];
+                this.keywords = [];
+                this.showSuggest = false;
+                return;
+            }
+            this.suggestTimer = setTimeout(() => this.fetchSuggestions(), 250);
+        },
+        async fetchSuggestions() {
+            try {
+                const url = `${config.suggestUrl}?q=${encodeURIComponent(this.q.trim())}`;
+                const res = await fetch(url, {
+                    headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                this.suggestions = data.suggestions || [];
+                this.keywords = data.keywords || [];
+                this.showSuggest = this.suggestions.length > 0 || this.keywords.length > 0;
+            } catch (e) {
+                this.showSuggest = false;
+            }
+        },
+        pickKeyword(word) {
+            this.q = word;
+            this.showSuggest = false;
+            this.applyFilters();
+        },
+        hideSuggestSoon() {
+            setTimeout(() => {
+                this.showSuggest = false;
+            }, 180);
+        },
+    }));
+
     Alpine.data('exchangeCalc', (rates = {}) => ({
         rates,
         asset: Object.keys(rates)[0] || 'USDT',

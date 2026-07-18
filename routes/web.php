@@ -47,6 +47,9 @@ Route::view('/terms', 'pages.terms')->name('terms');
 Route::view('/privacy', 'pages.privacy')->name('privacy');
 
 Route::get('/marketplace', [MarketplaceController::class, 'index'])->name('marketplace');
+Route::get('/marketplace/suggestions', [MarketplaceController::class, 'suggestions'])
+    ->middleware('throttle:60,1')
+    ->name('marketplace.suggestions');
 Route::redirect('/marketplace/web-services', '/services')->name('marketplace.web-services');
 Route::get('/marketplace/{slug}', [MarketplaceController::class, 'show'])->name('marketplace.show');
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');

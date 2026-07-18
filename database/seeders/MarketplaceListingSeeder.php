@@ -50,11 +50,11 @@ class MarketplaceListingSeeder extends Seeder
         $walletService = app(WalletProvisioningService::class);
 
         $listingTitles = [
-            'Aged {cat} asset — verified history',
+            'Aged {cat} with verified history',
             'Premium {cat} package with docs',
-            'Ready-to-use {cat} for agencies',
-            'Starter {cat} bundle — escrow ready',
-            'High-trust {cat} listing',
+            'Ready to use {cat} for agencies',
+            'Starter {cat} bundle with escrow',
+            'High trust {cat} listing',
         ];
 
         foreach ($vendors as $vendorIndex => $vendorData) {
@@ -77,8 +77,7 @@ class MarketplaceListingSeeder extends Seeder
 
             for ($i = 0; $i < 5; $i++) {
                 $category = $leafList[($vendorIndex * 5 + $i) % count($leafList)];
-                $titleTemplate = $listingTitles[$i];
-                $title = str_replace('{cat}', $category->name, $titleTemplate).' — '.$vendorData['name'];
+                $title = str_replace('{cat}', $category->name, $listingTitles[$i]);
                 $slug = Str::slug($vendorData['username'].'-'.$category->slug.'-'.$i);
 
                 Listing::updateOrCreate(
