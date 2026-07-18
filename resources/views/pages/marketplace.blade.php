@@ -64,9 +64,10 @@
         </x-ui.card>
     </form>
 
-    <div class="lg:grid lg:grid-cols-12 lg:gap-8 lg:items-start">
-        <div class="lg:col-span-8 xl:col-span-9 min-w-0">
-            <div class="space-y-3">
+    {{-- Flex layout (not 12-col grid) so side-by-side works even if grid-cols-12 is missing from CSS build --}}
+    <div class="flex flex-col lg:flex-row lg:gap-8 lg:items-start">
+        <div class="w-full min-w-0 lg:flex-1">
+            <div class="space-y-4">
                 @forelse($listings as $listing)
                     @include('partials.marketplace.listing-card', ['listing' => $listing])
                 @empty
@@ -82,7 +83,7 @@
             </div>
         </div>
 
-        <div class="mt-10 lg:mt-0 lg:col-span-4 xl:col-span-3 lg:sticky lg:top-24">
+        <div class="w-full mt-10 lg:mt-0 lg:w-80 xl:w-96 shrink-0 lg:sticky lg:top-24">
             @include('partials.marketplace.platform-sidebar')
         </div>
     </div>

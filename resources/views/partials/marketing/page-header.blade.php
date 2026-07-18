@@ -6,8 +6,8 @@
     $cta = $cta ?? null;
     $defaultHero = asset('assets/images/Image_ro410gro410gro41.png');
 @endphp
-{{-- Full-bleed compact page hero (not viewport-tall). Content stays in max-w-marketing. --}}
-<header class="relative isolate overflow-hidden border-b border-white/10 pt-24 sm:pt-28 pb-10 sm:pb-12 mb-8 sm:mb-10">
+{{-- Full-bleed compact page hero. Extra top padding clears the fixed h-20 nav. --}}
+<header class="relative isolate overflow-hidden border-b border-white/10 pt-32 sm:pt-36 pb-10 sm:pb-12 mb-8 sm:mb-10">
     <div
         class="pointer-events-none absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
         @if($image)
@@ -17,10 +17,10 @@
         @endif
         aria-hidden="true"
     ></div>
-    <div class="pointer-events-none absolute inset-0 z-0 marketing-page-hero-bg opacity-90 mix-blend-normal" aria-hidden="true"></div>
+    <div class="pointer-events-none absolute inset-0 z-0 marketing-page-hero-bg" aria-hidden="true"></div>
     <div
         class="pointer-events-none absolute inset-0 z-[1]"
-        style="background: linear-gradient(180deg, rgba(15, 23, 42, 0.82) 0%, rgba(15, 23, 42, 0.75) 50%, rgba(15, 23, 42, 0.88) 100%);"
+        style="background: linear-gradient(180deg, rgba(15, 23, 42, 0.78) 0%, rgba(15, 23, 42, 0.72) 45%, rgba(15, 23, 42, 0.88) 100%);"
         aria-hidden="true"
     ></div>
     <div class="pointer-events-none absolute top-0 right-0 z-[1] w-[420px] h-[420px] bg-primary/20 blur-[120px] rounded-full" aria-hidden="true"></div>
