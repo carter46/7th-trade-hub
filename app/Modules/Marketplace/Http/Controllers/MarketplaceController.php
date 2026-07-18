@@ -122,7 +122,10 @@ class MarketplaceController extends Controller
 
     private function filteredListings(Request $request)
     {
-        $query = Listing::published()->with(['user', 'listingCategory']);
+        $query = Listing::published()
+            ->with(['user', 'listingCategory'])
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews');
 
         if ($search = $request->get('q')) {
             $query->where(function ($q) use ($search) {

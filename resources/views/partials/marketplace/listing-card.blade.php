@@ -2,6 +2,9 @@
     $href = route('marketplace.show', $listing->slug);
     $vendor = $listing->user?->name ?? 'Seller';
     $initials = strtoupper(mb_substr(preg_replace('/[^A-Za-z0-9]/', '', $vendor) ?: 'V', 0, 2));
+    $avg = round((float) ($listing->reviews_avg_rating ?? 0), 1);
+    $reviewCount = (int) ($listing->reviews_count ?? 0);
+    $filled = (int) round($avg);
 @endphp
 <article class="flex overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm hover:shadow-md transition-shadow">
     <a href="{{ $href }}" class="relative w-24 sm:w-32 md:w-36 shrink-0 min-h-[6.5rem] sm:min-h-[7.5rem] bg-slate-800" aria-label="{{ $listing->title }}">
@@ -28,11 +31,24 @@
             <span>by {{ $vendor }}</span>
             <span class="font-bold text-primary text-xs sm:text-sm">₦{{ number_format($listing->price, 0) }}</span>
         </div>
-        <div>
+        <div class="flex flex-wrap items-center gap-2.5 sm:gap-3">
             <a href="{{ $href }}"
                class="inline-flex items-center justify-center rounded-lg bg-primary px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-white hover:bg-accent transition-colors whitespace-nowrap">
                 View details
             </a>
+            <div class="inline-flex items-center gap-1.5 text-xs sm:text-sm" title="{{ $reviewCount }} {{ \Illuminate\Support\Str::plural('review', $reviewCount) }}">
+                <span class="leading-none tracking-tight" aria-hidden="true">
+                    @for($i = 1; $i <= 5; $i++)
+                        <span class="{{ $i <= $filled && $avg > 0 ? 'text-warning' : 'text-slate-300' }}">★</span>
+                    @endfor
+                </span>
+                @if($avg > 0)
+                    <span class="font-semibold text-slate-700">{{ number_format($avg, 1) }}</span>
+                    <span class="text-slate-400">({{ $reviewCount }})</span>
+                @else
+                    <span class="text-slate-400">No reviews</span>
+                @endif
+            </div>
         </div>
     </div>
 </article>
