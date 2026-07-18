@@ -15,7 +15,7 @@ class MarketplaceSearchTest extends TestCase
 
     public function test_marketplace_filters_by_category_and_search(): void
     {
-        $category = Category::first();
+        $category = Category::query()->whereDoesntHave('children')->first();
         $this->assertNotNull($category);
 
         Listing::create([

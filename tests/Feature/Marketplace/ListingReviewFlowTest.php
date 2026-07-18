@@ -23,6 +23,7 @@ class ListingReviewFlowTest extends TestCase
                 'title' => 'My Service',
                 'description' => 'A great service',
                 'price' => 2500,
+                'category_id' => \App\Models\Category::query()->whereDoesntHave('children')->value('id'),
             ])
             ->assertRedirect(route('dashboard.listings'));
 

@@ -12,10 +12,10 @@ return new class extends Migration
         if (Schema::hasTable('categories')) {
             Schema::table('categories', function (Blueprint $table) {
                 if (! Schema::hasColumn('categories', 'parent_id')) {
-                    $table->foreignId('parent_id')->nullable()->after('id')->constrained('categories')->nullOnDelete();
+                    $table->foreignId('parent_id')->nullable()->constrained('categories')->nullOnDelete();
                 }
                 if (! Schema::hasColumn('categories', 'sort_order')) {
-                    $table->unsignedInteger('sort_order')->default(0)->after('is_active');
+                    $table->unsignedInteger('sort_order')->default(0);
                 }
             });
         }
@@ -23,31 +23,32 @@ return new class extends Migration
         if (Schema::hasTable('orders')) {
             Schema::table('orders', function (Blueprint $table) {
                 if (! Schema::hasColumn('orders', 'source')) {
-                    $table->string('source', 20)->default('marketplace')->after('id');
+                    $table->string('source', 20)->default('marketplace');
                 }
                 if (! Schema::hasColumn('orders', 'total_amount')) {
-                    $table->decimal('total_amount', 18, 2)->nullable()->after('amount');
+                    $table->decimal('total_amount', 18, 2)->nullable();
                 }
                 if (! Schema::hasColumn('orders', 'idempotency_key')) {
-                    $table->string('idempotency_key', 64)->nullable()->after('reference');
+                    $table->string('idempotency_key', 64)->nullable();
                 }
             });
 
-            $indexes = collect(DB::select('SHOW INDEX FROM `orders`'))->pluck('Key_name')->all();
-
-            if (Schema::hasColumn('orders', 'idempotency_key') && ! in_array('orders_idempotency_key_unique', $indexes, true)) {
+            if (Schema::hasColumn('orders', 'idempotency_key') && ! $this->indexExists('orders', 'orders_idempotency_key_unique')) {
                 Schema::table('orders', function (Blueprint $table) {
                     $table->unique('idempotency_key');
                 });
             }
 
-            if (! in_array('orders_source_index', $indexes, true)) {
+            if (Schema::hasColumn('orders', 'source') && ! $this->indexExists('orders', 'orders_source_index')) {
                 Schema::table('orders', function (Blueprint $table) {
                     $table->index('source');
                 });
             }
 
-            DB::statement('ALTER TABLE `orders` MODIFY `amount` DECIMAL(18,2) NOT NULL');
+            // MySQL/MariaDB only — SQLite ignores precision changes safely for tests.
+            if (in_array(Schema::getConnection()->getDriverName(), ['mysql', 'mariadb'], true)) {
+                DB::statement('ALTER TABLE `orders` MODIFY `amount` DECIMAL(18,2) NOT NULL');
+            }
         }
 
         if (Schema::hasTable('platform_categories') && ! $this->indexExists('platform_categories', 'platform_categories_product_type_index')) {
@@ -75,7 +76,12 @@ return new class extends Migration
 
     private function indexExists(string $table, string $indexName): bool
     {
-        return collect(DB::select("SHOW INDEX FROM `{$table}`"))
-            ->contains(fn ($row) => ($row->Key_name ?? '') === $indexName);
+        foreach (Schema::getIndexes($table) as $index) {
+            if (($index['name'] ?? '') === $indexName) {
+                return true;
+            }
+        }
+
+        return false;
     }
 };

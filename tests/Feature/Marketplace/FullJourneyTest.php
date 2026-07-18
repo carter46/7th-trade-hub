@@ -60,6 +60,7 @@ class FullJourneyTest extends TestCase
                 'title' => 'Full Journey Product',
                 'description' => 'End-to-end test listing',
                 'price' => 2000,
+                'category_id' => \App\Models\Category::query()->whereDoesntHave('children')->value('id'),
             ])
             ->assertRedirect(route('dashboard.listings'));
 

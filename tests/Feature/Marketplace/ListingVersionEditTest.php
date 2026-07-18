@@ -19,8 +19,11 @@ class ListingVersionEditTest extends TestCase
         $seller->assignRole('user');
         app(WalletProvisioningService::class)->createWallet($seller);
 
+        $leafCategoryId = \App\Models\Category::query()->whereDoesntHave('children')->value('id');
+
         $listing = Listing::create([
             'user_id' => $seller->id,
+            'category_id' => $leafCategoryId,
             'title' => 'Original',
             'slug' => 'original-'.uniqid(),
             'price' => 1000,
@@ -41,6 +44,7 @@ class ListingVersionEditTest extends TestCase
                 'title' => 'Improved Title',
                 'description' => 'Better description',
                 'price' => 1200,
+                'category_id' => $leafCategoryId,
             ])
             ->assertRedirect(route('dashboard.listings'));
 
