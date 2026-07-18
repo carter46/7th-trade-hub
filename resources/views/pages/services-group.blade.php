@@ -14,39 +14,52 @@
     'image' => $content['banner_image'] ?? null,
 ])
 
-<section class="max-w-marketing mx-auto px-5 sm:px-6 pb-12 sm:pb-16 space-y-10">
-    @if(!empty($content['benefits']))
-        <div>
-            <h2 class="text-lg font-bold font-display mb-3">Why browse here</h2>
-            <ul class="grid sm:grid-cols-2 gap-2 text-sm text-slate-300">
-                @foreach($content['benefits'] as $benefit)
-                    <li class="flex gap-2"><span class="text-accent">•</span><span>{{ $benefit }}</span></li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
-    <div>
-        <h2 class="text-xl font-bold font-display mb-5">Choose a type</h2>
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            @foreach($types as $card)
-                @include('partials.catalog.explore-card', ['card' => $card])
-            @endforeach
-        </div>
+<section class="max-w-marketing mx-auto px-5 sm:px-6 pb-12 sm:pb-16 space-y-8">
+    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+        <h2 class="text-xl font-bold font-display">All {{ $content['label'] }}</h2>
+        <form method="GET" action="{{ route('services.segment', $groupSlug) }}" class="flex flex-wrap gap-3 items-end">
+            @if(count($typeKeys) > 1)
+                <div class="min-w-[140px]">
+                    <label class="block text-xs text-slate-400 mb-1">Type</label>
+                    <select name="type" class="w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white">
+                        <option value="">All types</option>
+                        @foreach($typeKeys as $key)
+                            <option value="{{ $key }}" @selected(($filters['type'] ?? null) === $key)>
+                                {{ config('catalog.types.'.$key.'.label', $key) }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            @endif
+            @if($categories->isNotEmpty())
+                <div class="min-w-[160px]">
+                    <label class="block text-xs text-slate-400 mb-1">Category</label>
+                    <select name="category" class="w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white">
+                        <option value="">All</option>
+                        @foreach($categories as $category)
+                            <option value="{{ $category->id }}" @selected(($filters['category'] ?? null) == $category->id)>{{ $category->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            @endif
+            <div class="min-w-[180px] flex-1">
+                <label class="block text-xs text-slate-400 mb-1">Search</label>
+                <input type="search" name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Filter services…"
+                       class="w-full rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2 text-sm text-white placeholder:text-slate-500">
+            </div>
+            <button type="submit" class="px-4 py-2 rounded-xl bg-white text-slate-900 hover:bg-accent hover:text-white text-sm font-semibold transition-colors">Apply</button>
+        </form>
     </div>
 
-    @if(!empty($content['faq']))
-        <div>
-            <h2 class="text-lg font-bold font-display mb-3">FAQ</h2>
-            <dl class="space-y-4">
-                @foreach($content['faq'] as $item)
-                    <div class="glassmorphism rounded-xl p-4">
-                        <dt class="font-semibold mb-1">{{ $item['q'] ?? '' }}</dt>
-                        <dd class="text-sm text-slate-400">{{ $item['a'] ?? '' }}</dd>
-                    </div>
-                @endforeach
-            </dl>
+    @if($products->isEmpty())
+        <p class="text-slate-400">No services match your filters.</p>
+    @else
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            @foreach($products as $product)
+                @include('partials.catalog.product-card', ['product' => $product])
+            @endforeach
         </div>
+        <div class="mt-8">{{ $products->links() }}</div>
     @endif
 </section>
 @endsection

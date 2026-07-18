@@ -57,27 +57,87 @@ class ServiceController extends Controller
         ]);
     }
 
-    public function group(string $group): View
+    public function group(Request $request, string $group): View
     {
         abort_unless($this->browse->isGroup($group), 404);
 
         $resolved = $this->content->forGroup($group);
         $typeKeys = config('catalog.groups.'.$group.'.types', []);
 
+        // Single-type groups (e.g. social-media → social_service): skip the extra type card layer.
+        if (count($typeKeys) === 1) {
+            return $this->type($request, $typeKeys[0], $group);
+        }
+
+        $typeFilter = $request->string('type')->toString();
+        if ($typeFilter !== '' && ! in_array($typeFilter, $typeKeys, true)) {
+            $typeFilter = '';
+        }
+
+        $activeTypes = $typeFilter !== '' ? [$typeFilter] : $typeKeys;
+        $categoryId = $request->integer('category') ?: null;
+        $q = $request->string('q')->toString();
+
+        $categories = PlatformCategory::query()
+            ->where('is_active', true)
+            ->whereIn('product_type', $activeTypes)
+            ->orderBy('sort_order')
+            ->get();
+
+        if ($categoryId && ! $categories->contains('id', $categoryId)) {
+            $categoryId = null;
+        }
+
+        $products = PlatformProduct::query()
+            ->published()
+            ->whereIn('product_type', $activeTypes)
+            ->with(['category', 'activeVariants'])
+            ->when($categoryId, fn ($builder) => $builder->where('platform_category_id', $categoryId))
+            ->when($q !== '', function ($builder) use ($q) {
+                $builder->where(function ($inner) use ($q) {
+                    $inner->where('title', 'like', "%{$q}%")
+                        ->orWhere('short_description', 'like', "%{$q}%")
+                        ->orWhere('description', 'like', "%{$q}%");
+                });
+            })
+            ->orderByDesc('is_featured')
+            ->orderBy('sort_order')
+            ->orderBy('title')
+            ->paginate(12)
+            ->withQueryString();
+
         return view('pages.services-group', [
             'groupSlug' => $group,
             'content' => $resolved,
-            'types' => $this->browse->typeCards($typeKeys, $this->content),
+            'typeKeys' => $typeKeys,
+            'categories' => $categories,
+            'products' => $products,
+            'filters' => [
+                'q' => $q,
+                'category' => $categoryId,
+                'type' => $typeFilter !== '' ? $typeFilter : null,
+            ],
         ]);
     }
 
-    public function type(Request $request, string $type): View
+    public function type(Request $request, string $type, ?string $preferGroupSlug = null): View
     {
         abort_unless($this->browse->isType($type), 404);
 
         $resolved = $this->content->forType($type);
-        $groupSlug = $this->browse->groupForType($type);
+        $groupSlug = $preferGroupSlug ?? $this->browse->groupForType($type);
         $groupContent = $groupSlug ? $this->content->forGroup($groupSlug) : null;
+
+        // Prefer group page copy when opened via a single-type group URL (e.g. /services/social-media).
+        if ($preferGroupSlug && $groupContent) {
+            $resolved = array_merge($resolved, [
+                'label' => $groupContent['label'] ?? $resolved['label'],
+                'hero_title' => $groupContent['hero_title'] ?? $resolved['hero_title'] ?? null,
+                'hero_subtitle' => $groupContent['hero_subtitle'] ?? $resolved['hero_subtitle'] ?? null,
+                'short_description' => $groupContent['short_description'] ?? $resolved['short_description'] ?? null,
+                'banner_image' => $groupContent['banner_image'] ?? $resolved['banner_image'] ?? null,
+            ]);
+        }
 
         $categoryId = $request->integer('category') ?: null;
         $q = $request->string('q')->toString();
@@ -126,11 +186,17 @@ class ServiceController extends Controller
 
         $featured = $featuredQuery->get();
 
+        $filterAction = $preferGroupSlug
+            ? route('services.segment', $preferGroupSlug)
+            : route('services.segment', $type);
+
         return view('pages.services-type', [
             'typeKey' => $type,
             'content' => $resolved,
             'groupSlug' => $groupSlug,
             'groupContent' => $groupContent,
+            'preferGroupSlug' => $preferGroupSlug,
+            'filterAction' => $filterAction,
             'categories' => $categories,
             'activeCategory' => $activeCategory,
             'featured' => $featured,
@@ -181,7 +247,7 @@ class ServiceController extends Controller
         }
 
         if ($this->browse->isGroup($segment)) {
-            return $this->group($segment);
+            return $this->group(request(), $segment);
         }
 
         if ($this->browse->isType($segment)) {

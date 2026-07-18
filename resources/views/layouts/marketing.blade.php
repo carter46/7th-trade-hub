@@ -30,11 +30,9 @@
 
                 <div class="hidden lg:flex items-center space-x-8 text-sm font-medium text-slate-300">
                     <a class="hover:text-accent transition-colors" href="{{ route('home') }}">Home</a>
+                    <a class="hover:text-accent transition-colors" href="{{ route('services') }}">Services</a>
                     <a class="hover:text-accent transition-colors" href="{{ route('marketplace') }}">Marketplace</a>
                     <a class="hover:text-accent transition-colors" href="{{ route('exchange') }}">Exchange</a>
-                    <a class="hover:text-accent transition-colors" href="{{ route('services') }}">Services</a>
-                    <a class="hover:text-accent transition-colors" href="{{ route('templates') }}">Templates</a>
-                    <a class="hover:text-accent transition-colors" href="{{ route('website-listings') }}">Website Listings</a>
                     <a class="hover:text-accent transition-colors" href="{{ route('help') }}">Help</a>
                 </div>
 
@@ -111,11 +109,9 @@
 
                 <nav class="flex flex-col p-4 gap-1">
                     <a class="px-4 py-3 rounded-xl text-sm font-medium text-slate-200 hover:bg-primary/15 hover:text-accent transition-colors" href="{{ route('home') }}" @click="close()">Home</a>
+                    <a class="px-4 py-3 rounded-xl text-sm font-medium text-slate-200 hover:bg-primary/15 hover:text-accent transition-colors" href="{{ route('services') }}" @click="close()">Services</a>
                     <a class="px-4 py-3 rounded-xl text-sm font-medium text-slate-200 hover:bg-primary/15 hover:text-accent transition-colors" href="{{ route('marketplace') }}" @click="close()">Marketplace</a>
                     <a class="px-4 py-3 rounded-xl text-sm font-medium text-slate-200 hover:bg-primary/15 hover:text-accent transition-colors" href="{{ route('exchange') }}" @click="close()">Exchange</a>
-                    <a class="px-4 py-3 rounded-xl text-sm font-medium text-slate-200 hover:bg-primary/15 hover:text-accent transition-colors" href="{{ route('services') }}" @click="close()">Services</a>
-                    <a class="px-4 py-3 rounded-xl text-sm font-medium text-slate-200 hover:bg-primary/15 hover:text-accent transition-colors" href="{{ route('templates') }}" @click="close()">Templates</a>
-                    <a class="px-4 py-3 rounded-xl text-sm font-medium text-slate-200 hover:bg-primary/15 hover:text-accent transition-colors" href="{{ route('website-listings') }}" @click="close()">Website Listings</a>
                     <a class="px-4 py-3 rounded-xl text-sm font-medium text-slate-200 hover:bg-primary/15 hover:text-accent transition-colors" href="{{ route('help') }}" @click="close()">Help</a>
 
                     @auth
@@ -146,11 +142,10 @@
                     <div>
                         <h4 class="text-white font-bold mb-6 font-display">Platform</h4>
                         <ul class="space-y-4 text-slate-500 text-sm">
-                            <li><a class="hover:text-accent transition-colors" href="{{ route('marketplace') }}">Marketplace</a></li>
                             <li><a class="hover:text-accent transition-colors" href="{{ route('services') }}">Services</a></li>
-                            <li><a class="hover:text-accent transition-colors" href="{{ route('website-listings') }}">Website Listings</a></li>
+                            <li><a class="hover:text-accent transition-colors" href="{{ route('marketplace') }}">Marketplace</a></li>
                             <li><a class="hover:text-accent transition-colors" href="{{ route('exchange') }}">Crypto Exchange</a></li>
-                            <li><a class="hover:text-accent transition-colors" href="{{ route('templates') }}">Templates</a></li>
+                            <li><a class="hover:text-accent transition-colors" href="{{ route('help') }}">Help</a></li>
                         </ul>
                     </div>
                     <div>

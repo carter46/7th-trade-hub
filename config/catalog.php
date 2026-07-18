@@ -236,11 +236,7 @@ return [
             'short_description' => 'Growth and engagement services for social platforms.',
             'hero_title' => 'Social Media',
             'hero_subtitle' => 'Browse social services, then filter by Growth or Engagement.',
-            'benefits' => [
-                'Focused social catalog',
-                'Category filters on the type page',
-                'Featured picks to start faster',
-            ],
+            'benefits' => [],
             'faq' => [],
             'types' => ['social_service'],
         ],
