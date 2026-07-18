@@ -2,7 +2,10 @@
     $href = match ($product->product_type->defaultRoute()) {
         'templates' => route('templates.show', $product->slug),
         'website-listings' => route('website-listings.show', $product->slug),
-        default => route('services.show', $product->slug),
+        default => route('services.show', [
+            'type' => $product->product_type->value,
+            'productSlug' => $product->slug,
+        ]),
     };
 @endphp
 <a href="{{ $href }}" class="glassmorphism rounded-2xl p-5 hover:border-accent/40 transition-all flex flex-col h-full">

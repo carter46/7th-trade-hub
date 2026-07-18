@@ -6,48 +6,102 @@ use App\Enums\PlatformProductType;
 use App\Http\Controllers\Controller;
 use App\Models\PlatformCategory;
 use App\Models\PlatformProduct;
+use App\Modules\Catalog\Services\CatalogBrowseService;
+use App\Modules\Catalog\Services\CatalogContentResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class ServiceController extends Controller
 {
-    /** @return list<string> */
-    private function serviceTypeValues(): array
-    {
-        return collect(config('catalog.divisions'))
-            ->flatMap(fn ($division) => $division['types'] ?? [])
-            ->unique()
-            ->values()
-            ->all();
-    }
+    /** @var array<string, string> legacy division slug → group slug */
+    private const DIVISION_TO_GROUP = [
+        'digital-services' => 'network-services',
+        'web-solutions' => 'website-services',
+        'business-documents' => 'business-documents',
+        'trust-protection' => 'trust-escrow',
+    ];
+
+    public function __construct(
+        private CatalogBrowseService $browse,
+        private CatalogContentResolver $content,
+    ) {}
 
     public function index(Request $request): View
     {
-        $validTypes = $this->serviceTypeValues();
+        $q = $request->string('q')->toString();
+        $searchResults = null;
 
-        $type = $request->string('type')->toString() ?: null;
-        if ($type && ! in_array($type, $validTypes, true)) {
-            $type = null;
+        if ($q !== '') {
+            $types = $this->browse->allGroupTypeValues();
+            $searchResults = PlatformProduct::query()
+                ->published()
+                ->whereIn('product_type', $types)
+                ->with(['category', 'activeVariants'])
+                ->where(function ($inner) use ($q) {
+                    $inner->where('title', 'like', "%{$q}%")
+                        ->orWhere('short_description', 'like', "%{$q}%")
+                        ->orWhere('description', 'like', "%{$q}%");
+                })
+                ->orderByDesc('is_featured')
+                ->orderBy('sort_order')
+                ->orderBy('title')
+                ->paginate(12)
+                ->withQueryString();
         }
+
+        return view('pages.services', [
+            'groups' => $this->browse->groupCards($this->content),
+            'searchResults' => $searchResults,
+            'q' => $q,
+        ]);
+    }
+
+    public function group(string $group): View
+    {
+        abort_unless($this->browse->isGroup($group), 404);
+
+        $resolved = $this->content->forGroup($group);
+        $typeKeys = config('catalog.groups.'.$group.'.types', []);
+
+        return view('pages.services-group', [
+            'groupSlug' => $group,
+            'content' => $resolved,
+            'types' => $this->browse->typeCards($typeKeys, $this->content),
+        ]);
+    }
+
+    public function type(Request $request, string $type): View
+    {
+        abort_unless($this->browse->isType($type), 404);
+
+        $resolved = $this->content->forType($type);
+        $groupSlug = $this->browse->groupForType($type);
+        $groupContent = $groupSlug ? $this->content->forGroup($groupSlug) : null;
+
         $categoryId = $request->integer('category') ?: null;
-        $division = $request->string('division')->toString() ?: null;
-        if ($division && ! isset(config('catalog.divisions')[$division])) {
-            $division = null;
-        }
         $q = $request->string('q')->toString();
 
-        $divisionTypes = null;
-        if ($division && isset(config('catalog.divisions')[$division])) {
-            $divisionTypes = config('catalog.divisions.'.$division.'.types');
+        $categories = PlatformCategory::query()
+            ->where('is_active', true)
+            ->where('product_type', $type)
+            ->orderBy('sort_order')
+            ->get();
+
+        $activeCategory = null;
+        if ($categoryId) {
+            $activeCategory = $categories->firstWhere('id', $categoryId);
+            if ($activeCategory) {
+                $resolved = $this->content->forCategory($activeCategory);
+            } else {
+                $categoryId = null;
+            }
         }
 
-        $query = PlatformProduct::query()
+        $products = PlatformProduct::query()
             ->published()
-            ->whereIn('product_type', $validTypes)
+            ->ofType($type)
             ->with(['category', 'activeVariants'])
-            ->when($divisionTypes, fn ($builder) => $builder->whereIn('product_type', $divisionTypes))
-            ->when($type, fn ($builder) => $builder->ofType($type))
             ->when($categoryId, fn ($builder) => $builder->where('platform_category_id', $categoryId))
             ->when($q !== '', function ($builder) use ($q) {
                 $builder->where(function ($inner) use ($q) {
@@ -58,53 +112,47 @@ class ServiceController extends Controller
             })
             ->orderByDesc('is_featured')
             ->orderBy('sort_order')
-            ->orderBy('title');
-
-        $products = $query->paginate(12)->withQueryString();
+            ->orderBy('title')
+            ->paginate(12)
+            ->withQueryString();
 
         $featuredQuery = PlatformProduct::published()
             ->featured()
-            ->whereIn('product_type', $divisionTypes ?: $validTypes)
+            ->ofType($type)
             ->with('activeVariants')
+            ->when($categoryId, fn ($builder) => $builder->where('platform_category_id', $categoryId))
             ->orderBy('sort_order')
             ->limit(6);
 
         $featured = $featuredQuery->get();
 
-        $categories = PlatformCategory::query()
-            ->where('is_active', true)
-            ->when($divisionTypes, fn ($builder) => $builder->whereIn('product_type', $divisionTypes))
-            ->when($type, fn ($builder) => $builder->where('product_type', $type))
-            ->when(! $divisionTypes && ! $type, fn ($builder) => $builder->whereIn('product_type', $validTypes))
-            ->orderBy('sort_order')
-            ->get();
-
-        $typeCases = collect(PlatformProductType::cases())
-            ->filter(fn (PlatformProductType $case) => in_array($case->value, $validTypes, true))
-            ->values();
-
-        return view('pages.services', [
-            'products' => $products,
-            'featured' => $featured,
+        return view('pages.services-type', [
+            'typeKey' => $type,
+            'content' => $resolved,
+            'groupSlug' => $groupSlug,
+            'groupContent' => $groupContent,
             'categories' => $categories,
-            'divisions' => config('catalog.divisions'),
-            'types' => $typeCases,
+            'activeCategory' => $activeCategory,
+            'featured' => $featured,
+            'products' => $products,
             'filters' => [
                 'q' => $q,
-                'type' => $type,
                 'category' => $categoryId,
-                'division' => $division,
             ],
         ]);
     }
 
-    public function show(string $slug): View|RedirectResponse
+    public function show(string $type, string $productSlug): View|RedirectResponse
     {
         $product = PlatformProduct::query()
             ->published()
-            ->where('slug', $slug)
+            ->where('slug', $productSlug)
             ->with(['category', 'images', 'activeVariants'])
             ->firstOrFail();
+
+        if ($product->product_type->value !== $type) {
+            return $this->redirectToCanonicalProduct($product);
+        }
 
         return match ($product->product_type) {
             PlatformProductType::DocumentTemplate => redirect()->route('templates.show', $product->slug),
@@ -112,8 +160,56 @@ class ServiceController extends Controller
             PlatformProductType::WebsiteTemplate => redirect()->route('website-listings.show', $product->slug),
             default => view('pages.services-show', [
                 'product' => $product,
+                'typeKey' => $product->product_type->value,
+                'groupSlug' => $this->browse->groupForType($product->product_type->value),
+                'groupContent' => ($g = $this->browse->groupForType($product->product_type->value))
+                    ? $this->content->forGroup($g)
+                    : null,
+                'typeContent' => $this->content->forType($product->product_type->value),
                 'isFavorited' => $this->isFavorited($product),
             ]),
+        };
+    }
+
+    /**
+     * Legacy /services/{slug}: group, type, old division, or product slug.
+     */
+    public function segment(string $segment): View|RedirectResponse
+    {
+        if (isset(self::DIVISION_TO_GROUP[$segment])) {
+            return redirect()->route('services.segment', self::DIVISION_TO_GROUP[$segment], 301);
+        }
+
+        if ($this->browse->isGroup($segment)) {
+            return $this->group($segment);
+        }
+
+        if ($this->browse->isType($segment)) {
+            return $this->type(request(), $segment);
+        }
+
+        $product = PlatformProduct::query()
+            ->published()
+            ->where('slug', $segment)
+            ->first();
+
+        if ($product) {
+            return $this->redirectToCanonicalProduct($product);
+        }
+
+        abort(404);
+    }
+
+    private function redirectToCanonicalProduct(PlatformProduct $product): RedirectResponse
+    {
+        return match ($product->product_type) {
+            PlatformProductType::DocumentTemplate => redirect()->route('templates.show', $product->slug, 301),
+            PlatformProductType::WebsitePackage,
+            PlatformProductType::WebsiteTemplate => redirect()->route('website-listings.show', $product->slug, 301),
+            default => redirect()->route('services.show', [
+                'type' => $product->product_type->value,
+                'productSlug' => $product->slug,
+            ], 301),
         };
     }
 

@@ -15,49 +15,11 @@ class DemoDataSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->seedListings();
         $demoUsers = $this->seedDemoUsers();
         $this->seedWallets($demoUsers);
         $this->seedTransactions($demoUsers);
         $this->seedOrders($demoUsers);
         $this->seedSupportTickets($demoUsers);
-    }
-
-    private function seedListings(): void
-    {
-        $listings = [
-            [
-                'title' => 'E-commerce API Dev',
-                'slug' => 'ecommerce-api-dev',
-                'description' => 'Custom backend integration for storefronts.',
-                'price' => 450.00,
-                'category' => 'code',
-                'icon_class' => 'code bg-blue-600/20 text-blue-500',
-            ],
-            [
-                'title' => 'Logo Branding Kit',
-                'slug' => 'logo-branding-kit',
-                'description' => 'Professional vector logos and guidelines.',
-                'price' => 125.00,
-                'category' => 'image',
-                'icon_class' => 'image bg-pink-600/20 text-pink-500',
-            ],
-            [
-                'title' => 'Legal Sales Contract',
-                'slug' => 'legal-sales-contract',
-                'description' => 'Verified template for digital trade.',
-                'price' => 49.00,
-                'category' => 'document',
-                'icon_class' => 'description bg-green-600/20 text-green-500',
-            ],
-        ];
-
-        foreach ($listings as $item) {
-            Listing::firstOrCreate(
-                ['slug' => $item['slug']],
-                array_merge($item, ['is_active' => true, 'status' => 'published'])
-            );
-        }
     }
 
     private function seedDemoUsers(): array

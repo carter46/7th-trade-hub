@@ -28,6 +28,7 @@ return [
         ['route' => 'admin.listings.pending', 'label' => 'Listings Review', 'icon' => 'inventory'],
         ['route' => 'admin.platform-products', 'label' => 'Platform Products', 'icon' => 'storefront'],
         ['route' => 'admin.platform-categories', 'label' => 'Platform Categories', 'icon' => 'grid'],
+        ['route' => 'admin.catalog-pages', 'label' => 'Catalog Pages', 'icon' => 'listings'],
         ['route' => 'admin.marketplace-categories', 'label' => 'Market Categories', 'icon' => 'listings'],
         ['route' => 'admin.exchange-rates', 'label' => 'Exchange Rates', 'icon' => 'bitcoin'],
         ['route' => 'admin.transactions', 'label' => 'Transactions', 'icon' => 'transactions'],

@@ -9,13 +9,13 @@
                 'icon' => 'bitcoin',
                 'title' => 'Crypto Cash Exchange',
                 'body' => 'Turn crypto into cash fast. Safe swaps and quick payouts.',
-                'href' => route('services'),
+                'href' => route('exchange'),
             ],
             [
                 'icon' => 'analytics',
                 'title' => 'Social Media Growth',
                 'body' => 'Grow followers and reach with real engagement tools.',
-                'href' => route('services'),
+                'href' => route('services.segment', 'social-media'),
             ],
             [
                 'icon' => 'listings',

@@ -52,7 +52,13 @@ Route::get('/marketplace/{slug}', [MarketplaceController::class, 'show'])->name(
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 
 Route::get('/services', [\App\Modules\Catalog\Http\Controllers\ServiceController::class, 'index'])->name('services');
-Route::get('/services/{slug}', [\App\Modules\Catalog\Http\Controllers\ServiceController::class, 'show'])->name('services.show');
+Route::get('/services/{type}/{productSlug}', [\App\Modules\Catalog\Http\Controllers\ServiceController::class, 'show'])
+    ->where('type', '[a-z0-9_]+')
+    ->where('productSlug', '[A-Za-z0-9\-_]+')
+    ->name('services.show');
+// One segment: group slug, type key, or legacy product slug (301)
+Route::get('/services/{segment}', [\App\Modules\Catalog\Http\Controllers\ServiceController::class, 'segment'])
+    ->name('services.segment');
 Route::get('/exchange', \App\Modules\Catalog\Http\Controllers\ExchangePageController::class)->name('exchange');
 Route::get('/templates', [\App\Modules\Catalog\Http\Controllers\TemplateController::class, 'index'])->name('templates');
 Route::get('/templates/{slug}', [\App\Modules\Catalog\Http\Controllers\TemplateController::class, 'show'])->name('templates.show');
@@ -175,7 +181,10 @@ Route::middleware(['auth', 'verified', 'role:admin', 'throttle:60,1'])->prefix('
     Route::post('/marketplace-categories/{category}/toggle', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'toggleMarketplaceCategory'])->name('.marketplace-categories.toggle');
     Route::get('/platform-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'platformCategories'])->name('.platform-categories');
     Route::post('/platform-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'storePlatformCategory'])->name('.platform-categories.store');
+    Route::put('/platform-categories/{platformCategory}', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'updatePlatformCategory'])->name('.platform-categories.update');
     Route::post('/platform-categories/{platformCategory}/toggle', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'togglePlatformCategory'])->name('.platform-categories.toggle');
+    Route::get('/catalog-pages', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'catalogPages'])->name('.catalog-pages');
+    Route::post('/catalog-pages', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'upsertCatalogPage'])->name('.catalog-pages.upsert');
     Route::get('/exchange-rates', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'exchangeRates'])->name('.exchange-rates');
     Route::post('/exchange-rates', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'storeExchangeRate'])->name('.exchange-rates.store');
     Route::delete('/exchange-rates/{exchangeRate}', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'destroyExchangeRate'])->name('.exchange-rates.destroy');

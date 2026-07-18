@@ -1,6 +1,6 @@
 @extends('layouts.marketing')
 @section('title', 'Marketplace')
-@section('meta_description', 'Buy and sell social accounts, network services, and digital goods with escrow protection.')
+@section('meta_description', 'Discover digital products and online services from trusted vendors with escrow protection.')
 @section('content')
 @php
     $tree = $parents->map(fn ($p) => [
@@ -9,9 +9,20 @@
         'children' => $p->children->map(fn ($c) => ['id' => $c->id, 'name' => $c->name])->values(),
     ])->values();
 @endphp
-<section class="max-w-marketing mx-auto px-5 sm:px-6 py-16">
-    <h1 class="text-4xl font-bold text-text-primary mb-3">Marketplace</h1>
-    <p class="text-text-secondary mb-8">User-to-user listings protected by escrow. Choose a category before you sell.</p>
+<section class="max-w-marketing mx-auto px-5 sm:px-6 py-8 sm:py-12">
+    @include('partials.marketing.page-header', [
+        'breadcrumbs' => [
+            ['label' => 'Home', 'href' => route('home')],
+            ['label' => 'Marketplace'],
+        ],
+        'title' => 'Marketplace',
+        'subtitle' => 'Discover digital products and online services from trusted vendors. Every eligible purchase is protected through our secure escrow system.',
+    ])
+
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <p class="text-sm text-text-secondary">Want to be a vendor?</p>
+        <a href="{{ route('dashboard.listings.create') }}" class="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-primary hover:bg-accent font-semibold text-sm transition-colors">Sell Now</a>
+    </div>
 
     <form method="GET" class="mb-8" x-data="listingCategoryForm(@js($tree), {{ (int) ($filters['parent'] ?? 0) }}, {{ (int) ($filters['category'] ?? 0) }})">
         <x-ui.card>
@@ -62,6 +73,9 @@
                 <h2 class="text-xl font-bold text-text-primary mt-2">{{ $listing->title }}</h2>
                 @if($listing->listingCategory)
                     <p class="text-text-muted text-xs mt-1">{{ $listing->listingCategory->name }}</p>
+                @endif
+                @if($listing->user)
+                    <p class="text-text-muted text-xs mt-0.5">by {{ $listing->user->name }}</p>
                 @endif
                 <p class="text-text-secondary mt-2 text-sm flex-1">{{ Str::limit($listing->description, 120) }}</p>
                 <p class="text-accent font-bold mt-4">₦{{ number_format($listing->price, 2) }}</p>

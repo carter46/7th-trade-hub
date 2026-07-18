@@ -30,11 +30,18 @@ php artisan view:cache
 php artisan db:seed --class=ProductionSeeder
 ```
 
-Requires `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env`. **Never** run full `db:seed` in production (demo data).
+Requires `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env` only if you still create an admin via a separate seeder step. **Never** run full `db:seed` in production (demo dashboard data).
 
-`ProductionSeeder` also loads marketplace/platform category trees, platform catalog products (≈6 per type), and exchange rates. Demo marketplace listings only run when `SEED_DEMO_DATA=true`. Catalog seeders use `firstOrCreate` by slug so re-runs do not overwrite admin edits.
+`ProductionSeeder` loads marketplace/platform category trees, platform catalog products (≈6 per type), exchange rates, and **10 sample marketplace vendors** (5 published listings each). Catalog seeders use `firstOrCreate` by slug so re-runs do not overwrite admin edits. Sample vendor password is `password` (delete or change via admin as needed).
 
-After a **schema upgrade** on an existing DB, import/run the Phase 1 tables plus the Phase 1.1 upgrade notes in `database/sql/migration.sql` (or `php artisan migrate`), then re-run `ProductionSeeder` if needed.
+After a **schema upgrade** on an existing DB, run new migrations (or the upgrade notes in `database/sql/migration.sql`), then re-run `ProductionSeeder` if needed:
+
+```bash
+php artisan migrate --force
+php artisan db:seed --class=ProductionSeeder --force
+php artisan config:cache
+php artisan route:cache
+```
 
 See [PRODUCTION-ENV-CHECKLIST.md](PRODUCTION-ENV-CHECKLIST.md) and [LAUNCH-CHECKLIST.md](LAUNCH-CHECKLIST.md).
 

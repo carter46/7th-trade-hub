@@ -1,14 +1,19 @@
 @extends('layouts.marketing')
 @section('title', $listing->title)
 @section('content')
-<section class="max-w-marketing mx-auto px-5 sm:px-6 py-16">
+<section class="max-w-marketing mx-auto px-5 sm:px-6 py-8 sm:py-12">
 <div class="max-w-content-sm">
-    <h1 class="text-4xl font-bold text-text-primary">{{ $listing->title }}</h1>
-    @if($listing->listingCategory)
-        <p class="text-text-muted text-sm mt-2">{{ $listing->listingCategory->name }}</p>
-    @endif
+    @include('partials.marketing.page-header', [
+        'breadcrumbs' => [
+            ['label' => 'Home', 'href' => route('home')],
+            ['label' => 'Marketplace', 'href' => route('marketplace')],
+            ['label' => $listing->title],
+        ],
+        'title' => $listing->title,
+        'subtitle' => $listing->listingCategory?->name,
+    ])
     @if($avgRating > 0)
-        <p class="text-warning mt-2 text-sm">★ {{ $avgRating }} ({{ $listing->reviews->count() }} reviews)</p>
+        <p class="text-warning -mt-4 mb-4 text-sm">★ {{ $avgRating }} ({{ $listing->reviews->count() }} reviews)</p>
     @endif
     <p class="text-text-secondary mt-4">{{ $listing->description }}</p>
     <p class="text-3xl font-bold text-accent mt-6">₦{{ number_format($listing->price, 2) }}</p>

@@ -13,9 +13,9 @@ Do **not** merge platform SKUs into the `listings` table. Escrow marketplace tra
 
 ## Product types (no DB table)
 
-Types live in PHP enum `App\Enums\PlatformProductType` plus labels/icons/routes and **UI business divisions** in [`config/catalog.php`](../config/catalog.php).
+Types live in PHP enum `App\Enums\PlatformProductType` plus labels/icons/routes and **user-facing service groups** in [`config/catalog.php`](../config/catalog.php).
 
-Services browse divisions (UI only): Digital Services, Web Solutions, Business Documents, Trust & Protection.
+Services browse hierarchy: **Groups** (Network Services, Communication, Social Media, Website Services, Business Documents, Trust & Escrow) → **types** (VPN, Email, …) → **products**. URLs: `/services`, `/services/{group|type}`, `/services/{type}/{slug}`. Marketing copy defaults in config; overrides via `catalog_page_contents` and optional fields on `platform_categories`.
 
 ## Visibility
 
@@ -27,7 +27,7 @@ Platform products use `status`: `draft` | `published` | `archived`, plus `is_fea
 
 ## JSON content fields (Phase 1)
 
-`features`, `requirements`, `whats_included`, and `faqs` are JSON columns because admins edit them as whole blocks on the product form. If we later need per-item CRUD, ordering UI, localization, or search-inside-features, normalize into relational tables **without changing public routes** (`/services/{slug}`, etc.).
+`features`, `requirements`, `whats_included`, and `faqs` are JSON columns because admins edit them as whole blocks on the product form. If we later need per-item CRUD, ordering UI, localization, or search-inside-features, normalize into relational tables **without changing public routes** (`/services/{type}/{slug}`, etc.).
 
 ## Exchange rates
 
@@ -46,7 +46,7 @@ After importing `database/sql/migration.sql`:
 php artisan db:seed --class=ProductionSeeder
 ```
 
-This seeds roles/settings, marketplace + platform category trees, **5–6 products per type** with variants, exchange rates, demo marketplace listings (when included), and the platform wallet. Requires `ADMIN_EMAIL` / `ADMIN_PASSWORD` in `.env` where admin creation is configured.
+This seeds roles/settings, marketplace + platform category trees, **5–6 products per type** with variants, exchange rates, **10 sample marketplace vendors × 5 listings**, and the platform wallet.
 
 Never run full `db:seed` in production if it pulls demo-only seeders beyond ProductionSeeder.
 
@@ -62,4 +62,4 @@ Never run full `db:seed` in production if it pulls demo-only seeders beyond Prod
 
 - Platform purchase credits platform wallet; checkout idempotency; marketplace double-sell lock
 - Upgrade DDL / `hasColumn` guards; shared catalog search partial; FAQ admin editor
-- Favorites UX + marketing toasts; ProductionSeeder demo listings gated by `SEED_DEMO_DATA`
+- Favorites UX + marketing toasts; `ProductionSeeder` always seeds sample marketplace vendors (10×5 listings)

@@ -16,6 +16,13 @@ class PlatformCategory extends Model
         'product_type',
         'sort_order',
         'is_active',
+        'banner_image',
+        'card_image',
+        'short_description',
+        'hero_title',
+        'hero_subtitle',
+        'benefits',
+        'faq',
     ];
 
     protected function casts(): array
@@ -23,6 +30,8 @@ class PlatformCategory extends Model
         return [
             'product_type' => PlatformProductType::class,
             'is_active' => 'boolean',
+            'benefits' => 'array',
+            'faq' => 'array',
         ];
     }
 

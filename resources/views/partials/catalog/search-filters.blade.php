@@ -73,9 +73,5 @@
         </div>
     @endif
 
-    @if(!empty($filters['division']))
-        <input type="hidden" name="division" value="{{ $filters['division'] }}">
-    @endif
-
     <button type="submit" class="px-4 py-2 rounded-xl bg-primary text-white text-sm font-bold">Filter</button>
 </form>

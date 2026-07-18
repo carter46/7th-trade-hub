@@ -550,6 +550,13 @@ CREATE TABLE IF NOT EXISTS `platform_categories` (
   `product_type` varchar(40) NOT NULL,
   `sort_order` int unsigned NOT NULL DEFAULT 0,
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `banner_image` varchar(255) DEFAULT NULL,
+  `card_image` varchar(255) DEFAULT NULL,
+  `short_description` varchar(500) DEFAULT NULL,
+  `hero_title` varchar(255) DEFAULT NULL,
+  `hero_subtitle` varchar(500) DEFAULT NULL,
+  `benefits` json DEFAULT NULL,
+  `faq` json DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -692,6 +699,23 @@ CREATE TABLE IF NOT EXISTS `product_reviews` (
   CONSTRAINT `product_reviews_platform_product_id_foreign` FOREIGN KEY (`platform_product_id`) REFERENCES `platform_products` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS `catalog_page_contents` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `scope` varchar(20) NOT NULL,
+  `key` varchar(80) NOT NULL,
+  `banner_image` varchar(255) DEFAULT NULL,
+  `card_image` varchar(255) DEFAULT NULL,
+  `short_description` varchar(500) DEFAULT NULL,
+  `hero_title` varchar(255) DEFAULT NULL,
+  `hero_subtitle` varchar(500) DEFAULT NULL,
+  `benefits` json DEFAULT NULL,
+  `faq` json DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `catalog_page_contents_scope_key_unique` (`scope`,`key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ---------- Phase 1.1 upgrade (existing DBs that already imported older schema) ----------
 -- Safe to run on live DBs; ignore duplicate column/index errors if already applied.
 -- ALTER TABLE `categories` ADD COLUMN `parent_id` bigint unsigned DEFAULT NULL AFTER `id`;
@@ -702,5 +726,17 @@ CREATE TABLE IF NOT EXISTS `product_reviews` (
 -- ALTER TABLE `orders` MODIFY `amount` decimal(18,2) NOT NULL;
 -- ALTER TABLE `orders` ADD UNIQUE KEY `orders_idempotency_key_unique` (`idempotency_key`);
 -- ALTER TABLE `orders` ADD KEY `orders_source_index` (`source`);
+
+-- ---------- Catalog page content (Services hub) — existing DBs ----------
+-- Prefer: php artisan migrate --path=database/migrations/2026_07_18_120000_catalog_page_content_fields.php --force
+-- Or apply manually (ignore duplicate-column errors):
+-- ALTER TABLE `platform_categories` ADD COLUMN `banner_image` varchar(255) DEFAULT NULL AFTER `is_active`;
+-- ALTER TABLE `platform_categories` ADD COLUMN `card_image` varchar(255) DEFAULT NULL AFTER `banner_image`;
+-- ALTER TABLE `platform_categories` ADD COLUMN `short_description` varchar(500) DEFAULT NULL AFTER `card_image`;
+-- ALTER TABLE `platform_categories` ADD COLUMN `hero_title` varchar(255) DEFAULT NULL AFTER `short_description`;
+-- ALTER TABLE `platform_categories` ADD COLUMN `hero_subtitle` varchar(500) DEFAULT NULL AFTER `hero_title`;
+-- ALTER TABLE `platform_categories` ADD COLUMN `benefits` json DEFAULT NULL AFTER `hero_subtitle`;
+-- ALTER TABLE `platform_categories` ADD COLUMN `faq` json DEFAULT NULL AFTER `benefits`;
+-- CREATE TABLE IF NOT EXISTS `catalog_page_contents` (...see CREATE above...);
 
 COMMIT;

@@ -2,13 +2,16 @@
 
 namespace App\Modules\Admin\Http\Controllers;
 
+use App\Enums\PlatformProductType;
 use App\Http\Controllers\Controller;
+use App\Models\CatalogPageContent;
 use App\Models\Category;
 use App\Models\ExchangeRate;
 use App\Models\PlatformCategory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class CatalogMetaAdminController extends Controller
@@ -55,8 +58,13 @@ class CatalogMetaAdminController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'product_type' => ['required', 'string'],
+            'product_type' => ['required', Rule::enum(PlatformProductType::class)],
             'sort_order' => ['nullable', 'integer'],
+            'short_description' => ['nullable', 'string', 'max:500'],
+            'hero_title' => ['nullable', 'string', 'max:255'],
+            'hero_subtitle' => ['nullable', 'string', 'max:500'],
+            'banner_image' => ['nullable', 'string', 'max:255'],
+            'card_image' => ['nullable', 'string', 'max:255'],
         ]);
 
         PlatformCategory::create([
@@ -65,9 +73,29 @@ class CatalogMetaAdminController extends Controller
             'product_type' => $data['product_type'],
             'is_active' => true,
             'sort_order' => $data['sort_order'] ?? 0,
+            'short_description' => $data['short_description'] ?? null,
+            'hero_title' => $data['hero_title'] ?? null,
+            'hero_subtitle' => $data['hero_subtitle'] ?? null,
+            'banner_image' => $data['banner_image'] ?? null,
+            'card_image' => $data['card_image'] ?? null,
         ]);
 
         return back()->with('status', 'Platform category created.');
+    }
+
+    public function updatePlatformCategory(Request $request, PlatformCategory $platformCategory): RedirectResponse
+    {
+        $data = $request->validate([
+            'short_description' => ['nullable', 'string', 'max:500'],
+            'hero_title' => ['nullable', 'string', 'max:255'],
+            'hero_subtitle' => ['nullable', 'string', 'max:500'],
+            'banner_image' => ['nullable', 'string', 'max:255'],
+            'card_image' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $platformCategory->update($data);
+
+        return back()->with('status', 'Category content updated.');
     }
 
     public function togglePlatformCategory(PlatformCategory $platformCategory): RedirectResponse
@@ -82,6 +110,58 @@ class CatalogMetaAdminController extends Controller
         $category->update(['is_active' => ! $category->is_active]);
 
         return back()->with('status', 'Category '.($category->is_active ? 'activated' : 'deactivated').'.');
+    }
+
+    public function catalogPages(): View
+    {
+        $pages = CatalogPageContent::query()
+            ->orderBy('scope')
+            ->orderBy('key')
+            ->get()
+            ->keyBy(fn ($row) => $row->scope.'.'.$row->key);
+
+        $keys = [];
+        foreach (array_keys(config('catalog.groups', [])) as $slug) {
+            $keys[] = ['scope' => 'group', 'key' => $slug, 'label' => config('catalog.groups.'.$slug.'.label', $slug)];
+        }
+        foreach (array_keys(config('catalog.types', [])) as $type) {
+            $keys[] = ['scope' => 'type', 'key' => $type, 'label' => config('catalog.types.'.$type.'.label', $type)];
+        }
+
+        return view('dashboard.admin.catalog-pages', compact('pages', 'keys'));
+    }
+
+    public function upsertCatalogPage(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'scope' => ['required', Rule::in(['group', 'type'])],
+            'key' => ['required', 'string', 'max:80'],
+            'short_description' => ['nullable', 'string', 'max:500'],
+            'hero_title' => ['nullable', 'string', 'max:255'],
+            'hero_subtitle' => ['nullable', 'string', 'max:500'],
+            'banner_image' => ['nullable', 'string', 'max:255'],
+            'card_image' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        if ($data['scope'] === 'group' && ! isset(config('catalog.groups')[$data['key']])) {
+            return back()->withErrors(['key' => 'Unknown group key.']);
+        }
+        if ($data['scope'] === 'type' && ! isset(config('catalog.types')[$data['key']])) {
+            return back()->withErrors(['key' => 'Unknown type key.']);
+        }
+
+        CatalogPageContent::updateOrCreate(
+            ['scope' => $data['scope'], 'key' => $data['key']],
+            [
+                'short_description' => $data['short_description'] ?: null,
+                'hero_title' => $data['hero_title'] ?: null,
+                'hero_subtitle' => $data['hero_subtitle'] ?: null,
+                'banner_image' => $data['banner_image'] ?: null,
+                'card_image' => $data['card_image'] ?: null,
+            ]
+        );
+
+        return back()->with('status', 'Catalog page content saved (overrides config defaults where set).');
     }
 
     public function exchangeRates(): View

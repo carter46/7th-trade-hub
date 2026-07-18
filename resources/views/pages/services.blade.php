@@ -3,75 +3,49 @@
 @section('title', 'Services | 7th Trade Hub')
 
 @section('content')
-<section class="py-14 sm:py-20">
-    <div class="max-w-marketing mx-auto px-5 sm:px-6 space-y-14">
-        <div class="text-center max-w-2xl mx-auto">
-            <h1 class="text-3xl sm:text-4xl font-bold font-display mb-3">Services</h1>
-            <p class="text-slate-400">VPN, VPS, domains, documents, escrow, and more — sold directly by 7th Trade Hub.</p>
-        </div>
+<section class="py-8 sm:py-12">
+    <div class="max-w-marketing mx-auto px-5 sm:px-6">
+        @include('partials.marketing.page-header', [
+            'breadcrumbs' => [
+                ['label' => 'Home', 'href' => route('home')],
+                ['label' => 'Services'],
+            ],
+            'title' => 'Services',
+            'subtitle' => 'Browse by category — network, communication, social, websites, documents, and escrow.',
+        ])
 
-        @unless(request()->filled('type') || request()->filled('q') || request()->filled('category') || request()->filled('division'))
-            <div>
-                <h2 class="text-xl font-bold mb-4 font-display">Browse by division</h2>
-                <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    @foreach($divisions as $key => $division)
-                        <a href="{{ route('services', ['division' => $key]) }}" class="glassmorphism p-5 rounded-2xl hover:border-accent/40 transition-all block">
-                            <h3 class="font-bold mb-1">{{ $division['label'] }}</h3>
-                            <p class="text-sm text-slate-400">{{ $division['description'] }}</p>
-                        </a>
-                    @endforeach
+        <form method="GET" action="{{ route('services') }}" class="mb-10">
+            <div class="flex flex-col sm:flex-row gap-3">
+                <div class="flex-1">
+                    <label for="services-q" class="sr-only">Search services</label>
+                    <input id="services-q" type="search" name="q" value="{{ $q }}" placeholder="Search services (e.g. TikTok, VPN…)"
+                           class="w-full rounded-xl border border-white/10 bg-slate-900/50 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-accent/50 focus:outline-none focus:ring-1 focus:ring-accent/40">
                 </div>
+                <button type="submit" class="px-6 py-3 rounded-xl bg-primary hover:bg-accent font-semibold text-sm transition-colors">Search</button>
             </div>
-        @endunless
+        </form>
 
-        @unless(request()->filled('type') || request()->filled('q') || request()->filled('category'))
-            @if($featured->isNotEmpty())
-                <div>
-                    <h2 class="text-xl font-bold mb-4 font-display">Featured</h2>
+        @if($searchResults !== null)
+            <div class="mb-12">
+                <h2 class="text-xl font-bold font-display mb-4">Search results</h2>
+                @if($searchResults->isEmpty())
+                    <p class="text-slate-400">No services match “{{ $q }}”. Try another term or browse a category below.</p>
+                @else
                     <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                        @foreach($featured as $product)
+                        @foreach($searchResults as $product)
                             @include('partials.catalog.product-card', ['product' => $product])
                         @endforeach
                     </div>
-                </div>
-            @endif
-
-            @if($categories->isNotEmpty())
-                <div>
-                    <h2 class="text-xl font-bold mb-4 font-display">Categories</h2>
-                    <div class="flex flex-wrap gap-2">
-                        @foreach($categories as $category)
-                            <a href="{{ route('services', array_filter(['category' => $category->id, 'division' => $filters['division'] ?? null, 'type' => $category->product_type->value])) }}"
-                               class="px-4 py-2 rounded-xl border border-white/10 text-sm hover:border-accent/40 transition-colors">
-                                {{ $category->name }}
-                            </a>
-                        @endforeach
-                    </div>
-                </div>
-            @endif
-        @endunless
-
-        <div>
-            <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-6">
-                <h2 class="text-xl font-bold font-display">All services</h2>
-                @include('partials.catalog.search-filters', [
-                    'action' => route('services'),
-                    'filters' => $filters,
-                    'types' => $types,
-                    'categories' => $categories,
-                ])
+                    <div class="mt-8">{{ $searchResults->links() }}</div>
+                @endif
             </div>
+        @endif
 
-            @if($products->isEmpty())
-                <p class="text-slate-400">No services match your filters. Try clearing search or choosing another category.</p>
-            @else
-                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                    @foreach($products as $product)
-                        @include('partials.catalog.product-card', ['product' => $product])
-                    @endforeach
-                </div>
-                <div class="mt-8">{{ $products->links() }}</div>
-            @endif
+        <h2 class="text-xl font-bold font-display mb-5">Browse categories</h2>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            @foreach($groups as $card)
+                @include('partials.catalog.explore-card', ['card' => $card])
+            @endforeach
         </div>
     </div>
 </section>
