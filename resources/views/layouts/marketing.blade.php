@@ -142,38 +142,47 @@
                     <div>
                         <h4 class="text-white font-bold mb-6 font-display">Platform</h4>
                         <ul class="space-y-4 text-slate-500 text-sm">
+                            <li><a class="hover:text-accent transition-colors" href="{{ route('home') }}">Home</a></li>
                             <li><a class="hover:text-accent transition-colors" href="{{ route('services') }}">Services</a></li>
                             <li><a class="hover:text-accent transition-colors" href="{{ route('marketplace') }}">Marketplace</a></li>
-                            <li><a class="hover:text-accent transition-colors" href="{{ route('exchange') }}">Crypto Exchange</a></li>
-                            <li><a class="hover:text-accent transition-colors" href="{{ route('help') }}">Help</a></li>
+                            <li><a class="hover:text-accent transition-colors" href="{{ route('exchange') }}">Exchange</a></li>
+                            <li><a class="hover:text-accent transition-colors" href="{{ route('about') }}">About</a></li>
                         </ul>
                     </div>
                     <div>
                         <h4 class="text-white font-bold mb-6 font-display">Support</h4>
                         <ul class="space-y-4 text-slate-500 text-sm">
                             <li><a class="hover:text-accent transition-colors" href="{{ route('help') }}">Help Center</a></li>
-                            <li><a class="hover:text-accent transition-colors" href="{{ route('support') }}">Contact Us</a></li>
-                            <li><a class="hover:text-accent transition-colors" href="{{ route('support') }}">API Docs</a></li>
-                            <li><a class="hover:text-accent transition-colors" href="{{ route('support') }}">Status</a></li>
+                            <li>
+                                <a class="hover:text-accent transition-colors" href="{{ auth()->check() ? route('dashboard.support.create') : route('login') }}">
+                                    Open a ticket
+                                </a>
+                            </li>
+                            @auth
+                                <li><a class="hover:text-accent transition-colors" href="{{ route('dashboard.support.index') }}">My tickets</a></li>
+                                <li><a class="hover:text-accent transition-colors" href="{{ route('dashboard') }}">Dashboard</a></li>
+                            @else
+                                <li><a class="hover:text-accent transition-colors" href="{{ route('login') }}">Login</a></li>
+                                <li><a class="hover:text-accent transition-colors" href="{{ route('register') }}">Register</a></li>
+                            @endauth
                         </ul>
                     </div>
                     <div>
                         <h4 class="text-white font-bold mb-6 font-display">Legal</h4>
                         <ul class="space-y-4 text-slate-500 text-sm">
-                            <li><a class="hover:text-accent transition-colors" href="{{ route('terms') }}">Terms of Service</a></li>
-                            <li><a class="hover:text-accent transition-colors" href="{{ route('privacy') }}">Privacy Policy</a></li>
-                            <li><a class="hover:text-accent transition-colors" href="{{ route('terms') }}">Cookie Policy</a></li>
-                            <li><a class="hover:text-accent transition-colors" href="{{ route('support') }}">Compliance</a></li>
+                            <li><a class="hover:text-accent transition-colors" href="{{ route('legal') }}">Legal hub</a></li>
+                            <li><a class="hover:text-accent transition-colors" href="{{ route('legal', ['doc' => 'terms']) }}">Terms of Service</a></li>
+                            <li><a class="hover:text-accent transition-colors" href="{{ route('legal', ['doc' => 'privacy']) }}">Privacy Policy</a></li>
                         </ul>
                     </div>
                 </div>
 
                 <div class="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-slate-600 text-xs font-bold uppercase tracking-wider">
                     <p>© {{ now()->year }} 7th Trade Hub. All rights reserved.</p>
-                    <div class="flex gap-6">
-                        <a class="hover:text-white transition-colors" href="#">Twitter</a>
-                        <a class="hover:text-white transition-colors" href="#">Telegram</a>
-                        <a class="hover:text-white transition-colors" href="#">Discord</a>
+                    <div class="flex flex-wrap justify-center gap-6">
+                        <a class="hover:text-white transition-colors" href="{{ route('legal', ['doc' => 'terms']) }}">Terms</a>
+                        <a class="hover:text-white transition-colors" href="{{ route('legal', ['doc' => 'privacy']) }}">Privacy</a>
+                        <a class="hover:text-white transition-colors" href="{{ route('help') }}">Help</a>
                     </div>
                 </div>
             </div>

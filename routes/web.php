@@ -42,9 +42,26 @@ Route::get('/', function (CryptoPriceService $prices) {
 })->name('home');
 
 Route::view('/about', 'pages.about')->name('about');
-Route::view('/help', 'pages.help')->name('help');
-Route::view('/terms', 'pages.terms')->name('terms');
-Route::view('/privacy', 'pages.privacy')->name('privacy');
+Route::get('/help', function () {
+    return view('pages.help', [
+        'categories' => config('help.categories', []),
+        'faqs' => config('help.faqs', []),
+    ]);
+})->name('help');
+Route::get('/legal', function (\Illuminate\Http\Request $request) {
+    $doc = $request->string('doc')->toString() ?: 'terms';
+    $documents = config('legal.documents', []);
+    if (! isset($documents[$doc])) {
+        $doc = 'terms';
+    }
+
+    return view('pages.legal', [
+        'activeDoc' => $doc,
+        'document' => $documents[$doc] ?? [],
+    ]);
+})->name('legal');
+Route::redirect('/terms', '/legal?doc=terms')->name('terms');
+Route::redirect('/privacy', '/legal?doc=privacy')->name('privacy');
 
 Route::get('/marketplace', [MarketplaceController::class, 'index'])->name('marketplace');
 Route::get('/marketplace/suggestions', [MarketplaceController::class, 'suggestions'])

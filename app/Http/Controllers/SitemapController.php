@@ -21,8 +21,7 @@ class SitemapController extends Controller
             'templates' => ['priority' => '0.7', 'changefreq' => 'weekly'],
             'website-listings' => ['priority' => '0.7', 'changefreq' => 'weekly'],
             'exchange' => ['priority' => '0.7', 'changefreq' => 'weekly'],
-            'terms' => ['priority' => '0.3', 'changefreq' => 'yearly'],
-            'privacy' => ['priority' => '0.3', 'changefreq' => 'yearly'],
+            'legal' => ['priority' => '0.3', 'changefreq' => 'yearly'],
         ];
 
         $urls = [];
@@ -34,6 +33,17 @@ class SitemapController extends Controller
                 ]);
             }
         }
+
+        $urls[] = [
+            'loc' => route('legal', ['doc' => 'terms']),
+            'priority' => '0.3',
+            'changefreq' => 'yearly',
+        ];
+        $urls[] = [
+            'loc' => route('legal', ['doc' => 'privacy']),
+            'priority' => '0.3',
+            'changefreq' => 'yearly',
+        ];
 
         foreach (array_keys(config('catalog.groups', [])) as $groupSlug) {
             $urls[] = [

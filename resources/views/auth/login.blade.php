@@ -114,7 +114,7 @@
                         </div>
                         <div class="ml-3 text-sm">
                             <label class="text-text-secondary" for="terms">
-                                I agree to the <a class="text-accent hover:underline" href="{{ route('terms') }}">Terms of Service</a> and <a class="text-accent hover:underline" href="{{ route('privacy') }}">Privacy Policy</a>.
+                                I agree to the <a class="text-accent hover:underline" href="{{ route('legal', ['doc' => 'terms']) }}">Terms of Service</a> and <a class="text-accent hover:underline" href="{{ route('legal', ['doc' => 'privacy']) }}">Privacy Policy</a>.
                             </label>
                         </div>
                     </div>
