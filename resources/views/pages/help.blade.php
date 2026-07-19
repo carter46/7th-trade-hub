@@ -158,18 +158,18 @@
             <p class="text-sm sm:text-base text-text-secondary mb-8 max-w-2xl mx-auto leading-relaxed">
                 If you can’t find what you’re looking for, open a ticket from your dashboard and our team will follow up.
             </p>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 w-full">
-                <a href="{{ $ticketHref }}" class="flex flex-col items-center justify-center gap-3 p-6 min-h-[8.5rem] bg-surface/70 rounded-2xl border border-border-subtle hover:border-accent/40 hover:bg-muted/40 transition-colors">
-                    <span class="text-accent"><x-ui.icon name="support" class="w-8 h-8" /></span>
-                    <span class="text-xs font-bold uppercase tracking-wider text-white">Open a ticket</span>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 w-full">
+                <a href="{{ $ticketHref }}" class="flex flex-col items-center justify-center gap-2 p-4 md:p-5 min-h-0 bg-surface/70 rounded-xl border border-border-subtle hover:border-accent/40 hover:bg-muted/40 transition-colors">
+                    <span class="text-accent"><x-ui.icon name="support" class="w-6 h-6" /></span>
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-white">Open a ticket</span>
                 </a>
-                <a href="{{ $supportHref }}" class="flex flex-col items-center justify-center gap-3 p-6 min-h-[8.5rem] bg-surface/70 rounded-2xl border border-border-subtle hover:border-accent/40 hover:bg-muted/40 transition-colors">
-                    <span class="text-accent"><x-ui.icon name="chat" class="w-8 h-8" /></span>
-                    <span class="text-xs font-bold uppercase tracking-wider text-white">My tickets</span>
+                <a href="{{ $supportHref }}" class="flex flex-col items-center justify-center gap-2 p-4 md:p-5 min-h-0 bg-surface/70 rounded-xl border border-border-subtle hover:border-accent/40 hover:bg-muted/40 transition-colors">
+                    <span class="text-accent"><x-ui.icon name="chat" class="w-6 h-6" /></span>
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-white">My tickets</span>
                 </a>
-                <a href="{{ route('exchange') }}" class="flex flex-col items-center justify-center gap-3 p-6 min-h-[8.5rem] bg-surface/70 rounded-2xl border border-border-subtle hover:border-accent/40 hover:bg-muted/40 transition-colors">
-                    <span class="text-accent"><x-ui.icon name="swap" class="w-8 h-8" /></span>
-                    <span class="text-xs font-bold uppercase tracking-wider text-white">Exchange rates</span>
+                <a href="{{ route('exchange') }}" class="flex flex-col items-center justify-center gap-2 p-4 md:p-5 min-h-0 bg-surface/70 rounded-xl border border-border-subtle hover:border-accent/40 hover:bg-muted/40 transition-colors">
+                    <span class="text-accent"><x-ui.icon name="swap" class="w-6 h-6" /></span>
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-white">Exchange rates</span>
                 </a>
             </div>
         </div>
