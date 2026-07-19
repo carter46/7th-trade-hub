@@ -54,32 +54,8 @@
             />
         </div>
     @else
-        {{-- Compact rate cards --}}
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3 mb-10 sm:mb-12">
-            @foreach($rates as $rate)
-                @php $style = $assetStyles[$rate->asset] ?? $defaultStyle; @endphp
-                <div class="glassmorphism px-3 py-3 sm:px-3.5 sm:py-3.5 rounded-lg hover:border-accent/40 transition-all">
-                    <div class="flex items-center justify-between gap-2 mb-2">
-                        <div
-                            class="w-8 h-8 rounded-full flex items-center justify-center border shrink-0"
-                            style="background: {{ $style['bg'] }}; border-color: {{ $style['border'] }};"
-                        >
-                            <span class="font-bold text-[10px]" style="color: {{ $style['fg'] }};">{{ $rate->asset }}</span>
-                        </div>
-                        @if($rate->processing_time)
-                            <span class="text-[9px] text-text-muted text-right leading-tight line-clamp-2">{{ $rate->processing_time }}</span>
-                        @endif
-                    </div>
-                    <p class="text-text-secondary text-[9px] font-medium uppercase tracking-wider">Sell Rate</p>
-                    <p class="font-display text-sm sm:text-base font-semibold text-white leading-tight mt-0.5">
-                        ₦{{ number_format($rate->sell_rate_ngn, 0) }}
-                    </p>
-                </div>
-            @endforeach
-        </div>
-
-        {{-- Image + compact calculator --}}
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6 items-stretch">
+        {{-- Image + compact calculator first --}}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6 items-stretch mb-10 sm:mb-12">
             <div class="relative min-h-[220px] sm:min-h-[280px] lg:min-h-0 rounded-xl overflow-hidden border border-border-subtle bg-elevated">
                 <img
                     src="{{ $sideImage }}"
@@ -153,6 +129,30 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        {{-- Compact rate cards --}}
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
+            @foreach($rates as $rate)
+                @php $style = $assetStyles[$rate->asset] ?? $defaultStyle; @endphp
+                <div class="glassmorphism px-3 py-3 sm:px-3.5 sm:py-3.5 rounded-lg hover:border-accent/40 transition-all">
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                        <div
+                            class="w-8 h-8 rounded-full flex items-center justify-center border shrink-0"
+                            style="background: {{ $style['bg'] }}; border-color: {{ $style['border'] }};"
+                        >
+                            <span class="font-bold text-[10px]" style="color: {{ $style['fg'] }};">{{ $rate->asset }}</span>
+                        </div>
+                        @if($rate->processing_time)
+                            <span class="text-[9px] text-text-muted text-right leading-tight line-clamp-2">{{ $rate->processing_time }}</span>
+                        @endif
+                    </div>
+                    <p class="text-text-secondary text-[9px] font-medium uppercase tracking-wider">Sell Rate</p>
+                    <p class="font-display text-sm sm:text-base font-semibold text-white leading-tight mt-0.5">
+                        ₦{{ number_format($rate->sell_rate_ngn, 0) }}
+                    </p>
+                </div>
+            @endforeach
         </div>
     @endif
 </section>
