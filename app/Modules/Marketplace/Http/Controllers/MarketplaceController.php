@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Listing;
 use App\Models\Watchlist;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -118,6 +119,24 @@ class MarketplaceController extends Controller
             ->exists();
 
         return view('pages.marketplace-show', compact('listing', 'avgRating', 'watchlisted'));
+    }
+
+    public function checkout(string $slug): View|RedirectResponse
+    {
+        $listing = Listing::published()
+            ->where('slug', $slug)
+            ->with(['user', 'listingCategory'])
+            ->firstOrFail();
+
+        if (auth()->id() === $listing->user_id) {
+            return redirect()
+                ->route('marketplace.show', $listing->slug)
+                ->with('error', 'You cannot purchase your own listing.');
+        }
+
+        return view('pages.marketplace-checkout', [
+            'listing' => $listing,
+        ]);
     }
 
     private function filteredListings(Request $request)

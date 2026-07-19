@@ -19,32 +19,22 @@
         <p class="text-text-secondary">{{ $listing->description }}</p>
         <p class="text-3xl font-bold text-accent mt-6">₦{{ number_format($listing->price, 2) }}</p>
 
-        @auth
-            @if(auth()->id() === $listing->user_id)
-                <p class="mt-8 text-text-secondary">This is your listing. <a href="{{ route('dashboard.listings') }}" class="text-accent underline">Manage in dashboard</a></p>
+        <div class="mt-8 flex flex-wrap gap-4 items-center">
+            @if(auth()->check() && auth()->id() === $listing->user_id)
+                <p class="text-text-secondary">This is your listing. <a href="{{ route('dashboard.listings') }}" class="text-accent underline">Manage in dashboard</a></p>
             @else
-                <div class="mt-8 flex flex-wrap gap-4 items-center">
-                    @if(auth()->user()->hasVerifiedEmail() && auth()->user()->wallet)
-                        <form method="POST" action="{{ route('dashboard.checkout.store', $listing) }}">
-                            @csrf
-                            <input type="hidden" name="idempotency_key" value="{{ (string) Illuminate\Support\Str::uuid() }}">
-                            <x-ui.button type="submit" size="lg">Buy Now</x-ui.button>
-                        </form>
-                    @elseif(! auth()->user()->hasVerifiedEmail())
-                        <p class="text-text-secondary"><a href="{{ route('verification.notice') }}" class="text-accent underline">Verify your email</a> before purchasing.</p>
-                    @else
-                        <p class="text-text-secondary"><a href="{{ route('dashboard.wallet') }}" class="text-accent underline">Create a wallet</a> to purchase.</p>
-                    @endif
+                <x-ui.button :href="route('marketplace.checkout', $listing->slug)" size="lg">
+                    Buy Now
+                </x-ui.button>
+                @auth
                     <form method="POST" action="{{ route('dashboard.watchlist.toggle', $listing) }}">
                         @csrf
                         <x-ui.button type="submit" variant="secondary">{{ ($watchlisted ?? false) ? '★ Saved' : '☆ Save' }}</x-ui.button>
                     </form>
-                </div>
-                <p class="mt-3 text-text-muted text-sm">Funds are held in escrow until you confirm delivery.</p>
+                @endauth
+                <p class="w-full text-text-muted text-sm">Funds are held in escrow until you confirm delivery.</p>
             @endif
-        @else
-            <p class="mt-8"><a href="{{ route('login') }}" class="text-accent underline">Login</a> to buy or save listings.</p>
-        @endauth
+        </div>
 
         @if($listing->reviews->isNotEmpty())
             <div class="mt-12 space-y-3">

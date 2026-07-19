@@ -52,6 +52,9 @@ Route::get('/marketplace/suggestions', [MarketplaceController::class, 'suggestio
     ->name('marketplace.suggestions');
 Route::redirect('/marketplace/web-services', '/services')->name('marketplace.web-services');
 Route::get('/marketplace/{slug}', [MarketplaceController::class, 'show'])->name('marketplace.show');
+Route::get('/marketplace/{slug}/checkout', [MarketplaceController::class, 'checkout'])
+    ->middleware('auth')
+    ->name('marketplace.checkout');
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 
 Route::get('/services', [\App\Modules\Catalog\Http\Controllers\ServiceController::class, 'index'])->name('services');
@@ -69,6 +72,7 @@ Route::redirect('/document-templates', '/templates')->name('document-templates')
 Route::get('/website-listings', [\App\Modules\Catalog\Http\Controllers\WebsiteListingController::class, 'index'])->name('website-listings');
 Route::get('/website-listings/{slug}', [\App\Modules\Catalog\Http\Controllers\WebsiteListingController::class, 'show'])->name('website-listings.show');
 Route::get('/checkout/platform/{slug}', [\App\Modules\Catalog\Http\Controllers\PlatformCheckoutController::class, 'show'])
+    ->middleware('auth')
     ->name('checkout.platform.show');
 Route::post('/checkout/platform/{slug}', [\App\Modules\Catalog\Http\Controllers\PlatformCheckoutController::class, 'store'])
     ->middleware(['auth', 'verified', 'has_wallet', 'throttle:10,1'])
