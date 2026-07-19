@@ -12,7 +12,6 @@
         $crumbs[] = ['label' => $groupContent['label'], 'href' => route('services.segment', $groupSlug)];
     }
     if (! empty($typeKey) && ! empty($typeContent)) {
-        // Skip redundant crumb when group has a single type and labels match.
         $typeLabel = $typeContent['label'] ?? $product->product_type->label();
         $lastGroup = $groupContent['label'] ?? null;
         if ($typeLabel !== $lastGroup) {
@@ -21,11 +20,25 @@
     }
     $crumbs[] = ['label' => $product->title];
 
-    $heroImage = $product->hero_image
-        ? asset($product->hero_image)
-        : asset('assets/images/Image_ro410gro410gro41.png');
+    $gallery = collect();
+    if ($product->hero_image) {
+        $gallery->push(['src' => asset($product->hero_image), 'alt' => $product->title]);
+    }
+    foreach ($product->images ?? [] as $img) {
+        $gallery->push([
+            'src' => asset(ltrim($img->path, '/')),
+            'alt' => $img->alt ?: $product->title,
+        ]);
+    }
+    if ($gallery->isEmpty()) {
+        $gallery->push([
+            'src' => asset('assets/images/Image_ro410gro410gro41.png'),
+            'alt' => $product->title,
+        ]);
+    }
+    $gallery = $gallery->unique('src')->values();
 
-    $subtitle = $product->short_description ?: $product->description;
+    $subtitle = $product->short_description ?: null;
     $startPrice = $product->displayPrice();
     $checkoutUrl = route('checkout.platform.show', $product->slug);
 
@@ -69,253 +82,329 @@
     $supportHref = auth()->check()
         ? route('dashboard.support.index')
         : route('login');
+
+    $heroBg = $product->hero_image ?: null;
 @endphp
 
-{{-- Hero --}}
-<section class="relative min-h-[55vh] flex flex-col justify-center items-center px-5 sm:px-6 overflow-hidden">
-    <div class="absolute inset-0 z-0 opacity-40" aria-hidden="true">
-        <img alt="" class="w-full h-full object-cover" src="{{ $heroImage }}">
-        <div class="absolute inset-0 bg-gradient-to-b from-surface/40 via-surface/70 to-surface"></div>
-    </div>
-    <div class="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_center,rgba(11,106,57,0.12)_0%,transparent_70%)]" aria-hidden="true"></div>
-
-    <div class="relative z-10 max-w-marketing mx-auto w-full text-center py-14 sm:py-20">
-        <nav class="flex flex-wrap justify-center items-center gap-1.5 mb-4 text-xs text-text-secondary" aria-label="Breadcrumb">
-            @foreach($crumbs as $i => $crumb)
-                @if($i > 0)
-                    <x-ui.icon name="chevron-right" class="w-3.5 h-3.5 text-text-muted shrink-0" />
-                @endif
-                @if(! empty($crumb['href']) && ! $loop->last)
-                    <a href="{{ $crumb['href'] }}" class="hover:text-accent transition-colors">{{ $crumb['label'] }}</a>
-                @else
-                    <span class="{{ $loop->last ? 'text-accent font-medium' : '' }}">{{ $crumb['label'] }}</span>
-                @endif
-            @endforeach
-        </nav>
-
-        <h1 class="font-display text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white mb-4 leading-tight">
-            {{ $product->title }}
-        </h1>
-
-        @if($subtitle)
-            <p class="max-w-2xl mx-auto text-base sm:text-lg text-text-secondary leading-relaxed">
-                {{ $subtitle }}
-            </p>
+{{-- Compact hero: breadcrumbs only, same height/alignment as /services/* pages --}}
+<header class="relative isolate overflow-hidden border-b border-white/10 pt-32 sm:pt-36 pb-10 sm:pb-12">
+    <div
+        class="pointer-events-none absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
+        @if($heroBg)
+            style="background-image: url('{{ asset($heroBg) }}')"
+        @else
+            style="background-image: url('{{ asset('assets/images/Image_ro410gro410gro41.png') }}')"
         @endif
+        aria-hidden="true"
+    ></div>
+    <div class="pointer-events-none absolute inset-0 z-0 marketing-page-hero-bg" aria-hidden="true"></div>
+    <div
+        class="pointer-events-none absolute inset-0 z-[1]"
+        style="background: linear-gradient(180deg, rgba(15, 23, 42, 0.78) 0%, rgba(15, 23, 42, 0.72) 45%, rgba(15, 23, 42, 0.88) 100%);"
+        aria-hidden="true"
+    ></div>
+    <div class="pointer-events-none absolute top-0 right-0 z-[1] w-[420px] h-[420px] bg-primary/20 blur-[120px] rounded-full" aria-hidden="true"></div>
+    <div class="pointer-events-none absolute bottom-0 left-0 z-[1] w-[320px] h-[320px] bg-accent/10 blur-[100px] rounded-full" aria-hidden="true"></div>
 
-        <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
-            <div class="text-center">
-                <span class="text-[11px] font-medium uppercase tracking-widest text-text-secondary block">Pricing starts at</span>
-                <div class="text-2xl sm:text-3xl font-display font-semibold text-accent mt-1">
-                    ₦{{ number_format($startPrice, 2) }}
-                    @if($showPerMonthSuffix)
-                        <span class="text-sm font-normal text-text-secondary">/ mo</span>
-                    @endif
+    <div class="relative z-10 max-w-marketing mx-auto px-5 sm:px-6">
+        <nav class="text-sm text-slate-300" aria-label="Breadcrumb">
+            <ol class="flex flex-wrap items-center gap-1.5">
+                @foreach($crumbs as $i => $crumb)
+                    <li class="inline-flex items-center gap-1.5">
+                        @if($i > 0)
+                            <span class="text-slate-500" aria-hidden="true">/</span>
+                        @endif
+                        @if(! empty($crumb['href']) && ! $loop->last)
+                            <a href="{{ $crumb['href'] }}" class="hover:text-white transition-colors">{{ $crumb['label'] }}</a>
+                        @else
+                            <span class="{{ $loop->last ? 'text-white/90' : '' }}">{{ $crumb['label'] }}</span>
+                        @endif
+                    </li>
+                @endforeach
+            </ol>
+        </nav>
+    </div>
+</header>
+
+{{-- Ecommerce buy box (white) --}}
+<section class="bg-white text-slate-900">
+    <div class="max-w-marketing mx-auto px-5 sm:px-6 py-10 sm:py-14">
+        <div
+            class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start"
+            x-data="{ active: 0, images: {{ Js::from($gallery) }} }"
+        >
+            {{-- Left: gallery --}}
+            <div class="space-y-3">
+                <div class="aspect-[4/3] sm:aspect-square rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+                    <img
+                        :src="images[active].src"
+                        :alt="images[active].alt"
+                        class="w-full h-full object-cover"
+                    >
+                </div>
+                @if($gallery->count() > 1)
+                    <div class="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                        @foreach($gallery as $i => $shot)
+                            <button
+                                type="button"
+                                @click="active = {{ $i }}"
+                                :class="active === {{ $i }} ? 'ring-2 ring-primary border-primary' : 'border-slate-200 hover:border-slate-300'"
+                                class="aspect-square rounded-lg overflow-hidden border bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                            >
+                                <img src="{{ $shot['src'] }}" alt="" class="w-full h-full object-cover">
+                            </button>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+
+            {{-- Right: title, description, price, CTA --}}
+            <div class="flex flex-col gap-4 sm:gap-5 lg:pt-1">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-primary mb-2">
+                        {{ $product->product_type->label() }}
+                        @if($product->category)
+                            <span class="text-slate-400 font-normal">· {{ $product->category->name }}</span>
+                        @endif
+                    </p>
+                    <h1 class="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 tracking-tight leading-tight">
+                        {{ $product->title }}
+                    </h1>
+                </div>
+
+                @if($subtitle)
+                    <p class="text-sm sm:text-base text-slate-600 leading-relaxed">
+                        {{ $subtitle }}
+                    </p>
+                @endif
+
+                <div class="border-t border-b border-slate-200 py-4">
+                    <span class="text-[11px] font-medium uppercase tracking-widest text-slate-500 block">
+                        {{ $variants->count() > 1 ? 'Pricing starts at' : 'Price' }}
+                    </span>
+                    <div class="mt-1 flex items-baseline gap-2">
+                        <span class="text-3xl font-display font-bold text-primary">
+                            ₦{{ number_format($startPrice, 2) }}
+                        </span>
+                        @if($showPerMonthSuffix)
+                            <span class="text-sm text-slate-500">/ mo</span>
+                        @endif
+                    </div>
+                </div>
+
+                @if($variants->count() > 1)
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Choose a plan</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            @foreach($variants as $variant)
+                                @php
+                                    $months = (int) ($variant->duration_months ?? 0);
+                                    $isPopular = $variant->id === $popularVariantId;
+                                    $isBestValue = $months > 0 && $months === $longestMonths;
+                                @endphp
+                                <div @class([
+                                    'rounded-lg border px-3 py-2.5 text-left',
+                                    'border-primary bg-primary/5' => $isPopular || $isBestValue,
+                                    'border-slate-200 bg-slate-50' => ! ($isPopular || $isBestValue),
+                                ])>
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span class="text-sm font-semibold text-slate-900">{{ $variant->displayLabel() }}</span>
+                                        @if($isBestValue)
+                                            <span class="text-[9px] font-bold uppercase text-primary">Best</span>
+                                        @elseif($isPopular)
+                                            <span class="text-[9px] font-bold uppercase text-primary">Popular</span>
+                                        @endif
+                                    </div>
+                                    <div class="text-sm font-bold text-primary mt-0.5">₦{{ number_format($variant->price, 2) }}</div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                <div class="flex flex-col sm:flex-row gap-3 pt-1">
+                    <x-ui.button :href="$checkoutUrl" variant="primary" size="lg" class="!px-8 hover:!bg-accent">
+                        Buy Now
+                    </x-ui.button>
+                    @auth
+                        <form method="POST" action="{{ route('favorites.toggle') }}">
+                            @csrf
+                            <input type="hidden" name="type" value="platform_product">
+                            <input type="hidden" name="id" value="{{ $product->id }}">
+                            <x-ui.button type="submit" variant="secondary" size="lg" class="!bg-slate-100 !text-slate-800 !border-slate-200 hover:!bg-slate-200">
+                                {{ ($isFavorited ?? false) ? 'Favorited' : 'Favorite' }}
+                            </x-ui.button>
+                        </form>
+                    @endauth
                 </div>
             </div>
-            <x-ui.button :href="$checkoutUrl" variant="primary" size="lg" class="!px-10 !h-12 !text-base shadow-lg shadow-primary/20 hover:!bg-accent">
-                Buy Now
-            </x-ui.button>
-            @auth
-                <form method="POST" action="{{ route('favorites.toggle') }}">
-                    @csrf
-                    <input type="hidden" name="type" value="platform_product">
-                    <input type="hidden" name="id" value="{{ $product->id }}">
-                    <x-ui.button type="submit" variant="secondary" size="lg">
-                        {{ ($isFavorited ?? false) ? 'Favorited' : 'Favorite' }}
-                    </x-ui.button>
-                </form>
-            @endauth
         </div>
     </div>
 </section>
 
-{{-- Specs grid --}}
-<section class="max-w-marketing mx-auto px-5 sm:px-6 py-14 sm:py-16">
-    <div class="grid grid-cols-1 md:grid-cols-12 gap-6 sm:gap-8">
-        {{-- Pricing tiers --}}
-        <div class="md:col-span-8 flex flex-col gap-4">
-            <h2 class="font-display text-xl sm:text-2xl font-semibold text-white mb-1 flex items-center gap-3">
-                <span class="text-accent"><x-ui.icon name="wallet" class="w-6 h-6" /></span>
-                Pricing Tiers
-            </h2>
+{{-- Extra product information (white) --}}
+<section class="bg-white text-slate-900 border-t border-slate-200">
+    <div class="max-w-marketing mx-auto px-5 sm:px-6 py-10 sm:py-14 space-y-10">
+        @if($product->description && (! $subtitle || $product->description !== $subtitle))
+            <div>
+                <h2 class="font-display text-xl font-semibold text-slate-900 mb-3">About this service</h2>
+                <p class="text-sm sm:text-base text-slate-600 leading-relaxed whitespace-pre-line">{{ $product->description }}</p>
+            </div>
+        @endif
 
-            @if($variants->isEmpty())
-                <div class="glassmorphism p-6 rounded-xl">
-                    <div class="text-lg font-bold text-white">₦{{ number_format($product->base_price, 2) }}</div>
-                    <span class="text-xs text-text-secondary">Base price</span>
-                </div>
-            @else
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                    @foreach($variants as $variant)
-                        @php
-                            $months = (int) ($variant->duration_months ?? 0);
-                            $isPopular = $variant->id === $popularVariantId && $variants->count() > 1;
-                            $isBestValue = $months > 0 && $months === $longestMonths && $variants->count() > 1;
-                            $perMonth = $months > 0 ? ((float) $variant->price / $months) : null;
-                            $savePct = null;
-                            if ($monthlyVariant && $months > 1) {
-                                $expected = (float) $monthlyVariant->price * $months;
-                                if ($expected > 0 && (float) $variant->price < $expected) {
-                                    $savePct = (int) round((1 - ((float) $variant->price / $expected)) * 100);
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+            @if($variants->count() > 1)
+                <div class="md:col-span-8">
+                    <h2 class="font-display text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                        <span class="text-primary"><x-ui.icon name="wallet" class="w-5 h-5" /></span>
+                        Pricing tiers
+                    </h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        @foreach($variants as $variant)
+                            @php
+                                $months = (int) ($variant->duration_months ?? 0);
+                                $isPopular = $variant->id === $popularVariantId;
+                                $isBestValue = $months > 0 && $months === $longestMonths;
+                                $perMonth = $months > 0 ? ((float) $variant->price / $months) : null;
+                                $savePct = null;
+                                if ($monthlyVariant && $months > 1) {
+                                    $expected = (float) $monthlyVariant->price * $months;
+                                    if ($expected > 0 && (float) $variant->price < $expected) {
+                                        $savePct = (int) round((1 - ((float) $variant->price / $expected)) * 100);
+                                    }
                                 }
-                            }
-                            $tierBadge = $isBestValue ? 'Best Value' : ($isPopular && $savePct ? 'Save '.$savePct.'%' : ($isPopular ? 'Popular' : null));
-                            $featured = $isPopular || $isBestValue;
-                        @endphp
-                        <div @class([
-                            'glassmorphism p-6 rounded-xl flex flex-col justify-between transition-all hover:border-accent/40',
-                            'border-accent/50 ring-1 ring-accent/20 shadow-lg shadow-primary/5' => $featured,
-                        ])>
-                            <div class="flex justify-between items-start gap-3">
-                                <div>
-                                    <h3 class="text-xs font-medium uppercase tracking-wider text-accent mb-2">
-                                        {{ $variant->name ?: 'Plan' }}
-                                    </h3>
-                                    <div class="text-xl font-display font-semibold text-white">
-                                        {{ $variant->displayLabel() }}
+                                $tierBadge = $isBestValue ? 'Best Value' : ($isPopular && $savePct ? 'Save '.$savePct.'%' : ($isPopular ? 'Popular' : null));
+                            @endphp
+                            <div @class([
+                                'rounded-xl border p-5',
+                                'border-primary/40 bg-primary/5' => $isPopular || $isBestValue,
+                                'border-slate-200 bg-slate-50' => ! ($isPopular || $isBestValue),
+                            ])>
+                                <div class="flex justify-between items-start gap-2">
+                                    <div>
+                                        <div class="text-xs font-medium uppercase tracking-wider text-primary mb-1">{{ $variant->name ?: 'Plan' }}</div>
+                                        <div class="font-semibold text-slate-900">{{ $variant->displayLabel() }}</div>
                                     </div>
+                                    @if($tierBadge)
+                                        <span class="bg-primary/15 text-primary px-2 py-0.5 rounded text-[10px] font-bold uppercase whitespace-nowrap">{{ $tierBadge }}</span>
+                                    @endif
                                 </div>
-                                @if($tierBadge)
-                                    <span class="bg-primary/20 text-accent px-2 py-1 rounded text-[10px] font-bold uppercase whitespace-nowrap">
-                                        {{ $tierBadge }}
-                                    </span>
-                                @endif
-                            </div>
-                            <div class="mt-6">
-                                <div class="text-lg font-bold text-white">₦{{ number_format($variant->price, 2) }}</div>
+                                <div class="mt-4 text-lg font-bold text-slate-900">₦{{ number_format($variant->price, 2) }}</div>
                                 @if($perMonth !== null)
-                                    <span class="text-xs text-text-secondary">₦{{ number_format($perMonth, 2) }} / mo</span>
+                                    <div class="text-xs text-slate-500">₦{{ number_format($perMonth, 2) }} / mo</div>
                                 @elseif($months === 1)
-                                    <span class="text-xs text-text-secondary">Billed monthly</span>
+                                    <div class="text-xs text-slate-500">Billed monthly</div>
                                 @else
-                                    <span class="text-xs text-text-secondary">One-time</span>
+                                    <div class="text-xs text-slate-500">One-time</div>
                                 @endif
                             </div>
-                        </div>
-                    @endforeach
+                        @endforeach
+                    </div>
                 </div>
             @endif
-        </div>
 
-        {{-- Requirements --}}
-        <div class="md:col-span-4 glassmorphism p-6 sm:p-8 rounded-xl flex flex-col gap-6 h-full">
-            <h2 class="font-display text-lg sm:text-xl font-semibold text-white flex items-center gap-3">
-                <span class="text-warning"><x-ui.icon name="warning" class="w-5 h-5" /></span>
-                Requirements
-            </h2>
-            @if($requirements->isEmpty())
-                <p class="text-sm text-text-secondary">No special requirements listed for this product.</p>
-            @else
-                <ul class="space-y-4">
-                    @foreach($requirements as $req)
-                        <li class="flex gap-3 items-start">
-                            <span class="text-accent mt-0.5 shrink-0"><x-ui.icon name="check" class="w-5 h-5" /></span>
-                            <span class="text-sm sm:text-base text-text-primary">{{ $req }}</span>
-                        </li>
-                    @endforeach
-                </ul>
-            @endif
-            <div class="mt-auto pt-6 border-t border-border-subtle">
-                <p class="text-xs text-text-secondary italic">
+            <div @class(['md:col-span-4' => $variants->count() > 1, 'md:col-span-12' => $variants->count() <= 1])>
+                <h2 class="font-display text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                    <span class="text-warning"><x-ui.icon name="warning" class="w-5 h-5" /></span>
+                    Requirements
+                </h2>
+                @if($requirements->isEmpty())
+                    <p class="text-sm text-slate-500">No special requirements listed.</p>
+                @else
+                    <ul class="space-y-3">
+                        @foreach($requirements as $req)
+                            <li class="flex gap-2.5 items-start text-sm text-slate-700">
+                                <span class="text-primary mt-0.5 shrink-0"><x-ui.icon name="check" class="w-4 h-4" /></span>
+                                {{ $req }}
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+                <p class="mt-4 text-xs text-slate-500 italic border-t border-slate-200 pt-4">
                     Complete KYC when prompted so purchases and withdrawals process without delay.
                 </p>
             </div>
-        </div>
 
-        {{-- Features --}}
-        <div class="md:col-span-6 glassmorphism p-6 sm:p-8 rounded-xl">
-            <h2 class="font-display text-lg sm:text-xl font-semibold text-white mb-4 flex items-center gap-3">
-                <span class="text-accent"><x-ui.icon name="rocket" class="w-5 h-5" /></span>
-                Features
-            </h2>
-            @if($features->isEmpty())
-                <p class="text-sm text-text-secondary">Feature details coming soon.</p>
-            @else
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    @foreach($features as $i => $feature)
-                        <div class="bg-muted/40 p-4 rounded-lg flex items-start gap-3">
-                            <span class="text-accent p-2 bg-primary/15 rounded-lg shrink-0">
-                                <x-ui.icon :name="$featureIcons[$i % count($featureIcons)]" class="w-5 h-5" />
-                            </span>
-                            <div>
-                                <div class="font-bold text-sm text-white">{{ $feature['title'] }}</div>
-                                @if(! empty($feature['blurb']))
-                                    <div class="text-xs text-text-secondary mt-0.5">{{ $feature['blurb'] }}</div>
-                                @endif
+            <div class="md:col-span-6">
+                <h2 class="font-display text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                    <span class="text-primary"><x-ui.icon name="rocket" class="w-5 h-5" /></span>
+                    Features
+                </h2>
+                @if($features->isEmpty())
+                    <p class="text-sm text-slate-500">Feature details coming soon.</p>
+                @else
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        @foreach($features as $i => $feature)
+                            <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 flex items-start gap-3">
+                                <span class="text-primary p-2 bg-primary/10 rounded-lg shrink-0">
+                                    <x-ui.icon :name="$featureIcons[$i % count($featureIcons)]" class="w-4 h-4" />
+                                </span>
+                                <div>
+                                    <div class="font-semibold text-sm text-slate-900">{{ $feature['title'] }}</div>
+                                    @if(! empty($feature['blurb']))
+                                        <div class="text-xs text-slate-500 mt-0.5">{{ $feature['blurb'] }}</div>
+                                    @endif
+                                </div>
                             </div>
-                        </div>
-                    @endforeach
-                </div>
-            @endif
-        </div>
-
-        {{-- What's included --}}
-        <div class="md:col-span-6 glassmorphism p-6 sm:p-8 rounded-xl">
-            <h2 class="font-display text-lg sm:text-xl font-semibold text-white mb-4 flex items-center gap-3">
-                <span class="text-accent"><x-ui.icon name="inventory" class="w-5 h-5" /></span>
-                What's Included
-            </h2>
-            @if($included->isEmpty())
-                <p class="text-sm text-text-secondary">Inclusions will be listed here.</p>
-            @else
-                <div class="space-y-3">
-                    @foreach($included as $i => $item)
-                        <div class="flex items-center gap-3 p-3 border-l-2 border-accent bg-primary/5">
-                            <span class="text-accent shrink-0">
-                                <x-ui.icon :name="$includeIcons[$i % count($includeIcons)]" class="w-5 h-5" />
-                            </span>
-                            <span class="font-bold text-sm text-white">{{ $item }}</span>
-                        </div>
-                    @endforeach
-                </div>
-            @endif
-        </div>
-    </div>
-
-    @if($product->description && $product->short_description && $product->description !== $product->short_description)
-        <div class="mt-8 glassmorphism p-6 sm:p-8 rounded-xl">
-            <h2 class="font-display text-lg sm:text-xl font-semibold text-white mb-3">About this service</h2>
-            <p class="text-sm sm:text-base text-text-secondary leading-relaxed whitespace-pre-line">{{ $product->description }}</p>
-        </div>
-    @endif
-</section>
-
-{{-- FAQs --}}
-<section class="bg-elevated/40 border-t border-border-subtle py-14 sm:py-16">
-    <div class="max-w-3xl mx-auto px-5 sm:px-6">
-        <div class="text-center mb-8">
-            <h2 class="font-display text-xl sm:text-2xl font-semibold text-white mb-2">Frequently Asked Questions</h2>
-            <p class="text-text-secondary text-sm sm:text-base">
-                Everything you need to know about {{ $product->title }}.
-            </p>
-        </div>
-
-        <div class="space-y-4">
-            @forelse($faqs as $faq)
-                <details class="group glassmorphism rounded-xl overflow-hidden [&_summary::-webkit-details-marker]:hidden">
-                    <summary class="flex justify-between items-center gap-4 p-5 sm:p-6 cursor-pointer hover:bg-white/5 transition-colors">
-                        <h3 class="font-bold text-base text-white text-left">{{ $faq['q'] }}</h3>
-                        <span class="text-text-secondary transition-transform group-open:rotate-180 shrink-0">
-                            <x-ui.icon name="chevron-down" class="w-5 h-5" />
-                        </span>
-                    </summary>
-                    <div class="px-5 sm:px-6 pb-5 sm:pb-6 text-sm text-text-secondary leading-relaxed">
-                        {{ $faq['a'] ?? '' }}
+                        @endforeach
                     </div>
-                </details>
-            @empty
-                <p class="text-center text-sm text-text-secondary">No FAQs published for this product yet.</p>
-            @endforelse
+                @endif
+            </div>
 
-            <div class="mt-8 p-6 rounded-xl border border-dashed border-border-default text-center">
-                <p class="text-sm text-text-primary mb-4">
-                    {{ $product->support_text ?: 'Still have questions?' }}
-                </p>
-                <a href="{{ $supportHref }}" class="inline-flex items-center gap-2 text-accent font-bold hover:underline text-sm">
-                    <x-ui.icon name="support" class="w-5 h-5" />
-                    Open a support ticket from your dashboard
-                </a>
+            <div class="md:col-span-6">
+                <h2 class="font-display text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                    <span class="text-primary"><x-ui.icon name="inventory" class="w-5 h-5" /></span>
+                    What's included
+                </h2>
+                @if($included->isEmpty())
+                    <p class="text-sm text-slate-500">Inclusions will be listed here.</p>
+                @else
+                    <div class="space-y-2">
+                        @foreach($included as $i => $item)
+                            <div class="flex items-center gap-3 p-3 border-l-2 border-primary bg-primary/5 rounded-r-lg">
+                                <span class="text-primary shrink-0">
+                                    <x-ui.icon :name="$includeIcons[$i % count($includeIcons)]" class="w-4 h-4" />
+                                </span>
+                                <span class="font-semibold text-sm text-slate-900">{{ $item }}</span>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+        </div>
+
+        <div class="border-t border-slate-200 pt-10">
+            <div class="max-w-3xl">
+                <h2 class="font-display text-xl font-semibold text-slate-900 mb-2">Frequently asked questions</h2>
+                <p class="text-sm text-slate-500 mb-6">Everything you need to know about {{ $product->title }}.</p>
+
+                <div class="space-y-3">
+                    @forelse($faqs as $faq)
+                        <details class="group rounded-xl border border-slate-200 bg-slate-50 overflow-hidden [&_summary::-webkit-details-marker]:hidden">
+                            <summary class="flex justify-between items-center gap-4 p-4 sm:p-5 cursor-pointer hover:bg-slate-100 transition-colors">
+                                <h3 class="font-semibold text-sm sm:text-base text-slate-900 text-left">{{ $faq['q'] }}</h3>
+                                <span class="text-slate-400 transition-transform group-open:rotate-180 shrink-0">
+                                    <x-ui.icon name="chevron-down" class="w-5 h-5" />
+                                </span>
+                            </summary>
+                            <div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-600 leading-relaxed">
+                                {{ $faq['a'] ?? '' }}
+                            </div>
+                        </details>
+                    @empty
+                        <p class="text-sm text-slate-500">No FAQs published for this product yet.</p>
+                    @endforelse
+                </div>
+
+                <div class="mt-6 p-5 rounded-xl border border-dashed border-slate-300 text-center">
+                    <p class="text-sm text-slate-700 mb-3">
+                        {{ $product->support_text ?: 'Still have questions?' }}
+                    </p>
+                    <a href="{{ $supportHref }}" class="inline-flex items-center gap-2 text-primary font-bold hover:text-accent hover:underline text-sm">
+                        <x-ui.icon name="support" class="w-5 h-5" />
+                        Open a support ticket from your dashboard
+                    </a>
+                </div>
             </div>
         </div>
     </div>

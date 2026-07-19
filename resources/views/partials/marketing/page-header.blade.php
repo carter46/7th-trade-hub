@@ -46,7 +46,9 @@
             </nav>
         @endif
 
-        <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold font-display text-white tracking-tight">{{ $title }}</h1>
+        @if($title !== '' && $title !== null)
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold font-display text-white tracking-tight">{{ $title }}</h1>
+        @endif
         @if($subtitle)
             <p class="mt-2 text-slate-300 max-w-2xl text-sm sm:text-base leading-relaxed">{{ $subtitle }}</p>
         @endif
