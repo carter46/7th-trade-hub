@@ -242,146 +242,147 @@
     </div>
 </section>
 
-{{-- Extra product information (white) --}}
+{{-- Extra product information: only sections with admin data, each on its own grey card --}}
+@php
+    $showAbout = filled($product->description) && (! $subtitle || trim((string) $product->description) !== trim((string) $subtitle));
+    $showTiers = $variants->count() > 1;
+    $showRequirements = $requirements->isNotEmpty();
+    $showFeatures = $features->isNotEmpty();
+    $showIncluded = $included->isNotEmpty();
+    $showFaqs = $faqs->isNotEmpty();
+    $showSupport = filled($product->support_text);
+    $hasDetailSections = $showAbout || $showTiers || $showRequirements || $showFeatures || $showIncluded || $showFaqs || $showSupport;
+    $cardClass = 'rounded-xl border border-slate-200 bg-slate-100 p-5 sm:p-6';
+@endphp
+
+@if($hasDetailSections)
 <section class="bg-white text-slate-900 border-t border-slate-200">
-    <div class="max-w-marketing mx-auto px-5 sm:px-6 py-10 sm:py-14 space-y-10">
-        @if($product->description && (! $subtitle || $product->description !== $subtitle))
-            <div>
-                <h2 class="font-display text-xl font-semibold text-slate-900 mb-3">About this service</h2>
+    <div class="max-w-marketing mx-auto px-5 sm:px-6 py-10 sm:py-14 space-y-5 sm:space-y-6">
+        @if($showAbout)
+            <div class="{{ $cardClass }}">
+                <h2 class="font-display text-lg sm:text-xl font-semibold text-slate-900 mb-3">About this service</h2>
                 <p class="text-sm sm:text-base text-slate-600 leading-relaxed whitespace-pre-line">{{ $product->description }}</p>
             </div>
         @endif
 
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
-            @if($variants->count() > 1)
-                <div class="md:col-span-8">
-                    <h2 class="font-display text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                        <span class="text-primary"><x-ui.icon name="wallet" class="w-5 h-5" /></span>
-                        Pricing tiers
-                    </h2>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        @foreach($variants as $variant)
-                            @php
-                                $months = (int) ($variant->duration_months ?? 0);
-                                $isPopular = $variant->id === $popularVariantId;
-                                $isBestValue = $months > 0 && $months === $longestMonths;
-                                $perMonth = $months > 0 ? ((float) $variant->price / $months) : null;
-                                $savePct = null;
-                                if ($monthlyVariant && $months > 1) {
-                                    $expected = (float) $monthlyVariant->price * $months;
-                                    if ($expected > 0 && (float) $variant->price < $expected) {
-                                        $savePct = (int) round((1 - ((float) $variant->price / $expected)) * 100);
-                                    }
+        @if($showTiers)
+            <div class="{{ $cardClass }}">
+                <h2 class="font-display text-lg sm:text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                    <span class="text-primary"><x-ui.icon name="wallet" class="w-5 h-5" /></span>
+                    Pricing tiers
+                </h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    @foreach($variants as $variant)
+                        @php
+                            $months = (int) ($variant->duration_months ?? 0);
+                            $isPopular = $variant->id === $popularVariantId;
+                            $isBestValue = $months > 0 && $months === $longestMonths;
+                            $perMonth = $months > 0 ? ((float) $variant->price / $months) : null;
+                            $savePct = null;
+                            if ($monthlyVariant && $months > 1) {
+                                $expected = (float) $monthlyVariant->price * $months;
+                                if ($expected > 0 && (float) $variant->price < $expected) {
+                                    $savePct = (int) round((1 - ((float) $variant->price / $expected)) * 100);
                                 }
-                                $tierBadge = $isBestValue ? 'Best Value' : ($isPopular && $savePct ? 'Save '.$savePct.'%' : ($isPopular ? 'Popular' : null));
-                            @endphp
-                            <div @class([
-                                'rounded-xl border p-5',
-                                'border-primary/40 bg-primary/5' => $isPopular || $isBestValue,
-                                'border-slate-200 bg-slate-50' => ! ($isPopular || $isBestValue),
-                            ])>
-                                <div class="flex justify-between items-start gap-2">
-                                    <div>
-                                        <div class="text-xs font-medium uppercase tracking-wider text-primary mb-1">{{ $variant->name ?: 'Plan' }}</div>
-                                        <div class="font-semibold text-slate-900">{{ $variant->displayLabel() }}</div>
-                                    </div>
-                                    @if($tierBadge)
-                                        <span class="bg-primary/15 text-primary px-2 py-0.5 rounded text-[10px] font-bold uppercase whitespace-nowrap">{{ $tierBadge }}</span>
-                                    @endif
+                            }
+                            $tierBadge = $isBestValue ? 'Best Value' : ($isPopular && $savePct ? 'Save '.$savePct.'%' : ($isPopular ? 'Popular' : null));
+                        @endphp
+                        <div @class([
+                            'rounded-xl border p-4 sm:p-5 bg-white',
+                            'border-primary/40 ring-1 ring-primary/15' => $isPopular || $isBestValue,
+                            'border-slate-200' => ! ($isPopular || $isBestValue),
+                        ])>
+                            <div class="flex justify-between items-start gap-2">
+                                <div>
+                                    <div class="text-xs font-medium uppercase tracking-wider text-primary mb-1">{{ $variant->name ?: 'Plan' }}</div>
+                                    <div class="font-semibold text-slate-900">{{ $variant->displayLabel() }}</div>
                                 </div>
-                                <div class="mt-4 text-lg font-bold text-slate-900">₦{{ number_format($variant->price, 2) }}</div>
-                                @if($perMonth !== null)
-                                    <div class="text-xs text-slate-500">₦{{ number_format($perMonth, 2) }} / mo</div>
-                                @elseif($months === 1)
-                                    <div class="text-xs text-slate-500">Billed monthly</div>
-                                @else
-                                    <div class="text-xs text-slate-500">One-time</div>
+                                @if($tierBadge)
+                                    <span class="bg-primary/15 text-primary px-2 py-0.5 rounded text-[10px] font-bold uppercase whitespace-nowrap">{{ $tierBadge }}</span>
                                 @endif
                             </div>
-                        @endforeach
-                    </div>
+                            <div class="mt-4 text-lg font-bold text-slate-900">₦{{ number_format($variant->price, 2) }}</div>
+                            @if($perMonth !== null)
+                                <div class="text-xs text-slate-500">₦{{ number_format($perMonth, 2) }} / mo</div>
+                            @elseif($months === 1)
+                                <div class="text-xs text-slate-500">Billed monthly</div>
+                            @else
+                                <div class="text-xs text-slate-500">One-time</div>
+                            @endif
+                        </div>
+                    @endforeach
                 </div>
-            @endif
+            </div>
+        @endif
 
-            <div @class(['md:col-span-4' => $variants->count() > 1, 'md:col-span-12' => $variants->count() <= 1])>
-                <h2 class="font-display text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
+        @if($showRequirements)
+            <div class="{{ $cardClass }}">
+                <h2 class="font-display text-lg sm:text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
                     <span class="text-warning"><x-ui.icon name="warning" class="w-5 h-5" /></span>
                     Requirements
                 </h2>
-                @if($requirements->isEmpty())
-                    <p class="text-sm text-slate-500">No special requirements listed.</p>
-                @else
-                    <ul class="space-y-3">
-                        @foreach($requirements as $req)
-                            <li class="flex gap-2.5 items-start text-sm text-slate-700">
-                                <span class="text-primary mt-0.5 shrink-0"><x-ui.icon name="check" class="w-4 h-4" /></span>
-                                {{ $req }}
-                            </li>
-                        @endforeach
-                    </ul>
-                @endif
-                <p class="mt-4 text-xs text-slate-500 italic border-t border-slate-200 pt-4">
-                    Complete KYC when prompted so purchases and withdrawals process without delay.
-                </p>
+                <ul class="space-y-3">
+                    @foreach($requirements as $req)
+                        <li class="flex gap-2.5 items-start text-sm text-slate-700">
+                            <span class="text-primary mt-0.5 shrink-0"><x-ui.icon name="check" class="w-4 h-4" /></span>
+                            {{ $req }}
+                        </li>
+                    @endforeach
+                </ul>
             </div>
+        @endif
 
-            <div class="md:col-span-6">
-                <h2 class="font-display text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
+        @if($showFeatures)
+            <div class="{{ $cardClass }}">
+                <h2 class="font-display text-lg sm:text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
                     <span class="text-primary"><x-ui.icon name="rocket" class="w-5 h-5" /></span>
                     Features
                 </h2>
-                @if($features->isEmpty())
-                    <p class="text-sm text-slate-500">Feature details coming soon.</p>
-                @else
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        @foreach($features as $i => $feature)
-                            <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 flex items-start gap-3">
-                                <span class="text-primary p-2 bg-primary/10 rounded-lg shrink-0">
-                                    <x-ui.icon :name="$featureIcons[$i % count($featureIcons)]" class="w-4 h-4" />
-                                </span>
-                                <div>
-                                    <div class="font-semibold text-sm text-slate-900">{{ $feature['title'] }}</div>
-                                    @if(! empty($feature['blurb']))
-                                        <div class="text-xs text-slate-500 mt-0.5">{{ $feature['blurb'] }}</div>
-                                    @endif
-                                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    @foreach($features as $i => $feature)
+                        <div class="rounded-lg border border-slate-200 bg-white p-4 flex items-start gap-3">
+                            <span class="text-primary p-2 bg-primary/10 rounded-lg shrink-0">
+                                <x-ui.icon :name="$featureIcons[$i % count($featureIcons)]" class="w-4 h-4" />
+                            </span>
+                            <div>
+                                <div class="font-semibold text-sm text-slate-900">{{ $feature['title'] }}</div>
+                                @if(! empty($feature['blurb']))
+                                    <div class="text-xs text-slate-500 mt-0.5">{{ $feature['blurb'] }}</div>
+                                @endif
                             </div>
-                        @endforeach
-                    </div>
-                @endif
+                        </div>
+                    @endforeach
+                </div>
             </div>
+        @endif
 
-            <div class="md:col-span-6">
-                <h2 class="font-display text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
+        @if($showIncluded)
+            <div class="{{ $cardClass }}">
+                <h2 class="font-display text-lg sm:text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
                     <span class="text-primary"><x-ui.icon name="inventory" class="w-5 h-5" /></span>
                     What's included
                 </h2>
-                @if($included->isEmpty())
-                    <p class="text-sm text-slate-500">Inclusions will be listed here.</p>
-                @else
-                    <div class="space-y-2">
-                        @foreach($included as $i => $item)
-                            <div class="flex items-center gap-3 p-3 border-l-2 border-primary bg-primary/5 rounded-r-lg">
-                                <span class="text-primary shrink-0">
-                                    <x-ui.icon :name="$includeIcons[$i % count($includeIcons)]" class="w-4 h-4" />
-                                </span>
-                                <span class="font-semibold text-sm text-slate-900">{{ $item }}</span>
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
+                <div class="space-y-2">
+                    @foreach($included as $i => $item)
+                        <div class="flex items-center gap-3 p-3 border-l-2 border-primary bg-white rounded-r-lg">
+                            <span class="text-primary shrink-0">
+                                <x-ui.icon :name="$includeIcons[$i % count($includeIcons)]" class="w-4 h-4" />
+                            </span>
+                            <span class="font-semibold text-sm text-slate-900">{{ $item }}</span>
+                        </div>
+                    @endforeach
+                </div>
             </div>
-        </div>
+        @endif
 
-        <div class="border-t border-slate-200 pt-10">
-            <div class="max-w-3xl">
-                <h2 class="font-display text-xl font-semibold text-slate-900 mb-2">Frequently asked questions</h2>
-                <p class="text-sm text-slate-500 mb-6">Everything you need to know about {{ $product->title }}.</p>
-
+        @if($showFaqs)
+            <div class="{{ $cardClass }}">
+                <h2 class="font-display text-lg sm:text-xl font-semibold text-slate-900 mb-2">Frequently asked questions</h2>
+                <p class="text-sm text-slate-500 mb-5">About {{ $product->title }}</p>
                 <div class="space-y-3">
-                    @forelse($faqs as $faq)
-                        <details class="group rounded-xl border border-slate-200 bg-slate-50 overflow-hidden [&_summary::-webkit-details-marker]:hidden">
-                            <summary class="flex justify-between items-center gap-4 p-4 sm:p-5 cursor-pointer hover:bg-slate-100 transition-colors">
+                    @foreach($faqs as $faq)
+                        <details class="group rounded-xl border border-slate-200 bg-white overflow-hidden [&_summary::-webkit-details-marker]:hidden">
+                            <summary class="flex justify-between items-center gap-4 p-4 sm:p-5 cursor-pointer hover:bg-slate-50 transition-colors">
                                 <h3 class="font-semibold text-sm sm:text-base text-slate-900 text-left">{{ $faq['q'] }}</h3>
                                 <span class="text-slate-400 transition-transform group-open:rotate-180 shrink-0">
                                     <x-ui.icon name="chevron-down" class="w-5 h-5" />
@@ -391,22 +392,21 @@
                                 {{ $faq['a'] ?? '' }}
                             </div>
                         </details>
-                    @empty
-                        <p class="text-sm text-slate-500">No FAQs published for this product yet.</p>
-                    @endforelse
-                </div>
-
-                <div class="mt-6 p-5 rounded-xl border border-dashed border-slate-300 text-center">
-                    <p class="text-sm text-slate-700 mb-3">
-                        {{ $product->support_text ?: 'Still have questions?' }}
-                    </p>
-                    <a href="{{ $supportHref }}" class="inline-flex items-center gap-2 text-primary font-bold hover:text-accent hover:underline text-sm">
-                        <x-ui.icon name="support" class="w-5 h-5" />
-                        Open a support ticket from your dashboard
-                    </a>
+                    @endforeach
                 </div>
             </div>
-        </div>
+        @endif
+
+        @if($showSupport)
+            <div class="{{ $cardClass }} text-center">
+                <p class="text-sm text-slate-700 mb-3">{{ $product->support_text }}</p>
+                <a href="{{ $supportHref }}" class="inline-flex items-center gap-2 text-primary font-bold hover:text-accent hover:underline text-sm">
+                    <x-ui.icon name="support" class="w-5 h-5" />
+                    Open a support ticket from your dashboard
+                </a>
+            </div>
+        @endif
     </div>
 </section>
+@endif
 @endsection
