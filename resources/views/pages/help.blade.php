@@ -31,6 +31,15 @@
     ];
 @endphp
 
+@include('partials.marketing.page-header', [
+    'breadcrumbs' => [
+        ['label' => 'Home', 'href' => route('home')],
+        ['label' => 'Help Center'],
+    ],
+    'title' => 'Help Center',
+    'subtitle' => 'Search our knowledge base or get in touch with support for wallet, exchange, services, and marketplace help.',
+])
+
 <div
     x-data="{
         q: '',
@@ -58,39 +67,29 @@
     }"
 >
 
-{{-- Hero --}}
-<section class="relative px-5 sm:px-6 max-w-marketing mx-auto text-center pt-10 sm:pt-14 pb-12 sm:pb-16">
-    <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(11,106,57,0.12)_0%,transparent_70%)]" aria-hidden="true"></div>
-    <div class="relative z-10">
-        <h1 class="font-display text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white mb-4 leading-tight">
-            How can we help you?
-        </h1>
-        <p class="text-sm sm:text-base lg:text-lg text-text-secondary mb-8 max-w-2xl mx-auto leading-relaxed">
-            Search guides for wallet, exchange, services, and marketplace — or open a support ticket when you need a human.
-        </p>
-        <div class="max-w-2xl mx-auto relative">
-            <span class="absolute left-5 top-1/2 -translate-y-1/2 text-accent pointer-events-none">
-                <x-ui.icon name="search" class="w-5 h-5" />
-            </span>
-            <label for="help-search" class="sr-only">Search help center</label>
-            <input
-                id="help-search"
-                x-ref="search"
-                x-model="q"
-                type="search"
-                placeholder="Search our knowledge base..."
-                class="w-full pl-14 pr-16 py-4 sm:py-5 bg-elevated rounded-full border border-border-default focus:border-accent focus:ring-1 focus:ring-accent/40 text-sm sm:text-base text-text-primary placeholder:text-text-muted transition-all shadow-xl"
-            >
-            <kbd class="absolute right-5 top-1/2 -translate-y-1/2 px-2 py-1 bg-muted rounded text-[10px] font-medium text-text-muted border border-border-subtle hidden sm:inline-block">/</kbd>
-        </div>
+<section class="max-w-marketing mx-auto px-5 sm:px-6 -mt-2 mb-10 sm:mb-12">
+    <div class="max-w-2xl mx-auto relative">
+        <span class="absolute left-5 top-1/2 -translate-y-1/2 text-accent pointer-events-none">
+            <x-ui.icon name="search" class="w-5 h-5" />
+        </span>
+        <label for="help-search" class="sr-only">Search help center</label>
+        <input
+            id="help-search"
+            x-ref="search"
+            x-model="q"
+            type="search"
+            placeholder="Search our knowledge base..."
+            class="w-full pl-14 pr-16 py-4 sm:py-5 bg-elevated rounded-full border border-border-default focus:border-accent focus:ring-1 focus:ring-accent/40 text-sm sm:text-base text-text-primary placeholder:text-text-muted transition-all shadow-xl"
+        >
+        <kbd class="absolute right-5 top-1/2 -translate-y-1/2 px-2 py-1 bg-muted rounded text-[10px] font-medium text-text-muted border border-border-subtle hidden sm:inline-block">/</kbd>
     </div>
 </section>
 
 {{-- Categories --}}
-<section class="px-5 sm:px-6 max-w-marketing mx-auto pb-14 sm:pb-16">
+<section class="max-w-marketing mx-auto px-5 sm:px-6 pb-14 sm:pb-16">
     <div class="mb-6 sm:mb-8">
         <h2 class="font-display text-xl sm:text-2xl font-semibold text-accent mb-1">Browse categories</h2>
-        <p class="text-sm text-text-secondary">Common topics across the platform</p>
+        <p class="text-sm text-text-secondary">Explore common topics and guides</p>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
@@ -117,7 +116,6 @@
     </p>
 </section>
 
-{{-- FAQs --}}
 @if(count($faqs))
 <section id="faqs" class="bg-elevated/40 border-y border-border-subtle py-14 sm:py-16">
     <div class="px-5 sm:px-6 max-w-3xl mx-auto">
@@ -150,26 +148,26 @@
 </section>
 @endif
 
-{{-- Still need help --}}
-<section class="px-5 sm:px-6 max-w-marketing mx-auto py-14 sm:py-16">
-    <div class="rounded-2xl sm:rounded-3xl bg-gradient-to-br from-elevated to-muted/40 border border-border-subtle p-8 sm:p-12 text-center overflow-hidden relative">
+{{-- Still need help: 3 cards in a horizontal row on desktop --}}
+<section class="max-w-marketing mx-auto px-5 sm:px-6 py-14 sm:py-16">
+    <div class="rounded-2xl sm:rounded-3xl bg-gradient-to-br from-elevated to-muted/40 border border-border-subtle p-6 sm:p-10 lg:p-12 overflow-hidden relative">
         <div class="absolute -bottom-20 -right-20 w-64 h-64 bg-primary/20 rounded-full blur-[100px] pointer-events-none" aria-hidden="true"></div>
         <div class="absolute -top-20 -left-20 w-64 h-64 bg-accent/10 rounded-full blur-[100px] pointer-events-none" aria-hidden="true"></div>
-        <div class="relative z-10 max-w-3xl mx-auto">
-            <h2 class="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-4">Still need help?</h2>
-            <p class="text-sm sm:text-base text-text-secondary mb-8 leading-relaxed">
+        <div class="relative z-10 text-center">
+            <h2 class="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 sm:mb-4">Still need help?</h2>
+            <p class="text-sm sm:text-base text-text-secondary mb-8 max-w-2xl mx-auto leading-relaxed">
                 If you can’t find what you’re looking for, open a ticket from your dashboard and our team will follow up.
             </p>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
-                <a href="{{ $ticketHref }}" class="flex flex-col items-center gap-3 p-5 sm:p-6 bg-surface/60 rounded-xl border border-border-subtle hover:border-accent/40 hover:bg-muted/40 transition-colors">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 w-full">
+                <a href="{{ $ticketHref }}" class="flex flex-col items-center justify-center gap-3 p-6 min-h-[8.5rem] bg-surface/70 rounded-2xl border border-border-subtle hover:border-accent/40 hover:bg-muted/40 transition-colors">
                     <span class="text-accent"><x-ui.icon name="support" class="w-8 h-8" /></span>
                     <span class="text-xs font-bold uppercase tracking-wider text-white">Open a ticket</span>
                 </a>
-                <a href="{{ $supportHref }}" class="flex flex-col items-center gap-3 p-5 sm:p-6 bg-surface/60 rounded-xl border border-border-subtle hover:border-accent/40 hover:bg-muted/40 transition-colors">
+                <a href="{{ $supportHref }}" class="flex flex-col items-center justify-center gap-3 p-6 min-h-[8.5rem] bg-surface/70 rounded-2xl border border-border-subtle hover:border-accent/40 hover:bg-muted/40 transition-colors">
                     <span class="text-accent"><x-ui.icon name="chat" class="w-8 h-8" /></span>
                     <span class="text-xs font-bold uppercase tracking-wider text-white">My tickets</span>
                 </a>
-                <a href="{{ route('exchange') }}" class="flex flex-col items-center gap-3 p-5 sm:p-6 bg-surface/60 rounded-xl border border-border-subtle hover:border-accent/40 hover:bg-muted/40 transition-colors">
+                <a href="{{ route('exchange') }}" class="flex flex-col items-center justify-center gap-3 p-6 min-h-[8.5rem] bg-surface/70 rounded-2xl border border-border-subtle hover:border-accent/40 hover:bg-muted/40 transition-colors">
                     <span class="text-accent"><x-ui.icon name="swap" class="w-8 h-8" /></span>
                     <span class="text-xs font-bold uppercase tracking-wider text-white">Exchange rates</span>
                 </a>
