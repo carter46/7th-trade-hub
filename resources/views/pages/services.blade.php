@@ -17,11 +17,6 @@
     <div class="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_center,rgba(11,106,57,0.12)_0%,transparent_70%)]" aria-hidden="true"></div>
 
     <div class="relative z-10 max-w-marketing mx-auto px-5 sm:px-6 text-center w-full">
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/25 mb-8">
-            <span class="w-2 h-2 rounded-full bg-accent animate-pulse" aria-hidden="true"></span>
-            <span class="text-accent text-xs font-medium uppercase tracking-wider font-display">Apex Infrastructure Verified</span>
-        </div>
-
         <h1 class="font-display text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white mb-4 leading-tight">
             Secure Digital Services
         </h1>
@@ -88,31 +83,29 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             @foreach($groups as $card)
-                @include('partials.catalog.explore-card', [
-                    'card' => array_merge($card, ['cta' => 'Explore Services']),
-                ])
+                @include('partials.catalog.explore-card', ['card' => $card])
             @endforeach
         </div>
     </div>
 </section>
 
 {{-- Stats strip --}}
-<section class="py-16 sm:py-20 bg-surface border-t border-border-subtle">
-    <div class="max-w-marketing mx-auto px-5 sm:px-6 grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10 text-center">
+<section class="py-12 sm:py-14 bg-surface border-t border-border-subtle">
+    <div class="max-w-marketing mx-auto px-5 sm:px-6 grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 text-center">
         <div>
-            <div class="font-display text-4xl sm:text-5xl font-bold text-accent mb-2">500+</div>
-            <div class="font-display text-xl sm:text-2xl font-semibold text-white">Verified Services</div>
-            <p class="text-text-secondary text-sm sm:text-base mt-2 leading-relaxed">Rigorous vetting process for all platform listings.</p>
+            <div class="font-display text-2xl sm:text-3xl font-bold text-accent mb-1">500+</div>
+            <div class="font-display text-sm sm:text-base font-semibold text-white">Verified Services</div>
+            <p class="text-text-secondary text-xs sm:text-sm mt-1.5 leading-relaxed">Rigorous vetting process for all platform listings.</p>
         </div>
         <div>
-            <div class="font-display text-4xl sm:text-5xl font-bold text-accent mb-2">24/7</div>
-            <div class="font-display text-xl sm:text-2xl font-semibold text-white">Uptime Monitor</div>
-            <p class="text-text-secondary text-sm sm:text-base mt-2 leading-relaxed">Constant tracking of our infrastructure health.</p>
+            <div class="font-display text-2xl sm:text-3xl font-bold text-accent mb-1">24/7</div>
+            <div class="font-display text-sm sm:text-base font-semibold text-white">Uptime Monitor</div>
+            <p class="text-text-secondary text-xs sm:text-sm mt-1.5 leading-relaxed">Constant tracking of our infrastructure health.</p>
         </div>
         <div>
-            <div class="font-display text-4xl sm:text-5xl font-bold text-accent mb-2">12ms</div>
-            <div class="font-display text-xl sm:text-2xl font-semibold text-white">Avg. Latency</div>
-            <p class="text-text-secondary text-sm sm:text-base mt-2 leading-relaxed">Globally distributed nodes for peak performance.</p>
+            <div class="font-display text-2xl sm:text-3xl font-bold text-accent mb-1">12ms</div>
+            <div class="font-display text-sm sm:text-base font-semibold text-white">Avg. Latency</div>
+            <p class="text-text-secondary text-xs sm:text-sm mt-1.5 leading-relaxed">Globally distributed nodes for peak performance.</p>
         </div>
     </div>
 </section>

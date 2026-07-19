@@ -6,31 +6,32 @@
     $image = $card['card_image'] ?? null;
     $icon = $card['icon'] ?? 'grid';
     $initials = strtoupper(mb_substr(preg_replace('/[^A-Za-z0-9]/', '', $label) ?: 'S', 0, 2));
-    $ctaLabel = $card['cta'] ?? 'Explore Services';
+    $ctaLabel = $card['cta'] ?? 'Explore';
 @endphp
-<a href="{{ $href }}" class="group flex flex-col h-full bg-white p-6 sm:p-8 rounded-xl transition-all hover:shadow-lg">
-    <div class="w-full h-40 rounded-lg overflow-hidden mb-4 bg-slate-800 shrink-0">
+<a href="{{ $href }}" class="group flex flex-col h-full overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm hover:shadow-md transition-shadow">
+    <div class="relative aspect-[2/1] bg-slate-800 overflow-hidden shrink-0">
         @if($image)
             <img src="{{ asset($image) }}" alt="" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]">
         @else
-            <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/60 via-slate-800 to-slate-900">
-                <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 border border-white/20 text-white font-bold text-lg font-display" aria-hidden="true">
+            <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/50 via-slate-800 to-slate-900">
+                <span class="flex h-12 w-12 items-center justify-center rounded-full bg-white/15 border border-white/20 text-white font-bold text-sm font-display" aria-hidden="true">
                     {{ $initials }}
                 </span>
             </div>
+            <div class="absolute bottom-2 right-2 opacity-50">
+                <x-ui.icon :name="$icon" class="w-5 h-5 text-white" />
+            </div>
         @endif
     </div>
-
-    <h3 class="font-display text-xl sm:text-2xl font-semibold text-surface mb-2 leading-snug">{{ $label }}</h3>
-
-    @if($desc)
-        <p class="text-sm sm:text-base text-slate-500 leading-relaxed mb-6 flex-1 line-clamp-3">{{ $desc }}</p>
-    @else
-        <div class="flex-1 mb-6"></div>
-    @endif
-
-    <span class="inline-flex items-center gap-2 text-primary text-xs sm:text-sm font-bold uppercase tracking-widest group-hover:gap-3 group-hover:text-accent transition-all">
-        {{ $ctaLabel }}
-        <x-ui.icon name="arrow-right" class="w-4 h-4" />
-    </span>
+    <div class="flex flex-1 flex-col gap-2 p-4 sm:p-5 text-left">
+        <h3 class="font-bold text-sm sm:text-base text-slate-900 leading-snug line-clamp-2">{{ $label }}</h3>
+        @if($desc)
+            <p class="text-xs sm:text-sm text-slate-500 line-clamp-2 flex-1">{{ $desc }}</p>
+        @else
+            <div class="flex-1"></div>
+        @endif
+        <span class="mt-1 inline-flex w-fit items-center justify-center rounded-lg bg-primary px-3 py-1.5 text-xs sm:text-sm font-semibold text-white group-hover:bg-accent transition-colors">
+            {{ $ctaLabel }}
+        </span>
+    </div>
 </a>
