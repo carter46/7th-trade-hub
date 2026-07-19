@@ -89,24 +89,16 @@
     </div>
 </section>
 
-{{-- Stats strip --}}
+{{-- Highlights (live catalog stats + platform benefits) --}}
 <section class="py-12 sm:py-14 bg-surface border-t border-border-subtle">
     <div class="max-w-marketing mx-auto px-5 sm:px-6 grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 text-center">
-        <div>
-            <div class="font-display text-2xl sm:text-3xl font-bold text-accent mb-1">500+</div>
-            <div class="font-display text-sm sm:text-base font-semibold text-white">Verified Services</div>
-            <p class="text-text-secondary text-xs sm:text-sm mt-1.5 leading-relaxed">Rigorous vetting process for all platform listings.</p>
-        </div>
-        <div>
-            <div class="font-display text-2xl sm:text-3xl font-bold text-accent mb-1">24/7</div>
-            <div class="font-display text-sm sm:text-base font-semibold text-white">Uptime Monitor</div>
-            <p class="text-text-secondary text-xs sm:text-sm mt-1.5 leading-relaxed">Constant tracking of our infrastructure health.</p>
-        </div>
-        <div>
-            <div class="font-display text-2xl sm:text-3xl font-bold text-accent mb-1">12ms</div>
-            <div class="font-display text-sm sm:text-base font-semibold text-white">Avg. Latency</div>
-            <p class="text-text-secondary text-xs sm:text-sm mt-1.5 leading-relaxed">Globally distributed nodes for peak performance.</p>
-        </div>
+        @foreach($highlights as $item)
+            <div>
+                <div class="font-display text-2xl sm:text-3xl font-bold text-accent mb-1">{{ $item['value'] }}</div>
+                <div class="font-display text-sm sm:text-base font-semibold text-white">{{ $item['label'] }}</div>
+                <p class="text-text-secondary text-xs sm:text-sm mt-1.5 leading-relaxed">{{ $item['blurb'] }}</p>
+            </div>
+        @endforeach
     </div>
 </section>
 @endsection

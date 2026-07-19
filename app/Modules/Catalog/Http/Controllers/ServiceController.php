@@ -50,10 +50,34 @@ class ServiceController extends Controller
                 ->withQueryString();
         }
 
+        $groups = $this->browse->groupCards($this->content);
+        $types = $this->browse->allGroupTypeValues();
+        $serviceCount = PlatformProduct::query()
+            ->published()
+            ->whereIn('product_type', $types)
+            ->count();
+
         return view('pages.services', [
-            'groups' => $this->browse->groupCards($this->content),
+            'groups' => $groups,
             'searchResults' => $searchResults,
             'q' => $q,
+            'highlights' => [
+                [
+                    'value' => (string) $serviceCount,
+                    'label' => 'Services listed',
+                    'blurb' => 'Published plans you can browse and buy on the platform.',
+                ],
+                [
+                    'value' => (string) $groups->count(),
+                    'label' => 'Service categories',
+                    'blurb' => 'Network, communication, social, websites, documents, and escrow.',
+                ],
+                [
+                    'value' => 'NGN',
+                    'label' => 'Wallet checkout',
+                    'blurb' => 'Pay from your Naira wallet with escrow-backed purchases where available.',
+                ],
+            ],
         ]);
     }
 
