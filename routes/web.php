@@ -46,8 +46,33 @@ Route::get('/help', function () {
     return view('pages.help', [
         'categories' => config('help.categories', []),
         'faqs' => config('help.faqs', []),
+        'searchIndex' => \App\Support\HelpContent::searchIndex(),
     ]);
 })->name('help');
+Route::get('/help/{slug}', function (string $slug) {
+    $article = \App\Support\HelpContent::find($slug);
+    abort_unless($article, 404);
+
+    return view('pages.help-article', [
+        'article' => $article,
+        'slug' => $slug,
+    ]);
+})->where('slug', '[a-z0-9\-]+')->name('help.article');
+Route::get('/contact', function () {
+    $provider = strtolower(trim((string) \App\Models\SystemSetting::get('live_chat_provider', 'none')));
+    $smartsuppKey = trim((string) \App\Models\SystemSetting::get('smartsupp_key', ''));
+    $jivoId = trim((string) \App\Models\SystemSetting::get('jivo_widget_id', ''));
+    $chatEnabled = ($provider === 'smartsupp' && $smartsuppKey !== '')
+        || ($provider === 'jivo' && $jivoId !== '');
+
+    return view('pages.contact', [
+        'contactPhone' => \App\Models\SystemSetting::get('contact_phone', ''),
+        'contactEmail' => \App\Models\SystemSetting::get('contact_email', ''),
+        'contactEmailAlt' => \App\Models\SystemSetting::get('contact_email_alt', ''),
+        'liveChatProvider' => $provider,
+        'chatEnabled' => $chatEnabled,
+    ]);
+})->name('contact');
 Route::get('/legal', function (\Illuminate\Http\Request $request) {
     $doc = $request->string('doc')->toString() ?: 'terms';
     $documents = config('legal.documents', []);
@@ -190,6 +215,7 @@ Route::middleware(['auth', 'verified', 'role:admin', 'throttle:60,1'])->prefix('
     Route::post('/tickets/{ticket}/status', [SupportTicketAdminController::class, 'updateStatus'])->name('.tickets.status');
     Route::get('/settings', [AdminSettingsController::class, 'index'])->name('.settings');
     Route::post('/settings', [AdminSettingsController::class, 'update'])->name('.settings.update');
+    Route::post('/settings/test-mail', [AdminSettingsController::class, 'testMail'])->name('.settings.test-mail');
     Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('.audit-logs');
     Route::get('/wallet-adjustment', [WalletAdjustmentController::class, 'create'])->name('.wallet-adjustment');
     Route::post('/wallet-adjustment', [WalletAdjustmentController::class, 'store'])->name('.wallet-adjustment.store');

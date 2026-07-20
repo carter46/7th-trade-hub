@@ -14,6 +14,12 @@ class SystemSettingSeeder extends Seeder
             'withdrawal_min_amount' => '100',
             'withdrawal_max_amount' => '1000000',
             'deposit_min_amount' => '100',
+            'live_chat_provider' => 'none',
+            'smartsupp_key' => '',
+            'jivo_widget_id' => '',
+            'contact_phone' => '',
+            'contact_email' => '',
+            'contact_email_alt' => '',
         ];
 
         foreach ($defaults as $key => $value) {

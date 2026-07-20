@@ -5,19 +5,14 @@
 @section('content')
 @php
     $resolvedCategories = collect($categories)->map(function (array $cat) {
-        $needsAuth = ! empty($cat['auth']);
-        if ($needsAuth && ! auth()->check()) {
-            $href = route($cat['guest_href'] ?? 'login');
-        } else {
-            $href = route($cat['href']);
-        }
+        $slug = $cat['article'] ?? $cat['key'] ?? null;
+        $href = $slug
+            ? route('help.article', $slug)
+            : route('help');
 
         return array_merge($cat, ['resolved_href' => $href]);
     })->values();
 
-    $ticketHref = auth()->check()
-        ? route('dashboard.support.create')
-        : route('login');
     $supportHref = auth()->check()
         ? route('dashboard.support.index')
         : route('login');
@@ -43,18 +38,39 @@
 <div
     x-data="{
         q: '',
-        categoryTexts: {{ Js::from($resolvedCategories->map(fn ($c) => $c['title'].' '.$c['description'])->values()) }},
-        faqTexts: {{ Js::from(collect($faqs)->map(fn ($f) => ($f['q'] ?? '').' '.($f['a'] ?? ''))->values()) }},
-        matches(text) {
+        open: false,
+        active: -1,
+        index: {{ Js::from($searchIndex ?? []) }},
+        get suggestions() {
             const term = this.q.trim().toLowerCase();
-            if (!term) return true;
-            return String(text || '').toLowerCase().includes(term);
+            if (!term) return [];
+            return this.index
+                .filter((item) => String(item.text || '').toLowerCase().includes(term))
+                .slice(0, 8);
         },
-        get hasCategoryMatches() {
-            return this.categoryTexts.some((t) => this.matches(t));
+        select(item) {
+            if (!item?.href) return;
+            window.location.href = item.href;
         },
-        get hasFaqMatches() {
-            return this.faqTexts.some((t) => this.matches(t));
+        onKey(e) {
+            const list = this.suggestions;
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                this.open = true;
+                this.active = Math.min(this.active + 1, list.length - 1);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                this.active = Math.max(this.active - 1, 0);
+            } else if (e.key === 'Enter') {
+                if (this.active >= 0 && list[this.active]) {
+                    e.preventDefault();
+                    this.select(list[this.active]);
+                }
+            } else if (e.key === 'Escape') {
+                this.open = false;
+                this.active = -1;
+                this.q = '';
+            }
         },
         init() {
             window.addEventListener('keydown', (e) => {
@@ -63,13 +79,15 @@
                     this.$refs.search?.focus();
                 }
             });
+            this.$watch('q', () => { this.open = this.q.trim().length > 0; this.active = -1; });
         }
     }"
+    @click.outside="open = false"
 >
 
 <section class="max-w-marketing mx-auto px-5 sm:px-6 -mt-2 mb-10 sm:mb-12">
     <div class="max-w-2xl mx-auto relative">
-        <span class="absolute left-5 top-1/2 -translate-y-1/2 text-accent pointer-events-none">
+        <span class="absolute left-5 top-1/2 -translate-y-1/2 text-accent pointer-events-none z-10">
             <x-ui.icon name="search" class="w-5 h-5" />
         </span>
         <label for="help-search" class="sr-only">Search help center</label>
@@ -77,15 +95,50 @@
             id="help-search"
             x-ref="search"
             x-model="q"
+            @keydown="onKey($event)"
+            @focus="open = q.trim().length > 0"
             type="search"
+            autocomplete="off"
             placeholder="Search our knowledge base..."
             class="w-full pl-14 pr-16 py-4 sm:py-5 bg-elevated rounded-full border border-border-default focus:border-accent focus:ring-1 focus:ring-accent/40 text-sm sm:text-base text-text-primary placeholder:text-text-muted transition-all shadow-xl"
+            role="combobox"
+            :aria-expanded="open"
+            aria-controls="help-search-results"
+            aria-autocomplete="list"
         >
         <kbd class="absolute right-5 top-1/2 -translate-y-1/2 px-2 py-1 bg-muted rounded text-[10px] font-medium text-text-muted border border-border-subtle hidden sm:inline-block">/</kbd>
+
+        <div
+            id="help-search-results"
+            x-show="open"
+            x-cloak
+            class="absolute left-0 right-0 top-full mt-2 z-40 rounded-2xl border border-border-default bg-elevated shadow-2xl overflow-hidden"
+            role="listbox"
+        >
+            <template x-if="suggestions.length === 0 && q.trim()">
+                <p class="px-5 py-4 text-sm text-text-secondary">No results for “<span x-text="q.trim()"></span>”.</p>
+            </template>
+            <ul class="max-h-80 overflow-y-auto py-2">
+                <template x-for="(item, i) in suggestions" :key="item.href + item.label">
+                    <li role="option" :aria-selected="active === i">
+                        <button
+                            type="button"
+                            class="w-full text-left px-5 py-3 hover:bg-muted/60 transition-colors flex flex-col gap-0.5"
+                            :class="active === i ? 'bg-muted/60' : ''"
+                            @click="select(item)"
+                            @mouseenter="active = i"
+                        >
+                            <span class="text-sm font-medium text-white" x-text="item.label"></span>
+                            <span class="text-[11px] text-text-muted" x-text="item.hint || item.type"></span>
+                        </button>
+                    </li>
+                </template>
+            </ul>
+        </div>
     </div>
 </section>
 
-{{-- Categories --}}
+{{-- Categories (always visible — not filtered by search) --}}
 <section class="max-w-marketing mx-auto px-5 sm:px-6 pb-14 sm:pb-16">
     <div class="mb-6 sm:mb-8">
         <h2 class="font-display text-xl sm:text-2xl font-semibold text-accent mb-1">Browse categories</h2>
@@ -96,7 +149,6 @@
         @foreach($resolvedCategories as $cat)
             <a
                 href="{{ $cat['resolved_href'] }}"
-                x-show="matches(@js($cat['title'].' '.$cat['description']))"
                 class="group glassmorphism p-6 sm:p-7 rounded-xl flex flex-col items-start hover:border-accent/40 transition-all duration-300 hover:-translate-y-1"
             >
                 <div class="w-14 h-14 rounded-full flex items-center justify-center mb-4 {{ $toneBg[$cat['tone'] ?? 'primary'] ?? $toneBg['primary'] }}">
@@ -111,9 +163,6 @@
             </a>
         @endforeach
     </div>
-    <p x-show="!hasCategoryMatches" x-cloak class="text-sm text-text-secondary text-center py-8">
-        No categories match your search.
-    </p>
 </section>
 
 @if(count($faqs))
@@ -125,7 +174,6 @@
         <div class="space-y-3">
             @foreach($faqs as $faq)
                 <details
-                    x-show="matches(@js(($faq['q'] ?? '').' '.($faq['a'] ?? '')))"
                     class="group glassmorphism rounded-xl overflow-hidden [&_summary::-webkit-details-marker]:hidden"
                     @if($loop->first) open @endif
                 >
@@ -137,18 +185,22 @@
                     </summary>
                     <div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-text-secondary leading-relaxed border-t border-border-subtle pt-3">
                         {{ $faq['a'] ?? '' }}
+                        @if(! empty($faq['article']))
+                            <p class="mt-3">
+                                <a href="{{ route('help.article', $faq['article']) }}{{ ! empty($faq['section']) ? '#'.$faq['section'] : '' }}" class="text-accent font-medium hover:underline">
+                                    Read the full guide
+                                </a>
+                            </p>
+                        @endif
                     </div>
                 </details>
             @endforeach
         </div>
-        <p x-show="!hasFaqMatches" x-cloak class="text-sm text-text-secondary text-center py-6">
-            No FAQs match your search.
-        </p>
     </div>
 </section>
 @endif
 
-{{-- Still need help: 3 cards in a horizontal row on desktop --}}
+{{-- Still need help: two CTAs --}}
 <section class="max-w-marketing mx-auto px-5 sm:px-6 py-14 sm:py-16">
     <div class="rounded-2xl sm:rounded-3xl bg-gradient-to-br from-elevated to-muted/40 border border-border-subtle p-6 sm:p-10 lg:p-12 overflow-hidden relative">
         <div class="absolute -bottom-20 -right-20 w-64 h-64 bg-primary/20 rounded-full blur-[100px] pointer-events-none" aria-hidden="true"></div>
@@ -156,20 +208,16 @@
         <div class="relative z-10 text-center">
             <h2 class="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 sm:mb-4">Still need help?</h2>
             <p class="text-sm sm:text-base text-text-secondary mb-8 max-w-2xl mx-auto leading-relaxed">
-                If you can’t find what you’re looking for, open a ticket from your dashboard and our team will follow up.
+                Check your support tickets or reach us on the Contact page for live chat, phone, and email.
             </p>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 w-full">
-                <a href="{{ $ticketHref }}" class="flex flex-col items-center justify-center gap-2 p-4 md:p-5 min-h-0 bg-surface/70 rounded-xl border border-border-subtle hover:border-accent/40 hover:bg-muted/40 transition-colors">
-                    <span class="text-accent"><x-ui.icon name="support" class="w-6 h-6" /></span>
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-white">Open a ticket</span>
-                </a>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 w-full max-w-xl mx-auto">
                 <a href="{{ $supportHref }}" class="flex flex-col items-center justify-center gap-2 p-4 md:p-5 min-h-0 bg-surface/70 rounded-xl border border-border-subtle hover:border-accent/40 hover:bg-muted/40 transition-colors">
                     <span class="text-accent"><x-ui.icon name="chat" class="w-6 h-6" /></span>
                     <span class="text-[11px] font-bold uppercase tracking-wider text-white">My tickets</span>
                 </a>
-                <a href="{{ route('exchange') }}" class="flex flex-col items-center justify-center gap-2 p-4 md:p-5 min-h-0 bg-surface/70 rounded-xl border border-border-subtle hover:border-accent/40 hover:bg-muted/40 transition-colors">
-                    <span class="text-accent"><x-ui.icon name="swap" class="w-6 h-6" /></span>
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-white">Exchange rates</span>
+                <a href="{{ route('contact') }}" class="flex flex-col items-center justify-center gap-2 p-4 md:p-5 min-h-0 bg-surface/70 rounded-xl border border-border-subtle hover:border-accent/40 hover:bg-muted/40 transition-colors">
+                    <span class="text-accent"><x-ui.icon name="support" class="w-6 h-6" /></span>
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-white">Contact us</span>
                 </a>
             </div>
         </div>

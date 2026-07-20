@@ -54,7 +54,7 @@
     @endif
 
     @if(($section['variant'] ?? null) === 'contact')
-        <div class="glassmorphism p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
+        <div class="glassmorphism p-5 sm:p-6 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-5 mt-4 mb-2">
             <div class="space-y-3">
                 @if($legalEmail)
                     <div>

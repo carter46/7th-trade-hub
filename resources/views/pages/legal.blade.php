@@ -28,7 +28,7 @@
     'subtitle' => $document['intro'] ?? 'Terms of Service and Privacy Policy for 7th Trade Hub.',
 ])
 
-<section class="max-w-marketing mx-auto px-5 sm:px-6 pb-14 sm:pb-20">
+<section class="max-w-marketing mx-auto px-5 sm:px-6 pb-28 sm:pb-36 lg:pb-44">
     {{-- Document switcher --}}
     <div class="flex flex-wrap gap-2 mb-8 sm:mb-10" role="tablist" aria-label="Legal documents">
         @foreach($documents as $key => $doc)
@@ -47,13 +47,33 @@
         @endforeach
     </div>
 
-    {{-- Explicit breakpoints: built Tailwind may omit lg:block / lg:grid, which left desktop empty --}}
+    {{-- Explicit breakpoints: built Tailwind may omit lg:* utilities --}}
     <style>
         .legal-mobile { display: block; }
         .legal-desktop { display: none; }
         @media (min-width: 1024px) {
             .legal-mobile { display: none; }
             .legal-desktop { display: block; }
+            .legal-toc {
+                position: sticky;
+                top: 7rem;
+                align-self: flex-start;
+                width: 16rem;
+                flex-shrink: 0;
+                max-height: calc(100vh - 8.5rem);
+            }
+            .legal-toc-panel {
+                display: flex;
+                flex-direction: column;
+                min-height: calc(100vh - 8.5rem);
+                max-height: calc(100vh - 8.5rem);
+            }
+            .legal-toc-nav {
+                flex: 1 1 auto;
+                overflow-y: auto;
+                min-height: 0;
+                padding-bottom: 0.25rem;
+            }
         }
     </style>
 
@@ -93,16 +113,16 @@
         {{-- Desktop: sticky nav + full document --}}
         <div class="legal-desktop">
             <div class="flex gap-8 items-start">
-                <aside class="w-64 shrink-0 sticky top-28 self-start">
-                    <div class="glassmorphism rounded-xl p-4">
-                        <h3 class="text-[11px] font-medium uppercase tracking-wider text-text-secondary mb-3 px-2">
+                <aside class="legal-toc">
+                    <div class="legal-toc-panel glassmorphism rounded-xl p-4">
+                        <h3 class="text-[11px] font-medium uppercase tracking-wider text-text-secondary mb-3 px-2 shrink-0">
                             Document sections
                         </h3>
-                        <nav class="flex flex-col gap-1" aria-label="Document sections">
+                        <nav class="legal-toc-nav flex flex-col gap-1.5" aria-label="Document sections">
                             @foreach($sections as $section)
                                 <a
                                     href="#{{ $section['id'] }}"
-                                    class="px-3 py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:bg-muted hover:text-accent transition-colors"
+                                    class="px-3 py-3 rounded-lg text-sm font-medium text-text-secondary hover:bg-muted hover:text-accent transition-colors"
                                 >
                                     {{ $section['nav'] }}
                                 </a>
@@ -111,7 +131,7 @@
                     </div>
                 </aside>
 
-                <div class="min-w-0 flex-1 max-w-[800px] space-y-8">
+                <div class="min-w-0 flex-1 max-w-[800px] space-y-8 pb-8">
                     <div class="rounded-xl p-6 bg-muted/50 border border-border-subtle border-l-4 border-l-accent">
                         <div class="flex items-start gap-4">
                             <span class="text-accent shrink-0 mt-0.5"><x-ui.icon name="info" class="w-7 h-7" /></span>
@@ -126,7 +146,7 @@
                     </div>
 
                     @foreach($sections as $section)
-                        <section id="{{ $section['id'] }}" class="scroll-mt-28">
+                        <section id="{{ $section['id'] }}" @class(['scroll-mt-28', 'pb-6' => $loop->last])>
                             <h2 class="font-display text-xl sm:text-2xl font-semibold text-accent mb-4 flex items-center gap-3 flex-wrap">
                                 @if(! empty($section['number']))
                                     <span class="text-xs font-bold bg-primary/15 text-accent px-2 py-1 rounded">{{ $section['number'] }}</span>

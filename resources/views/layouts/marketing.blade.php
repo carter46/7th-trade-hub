@@ -153,6 +153,7 @@
                         <h4 class="text-white font-bold mb-6 font-display">Support</h4>
                         <ul class="space-y-4 text-slate-500 text-sm">
                             <li><a class="hover:text-accent transition-colors" href="{{ route('help') }}">Help Center</a></li>
+                            <li><a class="hover:text-accent transition-colors" href="{{ route('contact') }}">Contact Us</a></li>
                             <li>
                                 <a class="hover:text-accent transition-colors" href="{{ auth()->check() ? route('dashboard.support.create') : route('login') }}">
                                     Open a ticket
@@ -183,6 +184,7 @@
                         <a class="hover:text-white transition-colors" href="{{ route('legal', ['doc' => 'terms']) }}">Terms</a>
                         <a class="hover:text-white transition-colors" href="{{ route('legal', ['doc' => 'privacy']) }}">Privacy</a>
                         <a class="hover:text-white transition-colors" href="{{ route('help') }}">Help</a>
+                        <a class="hover:text-white transition-colors" href="{{ route('contact') }}">Contact</a>
                     </div>
                 </div>
             </div>

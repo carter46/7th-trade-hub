@@ -17,6 +17,7 @@ class SitemapController extends Controller
             'marketplace' => ['priority' => '0.9', 'changefreq' => 'daily'],
             'about' => ['priority' => '0.5', 'changefreq' => 'monthly'],
             'help' => ['priority' => '0.5', 'changefreq' => 'monthly'],
+            'contact' => ['priority' => '0.5', 'changefreq' => 'monthly'],
             'services' => ['priority' => '0.8', 'changefreq' => 'weekly'],
             'templates' => ['priority' => '0.7', 'changefreq' => 'weekly'],
             'website-listings' => ['priority' => '0.7', 'changefreq' => 'weekly'],
@@ -44,6 +45,14 @@ class SitemapController extends Controller
             'priority' => '0.3',
             'changefreq' => 'yearly',
         ];
+
+        foreach (array_keys(\App\Support\HelpContent::all()) as $helpSlug) {
+            $urls[] = [
+                'loc' => route('help.article', $helpSlug),
+                'priority' => '0.45',
+                'changefreq' => 'monthly',
+            ];
+        }
 
         foreach (array_keys(config('catalog.groups', [])) as $groupSlug) {
             $urls[] = [
