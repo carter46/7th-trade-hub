@@ -97,7 +97,10 @@
         $faqs = array_slice($faqs, 0, 5);
     @endphp
 
-    <section class="relative isolate overflow-hidden pt-28 pb-20 sm:pt-32 sm:pb-24 lg:min-h-[calc(100dvh-5rem)] lg:flex lg:items-center lg:pt-36 lg:pb-36">
+    <section
+        class="relative isolate overflow-hidden flex items-center pt-24 pb-12 sm:pt-32 sm:pb-24 lg:pt-36 lg:pb-36"
+        style="min-height: calc(100dvh - 5rem);"
+    >
         {{-- Fill the viewport section; image uses cover (does not drive height) --}}
         <div
             class="pointer-events-none absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
@@ -121,7 +124,7 @@
                     Buy and sell digital services, swap crypto to cash, grow social accounts, and get ready-made templates — all in one hub.
                 </p>
                 <div class="mx-auto grid max-w-sm grid-cols-2 gap-3">
-                    <a class="px-3 py-3 text-center text-sm sm:text-base bg-primary hover:bg-accent text-white font-bold rounded-xl shadow-xl transition-all hover:scale-[1.02] animate-glow" href="{{ route('register') }}">
+                    <a class="px-3 py-3 text-center text-sm sm:text-base bg-primary hover:bg-accent text-white font-bold rounded-xl shadow-xl transition-all hover:scale-[1.02] animate-glow" href="{{ route('services') }}">
                         Get Started
                     </a>
                     <a class="px-3 py-3 text-center text-sm sm:text-base glassmorphism hover:bg-white/10 text-white font-bold rounded-xl border border-white/20 transition-all" href="{{ route('marketplace') }}">
@@ -170,6 +173,16 @@
                         ></button>
                     </template>
                 </div>
+            </div>
+
+            <div class="mt-10 sm:mt-12 flex justify-center">
+                <a
+                    href="{{ route('services') }}"
+                    class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary hover:bg-accent text-white text-sm font-bold transition-colors shadow-lg"
+                >
+                    View all
+                    <x-ui.icon name="arrow-right" class="w-4 h-4" />
+                </a>
             </div>
         </div>
     </section>
