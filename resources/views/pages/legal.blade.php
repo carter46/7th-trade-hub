@@ -47,6 +47,16 @@
         @endforeach
     </div>
 
+    {{-- Explicit breakpoints: built Tailwind may omit lg:block / lg:grid, which left desktop empty --}}
+    <style>
+        .legal-mobile { display: block; }
+        .legal-desktop { display: none; }
+        @media (min-width: 1024px) {
+            .legal-mobile { display: none; }
+            .legal-desktop { display: block; }
+        }
+    </style>
+
     @if(empty($sections))
         <x-ui.empty
             icon="info"
@@ -55,7 +65,7 @@
         />
     @else
         {{-- Mobile: accordion --}}
-        <div class="lg:hidden space-y-3 mb-8">
+        <div class="legal-mobile space-y-3 mb-8">
             <div class="rounded-xl p-4 bg-muted/50 border border-border-subtle border-l-4 border-l-accent mb-4">
                 <h2 class="font-display text-base font-semibold text-white mb-1">{{ $document['label'] }} summary</h2>
                 <p class="text-sm text-text-secondary leading-relaxed">{{ $document['summary'] ?? '' }}</p>
@@ -80,55 +90,57 @@
             @endforeach
         </div>
 
-        {{-- Desktop: sticky vertical nav + full document (matches sample) --}}
-        <div class="hidden lg:grid lg:grid-cols-12 gap-8 items-start">
-            <aside class="lg:col-span-3 sticky top-28 self-start">
-                <div class="glassmorphism rounded-xl p-4">
-                    <h3 class="text-[11px] font-medium uppercase tracking-wider text-text-secondary mb-3 px-2">
-                        Document sections
-                    </h3>
-                    <nav class="flex flex-col gap-1" aria-label="Document sections">
-                        @foreach($sections as $section)
-                            <a
-                                href="#{{ $section['id'] }}"
-                                class="px-3 py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:bg-muted hover:text-accent transition-colors"
-                            >
-                                {{ $section['nav'] }}
-                            </a>
-                        @endforeach
-                    </nav>
-                </div>
-            </aside>
+        {{-- Desktop: sticky nav + full document --}}
+        <div class="legal-desktop">
+            <div class="flex gap-8 items-start">
+                <aside class="w-64 shrink-0 sticky top-28 self-start">
+                    <div class="glassmorphism rounded-xl p-4">
+                        <h3 class="text-[11px] font-medium uppercase tracking-wider text-text-secondary mb-3 px-2">
+                            Document sections
+                        </h3>
+                        <nav class="flex flex-col gap-1" aria-label="Document sections">
+                            @foreach($sections as $section)
+                                <a
+                                    href="#{{ $section['id'] }}"
+                                    class="px-3 py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:bg-muted hover:text-accent transition-colors"
+                                >
+                                    {{ $section['nav'] }}
+                                </a>
+                            @endforeach
+                        </nav>
+                    </div>
+                </aside>
 
-            <div class="lg:col-span-9 max-w-[800px] space-y-8">
-                <div class="rounded-xl p-6 bg-muted/50 border border-border-subtle border-l-4 border-l-accent">
-                    <div class="flex items-start gap-4">
-                        <span class="text-accent shrink-0 mt-0.5"><x-ui.icon name="info" class="w-7 h-7" /></span>
-                        <div>
-                            <h2 class="font-display text-lg font-semibold text-white mb-2">Legal summary</h2>
-                            <p class="text-sm text-text-secondary leading-relaxed">{{ $document['summary'] ?? '' }}</p>
-                            @if($updatedAt)
-                                <p class="text-xs text-text-muted mt-3">Last updated {{ \Illuminate\Support\Carbon::parse($updatedAt)->format('F Y') }}</p>
-                            @endif
+                <div class="min-w-0 flex-1 max-w-[800px] space-y-8">
+                    <div class="rounded-xl p-6 bg-muted/50 border border-border-subtle border-l-4 border-l-accent">
+                        <div class="flex items-start gap-4">
+                            <span class="text-accent shrink-0 mt-0.5"><x-ui.icon name="info" class="w-7 h-7" /></span>
+                            <div>
+                                <h2 class="font-display text-lg font-semibold text-white mb-2">Legal summary</h2>
+                                <p class="text-sm text-text-secondary leading-relaxed">{{ $document['summary'] ?? '' }}</p>
+                                @if($updatedAt)
+                                    <p class="text-xs text-text-muted mt-3">Last updated {{ \Illuminate\Support\Carbon::parse($updatedAt)->format('F Y') }}</p>
+                                @endif
+                            </div>
                         </div>
                     </div>
+
+                    @foreach($sections as $section)
+                        <section id="{{ $section['id'] }}" class="scroll-mt-28">
+                            <h2 class="font-display text-xl sm:text-2xl font-semibold text-accent mb-4 flex items-center gap-3 flex-wrap">
+                                @if(! empty($section['number']))
+                                    <span class="text-xs font-bold bg-primary/15 text-accent px-2 py-1 rounded">{{ $section['number'] }}</span>
+                                @endif
+                                {{ $section['title'] }}
+                            </h2>
+                            @include('partials.legal.section-body', ['section' => $section, 'legalEmail' => $legalEmail, 'ticketHref' => $ticketHref])
+                        </section>
+
+                        @if(! $loop->last)
+                            <hr class="border-border-subtle">
+                        @endif
+                    @endforeach
                 </div>
-
-                @foreach($sections as $section)
-                    <section id="{{ $section['id'] }}" class="scroll-mt-28">
-                        <h2 class="font-display text-xl sm:text-2xl font-semibold text-accent mb-4 flex items-center gap-3 flex-wrap">
-                            @if(! empty($section['number']))
-                                <span class="text-xs font-bold bg-primary/15 text-accent px-2 py-1 rounded">{{ $section['number'] }}</span>
-                            @endif
-                            {{ $section['title'] }}
-                        </h2>
-                        @include('partials.legal.section-body', ['section' => $section, 'legalEmail' => $legalEmail, 'ticketHref' => $ticketHref])
-                    </section>
-
-                    @if(! $loop->last)
-                        <hr class="border-border-subtle">
-                    @endif
-                @endforeach
             </div>
         </div>
     @endif
