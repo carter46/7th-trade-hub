@@ -30,7 +30,7 @@
         <div class="h-full bg-accent transition-all duration-150" :style="'width:' + percent + '%'"></div>
     </div>
 
-    <section class="max-w-marketing mx-auto px-5 sm:px-6 pb-28 sm:pb-36 lg:pb-44">
+    <section class="max-w-marketing mx-auto px-5 sm:px-6 pb-16 sm:pb-20">
         <div class="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-text-secondary mb-6 sm:mb-8">
             <span>{{ $article['reading_minutes'] ?? 1 }} min read</span>
             <span class="text-border-default" aria-hidden="true">·</span>

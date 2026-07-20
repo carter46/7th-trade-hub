@@ -64,4 +64,13 @@ export default {
     },
 
     plugins: [forms],
+
+    safelist: [
+        'pb-16', 'pb-20', 'pb-24', 'pb-28', 'pb-32', 'pb-36', 'pb-40', 'pb-44',
+        'sm:pb-20', 'sm:pb-24', 'sm:pb-28', 'sm:pb-32', 'sm:pb-36', 'sm:pb-44',
+        'lg:pb-32', 'lg:pb-40', 'lg:pb-44',
+        'py-14', 'py-16', 'sm:py-16', 'sm:py-20',
+        'hidden', 'block', 'lg:block', 'lg:hidden', 'lg:flex', 'lg:grid',
+        'grid-cols-12', 'col-span-3', 'col-span-8', 'col-span-9', 'col-span-4',
+    ],
 };

@@ -31,6 +31,21 @@
             linear-gradient(135deg, #052e16 0%, #0f172a 45%, #020617 100%);
     }
 
+    /* Reliable gap before footer — large pb-* utilities are often missing from purged builds */
+    .marketing-main {
+        padding-bottom: 5rem;
+    }
+    @media (min-width: 640px) {
+        .marketing-main {
+            padding-bottom: 7rem;
+        }
+    }
+    @media (min-width: 1024px) {
+        .marketing-main {
+            padding-bottom: 8rem;
+        }
+    }
+
     .auth-transition {
         transition: all 0.3s ease-in-out;
     }

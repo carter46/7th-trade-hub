@@ -45,8 +45,9 @@ class HelpCenterTest extends TestCase
     {
         $this->get(route('contact'))
             ->assertOk()
-            ->assertSee('Contact Us')
-            ->assertSee('Back to Help Center')
+            ->assertSee('Contact & Support')
+            ->assertSee('Direct contact methods')
+            ->assertSee('Go to Help Center')
             ->assertSee('Live chat is not enabled yet', false);
     }
 

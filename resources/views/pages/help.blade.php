@@ -201,7 +201,7 @@
 @endif
 
 {{-- Still need help: two CTAs --}}
-<section class="max-w-marketing mx-auto px-5 sm:px-6 py-14 sm:py-16">
+<section class="max-w-marketing mx-auto px-5 sm:px-6 py-14 sm:py-16 pb-16 sm:pb-20">
     <div class="rounded-2xl sm:rounded-3xl bg-gradient-to-br from-elevated to-muted/40 border border-border-subtle p-6 sm:p-10 lg:p-12 overflow-hidden relative">
         <div class="absolute -bottom-20 -right-20 w-64 h-64 bg-primary/20 rounded-full blur-[100px] pointer-events-none" aria-hidden="true"></div>
         <div class="absolute -top-20 -left-20 w-64 h-64 bg-accent/10 rounded-full blur-[100px] pointer-events-none" aria-hidden="true"></div>

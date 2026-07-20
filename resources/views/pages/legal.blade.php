@@ -28,7 +28,7 @@
     'subtitle' => $document['intro'] ?? 'Terms of Service and Privacy Policy for 7th Trade Hub.',
 ])
 
-<section class="max-w-marketing mx-auto px-5 sm:px-6 pb-28 sm:pb-36 lg:pb-44">
+<section class="max-w-marketing mx-auto px-5 sm:px-6 pb-16 sm:pb-20">
     {{-- Document switcher --}}
     <div class="flex flex-wrap gap-2 mb-8 sm:mb-10" role="tablist" aria-label="Legal documents">
         @foreach($documents as $key => $doc)

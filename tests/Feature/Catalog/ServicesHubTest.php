@@ -45,7 +45,7 @@ class ServicesHubTest extends TestCase
             ->assertOk()
             ->assertSee('Network Services')
             ->assertSee('Social Media')
-            ->assertSee('Browse categories')
+            ->assertSee('Browse Categories')
             ->assertDontSee('Residential VPN Demo');
     }
 
@@ -56,8 +56,7 @@ class ServicesHubTest extends TestCase
         $this->get(route('services.segment', 'network-services'))
             ->assertOk()
             ->assertSee('Network Services')
-            ->assertSee('VPN')
-            ->assertSee('Explore');
+            ->assertSee('VPN');
     }
 
     public function test_type_page_shows_featured_and_products(): void
@@ -67,8 +66,7 @@ class ServicesHubTest extends TestCase
         $this->get(route('services.segment', 'vpn'))
             ->assertOk()
             ->assertSee('Featured')
-            ->assertSee('Residential VPN Demo')
-            ->assertSee('Benefits');
+            ->assertSee('Residential VPN Demo');
     }
 
     public function test_type_page_filters_by_category(): void

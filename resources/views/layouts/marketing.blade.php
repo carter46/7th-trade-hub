@@ -123,11 +123,11 @@
             </div>
         </div>
 
-        <main class="pt-20">
+        <main class="pt-20 marketing-main" style="padding-bottom: clamp(5rem, 10vw, 8rem);">
             @yield('content')
         </main>
 
-        <footer class="bg-slate-950 pt-20 pb-10 border-t border-white/5">
+        <footer class="bg-slate-950 pt-16 sm:pt-20 pb-10 border-t border-white/5 mt-0">
             <div class="max-w-marketing mx-auto px-5 sm:px-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
                     <div>
