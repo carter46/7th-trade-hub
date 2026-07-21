@@ -26,6 +26,7 @@
     ],
     'title' => $document['label'] ?? 'Legal',
     'subtitle' => $document['intro'] ?? 'Terms of Service and Privacy Policy for 7th Trade Hub.',
+    'image' => 'assets/images/employee-working-with-document copy.jpg',
 ])
 
 <section class="max-w-marketing mx-auto px-5 sm:px-6 pb-16 sm:pb-20">

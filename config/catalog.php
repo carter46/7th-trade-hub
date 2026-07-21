@@ -205,6 +205,8 @@ return [
     'groups' => [
         'network-services' => [
             'label' => 'Network Services',
+            'banner_image' => 'assets/images/Network Services_1.jpg',
+            'card_image' => 'assets/images/Network Services_1.jpg',
             'short_description' => 'VPN, VPS, SMTP, and proxy plans for connectivity and infrastructure.',
             'hero_title' => 'Network Services',
             'hero_subtitle' => 'Secure connections, servers, mail relay, and proxies in one place.',
@@ -220,6 +222,8 @@ return [
         ],
         'communication' => [
             'label' => 'Communication',
+            'banner_image' => 'assets/images/Communication_1.jpg',
+            'card_image' => 'assets/images/Communication_1.jpg',
             'short_description' => 'Email mailboxes and virtual phone numbers for business outreach.',
             'hero_title' => 'Communication',
             'hero_subtitle' => 'Stay reachable with professional email and virtual numbers.',
@@ -233,6 +237,8 @@ return [
         ],
         'social-media' => [
             'label' => 'Social Media',
+            'banner_image' => 'assets/images/Social_Media.jpg',
+            'card_image' => 'assets/images/Social_Media.jpg',
             'short_description' => 'Growth and engagement services for social platforms.',
             'hero_title' => 'Social Media',
             'hero_subtitle' => 'Browse social services, then filter by Growth or Engagement.',
@@ -242,6 +248,8 @@ return [
         ],
         'website-services' => [
             'label' => 'Website Services',
+            'banner_image' => 'assets/images/Website_Services.jpg',
+            'card_image' => 'assets/images/Website_Services.jpg',
             'short_description' => 'Templates, hosted packages, and domain services.',
             'hero_title' => 'Website Services',
             'hero_subtitle' => 'From design templates to domains — build your web presence.',
@@ -254,9 +262,11 @@ return [
             'types' => ['website_template', 'website_package', 'domain'],
         ],
         'business-documents' => [
-            'label' => 'Business Documents',
+            'label' => 'Documents & Receipts',
+            'banner_image' => 'assets/images/Business_Documents.jpg',
+            'card_image' => 'assets/images/Business_Documents.jpg',
             'short_description' => 'Contracts, HR, and legal document templates.',
-            'hero_title' => 'Business Documents',
+            'hero_title' => 'Documents & Receipts',
             'hero_subtitle' => 'Ready-to-edit templates for everyday business paperwork.',
             'benefits' => [
                 'Contracts, HR, and Legal categories',
@@ -268,16 +278,19 @@ return [
         ],
         'trust-escrow' => [
             'label' => 'Trust & Escrow',
-            'short_description' => 'Escrow and protected trade services for digital deals.',
+            'banner_image' => 'assets/images/flat-lay-real-estate-concept.jpg',
+            'card_image' => 'assets/images/flat-lay-real-estate-concept.jpg',
+            'short_description' => 'Buy and sell digital products with marketplace escrow protection.',
             'hero_title' => 'Trust & Escrow',
-            'hero_subtitle' => 'Add protection to high-value digital transactions.',
+            'hero_subtitle' => 'Explore escrow-protected purchases in the marketplace.',
             'benefits' => [
-                'Standard and high-value escrow options',
                 'Aligned with marketplace protection',
-                'Clear product terms before you pay',
+                'Funds held until delivery confirmation',
             ],
             'faq' => [],
-            'types' => ['escrow_service'],
+            'types' => [],
+            'route' => 'marketplace',
+            'cta' => 'Open marketplace',
         ],
     ],
 
@@ -296,7 +309,7 @@ return [
             'types' => ['website_template', 'website_package', 'domain'],
         ],
         'business-documents' => [
-            'label' => 'Business Documents',
+            'label' => 'Documents & Receipts',
             'description' => 'Contracts, agreements, and ready-to-edit templates.',
             'types' => ['document_template'],
         ],

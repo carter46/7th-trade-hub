@@ -4,7 +4,7 @@
 
 @section('content')
 @php
-    $heroImage = asset('assets/images/Image_ro410gro410gro41.png');
+    $heroImage = asset('assets/images/services_1.jpg');
     $groupCount = $groups->count();
 @endphp
 

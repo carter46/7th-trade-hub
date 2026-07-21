@@ -7,6 +7,7 @@ return [
     'intro' => 'Explore service categories, filter products, choose variants, and check out with your wallet.',
     'summary' => 'Platform services cover network tools, social growth, websites, documents, and more — purchased from your funded Naira wallet.',
     'updated_at' => '2026-07-20',
+    'hero_image' => 'assets/images/services_1.jpg',
     'printable' => true,
     'related' => ['billing-wallets-payments', 'getting-started'],
     'platform_actions' => [

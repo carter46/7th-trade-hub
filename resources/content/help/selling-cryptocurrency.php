@@ -7,6 +7,7 @@ return [
     'intro' => 'Estimate payouts, submit a sell request, and understand how admin approval credits your Naira wallet.',
     'summary' => 'Crypto sells use live sell rates, a calculator for estimates, and admin review before NGN credit.',
     'updated_at' => '2026-07-20',
+    'hero_image' => 'assets/images/crytpo_exchange.jpg',
     'printable' => true,
     'related' => ['billing-wallets-payments', 'getting-started'],
     'platform_actions' => [

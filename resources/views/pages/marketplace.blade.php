@@ -21,6 +21,7 @@
     ],
     'title' => 'Marketplace',
     'subtitle' => 'Discover digital products and online services from trusted vendors. Every eligible purchase is protected through our secure escrow system.',
+    'image' => 'assets/images/market_place.jpg',
     'cta' => [
         'label' => 'Sell Now',
         'href' => route('dashboard.listings.create'),

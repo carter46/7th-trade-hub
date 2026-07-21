@@ -29,6 +29,16 @@
 
 {{-- Hero --}}
 <section class="relative flex flex-col justify-center items-center px-5 sm:px-6 py-12 sm:py-16 text-center overflow-hidden">
+    <div
+        class="pointer-events-none absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
+        style="background-image: url('{{ asset('assets/images/crytpo_exchange.jpg') }}')"
+        aria-hidden="true"
+    ></div>
+    <div
+        class="pointer-events-none absolute inset-0 z-0"
+        style="background: linear-gradient(180deg, rgba(15, 23, 42, 0.82) 0%, rgba(15, 23, 42, 0.74) 45%, rgba(15, 23, 42, 0.92) 100%);"
+        aria-hidden="true"
+    ></div>
     <div class="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,rgba(11,106,57,0.12)_0%,transparent_70%)]" aria-hidden="true"></div>
     <div class="relative z-10 max-w-3xl">
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/25 text-accent mb-5">

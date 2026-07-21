@@ -95,18 +95,56 @@
         ];
 
         $faqs = array_slice($faqs, 0, 5);
+        $heroSlides = [
+            asset('assets/images/homeslider1.jpg'),
+            asset('assets/images/homeslider2.jpg'),
+            asset('assets/images/homeslider3.jpg'),
+        ];
     @endphp
 
     <section
         class="relative isolate overflow-hidden flex items-center pt-24 pb-12 sm:pt-32 sm:pb-24 lg:pt-36 lg:pb-36"
         style="min-height: calc(100dvh - 5rem);"
+        x-data="{
+            current: 0,
+            timer: null,
+            start() {
+                this.stop();
+                this.timer = setInterval(() => this.current = (this.current + 1) % {{ count($heroSlides) }}, 6000);
+            },
+            stop() {
+                if (this.timer) clearInterval(this.timer);
+                this.timer = null;
+            },
+            goTo(index) {
+                this.current = index;
+                this.start();
+            },
+            init() {
+                this.start();
+            },
+            destroy() {
+                this.stop();
+            }
+        }"
+        @mouseenter="stop()"
+        @mouseleave="start()"
     >
-        {{-- Fill the viewport section; image uses cover (does not drive height) --}}
-        <div
-            class="pointer-events-none absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
-            style="background-image: url('{{ asset('assets/images/Image_ro410gro410gro41.png') }}')"
-            aria-hidden="true"
-        ></div>
+        {{-- Cross-fading hero backgrounds --}}
+        @foreach($heroSlides as $index => $slide)
+            <div
+                x-show="current === {{ $index }}"
+                x-transition:enter="transition-opacity duration-1000 ease-out"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="transition-opacity duration-1000 ease-in"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                class="pointer-events-none absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
+                style="background-image: url('{{ $slide }}'); @if($index > 0) display: none; @endif"
+                aria-hidden="true"
+            ></div>
+        @endforeach
         {{-- Dark wash over photo — keep texture visible, not blank --}}
         <div
             class="pointer-events-none absolute inset-0 z-[1]"
@@ -132,6 +170,18 @@
                     </a>
                 </div>
             </div>
+        </div>
+        <div class="absolute bottom-5 sm:bottom-7 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2" aria-label="Hero slide navigation">
+            @foreach($heroSlides as $index => $slide)
+                <button
+                    type="button"
+                    class="h-2 rounded-full border border-white/30 transition-all duration-300"
+                    :class="current === {{ $index }} ? 'w-7 bg-accent' : 'w-2 bg-white/40 hover:bg-white/70'"
+                    @click="goTo({{ $index }})"
+                    aria-label="Show hero image {{ $index + 1 }}"
+                    :aria-current="current === {{ $index }} ? 'true' : 'false'"
+                ></button>
+            @endforeach
         </div>
     </section>
 

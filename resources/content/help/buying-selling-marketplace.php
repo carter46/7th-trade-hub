@@ -7,6 +7,7 @@ return [
     'intro' => 'Browse listings, buy with escrow, sell as a vendor, manage orders, and build reputation with reviews.',
     'summary' => 'The marketplace connects buyers and sellers with search, favorites, escrow checkout, and delivery confirmation.',
     'updated_at' => '2026-07-20',
+    'hero_image' => 'assets/images/market_place.jpg',
     'printable' => true,
     'related' => ['keeping-account-secure', 'billing-wallets-payments', 'getting-started'],
     'platform_actions' => [

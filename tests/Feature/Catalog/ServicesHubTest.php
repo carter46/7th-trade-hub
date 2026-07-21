@@ -45,7 +45,15 @@ class ServicesHubTest extends TestCase
             ->assertOk()
             ->assertSee('Network Services')
             ->assertSee('Social Media')
+            ->assertSee('Documents & Receipts')
             ->assertSee('Browse Categories')
+            ->assertSee('assets/images/services_1.jpg', false)
+            ->assertSee('assets/images/Network Services_1.jpg', false)
+            ->assertSee('assets/images/Communication_1.jpg', false)
+            ->assertSee('assets/images/Social_Media.jpg', false)
+            ->assertSee('assets/images/Website_Services.jpg', false)
+            ->assertSee('assets/images/Business_Documents.jpg', false)
+            ->assertSee('assets/images/flat-lay-real-estate-concept.jpg', false)
             ->assertDontSee('Residential VPN Demo');
     }
 
@@ -126,6 +134,12 @@ class ServicesHubTest extends TestCase
     {
         $this->get('/services/digital-services')
             ->assertRedirect('/services/network-services');
+    }
+
+    public function test_trust_and_escrow_routes_to_marketplace(): void
+    {
+        $this->get('/services/trust-escrow')
+            ->assertRedirect(route('marketplace'));
     }
 
     public function test_wrong_type_in_product_url_redirects_to_canonical(): void

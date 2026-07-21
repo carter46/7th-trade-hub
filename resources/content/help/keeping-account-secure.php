@@ -7,6 +7,7 @@ return [
     'intro' => 'Verify your email, strengthen passwords, complete KYC when needed, and use escrow-aware buying practices.',
     'summary' => 'Security on 7th Trade Hub combines account hygiene, KYC, escrow protection, and scam awareness.',
     'updated_at' => '2026-07-20',
+    'hero_image' => 'assets/images/programming-background-with-person-working-with-codes-computer copy.jpg',
     'printable' => true,
     'related' => ['getting-started', 'buying-selling-marketplace', 'billing-wallets-payments'],
     'platform_actions' => [

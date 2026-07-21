@@ -100,12 +100,14 @@ class CatalogBrowseService
         return collect(config('catalog.groups', []))->map(function (array $group, string $slug) use ($content) {
             $resolved = $content->forGroup($slug);
             $stats = $this->statsForTypes($group['types'] ?? []);
+            $routeName = $group['route'] ?? null;
 
             return array_merge($resolved, [
                 'slug' => $slug,
                 'count' => $stats['count'],
                 'from_price' => $stats['from_price'],
-                'href' => route('services.segment', $slug),
+                'href' => $routeName ? route($routeName) : route('services.segment', $slug),
+                'cta' => $group['cta'] ?? 'Explore',
             ]);
         })->values();
     }

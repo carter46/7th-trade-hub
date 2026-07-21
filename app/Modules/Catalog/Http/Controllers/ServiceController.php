@@ -271,6 +271,11 @@ class ServiceController extends Controller
         }
 
         if ($this->browse->isGroup($segment)) {
+            $routeName = config('catalog.groups.'.$segment.'.route');
+            if ($routeName) {
+                return redirect()->route($routeName, status: 301);
+            }
+
             return $this->group(request(), $segment);
         }
 

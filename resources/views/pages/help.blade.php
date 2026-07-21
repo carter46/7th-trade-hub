@@ -33,6 +33,7 @@
     ],
     'title' => 'Help Center',
     'subtitle' => 'Search our knowledge base or get in touch with support for wallet, exchange, services, and marketplace help.',
+    'image' => 'assets/images/helpcenter.jpg',
 ])
 
 <div

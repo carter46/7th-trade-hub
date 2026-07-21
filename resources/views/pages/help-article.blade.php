@@ -18,6 +18,7 @@
     ],
     'title' => $article['title'] ?? 'Help guide',
     'subtitle' => $article['intro'] ?? '',
+    'image' => $article['hero_image'] ?? 'assets/images/helpcenter.jpg',
 ])
 
 {{-- Single layout switch via matchMedia so section ids stay unique (deep links work) --}}
