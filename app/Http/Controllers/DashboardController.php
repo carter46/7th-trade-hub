@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Listing;
+use App\Models\Message;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
