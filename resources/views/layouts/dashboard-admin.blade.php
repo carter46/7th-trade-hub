@@ -7,7 +7,7 @@
     <div class="relative flex h-full min-h-0 w-full flex-col">
         <header class="h-16 shrink-0 flex items-center justify-between border-b border-border-default bg-header px-4 sm:px-6 lg:px-10 z-30">
             <div class="flex items-center gap-4 sm:gap-8">
-                <button type="button" class="lg:hidden p-2 text-text-secondary hover:text-text-primary rounded-lg focus-ring" aria-label="Open menu" aria-controls="sidebar" @click="toggle()" :aria-expanded="open.toString()">
+                <button type="button" class="lg:hidden inline-flex min-h-11 min-w-11 items-center justify-center text-text-secondary hover:text-text-primary rounded-lg focus-ring" aria-label="Open menu" aria-controls="sidebar" @click="toggle()" :aria-expanded="open.toString()">
                     <x-ui.icon name="menu" class="w-6 h-6" />
                 </button>
                 <a href="{{ route('admin') }}" class="flex items-center gap-3 text-primary">
@@ -16,7 +16,9 @@
                 </a>
             </div>
             <div class="flex items-center gap-2 sm:gap-3">
-                <x-dashboard.theme-switcher />
+                <div class="hidden lg:block" data-desktop-theme-switcher>
+                    <x-dashboard.theme-switcher />
+                </div>
                 <a href="{{ route('dashboard.notifications') }}" class="relative flex size-10 items-center justify-center rounded-xl bg-muted/40 text-text-secondary hover:text-primary transition-colors focus-ring" aria-label="Notifications">
                     <x-ui.icon name="notifications" class="w-5 h-5" />
                     @php $unread = auth()->user()->unreadNotificationsCount(); @endphp

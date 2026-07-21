@@ -138,6 +138,21 @@ html[data-theme] .dashboard-card {
         @apply bg-primary text-white;
     }
 
+    .dashboard-nav-panel {
+        display: grid;
+        grid-template-rows: 0fr;
+        overflow: hidden;
+        opacity: 0;
+        transition:
+            grid-template-rows 200ms ease-out,
+            opacity 200ms ease-out;
+    }
+
+    .dashboard-nav-panel.is-expanded {
+        grid-template-rows: 1fr;
+        opacity: 1;
+    }
+
     .focus-ring {
         @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface;
     }
@@ -161,6 +176,12 @@ html[data-theme] .dashboard-card {
 
     .scrollbar-hide::-webkit-scrollbar {
         display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dashboard-nav-panel {
+        transition: none;
     }
 }
 

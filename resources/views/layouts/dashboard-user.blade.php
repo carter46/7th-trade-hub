@@ -11,7 +11,7 @@
     <main id="main-content" class="flex-1 flex flex-col min-w-0 min-h-0 bg-surface overflow-y-auto">
         <header class="h-16 shrink-0 bg-header sticky top-0 z-30 flex items-center justify-between px-4 sm:px-8 border-b border-border-default">
             <div class="flex items-center gap-4 lg:hidden">
-                <button type="button" class="p-2 text-text-secondary hover:text-text-primary focus-ring rounded-lg" aria-label="Open menu" aria-controls="sidebar" @click="toggle()" :aria-expanded="open.toString()">
+                <button type="button" class="inline-flex min-h-11 min-w-11 items-center justify-center text-text-secondary hover:text-text-primary focus-ring rounded-lg" aria-label="Open menu" aria-controls="sidebar" @click="toggle()" :aria-expanded="open.toString()">
                     <x-ui.icon name="menu" class="w-6 h-6" />
                 </button>
                 <a href="{{ route('dashboard') }}" class="flex items-center">
@@ -20,7 +20,9 @@
             </div>
             <div class="flex-1 hidden md:block"></div>
             <div class="flex items-center gap-2 sm:gap-4">
-                <x-dashboard.theme-switcher />
+                <div class="hidden lg:block" data-desktop-theme-switcher>
+                    <x-dashboard.theme-switcher />
+                </div>
                 <a href="{{ route('dashboard.notifications') }}" class="relative p-2 text-text-secondary hover:text-text-primary transition-colors focus-ring rounded-lg" aria-label="Notifications">
                     <x-ui.icon name="notifications" class="w-5 h-5" />
                     @php $unread = auth()->user()->unreadNotificationsCount(); @endphp

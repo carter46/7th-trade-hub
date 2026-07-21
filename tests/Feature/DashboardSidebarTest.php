@@ -1,0 +1,88 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class DashboardSidebarTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_admin_sidebar_uses_grouped_persisted_navigation(): void
+    {
+        $admin = User::factory()->create(['email_verified_at' => now()]);
+        $admin->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->get(route('admin'))
+            ->assertOk()
+            ->assertSee('data-dashboard-nav="admin"', false)
+            ->assertSee('Compliance')
+            ->assertSee('Marketplace')
+            ->assertSee('Platform Catalog')
+            ->assertSee('Operations')
+            ->assertSee('System')
+            ->assertSee("7th.dashboard.nav.admin.{$admin->id}", false)
+            ->assertSee('scrollbar-hide', false)
+            ->assertSee('aria-expanded=', false)
+            ->assertSee('data-mobile-theme-switcher', false)
+            ->assertSee('data-desktop-theme-switcher', false)
+            ->assertSee('!text-danger', false);
+    }
+
+    public function test_user_sidebar_uses_grouped_persisted_navigation(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $user->assignRole('user');
+
+        $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('data-dashboard-nav="user"', false)
+            ->assertSee('Wallet')
+            ->assertSee('Marketplace')
+            ->assertSee('Communication')
+            ->assertSee("7th.dashboard.nav.user.{$user->id}", false)
+            ->assertSee('scrollbar-hide', false)
+            ->assertSee('data-mobile-theme-switcher', false)
+            ->assertSee('!text-danger', false);
+    }
+
+    public function test_admin_child_page_does_not_mark_overview_active(): void
+    {
+        $admin = User::factory()->create(['email_verified_at' => now()]);
+        $admin->assignRole('admin');
+
+        $response = $this->actingAs($admin)->get(route('admin.users'))->assertOk();
+        $html = $response->getContent();
+
+        $this->assertMatchesRegularExpression(
+            '/href="'.preg_quote(route('admin.users'), '/').'"\\s+class="[^"]*sidebar-link-active/',
+            $html,
+        );
+        $this->assertDoesNotMatchRegularExpression(
+            '/href="'.preg_quote(route('admin'), '/').'"\\s+class="[^"]*sidebar-link-active/',
+            $html,
+        );
+    }
+
+    public function test_user_child_page_does_not_mark_dashboard_active(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $user->assignRole('user');
+
+        $response = $this->actingAs($user)->get(route('dashboard.wallet'))->assertOk();
+        $html = $response->getContent();
+
+        $this->assertMatchesRegularExpression(
+            '/href="'.preg_quote(route('dashboard.wallet'), '/').'"\\s+class="[^"]*sidebar-link-active/',
+            $html,
+        );
+        $this->assertDoesNotMatchRegularExpression(
+            '/href="'.preg_quote(route('dashboard'), '/').'"\\s+class="[^"]*sidebar-link-active/',
+            $html,
+        );
+    }
+}

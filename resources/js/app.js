@@ -26,13 +26,23 @@ document.addEventListener('alpine:init', () => {
 
     Alpine.data('mobileNav', () => ({
         open: false,
+        previouslyFocused: null,
+        previousRootOverflow: '',
         init() {
             this.$watch('open', (value) => {
                 if (value) {
+                    this.previouslyFocused = document.activeElement;
+                    this.previousRootOverflow = document.documentElement.style.overflow;
                     document.documentElement.style.overflow = 'hidden';
+                    this.$nextTick(() => {
+                        this.drawerFocusableElements()[0]?.focus();
+                    });
                 } else {
-                    document.documentElement.style.overflow = '';
+                    document.documentElement.style.overflow = this.previousRootOverflow;
                     document.body.style.overflow = '';
+                    this.$nextTick(() => {
+                        this.previouslyFocused?.focus?.();
+                    });
                 }
             });
         },
@@ -41,6 +51,80 @@ document.addEventListener('alpine:init', () => {
         },
         close() {
             this.open = false;
+        },
+        drawerFocusableElements() {
+            const drawer = this.$refs.mobileDrawer;
+            if (!drawer) return [];
+
+            return [...drawer.querySelectorAll(
+                'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+            )].filter((element) => element.offsetParent !== null);
+        },
+        trapFocus(event) {
+            if (!this.open || window.innerWidth >= 1024 || event.key !== 'Tab') return;
+
+            const focusable = this.drawerFocusableElements();
+            if (!focusable.length) return;
+
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+            }
+        },
+    }));
+
+    Alpine.data('sidebarNav', (options = {}) => ({
+        storageKey: options.storageKey || '7th.dashboard.nav',
+        initiallyOpen: Array.isArray(options.initiallyOpen) ? options.initiallyOpen : [],
+        openGroups: {},
+        init() {
+            const saved = this.readSavedState();
+
+            if (saved && typeof saved === 'object' && !Array.isArray(saved)) {
+                this.openGroups = { ...saved };
+            }
+
+            // The current page's parent is always expanded on first render.
+            this.initiallyOpen.forEach((id) => {
+                this.openGroups[id] = true;
+            });
+        },
+        readSavedState() {
+            try {
+                return JSON.parse(localStorage.getItem(this.storageKey) || 'null');
+            } catch (_) {
+                return null;
+            }
+        },
+        persist() {
+            try {
+                localStorage.setItem(this.storageKey, JSON.stringify(this.openGroups));
+            } catch (_) {
+                // Navigation still works when storage is unavailable.
+            }
+        },
+        isOpen(id) {
+            return Boolean(this.openGroups[id]);
+        },
+        toggleGroup(id) {
+            this.openGroups = { ...this.openGroups, [id]: !this.isOpen(id) };
+            this.persist();
+        },
+        openGroup(id) {
+            if (this.isOpen(id)) return;
+            this.openGroups = { ...this.openGroups, [id]: true };
+            this.persist();
+        },
+        closeGroup(id) {
+            if (!this.isOpen(id)) return;
+            this.openGroups = { ...this.openGroups, [id]: false };
+            this.persist();
         },
     }));
 
