@@ -95,4 +95,14 @@ class User extends Authenticatable
     {
         return $this->kyc_level >= $level;
     }
+
+    /**
+     * Role-aware landing page after login/verification.
+     */
+    public function homeRoute(): string
+    {
+        return $this->hasRole('admin')
+            ? route('admin', absolute: false)
+            : route('dashboard', absolute: false);
+    }
 }

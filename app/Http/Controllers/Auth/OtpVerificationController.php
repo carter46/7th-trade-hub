@@ -25,7 +25,7 @@ class OtpVerificationController extends Controller
     public function show(Request $request): RedirectResponse|View
     {
         if ($request->user()->hasVerifiedEmail()) {
-            return redirect()->intended(route('dashboard', absolute: false));
+            return redirect()->intended($request->user()->homeRoute());
         }
 
         return view('auth.verify-email');
@@ -42,7 +42,7 @@ class OtpVerificationController extends Controller
 
         $user = $request->user();
         if ($user->hasVerifiedEmail()) {
-            return redirect()->intended(route('dashboard', absolute: false));
+            return redirect()->intended($user->homeRoute());
         }
 
         $otp = $request->input('otp');
@@ -94,7 +94,7 @@ class OtpVerificationController extends Controller
         $user->forceFill(['email_verified_at' => now()])->save();
         DB::table('email_verification_codes')->where('user_id', $user->id)->delete();
 
-        return redirect()->intended(route('dashboard', absolute: false))->with('status', __('Your email has been verified.'));
+        return redirect()->intended($user->homeRoute())->with('status', __('Your email has been verified.'));
     }
 
     /**
@@ -103,7 +103,7 @@ class OtpVerificationController extends Controller
     public function resend(Request $request): RedirectResponse
     {
         if ($request->user()->hasVerifiedEmail()) {
-            return redirect()->intended(route('dashboard', absolute: false));
+            return redirect()->intended($request->user()->homeRoute());
         }
 
         $this->createAndSendOtp($request->user());
