@@ -108,27 +108,13 @@
         x-data="{
             current: 0,
             timer: null,
-            start() {
-                this.stop();
+            init() {
                 this.timer = setInterval(() => this.current = (this.current + 1) % {{ count($heroSlides) }}, 6000);
             },
-            stop() {
-                if (this.timer) clearInterval(this.timer);
-                this.timer = null;
-            },
-            goTo(index) {
-                this.current = index;
-                this.start();
-            },
-            init() {
-                this.start();
-            },
             destroy() {
-                this.stop();
+                if (this.timer) clearInterval(this.timer);
             }
         }"
-        @mouseenter="stop()"
-        @mouseleave="start()"
     >
         {{-- Cross-fading hero backgrounds --}}
         @foreach($heroSlides as $index => $slide)
@@ -170,18 +156,6 @@
                     </a>
                 </div>
             </div>
-        </div>
-        <div class="absolute bottom-5 sm:bottom-7 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2" aria-label="Hero slide navigation">
-            @foreach($heroSlides as $index => $slide)
-                <button
-                    type="button"
-                    class="h-2 rounded-full border border-white/30 transition-all duration-300"
-                    :class="current === {{ $index }} ? 'w-7 bg-accent' : 'w-2 bg-white/40 hover:bg-white/70'"
-                    @click="goTo({{ $index }})"
-                    aria-label="Show hero image {{ $index + 1 }}"
-                    :aria-current="current === {{ $index }} ? 'true' : 'false'"
-                ></button>
-            @endforeach
         </div>
     </section>
 
