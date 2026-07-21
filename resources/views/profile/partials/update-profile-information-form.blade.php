@@ -16,7 +16,7 @@
         @csrf
         @method('patch')
 
-        <x-ui.input
+        <x-dashboard.input
             label="{{ __('Name') }}"
             name="name"
             type="text"
@@ -28,7 +28,7 @@
         />
 
         <div class="space-y-2">
-            <x-ui.input
+            <x-dashboard.input
                 label="{{ __('Email') }}"
                 name="email"
                 type="email"
@@ -39,15 +39,15 @@
             />
 
             @if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail())
-                <x-ui.alert type="warning">
+                <x-dashboard.alert type="warning">
                     {{ __('Your email address is unverified.') }}
                     <button form="send-verification" type="submit" class="underline font-medium ml-1">
                         {{ __('Click here to re-send the verification email.') }}
                     </button>
-                </x-ui.alert>
+                </x-dashboard.alert>
             @endif
         </div>
 
-        <x-ui.button type="submit" x-bind:loading="submitting">{{ __('Save') }}</x-ui.button>
+        <x-dashboard.button type="submit" x-bind:loading="submitting">{{ __('Save') }}</x-dashboard.button>
     </form>
 </section>

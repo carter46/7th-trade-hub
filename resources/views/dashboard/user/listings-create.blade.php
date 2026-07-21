@@ -20,7 +20,7 @@
         ['Create', null],
     ]"
 >
-    <x-ui.card>
+    <x-dashboard.card>
         <form
             method="POST"
             action="{{ route('dashboard.listings.store') }}"
@@ -29,8 +29,8 @@
             @submit="submitting = true"
         >
             @csrf
-            <x-ui.input label="Title" name="title" :value="old('title')" required />
-            <x-ui.textarea label="Description" name="description">{{ old('description') }}</x-ui.textarea>
+            <x-dashboard.input label="Title" name="title" :value="old('title')" required />
+            <x-dashboard.textarea label="Description" name="description">{{ old('description') }}</x-dashboard.textarea>
 
             <div>
                 <label class="block text-sm font-medium text-text-secondary mb-1">Parent category</label>
@@ -52,9 +52,9 @@
                 @error('category_id')<p class="text-danger text-sm mt-1">{{ $message }}</p>@enderror
             </div>
 
-            <x-ui.input label="Price (NGN)" type="number" name="price" min="1" :value="old('price')" required />
-            <x-ui.button type="submit" icon="check" x-bind:disabled="submitting">Save Draft</x-ui.button>
+            <x-dashboard.input label="Price (NGN)" type="number" name="price" min="1" :value="old('price')" required />
+            <x-dashboard.button type="submit" icon="check" x-bind:disabled="submitting">Save Draft</x-dashboard.button>
         </form>
-    </x-ui.card>
+    </x-dashboard.card>
 </x-layout.page>
 @endsection

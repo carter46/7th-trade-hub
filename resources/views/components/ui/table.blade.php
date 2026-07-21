@@ -9,36 +9,32 @@
     'minHeight' => true,
 ])
 
-<div {{ $attributes->merge(['class' => 'overflow-hidden rounded-2xl border border-border-default bg-card-solid']) }}>
+{{-- Internals: single implementation lives in x-dashboard.table --}}
+<x-dashboard.table
+    :striped="$striped"
+    :loading="$loading"
+    :empty="$empty"
+    :empty-title="$emptyTitle"
+    :empty-description="$emptyDescription"
+    :empty-icon="$emptyIcon"
+    :empty-action="$emptyAction"
+    :min-height="$minHeight"
+    {{ $attributes }}
+>
+    @isset($toolbar)
+        <x-slot:toolbar>{{ $toolbar }}</x-slot:toolbar>
+    @endisset
     @isset($filters)
-        <div class="border-b border-border-default p-4">{{ $filters }}</div>
+        <x-slot:filters>{{ $filters }}</x-slot:filters>
     @endisset
-
     @isset($bulk)
-        <div class="border-b border-border-default p-4">{{ $bulk }}</div>
+        <x-slot:bulk>{{ $bulk }}</x-slot:bulk>
     @endisset
-
-    <div class="overflow-x-auto {{ $minHeight ? 'min-h-[400px]' : '' }}">
-        @if ($loading)
-            <x-ui.skeleton.table :rows="5" :cols="5" />
-        @elseif ($empty)
-            <x-ui.empty
-                :icon="$emptyIcon"
-                :title="$emptyTitle"
-                :description="$emptyDescription"
-                :action="$emptyAction"
-            />
-        @else
-            <table class="w-full text-sm text-left">
-                @isset($head)
-                    <thead class="sticky top-0 z-10 bg-elevated text-text-secondary">
-                        <tr>{{ $head }}</tr>
-                    </thead>
-                @endisset
-                <tbody class="{{ $striped ? '[&>tr:nth-child(even)]:bg-muted/30' : '' }} divide-y divide-border-default">
-                    {{ $slot }}
-                </tbody>
-            </table>
-        @endif
-    </div>
-</div>
+    @isset($head)
+        <x-slot:head>{{ $head }}</x-slot:head>
+    @endisset
+    @isset($footer)
+        <x-slot:footer>{{ $footer }}</x-slot:footer>
+    @endisset
+    {{ $slot }}
+</x-dashboard.table>

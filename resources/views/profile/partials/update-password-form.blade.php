@@ -12,7 +12,7 @@
         @csrf
         @method('put')
 
-        <x-ui.input
+        <x-dashboard.input
             label="{{ __('Current Password') }}"
             name="current_password"
             type="password"
@@ -21,7 +21,7 @@
             :error="$errors->updatePassword->first('current_password')"
         />
 
-        <x-ui.input
+        <x-dashboard.input
             label="{{ __('New Password') }}"
             name="password"
             type="password"
@@ -30,7 +30,7 @@
             :error="$errors->updatePassword->first('password')"
         />
 
-        <x-ui.input
+        <x-dashboard.input
             label="{{ __('Confirm Password') }}"
             name="password_confirmation"
             type="password"
@@ -39,6 +39,6 @@
             :error="$errors->updatePassword->first('password_confirmation')"
         />
 
-        <x-ui.button type="submit" x-bind:loading="submitting">{{ __('Save') }}</x-ui.button>
+        <x-dashboard.button type="submit" x-bind:loading="submitting">{{ __('Save') }}</x-dashboard.button>
     </form>
 </section>

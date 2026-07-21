@@ -13,14 +13,14 @@
         ['New', null],
     ]"
 >
-    <x-ui.card>
+    <x-dashboard.card>
         <form method="POST" action="{{ route('dashboard.messages.store') }}" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
-            <x-ui.input label="Recipient email" type="email" name="to_email" :value="old('to_email')" required />
-            <x-ui.input label="Subject" name="subject" :value="old('subject')" required />
-            <x-ui.textarea label="Message" name="body" :rows="5" required>{{ old('body') }}</x-ui.textarea>
-            <x-ui.button type="submit" icon="messages" x-bind:disabled="submitting">Send</x-ui.button>
+            <x-dashboard.input label="Recipient email" type="email" name="to_email" :value="old('to_email')" required />
+            <x-dashboard.input label="Subject" name="subject" :value="old('subject')" required />
+            <x-dashboard.textarea label="Message" name="body" :rows="5" required>{{ old('body') }}</x-dashboard.textarea>
+            <x-dashboard.button type="submit" icon="messages" x-bind:disabled="submitting">Send</x-dashboard.button>
         </form>
-    </x-ui.card>
+    </x-dashboard.card>
 </x-layout.page>
 @endsection

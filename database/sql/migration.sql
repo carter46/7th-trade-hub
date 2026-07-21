@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `profile_completed_at` timestamp NULL DEFAULT NULL,
   `email_verified_at` timestamp NULL DEFAULT NULL,
   `password` varchar(255) NOT NULL,
+  `theme_preference` varchar(16) DEFAULT NULL,
   `remember_token` varchar(100) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
@@ -738,5 +739,10 @@ CREATE TABLE IF NOT EXISTS `catalog_page_contents` (
 -- ALTER TABLE `platform_categories` ADD COLUMN `benefits` json DEFAULT NULL AFTER `hero_subtitle`;
 -- ALTER TABLE `platform_categories` ADD COLUMN `faq` json DEFAULT NULL AFTER `benefits`;
 -- CREATE TABLE IF NOT EXISTS `catalog_page_contents` (...see CREATE above...);
+
+-- ---------- Dashboard theme preference — existing DBs ----------
+-- Prefer: php artisan migrate --path=database/migrations/2026_07_21_140000_add_theme_preference_to_users_table.php --force
+-- Or apply manually (ignore duplicate-column errors):
+-- ALTER TABLE `users` ADD COLUMN `theme_preference` varchar(16) DEFAULT NULL AFTER `password`;
 
 COMMIT;

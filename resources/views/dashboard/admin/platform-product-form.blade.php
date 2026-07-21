@@ -20,40 +20,40 @@
         : [['id' => null, 'name' => 'Standard', 'price' => $product->base_price, 'duration_months' => null, 'is_default' => true]]);
 @endphp
 <x-layout.page title="{{ isset($product->id) ? 'Edit Product' : 'New Product' }}" width="form">
-    <x-ui.card>
+    <x-dashboard.card>
         <form method="POST" action="{{ isset($product->id) ? route('admin.platform-products.update', $product) : route('admin.platform-products.store') }}" class="space-y-4"
               x-data="{ variants: @js($variantRows) }">
             @csrf
             @if(isset($product->id)) @method('PUT') @endif
 
-            <x-ui.input label="Title" name="title" :value="old('title', $product->title)" required />
-            <x-ui.input label="Slug (optional)" name="slug" :value="old('slug', $product->slug)" />
-            <x-ui.select label="Product type" name="product_type" required>
+            <x-dashboard.input label="Title" name="title" :value="old('title', $product->title)" required />
+            <x-dashboard.input label="Slug (optional)" name="slug" :value="old('slug', $product->slug)" />
+            <x-dashboard.select label="Product type" name="product_type" required>
                 @foreach($types as $type)
                     <option value="{{ $type->value }}" @selected(old('product_type', $product->product_type?->value) === $type->value)>{{ $type->label() }}</option>
                 @endforeach
-            </x-ui.select>
-            <x-ui.select label="Category" name="platform_category_id">
+            </x-dashboard.select>
+            <x-dashboard.select label="Category" name="platform_category_id">
                 <option value="">— None —</option>
                 @foreach($categories as $category)
                     <option value="{{ $category->id }}" @selected(old('platform_category_id', $product->platform_category_id) == $category->id)>{{ $category->name }} ({{ $category->product_type->value }})</option>
                 @endforeach
-            </x-ui.select>
-            <x-ui.textarea label="Short description" name="short_description">{{ old('short_description', $product->short_description) }}</x-ui.textarea>
-            <x-ui.textarea label="Description" name="description">{{ old('description', $product->description) }}</x-ui.textarea>
-            <x-ui.select label="Status" name="status" required>
+            </x-dashboard.select>
+            <x-dashboard.textarea label="Short description" name="short_description">{{ old('short_description', $product->short_description) }}</x-dashboard.textarea>
+            <x-dashboard.textarea label="Description" name="description">{{ old('description', $product->description) }}</x-dashboard.textarea>
+            <x-dashboard.select label="Status" name="status" required>
                 @foreach(['draft','published','archived'] as $status)
                     <option value="{{ $status }}" @selected(old('status', $product->status?->value ?? 'draft') === $status)>{{ ucfirst($status) }}</option>
                 @endforeach
-            </x-ui.select>
-            <x-ui.input label="Base price (NGN)" type="number" step="0.01" name="base_price" :value="old('base_price', $product->base_price)" required />
-            <x-ui.input label="Hero image path" name="hero_image" :value="old('hero_image', $product->hero_image)" />
+            </x-dashboard.select>
+            <x-dashboard.input label="Base price (NGN)" type="number" step="0.01" name="base_price" :value="old('base_price', $product->base_price)" required />
+            <x-dashboard.input label="Hero image path" name="hero_image" :value="old('hero_image', $product->hero_image)" />
             <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="is_featured" value="1" @checked(old('is_featured', $product->is_featured))> Featured</label>
 
             <div class="space-y-3 border-t border-border-default pt-4">
                 <div class="flex items-center justify-between">
                     <h3 class="font-medium">Variants</h3>
-                    <button type="button" class="text-sm text-brand" @click="variants.push({ id: null, name: '', price: '', duration_months: '', is_default: false })">Add variant</button>
+                    <button type="button" class="text-sm text-primary" @click="variants.push({ id: null, name: '', price: '', duration_months: '', is_default: false })">Add variant</button>
                 </div>
                 <template x-for="(variant, index) in variants" :key="index">
                     <div class="grid gap-2 sm:grid-cols-5 items-end border border-border-default rounded-xl p-3">
@@ -78,23 +78,23 @@
                 </template>
             </div>
 
-            <x-ui.textarea label="Features (one per line)" name="features_text">{{ $featuresText }}</x-ui.textarea>
-            <x-ui.textarea label="Requirements (one per line)" name="requirements_text">{{ $requirementsText }}</x-ui.textarea>
-            <x-ui.textarea label="What's included (one per line)" name="whats_included_text">{{ $includedText }}</x-ui.textarea>
-            <x-ui.textarea label="FAQs (blank line between pairs; Q: / A: lines)" name="faqs_text">{{ $faqsText }}</x-ui.textarea>
-            <x-ui.textarea label="Gallery image paths (one per line)" name="gallery_paths">{{ $galleryText }}</x-ui.textarea>
+            <x-dashboard.textarea label="Features (one per line)" name="features_text">{{ $featuresText }}</x-dashboard.textarea>
+            <x-dashboard.textarea label="Requirements (one per line)" name="requirements_text">{{ $requirementsText }}</x-dashboard.textarea>
+            <x-dashboard.textarea label="What's included (one per line)" name="whats_included_text">{{ $includedText }}</x-dashboard.textarea>
+            <x-dashboard.textarea label="FAQs (blank line between pairs; Q: / A: lines)" name="faqs_text">{{ $faqsText }}</x-dashboard.textarea>
+            <x-dashboard.textarea label="Gallery image paths (one per line)" name="gallery_paths">{{ $galleryText }}</x-dashboard.textarea>
 
-            <x-ui.input label="Demo URL" name="demo_url" :value="old('demo_url', $product->demo_url)" />
-            <x-ui.input label="Demo username" name="demo_username" :value="old('demo_username', $product->demo_username)" />
-            <x-ui.input label="Demo password" name="demo_password" :value="old('demo_password', $product->demo_password)" />
-            <x-ui.input label="Industry" name="industry" :value="old('industry', $product->industry)" />
-            <x-ui.input label="Framework" name="framework" :value="old('framework', $product->framework)" />
-            <x-ui.input label="Support period" name="support_period" :value="old('support_period', $product->support_period)" />
-            <x-ui.textarea label="Support text" name="support_text">{{ old('support_text', $product->support_text) }}</x-ui.textarea>
+            <x-dashboard.input label="Demo URL" name="demo_url" :value="old('demo_url', $product->demo_url)" />
+            <x-dashboard.input label="Demo username" name="demo_username" :value="old('demo_username', $product->demo_username)" />
+            <x-dashboard.input label="Demo password" name="demo_password" :value="old('demo_password', $product->demo_password)" />
+            <x-dashboard.input label="Industry" name="industry" :value="old('industry', $product->industry)" />
+            <x-dashboard.input label="Framework" name="framework" :value="old('framework', $product->framework)" />
+            <x-dashboard.input label="Support period" name="support_period" :value="old('support_period', $product->support_period)" />
+            <x-dashboard.textarea label="Support text" name="support_text">{{ old('support_text', $product->support_text) }}</x-dashboard.textarea>
             <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="is_responsive" value="1" @checked(old('is_responsive', $product->is_responsive ?? true))> Responsive</label>
             <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="is_seo_ready" value="1" @checked(old('is_seo_ready', $product->is_seo_ready))> SEO ready</label>
-            <x-ui.button type="submit">Save</x-ui.button>
+            <x-dashboard.button type="submit">Save</x-dashboard.button>
         </form>
-    </x-ui.card>
+    </x-dashboard.card>
 </x-layout.page>
 @endsection

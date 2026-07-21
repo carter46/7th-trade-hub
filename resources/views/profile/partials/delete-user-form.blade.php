@@ -8,16 +8,16 @@
         </p>
     </header>
 
-    <x-ui.button
+    <x-dashboard.button
         type="button"
         variant="danger"
         x-data
         @click="$dispatch('open-modal', 'confirm-user-deletion')"
     >
         {{ __('Delete Account') }}
-    </x-ui.button>
+    </x-dashboard.button>
 
-    <x-ui.modal
+    <x-dashboard.modal
         name="confirm-user-deletion"
         title="{{ __('Are you sure you want to delete your account?') }}"
         variant="danger"
@@ -32,7 +32,7 @@
 
         <x-slot:form>
             <div class="mb-4">
-                <x-ui.input
+                <x-dashboard.input
                     label="{{ __('Password') }}"
                     name="password"
                     type="password"
@@ -42,5 +42,5 @@
                 />
             </div>
         </x-slot:form>
-    </x-ui.modal>
+    </x-dashboard.modal>
 </section>

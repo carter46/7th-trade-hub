@@ -21,18 +21,18 @@
 >
     <template x-for="toast in toasts" :key="toast.id">
         <div
-            class="pointer-events-auto flex items-start gap-3 rounded-xl border px-4 py-3 shadow-lg min-h-[56px]"
+            class="pointer-events-auto flex items-start gap-3 rounded-xl border px-4 py-3 shadow-panel min-h-[56px] bg-elevated text-text-primary"
             :class="{
-                'bg-success/15 border-success/40 text-green-100': toast.type === 'success',
-                'bg-danger/15 border-danger/40 text-red-100': toast.type === 'error',
-                'bg-warning/15 border-warning/40 text-amber-100': toast.type === 'warning',
-                'bg-blue-500/15 border-blue-500/40 text-blue-100': toast.type === 'info',
+                'border-success/40': toast.type === 'success',
+                'border-danger/40': toast.type === 'error',
+                'border-warning/40': toast.type === 'warning',
+                'border-primary/40': toast.type === 'info',
             }"
             x-show="true"
             x-transition
         >
             <p class="flex-1 text-sm" x-text="toast.message"></p>
-            <button type="button" class="text-current/70 hover:text-current shrink-0" @click="dismiss(toast.id)" aria-label="Dismiss">
+            <button type="button" class="inline-flex min-h-11 min-w-11 items-center justify-center text-text-muted hover:text-text-primary shrink-0 -mr-2 -mt-1" @click="dismiss(toast.id)" aria-label="Dismiss">
                 <x-ui.icon name="x" class="w-4 h-4" />
             </button>
         </div>

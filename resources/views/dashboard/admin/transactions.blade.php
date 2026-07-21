@@ -4,7 +4,7 @@
 
 @section('content')
 <x-layout.page title="Transactions" subtitle="View and manage all transactions." width="full">
-    <x-ui.table
+    <x-dashboard.table
         :empty="$transactions->isEmpty()"
         empty-title="No transactions yet"
         empty-description="Platform transactions will appear here."
@@ -12,30 +12,30 @@
         striped
     >
         <x-slot:head>
-            <x-ui.th>Reference</x-ui.th>
-            <x-ui.th>User</x-ui.th>
-            <x-ui.th>Type</x-ui.th>
-            <x-ui.th>Label</x-ui.th>
-            <x-ui.th>Amount</x-ui.th>
-            <x-ui.th>Status</x-ui.th>
-            <x-ui.th>Date</x-ui.th>
+            <x-dashboard.th>Reference</x-dashboard.th>
+            <x-dashboard.th>User</x-dashboard.th>
+            <x-dashboard.th>Type</x-dashboard.th>
+            <x-dashboard.th>Label</x-dashboard.th>
+            <x-dashboard.th>Amount</x-dashboard.th>
+            <x-dashboard.th>Status</x-dashboard.th>
+            <x-dashboard.th>Date</x-dashboard.th>
         </x-slot:head>
 
         @foreach ($transactions as $tx)
             <tr class="hover:bg-muted/50">
-                <x-ui.td class="font-mono text-xs">{{ $tx->reference }}</x-ui.td>
-                <x-ui.td>{{ $tx->user?->name ?? $tx->user?->email ?? '—' }}</x-ui.td>
-                <x-ui.td>{{ $tx->type }}</x-ui.td>
-                <x-ui.td>{{ $tx->label }}</x-ui.td>
-                <x-ui.td>{{ $tx->currency }} {{ number_format($tx->amount, 2) }}</x-ui.td>
-                <x-ui.td><x-ui.badge :status="$tx->status" /></x-ui.td>
-                <x-ui.td class="text-text-muted text-xs">{{ $tx->created_at->format('M j, Y H:i') }}</x-ui.td>
+                <x-dashboard.td class="font-mono text-xs">{{ $tx->reference }}</x-dashboard.td>
+                <x-dashboard.td>{{ $tx->user?->name ?? $tx->user?->email ?? '—' }}</x-dashboard.td>
+                <x-dashboard.td>{{ $tx->type }}</x-dashboard.td>
+                <x-dashboard.td>{{ $tx->label }}</x-dashboard.td>
+                <x-dashboard.td>{{ $tx->currency }} {{ number_format($tx->amount, 2) }}</x-dashboard.td>
+                <x-dashboard.td><x-dashboard.badge :status="$tx->status" /></x-dashboard.td>
+                <x-dashboard.td class="text-text-muted text-xs">{{ $tx->created_at->format('M j, Y H:i') }}</x-dashboard.td>
             </tr>
         @endforeach
-    </x-ui.table>
+    </x-dashboard.table>
 
     <x-slot:pagination>
-        <x-ui.pagination :paginator="$transactions" />
+        <x-dashboard.pagination :paginator="$transactions" />
     </x-slot:pagination>
 </x-layout.page>
 @endsection

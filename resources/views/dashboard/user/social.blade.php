@@ -4,7 +4,7 @@
 
 @section('content')
 <x-layout.page title="Social Services" subtitle="Manage your social media services." width="content">
-    <x-ui.card :padding="false">
+    <x-dashboard.card :padding="false">
         @if (isset($items) && $items->isNotEmpty())
             <ul class="divide-y divide-border-default">
                 @foreach ($items as $item)
@@ -12,12 +12,12 @@
                 @endforeach
             </ul>
         @else
-            <x-ui.empty
+            <x-dashboard.empty
                 icon="group"
                 title="No social services linked yet"
                 description="When this feature is enabled, your connected accounts will appear here."
             />
         @endif
-    </x-ui.card>
+    </x-dashboard.card>
 </x-layout.page>
 @endsection

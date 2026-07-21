@@ -4,7 +4,7 @@
 
 @section('content')
 <x-layout.page title="Document Templates" subtitle="Create and manage document templates." width="content">
-    <x-ui.card :padding="false">
+    <x-dashboard.card :padding="false">
         @if (isset($templates) && $templates->isNotEmpty())
             <ul class="divide-y divide-border-default">
                 @foreach ($templates as $template)
@@ -12,12 +12,12 @@
                 @endforeach
             </ul>
         @else
-            <x-ui.empty
+            <x-dashboard.empty
                 icon="inventory"
                 title="No document templates yet"
                 description="When templates are available, they will appear here."
             />
         @endif
-    </x-ui.card>
+    </x-dashboard.card>
 </x-layout.page>
 @endsection

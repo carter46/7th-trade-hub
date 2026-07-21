@@ -5,12 +5,12 @@
 @section('content')
 <x-layout.page title="Messages" subtitle="Your inbox and conversations." width="content">
     <x-slot:actions>
-        <x-ui.button :href="route('dashboard.messages.create')" icon="plus">New message</x-ui.button>
+        <x-dashboard.button :href="route('dashboard.messages.create')" icon="plus">New message</x-dashboard.button>
     </x-slot:actions>
 
-    <x-ui.card :padding="false">
+    <x-dashboard.card :padding="false">
         @if ($messages->isEmpty())
-            <x-ui.empty
+            <x-dashboard.empty
                 icon="messages"
                 title="No messages yet"
                 description="Start a conversation with another user on the platform."
@@ -32,10 +32,10 @@
                 @endforeach
             </ul>
         @endif
-    </x-ui.card>
+    </x-dashboard.card>
 
     <x-slot:pagination>
-        <x-ui.pagination :paginator="$messages" />
+        <x-dashboard.pagination :paginator="$messages" />
     </x-slot:pagination>
 </x-layout.page>
 @endsection

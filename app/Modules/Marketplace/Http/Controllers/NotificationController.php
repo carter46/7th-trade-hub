@@ -17,7 +17,11 @@ class NotificationController extends Controller
             ->orderByDesc('created_at')
             ->paginate(20);
 
-        return view('dashboard.user.notifications', compact('notifications'));
+        $layout = auth()->user()->hasRole('admin')
+            ? 'layouts.dashboard-admin'
+            : 'layouts.dashboard-user';
+
+        return view('dashboard.user.notifications', compact('notifications', 'layout'));
     }
 
     public function markRead(UserNotification $notification): RedirectResponse

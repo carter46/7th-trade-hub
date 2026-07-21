@@ -13,10 +13,10 @@
     ]"
 >
     <x-slot:actions>
-        <x-ui.button :href="route('dashboard.crypto-sell.create')" icon="plus">New Sell Request</x-ui.button>
+        <x-dashboard.button :href="route('dashboard.crypto-sell.create')" icon="plus">New Sell Request</x-dashboard.button>
     </x-slot:actions>
 
-    <x-ui.table
+    <x-dashboard.table
         :empty="$requests->isEmpty()"
         empty-title="No sell requests yet"
         empty-description="Create a quote to sell crypto and receive NGN in your wallet."
@@ -25,40 +25,40 @@
         striped
     >
         <x-slot:head>
-            <x-ui.th>Coin</x-ui.th>
-            <x-ui.th>Amount</x-ui.th>
-            <x-ui.th>Expected NGN</x-ui.th>
-            <x-ui.th>Expires</x-ui.th>
-            <x-ui.th>Status</x-ui.th>
-            <x-ui.th>Actions</x-ui.th>
+            <x-dashboard.th>Coin</x-dashboard.th>
+            <x-dashboard.th>Amount</x-dashboard.th>
+            <x-dashboard.th>Expected NGN</x-dashboard.th>
+            <x-dashboard.th>Expires</x-dashboard.th>
+            <x-dashboard.th>Status</x-dashboard.th>
+            <x-dashboard.th>Actions</x-dashboard.th>
         </x-slot:head>
         @foreach ($requests as $r)
             <tr class="hover:bg-muted/50">
-                <x-ui.td class="font-medium">{{ $r->coin }}</x-ui.td>
-                <x-ui.td>{{ $r->amount_crypto }}</x-ui.td>
-                <x-ui.td>₦{{ number_format($r->expected_ngn, 2) }}</x-ui.td>
-                <x-ui.td class="text-text-secondary text-xs">{{ $r->expires_at->format('H:i') }}</x-ui.td>
-                <x-ui.td>
+                <x-dashboard.td class="font-medium">{{ $r->coin }}</x-dashboard.td>
+                <x-dashboard.td>{{ $r->amount_crypto }}</x-dashboard.td>
+                <x-dashboard.td>₦{{ number_format($r->expected_ngn, 2) }}</x-dashboard.td>
+                <x-dashboard.td class="text-text-secondary text-xs">{{ $r->expires_at->format('H:i') }}</x-dashboard.td>
+                <x-dashboard.td>
                     @if ($r->status === 'pending' && $r->isQuoteExpired())
-                        <x-ui.badge status="warning">Expired</x-ui.badge>
+                        <x-dashboard.badge status="warning">Expired</x-dashboard.badge>
                     @else
-                        <x-ui.badge :status="$r->status" />
+                        <x-dashboard.badge :status="$r->status" />
                     @endif
-                </x-ui.td>
-                <x-ui.td>
+                </x-dashboard.td>
+                <x-dashboard.td>
                     @if ($r->status === 'pending' && $r->isQuoteExpired())
                         <form method="POST" action="{{ route('dashboard.crypto-sell.refresh', $r) }}" x-data="{ submitting: false }" @submit="submitting = true">
                             @csrf
-                            <x-ui.button type="submit" size="xs" variant="link" x-bind:disabled="submitting">Request New Quote</x-ui.button>
+                            <x-dashboard.button type="submit" size="xs" variant="link" x-bind:disabled="submitting">Request New Quote</x-dashboard.button>
                         </form>
                     @endif
-                </x-ui.td>
+                </x-dashboard.td>
             </tr>
         @endforeach
-    </x-ui.table>
+    </x-dashboard.table>
 
     <x-slot:pagination>
-        <x-ui.pagination :paginator="$requests" />
+        <x-dashboard.pagination :paginator="$requests" />
     </x-slot:pagination>
 </x-layout.page>
 @endsection

@@ -13,15 +13,15 @@
         ['Request', null],
     ]"
 >
-    <x-ui.card>
+    <x-dashboard.card>
         <form method="POST" action="{{ route('dashboard.withdrawal.store') }}" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
-            <x-ui.input label="Amount (NGN)" type="number" name="amount" min="100" required />
-            <x-ui.input label="Bank name" name="bank_name" required />
-            <x-ui.input label="Account number" name="account_number" required />
-            <x-ui.input label="Account name" name="account_name" required />
-            <x-ui.button type="submit" icon="withdraw" x-bind:disabled="submitting">Request Withdrawal</x-ui.button>
+            <x-dashboard.input label="Amount (NGN)" type="number" name="amount" min="100" required />
+            <x-dashboard.input label="Bank name" name="bank_name" required />
+            <x-dashboard.input label="Account number" name="account_number" required />
+            <x-dashboard.input label="Account name" name="account_name" required />
+            <x-dashboard.button type="submit" icon="withdraw" x-bind:disabled="submitting">Request Withdrawal</x-dashboard.button>
         </form>
-    </x-ui.card>
+    </x-dashboard.card>
 </x-layout.page>
 @endsection

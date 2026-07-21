@@ -13,18 +13,18 @@
         ['New quote', null],
     ]"
 >
-    <x-ui.card>
+    <x-dashboard.card>
         <form method="POST" action="{{ route('dashboard.crypto-sell.store') }}" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
-            <x-ui.select label="Coin" name="coin">
+            <x-dashboard.select label="Coin" name="coin">
                 @foreach ($coins as $c)
                     <option>{{ $c }}</option>
                 @endforeach
-            </x-ui.select>
-            <x-ui.input label="Network" name="network" placeholder="e.g. TRC20" />
-            <x-ui.input label="Amount" type="number" step="any" name="amount_crypto" required />
-            <x-ui.button type="submit" icon="bitcoin" x-bind:disabled="submitting">Get Quote</x-ui.button>
+            </x-dashboard.select>
+            <x-dashboard.input label="Network" name="network" placeholder="e.g. TRC20" />
+            <x-dashboard.input label="Amount" type="number" step="any" name="amount_crypto" required />
+            <x-dashboard.button type="submit" icon="bitcoin" x-bind:disabled="submitting">Get Quote</x-dashboard.button>
         </form>
-    </x-ui.card>
+    </x-dashboard.card>
 </x-layout.page>
 @endsection

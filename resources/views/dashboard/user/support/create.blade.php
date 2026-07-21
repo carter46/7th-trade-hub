@@ -13,18 +13,18 @@
         ['New ticket', null],
     ]"
 >
-    <x-ui.card>
+    <x-dashboard.card>
         <form method="POST" action="{{ route('dashboard.support.store') }}" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
-            <x-ui.select label="Category" name="category">
+            <x-dashboard.select label="Category" name="category">
                 @foreach ($categories as $c)
                     <option value="{{ $c }}">{{ ucfirst(str_replace('_', ' ', $c)) }}</option>
                 @endforeach
-            </x-ui.select>
-            <x-ui.input label="Subject" name="subject" required />
-            <x-ui.textarea label="Message" name="body" :rows="5" required />
-            <x-ui.button type="submit" icon="support" x-bind:disabled="submitting">Submit</x-ui.button>
+            </x-dashboard.select>
+            <x-dashboard.input label="Subject" name="subject" required />
+            <x-dashboard.textarea label="Message" name="body" :rows="5" required />
+            <x-dashboard.button type="submit" icon="support" x-bind:disabled="submitting">Submit</x-dashboard.button>
         </form>
-    </x-ui.card>
+    </x-dashboard.card>
 </x-layout.page>
 @endsection

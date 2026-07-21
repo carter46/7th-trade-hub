@@ -5,10 +5,10 @@
 
 @php
     $styles = [
-        'info' => 'border-blue-500/40 bg-blue-500/10 text-blue-200',
-        'success' => 'border-success/40 bg-success/10 text-green-200',
-        'warning' => 'border-warning/40 bg-warning/10 text-amber-200',
-        'error' => 'border-danger/40 bg-danger/10 text-red-200',
+        'info' => 'border-primary/30 bg-primary/10 text-text-primary',
+        'success' => 'border-success/40 bg-success/10 text-text-primary',
+        'warning' => 'border-warning/40 bg-warning/10 text-text-primary',
+        'error' => 'border-danger/40 bg-danger/10 text-text-primary',
     ];
     $icons = [
         'info' => 'info',
@@ -19,11 +19,11 @@
 @endphp
 
 <div {{ $attributes->merge(['class' => 'flex gap-3 rounded-xl border p-4 ' . ($styles[$type] ?? $styles['info']), 'role' => 'alert']) }}>
-    <x-ui.icon :name="$icons[$type] ?? 'info'" class="w-5 h-5 shrink-0 mt-0.5" />
+    <x-ui.icon :name="$icons[$type] ?? 'info'" class="w-5 h-5 shrink-0 mt-0.5 text-primary" />
     <div class="min-w-0">
         @if ($title)
-            <p class="text-sm font-semibold">{{ $title }}</p>
+            <p class="text-sm font-semibold text-text-primary">{{ $title }}</p>
         @endif
-        <div class="text-sm opacity-90">{{ $slot }}</div>
+        <div class="text-sm text-text-secondary">{{ $slot }}</div>
     </div>
 </div>

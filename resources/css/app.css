@@ -6,7 +6,69 @@
     display: none !important;
 }
 
+/*
+ * Marketing / auth semantic fallbacks (dark). Dashboard light/dark paint is NOT
+ * duplicated here — it is generated from config/dashboard-themes.php via
+ * partials/dashboard/theme-tokens.blade.php (ThemeManager::dashboardThemeStylesheet).
+ */
+:root {
+    --th-surface: #0f172a;
+    --th-surface-secondary: #111827;
+    --th-elevated: #1e293b;
+    --th-card: rgba(30, 41, 59, 0.72);
+    --th-sidebar: #1e293b;
+    --th-header: rgba(30, 41, 59, 0.85);
+    --th-muted: #334155;
+    --th-border-default: #334155;
+    --th-border-subtle: rgba(255, 255, 255, 0.1);
+    --th-text-primary: #f1f5f9;
+    --th-text-secondary: #94a3b8;
+    --th-text-muted: #64748b;
+    --th-overlay: rgba(2, 6, 23, 0.65);
+    --th-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+    --th-blur: 12px;
+    --th-input-bg: rgba(30, 41, 59, 0.55);
+    --th-table-stripe: rgba(51, 65, 85, 0.35);
+    --th-table-hover: rgba(51, 65, 85, 0.55);
+    --th-code-bg: #111827;
+    --th-gradient-soft: linear-gradient(135deg, #0f172a 0%, #052e16 100%);
+    --th-icon-bg: rgba(11, 106, 57, 0.18);
+    --th-icon-fg: #4ade80;
+    --th-surface-rgb: 15 23 42;
+    --th-elevated-rgb: 30 41 59;
+    --th-muted-rgb: 51 65 85;
+    --th-chart-bg: #0f172a;
+    --th-chart-grid: #334155;
+    --th-chart-labels: #94a3b8;
+}
+
+/* Dashboard-only polished transitions (scoped — not universal *) */
+.dashboard-shell,
+.dashboard-shell > header,
+.dashboard-shell aside,
+.dashboard-shell main,
+.dashboard-shell .dashboard-card,
+html[data-theme] .glass-card,
+html[data-theme] .dashboard-card {
+    transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+    transition-duration: 220ms;
+    transition-timing-function: ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dashboard-shell,
+    .dashboard-shell > header,
+    .dashboard-shell aside,
+    .dashboard-shell main,
+    .dashboard-shell .dashboard-card,
+    html[data-theme] .glass-card,
+    html[data-theme] .dashboard-card {
+        transition: none !important;
+    }
+}
+
 @layer utilities {
+    /* Marketing glass stays dark; dashboard data-theme overrides below */
     .glassmorphism {
         background: rgba(30, 41, 59, 0.6);
         backdrop-filter: blur(12px);
@@ -20,6 +82,24 @@
         -webkit-backdrop-filter: blur(12px);
         border: 1px solid rgba(255, 255, 255, 0.1);
         box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    }
+
+    html[data-theme='light'] .glass-card,
+    html[data-theme='light'] .dashboard-card {
+        background: var(--th-card);
+        border: 1px solid var(--th-border-default);
+        box-shadow: var(--th-shadow);
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+
+    html[data-theme='dark'] .glass-card,
+    html[data-theme='dark'] .dashboard-card {
+        background: var(--th-card);
+        border: 1px solid var(--th-border-subtle);
+        box-shadow: var(--th-shadow);
+        backdrop-filter: blur(var(--th-blur));
+        -webkit-backdrop-filter: blur(var(--th-blur));
     }
 
     .marketing-page-hero-bg {

@@ -1,4 +1,5 @@
 import './bootstrap';
+import './dashboard-theme';
 
 import Alpine from 'alpinejs';
 
@@ -27,7 +28,12 @@ document.addEventListener('alpine:init', () => {
         open: false,
         init() {
             this.$watch('open', (value) => {
-                document.body.style.overflow = value ? 'hidden' : '';
+                if (value) {
+                    document.documentElement.style.overflow = 'hidden';
+                } else {
+                    document.documentElement.style.overflow = '';
+                    document.body.style.overflow = '';
+                }
             });
         },
         toggle() {
@@ -35,6 +41,22 @@ document.addEventListener('alpine:init', () => {
         },
         close() {
             this.open = false;
+        },
+    }));
+
+    Alpine.data('themeSwitcher', (initialPreference = 'system') => ({
+        preference: initialPreference,
+        saving: false,
+        async choose(next) {
+            if (this.saving || this.preference === next) return;
+            this.saving = true;
+            const previous = this.preference;
+            this.preference = next;
+            const result = await window.DashboardTheme.setPreference(next);
+            if (!result?.ok) {
+                this.preference = previous;
+            }
+            this.saving = false;
         },
     }));
 
@@ -111,7 +133,6 @@ document.addEventListener('alpine:init', () => {
                 clean.search = this.queryParams().toString();
                 window.history.replaceState({}, '', clean.pathname + (clean.search ? `?${clean.search}` : ''));
             } catch (e) {
-                // Fallback to full navigation if AJAX fails
                 const form = this.$refs.filterForm;
                 if (form) form.submit();
             } finally {
@@ -375,6 +396,5 @@ document.addEventListener('alpine:init', () => {
         },
     }));
 });
-
 
 Alpine.start();

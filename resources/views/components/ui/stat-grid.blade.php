@@ -2,6 +2,7 @@
     'count' => 4,
 ])
 
-<div {{ $attributes->merge(['class' => 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4']) }}>
+{{-- Internals: authenticated pages should use x-dashboard.stat-grid --}}
+<x-dashboard.stat-grid :count="$count" {{ $attributes }}>
     {{ $slot }}
-</div>
+</x-dashboard.stat-grid>

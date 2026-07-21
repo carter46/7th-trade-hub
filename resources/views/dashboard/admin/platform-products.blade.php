@@ -5,42 +5,42 @@
 @section('content')
 <x-layout.page title="Platform Products" subtitle="Admin-owned catalog items" width="full">
     <x-slot:actions>
-        <x-ui.button :href="route('admin.platform-products.create')" icon="plus">New product</x-ui.button>
+        <x-dashboard.button :href="route('admin.platform-products.create')" icon="plus">New product</x-dashboard.button>
     </x-slot:actions>
 
-    <x-ui.card>
-        <x-ui.table
+    <x-dashboard.card>
+        <x-dashboard.table
             :empty="$products->isEmpty()"
             empty-title="No platform products"
             empty-description="Create your first catalog product."
             empty-icon="storefront"
         >
             <x-slot:head>
-                <x-ui.th>Title</x-ui.th>
-                <x-ui.th>Type</x-ui.th>
-                <x-ui.th>Status</x-ui.th>
-                <x-ui.th>Price</x-ui.th>
-                <x-ui.th></x-ui.th>
+                <x-dashboard.th>Title</x-dashboard.th>
+                <x-dashboard.th>Type</x-dashboard.th>
+                <x-dashboard.th>Status</x-dashboard.th>
+                <x-dashboard.th>Price</x-dashboard.th>
+                <x-dashboard.th></x-dashboard.th>
             </x-slot:head>
             @foreach($products as $product)
                 <tr>
-                    <x-ui.td>
+                    <x-dashboard.td>
                         {{ $product->title }}
                         @if($product->is_featured)
-                            <x-ui.badge status="warning">Featured</x-ui.badge>
+                            <x-dashboard.badge status="warning">Featured</x-dashboard.badge>
                         @endif
-                    </x-ui.td>
-                    <x-ui.td>{{ $product->product_type->label() }}</x-ui.td>
-                    <x-ui.td>
-                        <x-ui.badge :status="$product->status->value === 'published' ? 'success' : 'neutral'">
+                    </x-dashboard.td>
+                    <x-dashboard.td>{{ $product->product_type->label() }}</x-dashboard.td>
+                    <x-dashboard.td>
+                        <x-dashboard.badge :status="$product->status->value === 'published' ? 'success' : 'neutral'">
                             {{ $product->status->value }}
-                        </x-ui.badge>
-                    </x-ui.td>
-                    <x-ui.td>₦{{ number_format($product->base_price, 2) }}</x-ui.td>
-                    <x-ui.td class="text-right space-x-2">
+                        </x-dashboard.badge>
+                    </x-dashboard.td>
+                    <x-dashboard.td>₦{{ number_format($product->base_price, 2) }}</x-dashboard.td>
+                    <x-dashboard.td class="text-right space-x-2">
                         <a href="{{ route('admin.platform-products.edit', $product) }}" class="text-accent text-sm">Edit</a>
-                        <x-ui.button type="button" size="xs" variant="danger" @click="$dispatch('open-modal', 'delete-product-{{ $product->id }}')">Delete</x-ui.button>
-                        <x-ui.modal
+                        <x-dashboard.button type="button" size="xs" variant="danger" @click="$dispatch('open-modal', 'delete-product-{{ $product->id }}')">Delete</x-dashboard.button>
+                        <x-dashboard.modal
                             name="delete-product-{{ $product->id }}"
                             title="Delete product?"
                             confirm-label="Delete"
@@ -48,14 +48,14 @@
                             method="DELETE"
                         >
                             Delete “{{ $product->title }}”? This cannot be undone.
-                        </x-ui.modal>
-                    </x-ui.td>
+                        </x-dashboard.modal>
+                    </x-dashboard.td>
                 </tr>
             @endforeach
-        </x-ui.table>
-    </x-ui.card>
+        </x-dashboard.table>
+    </x-dashboard.card>
     <div class="mt-4">
-        <x-ui.pagination :paginator="$products" />
+        <x-dashboard.pagination :paginator="$products" />
     </div>
 </x-layout.page>
 @endsection

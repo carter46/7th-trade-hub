@@ -14,19 +14,19 @@
     ]"
 >
     <x-slot:actions>
-        <x-ui.button :href="route('dashboard.messages')" variant="ghost" size="sm">← Inbox</x-ui.button>
+        <x-dashboard.button :href="route('dashboard.messages')" variant="ghost" size="sm">← Inbox</x-dashboard.button>
     </x-slot:actions>
 
-    <x-ui.card>
+    <x-dashboard.card>
         <div class="text-text-primary whitespace-pre-wrap">{{ $message->body }}</div>
-    </x-ui.card>
+    </x-dashboard.card>
 
-    <x-ui.card>
+    <x-dashboard.card>
         <form method="POST" action="{{ route('dashboard.messages.reply', $message) }}" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
-            <x-ui.textarea label="Reply" name="body" :rows="4" placeholder="Reply..." required />
-            <x-ui.button type="submit" size="sm" icon="chat" x-bind:disabled="submitting">Reply</x-ui.button>
+            <x-dashboard.textarea label="Reply" name="body" :rows="4" placeholder="Reply..." required />
+            <x-dashboard.button type="submit" size="sm" icon="chat" x-bind:disabled="submitting">Reply</x-dashboard.button>
         </form>
-    </x-ui.card>
+    </x-dashboard.card>
 </x-layout.page>
 @endsection

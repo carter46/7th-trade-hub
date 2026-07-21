@@ -14,15 +14,15 @@
     ]"
 >
     <x-slot:actions>
-        <x-ui.badge :status="$ticket->status === 'open' ? 'pending' : 'completed'">{{ $ticket->status }}</x-ui.badge>
+        <x-dashboard.badge :status="$ticket->status === 'open' ? 'pending' : 'completed'">{{ $ticket->status }}</x-dashboard.badge>
     </x-slot:actions>
 
-    <x-ui.card>
+    <x-dashboard.card>
         <div class="text-text-primary whitespace-pre-wrap">{{ $ticket->body }}</div>
-    </x-ui.card>
+    </x-dashboard.card>
 
     @foreach ($ticket->replies as $reply)
-        <x-ui.card :class="$reply->is_staff ? 'border border-primary/30' : ''">
+        <x-dashboard.card :class="$reply->is_staff ? 'border border-primary/30' : ''">
             <p class="text-xs text-text-muted mb-2">
                 {{ $reply->user->name }}
                 @if ($reply->is_staff)
@@ -30,15 +30,15 @@
                 @endif
             </p>
             <p class="text-sm text-text-primary whitespace-pre-wrap">{{ $reply->body }}</p>
-        </x-ui.card>
+        </x-dashboard.card>
     @endforeach
 
-    <x-ui.card>
+    <x-dashboard.card>
         <form method="POST" action="{{ route('dashboard.support.reply', $ticket) }}" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
-            <x-ui.textarea label="Reply" name="body" :rows="3" required />
-            <x-ui.button type="submit" size="sm" icon="chat" x-bind:disabled="submitting">Reply</x-ui.button>
+            <x-dashboard.textarea label="Reply" name="body" :rows="3" required />
+            <x-dashboard.button type="submit" size="sm" icon="chat" x-bind:disabled="submitting">Reply</x-dashboard.button>
         </form>
-    </x-ui.card>
+    </x-dashboard.card>
 </x-layout.page>
 @endsection

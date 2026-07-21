@@ -14,28 +14,28 @@
     ]"
 >
     <x-slot:actions>
-        <x-ui.button :href="route('admin.tickets')" variant="secondary" size="sm">All tickets</x-ui.button>
+        <x-dashboard.button :href="route('admin.tickets')" variant="secondary" size="sm">All tickets</x-dashboard.button>
     </x-slot:actions>
 
-    <x-ui.card variant="solid">
+    <x-dashboard.card variant="solid">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-            <x-ui.badge :status="$ticket->status === 'open' ? 'pending' : 'completed'">
+            <x-dashboard.badge :status="$ticket->status === 'open' ? 'pending' : 'completed'">
                 {{ $ticket->status }}
-            </x-ui.badge>
+            </x-dashboard.badge>
             <form method="POST" action="{{ route('admin.tickets.status', $ticket) }}" class="flex gap-2 items-end" x-data="{ submitting: false }" @submit="submitting = true">
                 @csrf
-                <x-ui.select name="status" size="sm">
+                <x-dashboard.select name="status" size="sm">
                     <option value="open" @selected($ticket->status === 'open')>Open</option>
                     <option value="closed" @selected($ticket->status === 'closed')>Closed</option>
-                </x-ui.select>
-                <x-ui.button type="submit" variant="secondary" size="sm" x-bind:disabled="submitting">Update</x-ui.button>
+                </x-dashboard.select>
+                <x-dashboard.button type="submit" variant="secondary" size="sm" x-bind:disabled="submitting">Update</x-dashboard.button>
             </form>
         </div>
         <div class="text-text-secondary whitespace-pre-wrap text-sm">{{ $ticket->body }}</div>
-    </x-ui.card>
+    </x-dashboard.card>
 
     @foreach ($ticket->replies as $reply)
-        <x-ui.card
+        <x-dashboard.card
             variant="solid"
             class="{{ $reply->is_staff ? 'border-primary/30 bg-primary/5' : '' }}"
         >
@@ -47,15 +47,15 @@
                 — {{ $reply->created_at->format('M j, H:i') }}
             </p>
             <p class="text-text-secondary text-sm whitespace-pre-wrap">{{ $reply->body }}</p>
-        </x-ui.card>
+        </x-dashboard.card>
     @endforeach
 
-    <x-ui.card variant="solid">
+    <x-dashboard.card variant="solid">
         <form method="POST" action="{{ route('admin.tickets.reply', $ticket) }}" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
-            <x-ui.textarea name="body" label="Staff reply" :rows="4" required />
-            <x-ui.button type="submit" variant="primary" x-bind:disabled="submitting">Send reply</x-ui.button>
+            <x-dashboard.textarea name="body" label="Staff reply" :rows="4" required />
+            <x-dashboard.button type="submit" variant="primary" x-bind:disabled="submitting">Send reply</x-dashboard.button>
         </form>
-    </x-ui.card>
+    </x-dashboard.card>
 </x-layout.page>
 @endsection
