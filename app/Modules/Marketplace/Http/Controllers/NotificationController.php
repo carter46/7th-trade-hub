@@ -20,8 +20,9 @@ class NotificationController extends Controller
         $layout = auth()->user()->hasRole('admin')
             ? 'layouts.dashboard-admin'
             : 'layouts.dashboard-user';
+        $notificationPrefix = auth()->user()->hasRole('admin') ? 'admin' : 'dashboard';
 
-        return view('dashboard.user.notifications', compact('notifications', 'layout'));
+        return view('dashboard.user.notifications', compact('notifications', 'layout', 'notificationPrefix'));
     }
 
     public function markRead(UserNotification $notification): RedirectResponse

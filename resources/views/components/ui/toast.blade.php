@@ -4,6 +4,7 @@
         'verification-link-sent' => 'A new verification link has been sent to your email address.',
         'profile-updated' => 'Profile updated.',
         'password-updated' => 'Password updated.',
+        'session-revoked' => 'Session revoked.',
     ];
     $toasts = [];
     foreach (['status' => 'success', 'success' => 'success', 'error' => 'error', 'warning' => 'warning', 'info' => 'info'] as $key => $type) {

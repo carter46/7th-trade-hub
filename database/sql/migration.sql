@@ -745,4 +745,12 @@ CREATE TABLE IF NOT EXISTS `catalog_page_contents` (
 -- Or apply manually (ignore duplicate-column errors):
 -- ALTER TABLE `users` ADD COLUMN `theme_preference` varchar(16) DEFAULT NULL AFTER `password`;
 
+-- ---------- User lifecycle (suspend metadata + anonymize) — existing DBs ----------
+-- Prefer: php artisan migrate --path=database/migrations/2026_07_21_220000_add_user_lifecycle_columns.php --force
+-- Or apply manually (ignore duplicate-column errors):
+-- ALTER TABLE `users` ADD COLUMN `suspended_at` timestamp NULL DEFAULT NULL AFTER `is_suspended`;
+-- ALTER TABLE `users` ADD COLUMN `suspended_by` bigint unsigned NULL DEFAULT NULL AFTER `suspended_at`;
+-- ALTER TABLE `users` ADD COLUMN `anonymized_at` timestamp NULL DEFAULT NULL AFTER `suspended_by`;
+-- ALTER TABLE `users` ADD CONSTRAINT `users_suspended_by_foreign` FOREIGN KEY (`suspended_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
 COMMIT;

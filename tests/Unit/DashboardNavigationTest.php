@@ -2,12 +2,16 @@
 
 namespace Tests\Unit;
 
+use App\Models\User;
 use App\Support\DashboardNavigation;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 class DashboardNavigationTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_root_routes_match_exactly_and_not_every_dashboard_page(): void
     {
         $adminOverview = [
@@ -72,28 +76,52 @@ class DashboardNavigationTest extends TestCase
         $entries = collect(DashboardNavigation::for('test-role'))->keyBy('id');
 
         $this->assertSame('link', $entries['lonely']['type']);
-        $this->assertSame('Lonely', $entries['lonely']['label']);
+        $this->assertSame('Child', $entries['lonely']['label']);
         $this->assertSame('admin', $entries['lonely']['route']);
         $this->assertSame('group', $entries['packed']['type']);
 
-        $admin = collect(DashboardNavigation::for('admin'))->keyBy('id');
-        $this->assertSame('link', $admin['dashboard']['type']);
-        $this->assertSame('link', $admin['system']['type']);
+        $adminUser = User::factory()->admin()->create();
+        $admin = collect(DashboardNavigation::for('admin', $adminUser))->keyBy('id');
+        $this->assertSame('group', $admin['dashboard']['type']);
+        $this->assertSame('link', $admin['support']['type']);
     }
 
     public function test_active_child_opens_its_parent_group(): void
     {
-        $entries = DashboardNavigation::for('admin');
+        $admin = User::factory()->admin()->create();
+        $entries = DashboardNavigation::for('admin', $admin);
         $open = DashboardNavigation::initiallyOpenGroups($entries, 'admin.users');
 
-        $this->assertContains('users', $open);
-        $this->assertNotContains('dashboard', $open);
+        $this->assertSame(['identity'], $open);
+    }
+
+    public function test_search_index_is_permission_aware(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $index = DashboardNavigation::searchIndex('admin', $admin);
+        $labels = collect($index)->pluck('label')->all();
+
+        $this->assertContains('Platform Products', $labels);
+        $this->assertContains('Users', $labels);
+
+        $prodHits = collect($index)->filter(function (array $item) {
+            return collect($item['keywords'])->contains(fn ($k) => str_contains(strtolower((string) $k), 'prod'));
+        });
+
+        $this->assertTrue($prodHits->isNotEmpty());
     }
 
     public function test_all_configured_menu_routes_and_icons_exist(): void
     {
+        $admin = User::factory()->admin()->create();
+
         foreach (['admin', 'user'] as $role) {
-            foreach (DashboardNavigation::for($role) as $entry) {
+            $user = $role === 'admin' ? $admin : User::factory()->create();
+            if ($role === 'user') {
+                $user->assignRole('user');
+            }
+
+            foreach (DashboardNavigation::for($role, $user) as $entry) {
                 $items = ($entry['type'] ?? 'link') === 'group'
                     ? ($entry['children'] ?? [])
                     : [$entry];

@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         ]);
         $middleware->appendToGroup('web', EnsureNotSuspended::class);
+        $middleware->appendToGroup('api', EnsureNotSuspended::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         if (class_exists(\Sentry\Laravel\Integration::class)) {

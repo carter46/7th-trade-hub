@@ -50,6 +50,14 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        if (Auth::user()?->is_suspended) {
+            Auth::logout();
+
+            throw ValidationException::withMessages([
+                'email' => __('Your account has been suspended.'),
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 

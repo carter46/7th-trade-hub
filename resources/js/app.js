@@ -29,6 +29,9 @@ document.addEventListener('alpine:init', () => {
         previouslyFocused: null,
         previousRootOverflow: '',
         init() {
+            window.addEventListener('open-mobile-nav', () => {
+                this.open = true;
+            });
             this.$watch('open', (value) => {
                 if (value) {
                     this.previouslyFocused = document.activeElement;
@@ -79,20 +82,56 @@ document.addEventListener('alpine:init', () => {
         },
     }));
 
+    Alpine.data('accountMenu', () => ({
+        open: false,
+        trigger: null,
+        toggle() {
+            this.trigger = this.$el.querySelector('button[aria-haspopup="menu"]');
+            this.open = !this.open;
+        },
+        close(restoreFocus = false) {
+            if (!this.open) return;
+            this.open = false;
+            if (restoreFocus) {
+                this.$nextTick(() => this.trigger?.focus());
+            }
+        },
+    }));
+
+    Alpine.data('rowActions', () => ({
+        open: false,
+        toggle() {
+            this.open = !this.open;
+        },
+        close() {
+            this.open = false;
+        },
+    }));
+
     Alpine.data('sidebarNav', (options = {}) => ({
         storageKey: options.storageKey || '7th.dashboard.nav',
         initiallyOpen: Array.isArray(options.initiallyOpen) ? options.initiallyOpen : [],
-        openGroups: {},
+        destinations: Array.isArray(options.destinations) ? options.destinations : [],
+        openGroupId: null,
+        query: '',
+        activeResult: 0,
         init() {
             const saved = this.readSavedState();
+            const activeId = this.initiallyOpen[0] || null;
 
-            if (saved && typeof saved === 'object' && !Array.isArray(saved)) {
-                this.openGroups = { ...saved };
+            if (activeId) {
+                this.openGroupId = activeId;
+            } else if (saved && typeof saved.openGroupId === 'string' && saved.openGroupId) {
+                this.openGroupId = saved.openGroupId;
+            } else if (saved && typeof saved === 'object' && !Array.isArray(saved)) {
+                // Migrate legacy multi-open maps to a single accordion id.
+                const legacyOpen = Object.keys(saved).find((key) => saved[key]);
+                this.openGroupId = legacyOpen || null;
             }
 
-            // The current page's parent is always expanded on first render.
-            this.initiallyOpen.forEach((id) => {
-                this.openGroups[id] = true;
+            this.persist();
+            this.$watch('query', () => {
+                this.activeResult = 0;
             });
         },
         readSavedState() {
@@ -104,33 +143,124 @@ document.addEventListener('alpine:init', () => {
         },
         persist() {
             try {
-                localStorage.setItem(this.storageKey, JSON.stringify(this.openGroups));
+                localStorage.setItem(this.storageKey, JSON.stringify({ openGroupId: this.openGroupId }));
             } catch (_) {
                 // Navigation still works when storage is unavailable.
             }
         },
         isOpen(id) {
-            return Boolean(this.openGroups[id]);
+            return this.openGroupId === id;
         },
         toggleGroup(id) {
-            this.openGroups = { ...this.openGroups, [id]: !this.isOpen(id) };
+            this.openGroupId = this.isOpen(id) ? null : id;
             this.persist();
         },
         openGroup(id) {
-            if (this.isOpen(id)) return;
-            this.openGroups = { ...this.openGroups, [id]: true };
+            this.openGroupId = id;
             this.persist();
         },
         closeGroup(id) {
-            if (!this.isOpen(id)) return;
-            this.openGroups = { ...this.openGroups, [id]: false };
-            this.persist();
+            if (this.openGroupId === id) {
+                this.openGroupId = null;
+                this.persist();
+            }
+        },
+        clearSearch() {
+            this.query = '';
+            this.activeResult = 0;
+        },
+        filteredDestinations() {
+            const term = this.query.trim().toLowerCase();
+            if (!term) return [];
+
+            return this.destinations.filter((item) => {
+                const haystack = [item.label, item.group, ...(item.keywords || [])]
+                    .filter(Boolean)
+                    .join(' ')
+                    .toLowerCase();
+
+                return haystack.includes(term);
+            });
+        },
+        moveResult(delta) {
+            const results = this.filteredDestinations();
+            if (!results.length) return;
+            const next = this.activeResult + delta;
+            this.activeResult = (next + results.length) % results.length;
+        },
+        openActiveResult() {
+            const results = this.filteredDestinations();
+            const item = results[this.activeResult];
+            if (!item?.url) return;
+            window.location.href = item.url;
+        },
+    }));
+
+    Alpine.data('notificationMenu', () => ({
+        open: false,
+        toggle() {
+            this.open = !this.open;
+        },
+        close() {
+            this.open = false;
+        },
+    }));
+
+    /**
+     * Foundation for a future Ctrl+K command palette.
+     * Reuses the same destination registry shape as sidebar search.
+     */
+    Alpine.data('commandPalette', (options = {}) => ({
+        open: false,
+        query: '',
+        activeResult: 0,
+        destinations: Array.isArray(options.destinations) ? options.destinations : [],
+        init() {
+            window.addEventListener('keydown', (event) => {
+                if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+                    event.preventDefault();
+                    this.open = !this.open;
+                    if (this.open) {
+                        this.query = '';
+                        this.activeResult = 0;
+                    }
+                }
+            });
+            this.$watch('open', (value) => {
+                if (value) {
+                    this.$nextTick(() => this.$refs.paletteInput?.focus());
+                }
+            });
+        },
+        filtered() {
+            const term = this.query.trim().toLowerCase();
+            if (!term) return this.destinations.slice(0, 12);
+
+            return this.destinations.filter((item) => {
+                const haystack = [item.label, item.group, ...(item.keywords || [])]
+                    .filter(Boolean)
+                    .join(' ')
+                    .toLowerCase();
+
+                return haystack.includes(term);
+            }).slice(0, 12);
+        },
+        close() {
+            this.open = false;
         },
     }));
 
     Alpine.data('themeSwitcher', (initialPreference = 'system') => ({
         preference: initialPreference,
         saving: false,
+        init() {
+            window.addEventListener('dashboard-theme-changed', (event) => {
+                const next = event.detail?.preference;
+                if (typeof next === 'string' && next !== '') {
+                    this.preference = next;
+                }
+            });
+        },
         async choose(next) {
             if (this.saving || this.preference === next) return;
             this.saving = true;

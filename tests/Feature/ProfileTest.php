@@ -18,7 +18,7 @@ class ProfileTest extends TestCase
             ->actingAs($user)
             ->get('/profile');
 
-        $response->assertOk();
+        $response->assertRedirect(route('dashboard.account.profile'));
     }
 
     public function test_profile_information_can_be_updated(): void
@@ -34,7 +34,7 @@ class ProfileTest extends TestCase
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect('/profile');
+            ->assertRedirect(route('dashboard.account.profile'));
 
         $user->refresh();
 
@@ -56,7 +56,7 @@ class ProfileTest extends TestCase
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect('/profile');
+            ->assertRedirect(route('dashboard.account.profile'));
 
         $this->assertNotNull($user->refresh()->email_verified_at);
     }
@@ -76,7 +76,10 @@ class ProfileTest extends TestCase
             ->assertRedirect('/');
 
         $this->assertGuest();
-        $this->assertNull($user->fresh());
+        $user->refresh();
+        $this->assertNotNull($user->anonymized_at);
+        $this->assertTrue($user->is_suspended);
+        $this->assertSame('Deleted User', $user->name);
     }
 
     public function test_correct_password_must_be_provided_to_delete_account(): void

@@ -12,27 +12,22 @@ class DashboardSidebarTest extends TestCase
 
     public function test_admin_sidebar_uses_grouped_persisted_navigation(): void
     {
-        $admin = User::factory()->create(['email_verified_at' => now()]);
-        $admin->assignRole('admin');
+        $admin = User::factory()->admin()->create(['email_verified_at' => now()]);
 
         $this->actingAs($admin)
             ->get(route('admin'))
             ->assertOk()
             ->assertSee('data-dashboard-nav="admin"', false)
-            ->assertSee('Transactions')
-            ->assertSee('Marketplace')
-            ->assertSee('Platform Catalog')
-            ->assertSee('Operations')
-            ->assertDontSee('data-nav-group="dashboard"', false)
-            ->assertDontSee('data-nav-group="system"', false)
-            ->assertSee('Dashboard')
-            ->assertSee('Settings')
+            ->assertSee('Identity')
+            ->assertSee('Finance')
+            ->assertSee('Commerce')
+            ->assertSee('System')
+            ->assertSee('data-dashboard-nav-search', false)
             ->assertSee("7th.dashboard.nav.admin.{$admin->id}", false)
             ->assertSee('scrollbar-hide', false)
             ->assertSee('aria-expanded=', false)
             ->assertSee('data-mobile-theme-switcher', false)
-            ->assertSee('data-desktop-theme-switcher', false)
-            ->assertSee('!text-danger', false);
+            ->assertSee('data-desktop-theme-switcher', false);
     }
 
     public function test_user_sidebar_uses_grouped_persisted_navigation(): void
@@ -47,16 +42,15 @@ class DashboardSidebarTest extends TestCase
             ->assertSee('Wallet')
             ->assertSee('Marketplace')
             ->assertSee('Communication')
+            ->assertSee('data-dashboard-nav-search', false)
             ->assertSee("7th.dashboard.nav.user.{$user->id}", false)
             ->assertSee('scrollbar-hide', false)
-            ->assertSee('data-mobile-theme-switcher', false)
-            ->assertSee('!text-danger', false);
+            ->assertSee('data-mobile-theme-switcher', false);
     }
 
     public function test_admin_child_page_does_not_mark_overview_active(): void
     {
-        $admin = User::factory()->create(['email_verified_at' => now()]);
-        $admin->assignRole('admin');
+        $admin = User::factory()->admin()->create(['email_verified_at' => now()]);
 
         $response = $this->actingAs($admin)->get(route('admin.users'))->assertOk();
         $html = $response->getContent();

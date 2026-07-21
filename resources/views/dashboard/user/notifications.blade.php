@@ -3,9 +3,12 @@
 @section('title', 'Notifications')
 
 @section('content')
+@php
+    $notificationPrefix = $notificationPrefix ?? 'dashboard';
+@endphp
 <x-layout.page title="Notifications" subtitle="Updates on orders, listings, and messages." width="content">
     <x-slot:actions>
-        <form method="POST" action="{{ route('dashboard.notifications.read-all') }}" x-data="{ submitting: false }" @submit="submitting = true">
+        <form method="POST" action="{{ route($notificationPrefix.'.notifications.read-all') }}" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
             <x-dashboard.button type="submit" variant="ghost" size="sm" x-bind:disabled="submitting">Mark all read</x-dashboard.button>
         </form>
@@ -23,7 +26,7 @@
                 @foreach ($notifications as $notification)
                     <div class="px-6 py-4 {{ $notification->read_at ? 'opacity-70' : '' }}">
                         @if (! $notification->read_at && $notification->action_url)
-                            <form method="POST" action="{{ route('dashboard.notifications.read', $notification) }}">
+                            <form method="POST" action="{{ route($notificationPrefix.'.notifications.read', $notification) }}">
                                 @csrf
                                 <x-dashboard.button type="submit" variant="ghost" class="!h-auto !w-full !justify-start !px-0 !py-0 text-left whitespace-normal">
                                     <span class="block w-full text-left">
@@ -43,7 +46,7 @@
                             <div class="flex flex-wrap items-center gap-3 mt-1">
                                 <p class="text-text-muted text-xs">{{ $notification->created_at->diffForHumans() }}</p>
                                 @if (! $notification->read_at)
-                                    <form method="POST" action="{{ route('dashboard.notifications.read', $notification) }}" x-data="{ submitting: false }" @submit="submitting = true">
+                                    <form method="POST" action="{{ route($notificationPrefix.'.notifications.read', $notification) }}" x-data="{ submitting: false }" @submit="submitting = true">
                                         @csrf
                                         <x-dashboard.button type="submit" variant="link" size="xs" x-bind:disabled="submitting">Mark read</x-dashboard.button>
                                     </form>

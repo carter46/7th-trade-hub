@@ -40,4 +40,29 @@ class UserFactory extends Factory
             'kyc_level' => 1,
         ]);
     }
+
+    public function suspended(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_suspended' => true,
+        ]);
+    }
+
+    public function admin(): static
+    {
+        return $this->afterCreating(function (User $user): void {
+            $user->assignRole('admin');
+            $user->givePermissionTo(\Database\Seeders\PermissionSeeder::PERMISSIONS);
+        });
+    }
+
+    public function anonymized(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_suspended' => true,
+            'anonymized_at' => now(),
+            'name' => 'Deleted User',
+            'email' => 'deleted+'.$attributes['email'].'@invalid.local',
+        ]);
+    }
 }

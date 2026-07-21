@@ -8,6 +8,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
@@ -41,6 +44,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_suspended' => 'boolean',
+            'suspended_at' => 'datetime',
+            'anonymized_at' => 'datetime',
             'terms_accepted_at' => 'datetime',
             'profile_completed_at' => 'datetime',
         ];
@@ -84,6 +89,80 @@ class User extends Authenticatable
     public function reviews(): HasMany
     {
         return $this->hasMany(Review::class);
+    }
+
+    public function supportTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class);
+    }
+
+    public function suspend(?int $administratorId = null): bool
+    {
+        if ($this->is_suspended) {
+            return true;
+        }
+
+        return $this->forceFill([
+            'is_suspended' => true,
+            'suspended_at' => now(),
+            'suspended_by' => $administratorId,
+        ])->save();
+    }
+
+    public function restoreAccess(): bool
+    {
+        return $this->forceFill([
+            'is_suspended' => false,
+            'suspended_at' => null,
+            'suspended_by' => null,
+        ])->save();
+    }
+
+    /**
+     * Irreversibly scrub personal data while preserving financial and audit records.
+     * Admins must never be anonymized.
+     */
+    public function anonymize(?int $administratorId = null): bool
+    {
+        if ($this->hasRole('admin') || $this->anonymized_at !== null) {
+            return false;
+        }
+
+        return DB::transaction(function () use ($administratorId): bool {
+            $id = $this->getKey();
+            $tombstoneUsername = 'deleted_'.$id;
+
+            $saved = $this->forceFill([
+                'name' => 'Deleted User',
+                'username' => $tombstoneUsername,
+                'email' => "deleted+{$id}@invalid.local",
+                'phone' => null,
+                'country' => null,
+                'bio' => null,
+                'avatar' => null,
+                'email_verified_at' => null,
+                'remember_token' => null,
+                // Plain string — hashed cast will hash once.
+                'password' => Str::random(64),
+                'is_suspended' => true,
+                'suspended_at' => $this->suspended_at ?? now(),
+                'suspended_by' => $administratorId ?? $this->suspended_by,
+                'anonymized_at' => now(),
+            ])->save();
+
+            if (Schema::hasTable('sessions')) {
+                DB::table('sessions')->where('user_id', $id)->delete();
+            }
+
+            if (Schema::hasTable('personal_access_tokens')) {
+                DB::table('personal_access_tokens')
+                    ->where('tokenable_type', self::class)
+                    ->where('tokenable_id', $id)
+                    ->delete();
+            }
+
+            return $saved;
+        });
     }
 
     public function unreadNotificationsCount(): int

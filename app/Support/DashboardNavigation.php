@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\User;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
 class DashboardNavigation
@@ -49,11 +50,17 @@ class DashboardNavigation
             return [
                 'type' => 'link',
                 'id' => $entry['id'] ?? null,
-                'label' => $entry['label'] ?? $child['label'] ?? '',
-                'icon' => $entry['icon'] ?? $child['icon'] ?? null,
+                'label' => $child['label'] ?? $entry['label'] ?? '',
+                'icon' => $child['icon'] ?? $entry['icon'] ?? null,
                 'route' => $child['route'] ?? null,
                 'match' => $child['match'] ?? null,
-                'badge' => $child['badge'] ?? null,
+                'badge' => $child['badge'] ?? ($entry['badge'] ?? null),
+                'keywords' => array_values(array_unique(array_merge(
+                    Arr::wrap($entry['keywords'] ?? []),
+                    Arr::wrap($child['keywords'] ?? []),
+                    Arr::wrap($entry['label'] ?? []),
+                ))),
+                'permission' => $child['permission'] ?? ($entry['permission'] ?? null),
                 'sort' => $entry['sort'] ?? 0,
             ];
         }, $entries);
@@ -61,6 +68,37 @@ class DashboardNavigation
         usort($entries, fn (array $a, array $b): int => ($a['sort'] ?? 0) <=> ($b['sort'] ?? 0));
 
         return $entries;
+    }
+
+    /**
+     * Flat permission-filtered destination list for sidebar search and future Ctrl+K.
+     *
+     * @return list<array{id: string, label: string, group: string|null, url: string, icon: string|null, keywords: list<string>}>
+     */
+    public static function searchIndex(string $role, ?User $user = null): array
+    {
+        $index = [];
+
+        foreach (self::for($role, $user) as $entry) {
+            if (($entry['type'] ?? 'link') === 'group') {
+                $groupLabel = (string) ($entry['label'] ?? '');
+                foreach ((array) ($entry['children'] ?? []) as $child) {
+                    $destination = self::destinationFromItem($child, $groupLabel);
+                    if ($destination !== null) {
+                        $index[] = $destination;
+                    }
+                }
+
+                continue;
+            }
+
+            $destination = self::destinationFromItem($entry, null);
+            if ($destination !== null) {
+                $index[] = $destination;
+            }
+        }
+
+        return $index;
     }
 
     /**
@@ -97,24 +135,59 @@ class DashboardNavigation
     }
 
     /**
+     * Accordion opens at most one group: the active parent when present.
+     *
      * @param  array<int, array<string, mixed>>  $entries
      * @return list<string>
      */
     public static function initiallyOpenGroups(array $entries, ?string $routeName = null): array
     {
-        $open = [];
-
         foreach ($entries as $entry) {
             if (($entry['type'] ?? 'link') !== 'group') {
                 continue;
             }
 
-            if (($entry['default_open'] ?? false) || self::groupIsActive($entry, $routeName)) {
-                $open[] = (string) $entry['id'];
+            if (self::groupIsActive($entry, $routeName)) {
+                return [(string) $entry['id']];
             }
         }
 
-        return array_values(array_unique($open));
+        foreach ($entries as $entry) {
+            if (($entry['type'] ?? 'link') === 'group' && ($entry['default_open'] ?? false)) {
+                return [(string) $entry['id']];
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * @return array{id: string, label: string, group: string|null, url: string, icon: string|null, keywords: list<string>}|null
+     */
+    private static function destinationFromItem(array $item, ?string $groupLabel): ?array
+    {
+        $routeName = $item['route'] ?? null;
+        if (! is_string($routeName) || $routeName === '' || ! Route::has($routeName)) {
+            return null;
+        }
+
+        $label = (string) ($item['label'] ?? '');
+        $keywords = array_values(array_filter(array_map(
+            'strval',
+            array_merge(
+                Arr::wrap($item['keywords'] ?? []),
+                [$label, $groupLabel ?? ''],
+            ),
+        )));
+
+        return [
+            'id' => (string) ($item['id'] ?? $routeName),
+            'label' => $label,
+            'group' => $groupLabel,
+            'url' => route($routeName),
+            'icon' => $item['icon'] ?? null,
+            'keywords' => $keywords,
+        ];
     }
 
     private static function isVisible(array $item, ?User $user): bool

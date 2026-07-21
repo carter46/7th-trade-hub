@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\Schema;
@@ -14,6 +15,10 @@ abstract class TestCase extends BaseTestCase
 
         if (Schema::hasTable('roles')) {
             $this->seed(RoleSeeder::class);
+        }
+
+        if (Schema::hasTable('permissions')) {
+            $this->seed(PermissionSeeder::class);
         }
 
         if (Schema::hasTable('categories')) {

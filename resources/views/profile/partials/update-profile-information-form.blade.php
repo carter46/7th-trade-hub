@@ -12,7 +12,7 @@
         @csrf
     </form>
 
-    <form method="post" action="{{ route('profile.update') }}" class="space-y-5" x-data="{ submitting: false }" @submit="submitting = true">
+    <form method="post" action="{{ route($profileUpdateRoute ?? 'profile.update') }}" class="space-y-5" x-data="{ submitting: false }" @submit="submitting = true">
         @csrf
         @method('patch')
 
@@ -25,6 +25,16 @@
             required
             autofocus
             autocomplete="name"
+        />
+
+        <x-dashboard.input
+            label="{{ __('Username') }}"
+            name="username"
+            type="text"
+            id="username"
+            :value="old('username', $user->username)"
+            required
+            autocomplete="username"
         />
 
         <div class="space-y-2">
@@ -47,6 +57,17 @@
                 </x-dashboard.alert>
             @endif
         </div>
+
+        @if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'phone'))
+            <x-dashboard.input
+                label="{{ __('Phone') }}"
+                name="phone"
+                type="tel"
+                id="phone"
+                :value="old('phone', $user->phone)"
+                autocomplete="tel"
+            />
+        @endif
 
         <x-dashboard.button type="submit" x-bind:loading="submitting">{{ __('Save') }}</x-dashboard.button>
     </form>

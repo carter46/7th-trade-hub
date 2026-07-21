@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\Admin\AdministratorController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\UserManagementController;
+use App\Http\Controllers\Account\AccountController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Dev\DevUiController;
 use App\Http\Controllers\ProfileController;
@@ -131,6 +133,16 @@ Route::get('/u/{username}', function (string $username) {
 
 Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('');
+    Route::prefix('account')->name('.account')->controller(AccountController::class)->group(function () {
+        Route::get('/profile', 'profile')->name('.profile');
+        Route::patch('/profile', 'updateProfile')->name('.profile.update');
+        Route::get('/security', 'security')->name('.security');
+        Route::delete('/security', 'destroy')->name('.destroy');
+        Route::get('/notifications', 'notifications')->name('.notifications');
+        Route::get('/preferences', 'preferences')->name('.preferences');
+        Route::get('/sessions', 'sessions')->name('.sessions');
+        Route::delete('/sessions/{session}', 'revokeSession')->name('.sessions.destroy');
+    });
     Route::get('/kyc', [KycController::class, 'show'])->name('.kyc');
     Route::post('/kyc', [KycController::class, 'store'])->name('.kyc.store');
     Route::post('/wallet/create', [WalletController::class, 'create'])->name('.wallet.create');
@@ -183,61 +195,118 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
 
 Route::middleware(['auth', 'verified', 'role:admin', 'throttle:60,1'])->prefix('admin')->name('admin')->group(function () {
     Route::get('/', [AdminDashboardController::class, 'index'])->name('');
-    Route::get('/users', [UserManagementController::class, 'index'])->name('.users');
-    Route::post('/users/{user}/suspend', [UserManagementController::class, 'suspend'])->name('.users.suspend');
-    Route::post('/users/{user}/role', [UserManagementController::class, 'assignRole'])->name('.users.role');
-    Route::get('/kyc', [AdminKycController::class, 'index'])->name('.kyc');
-    Route::post('/kyc/{submission}/approve', [AdminKycController::class, 'approve'])->name('.kyc.approve');
-    Route::post('/kyc/{submission}/reject', [AdminKycController::class, 'reject'])->name('.kyc.reject');
-    Route::get('/fundings', [AdminWalletFundingController::class, 'index'])->name('.fundings');
-    Route::post('/fundings/{funding}/approve', [AdminWalletFundingController::class, 'approve'])->name('.fundings.approve');
-    Route::post('/fundings/{funding}/reject', [AdminWalletFundingController::class, 'reject'])->name('.fundings.reject');
-    Route::post('/fundings/{funding}/reverse', [AdminWalletFundingController::class, 'reverse'])->name('.fundings.reverse');
-    Route::get('/fundings/{funding}/proof', [AdminWalletFundingController::class, 'downloadProof'])->name('.fundings.proof');
-    Route::get('/crypto-sells', [AdminCryptoSellController::class, 'index'])->name('.crypto-sells');
-    Route::post('/crypto-sells/{cryptoSellRequest}/approve', [AdminCryptoSellController::class, 'approve'])->name('.crypto-sells.approve');
-    Route::post('/crypto-sells/{cryptoSellRequest}/reject', [AdminCryptoSellController::class, 'reject'])->name('.crypto-sells.reject');
-    Route::get('/withdrawals', [WithdrawalAdminController::class, 'index'])->name('.withdrawals');
-    Route::post('/withdrawals/{withdrawal}/approve', [WithdrawalAdminController::class, 'approve'])->name('.withdrawals.approve');
-    Route::post('/withdrawals/{withdrawal}/reject', [WithdrawalAdminController::class, 'reject'])->name('.withdrawals.reject');
-    Route::get('/escrows', [AdminEscrowController::class, 'index'])->name('.escrows');
-    Route::post('/escrows/{escrow}/release', [AdminEscrowController::class, 'release'])->name('.escrows.release');
-    Route::post('/escrows/{escrow}/refund', [AdminEscrowController::class, 'refund'])->name('.escrows.refund');
-    Route::get('/listings/pending', [ListingAdminController::class, 'pending'])->name('.listings.pending');
-    Route::post('/listings/{listing}/approve', [ListingAdminController::class, 'approve'])->name('.listings.approve');
-    Route::post('/listings/{listing}/reject', [ListingAdminController::class, 'reject'])->name('.listings.reject');
-    Route::get('/transactions', [AdminDashboardController::class, 'transactions'])->name('.transactions');
-    Route::get('/listings', [AdminDashboardController::class, 'listings'])->name('.listings');
+    Route::prefix('account')->name('.account')->controller(AccountController::class)->group(function () {
+        Route::get('/profile', 'profile')->name('.profile');
+        Route::patch('/profile', 'updateProfile')->name('.profile.update');
+        Route::get('/security', 'security')->name('.security');
+        Route::get('/notifications', 'notifications')->name('.notifications');
+        Route::get('/preferences', 'preferences')->name('.preferences');
+        Route::get('/sessions', 'sessions')->name('.sessions');
+        Route::delete('/sessions/{session}', 'revokeSession')->name('.sessions.destroy');
+    });
+    Route::middleware('permission:users.manage')->group(function () {
+        Route::get('/users', [UserManagementController::class, 'index'])->name('.users');
+        Route::get('/users/{user}', [UserManagementController::class, 'show'])->name('.users.show');
+        Route::get('/users/{user}/edit', [UserManagementController::class, 'edit'])->name('.users.edit');
+        Route::put('/users/{user}', [UserManagementController::class, 'update'])->name('.users.update');
+        Route::get('/users/{user}/wallet', [UserManagementController::class, 'wallet'])->name('.users.wallet');
+        Route::get('/users/{user}/transactions', [UserManagementController::class, 'transactions'])->name('.users.transactions');
+        Route::get('/users/{user}/orders', [UserManagementController::class, 'orders'])->name('.users.orders');
+        Route::get('/users/{user}/listings', [UserManagementController::class, 'listings'])->name('.users.listings');
+        Route::get('/users/{user}/escrows', [UserManagementController::class, 'escrows'])->name('.users.escrows');
+        Route::get('/users/{user}/tickets', [UserManagementController::class, 'tickets'])->name('.users.tickets');
+        Route::get('/users/{user}/activity', [UserManagementController::class, 'activity'])->name('.users.activity');
+        Route::get('/users/{user}/security', [UserManagementController::class, 'security'])->name('.users.security');
+        Route::post('/users/{user}/suspend', [UserManagementController::class, 'suspend'])->name('.users.suspend');
+        Route::post('/users/{user}/restore', [UserManagementController::class, 'restore'])->name('.users.restore');
+        Route::delete('/users/{user}', [UserManagementController::class, 'destroy'])->name('.users.destroy');
+        Route::post('/users/{user}/role', [UserManagementController::class, 'assignRole'])->name('.users.role');
+    });
+
+    Route::middleware('permission:admins.manage')->group(function () {
+        Route::get('/administrators', [AdministratorController::class, 'index'])->name('.administrators');
+        Route::get('/administrators/create', [AdministratorController::class, 'create'])->name('.administrators.create');
+        Route::post('/administrators', [AdministratorController::class, 'store'])->name('.administrators.store');
+        Route::get('/administrators/{administrator}/edit', [AdministratorController::class, 'edit'])->name('.administrators.edit');
+        Route::put('/administrators/{administrator}', [AdministratorController::class, 'update'])->name('.administrators.update');
+        Route::post('/administrators/{administrator}/suspend', [AdministratorController::class, 'suspend'])->name('.administrators.suspend');
+        Route::post('/administrators/{administrator}/restore', [AdministratorController::class, 'restore'])->name('.administrators.restore');
+    });
+
+    Route::get('/notifications', [UserNotificationController::class, 'index'])->name('.notifications');
+    Route::post('/notifications/{notification}/read', [UserNotificationController::class, 'markRead'])->name('.notifications.read');
+    Route::post('/notifications/read-all', [UserNotificationController::class, 'markAllRead'])->name('.notifications.read-all');
+
+    Route::middleware('permission:compliance.manage')->group(function () {
+        Route::get('/kyc', [AdminKycController::class, 'index'])->name('.kyc');
+        Route::post('/kyc/{submission}/approve', [AdminKycController::class, 'approve'])->name('.kyc.approve');
+        Route::post('/kyc/{submission}/reject', [AdminKycController::class, 'reject'])->name('.kyc.reject');
+    });
+
+    Route::middleware('permission:finance.manage')->group(function () {
+        Route::get('/fundings', [AdminWalletFundingController::class, 'index'])->name('.fundings');
+        Route::post('/fundings/{funding}/approve', [AdminWalletFundingController::class, 'approve'])->name('.fundings.approve');
+        Route::post('/fundings/{funding}/reject', [AdminWalletFundingController::class, 'reject'])->name('.fundings.reject');
+        Route::post('/fundings/{funding}/reverse', [AdminWalletFundingController::class, 'reverse'])->name('.fundings.reverse');
+        Route::get('/fundings/{funding}/proof', [AdminWalletFundingController::class, 'downloadProof'])->name('.fundings.proof');
+        Route::get('/crypto-sells', [AdminCryptoSellController::class, 'index'])->name('.crypto-sells');
+        Route::post('/crypto-sells/{cryptoSellRequest}/approve', [AdminCryptoSellController::class, 'approve'])->name('.crypto-sells.approve');
+        Route::post('/crypto-sells/{cryptoSellRequest}/reject', [AdminCryptoSellController::class, 'reject'])->name('.crypto-sells.reject');
+        Route::get('/withdrawals', [WithdrawalAdminController::class, 'index'])->name('.withdrawals');
+        Route::post('/withdrawals/{withdrawal}/approve', [WithdrawalAdminController::class, 'approve'])->name('.withdrawals.approve');
+        Route::post('/withdrawals/{withdrawal}/reject', [WithdrawalAdminController::class, 'reject'])->name('.withdrawals.reject');
+        Route::get('/escrows', [AdminEscrowController::class, 'index'])->name('.escrows');
+        Route::post('/escrows/{escrow}/release', [AdminEscrowController::class, 'release'])->name('.escrows.release');
+        Route::post('/escrows/{escrow}/refund', [AdminEscrowController::class, 'refund'])->name('.escrows.refund');
+        Route::get('/transactions', [AdminDashboardController::class, 'transactions'])->name('.transactions');
+        Route::get('/wallet-adjustment', [WalletAdjustmentController::class, 'create'])->name('.wallet-adjustment');
+        Route::post('/wallet-adjustment', [WalletAdjustmentController::class, 'store'])->name('.wallet-adjustment.store');
+    });
+
+    Route::middleware('permission:catalog.manage')->group(function () {
+        Route::get('/listings/pending', [ListingAdminController::class, 'pending'])->name('.listings.pending');
+        Route::post('/listings/{listing}/approve', [ListingAdminController::class, 'approve'])->name('.listings.approve');
+        Route::post('/listings/{listing}/reject', [ListingAdminController::class, 'reject'])->name('.listings.reject');
+        Route::get('/listings', [AdminDashboardController::class, 'listings'])->name('.listings');
+        Route::get('/platform-products', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'index'])->name('.platform-products');
+        Route::get('/platform-products/create', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'create'])->name('.platform-products.create');
+        Route::post('/platform-products', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'store'])->name('.platform-products.store');
+        Route::get('/platform-products/{platformProduct}/edit', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'edit'])->name('.platform-products.edit');
+        Route::put('/platform-products/{platformProduct}', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'update'])->name('.platform-products.update');
+        Route::delete('/platform-products/{platformProduct}', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'destroy'])->name('.platform-products.destroy');
+        Route::get('/marketplace-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'marketplaceCategories'])->name('.marketplace-categories');
+        Route::post('/marketplace-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'storeMarketplaceCategory'])->name('.marketplace-categories.store');
+        Route::post('/marketplace-categories/{category}/toggle', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'toggleMarketplaceCategory'])->name('.marketplace-categories.toggle');
+        Route::get('/platform-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'platformCategories'])->name('.platform-categories');
+        Route::post('/platform-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'storePlatformCategory'])->name('.platform-categories.store');
+        Route::put('/platform-categories/{platformCategory}', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'updatePlatformCategory'])->name('.platform-categories.update');
+        Route::post('/platform-categories/{platformCategory}/toggle', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'togglePlatformCategory'])->name('.platform-categories.toggle');
+        Route::get('/catalog-pages', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'catalogPages'])->name('.catalog-pages');
+        Route::post('/catalog-pages', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'upsertCatalogPage'])->name('.catalog-pages.upsert');
+        Route::get('/exchange-rates', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'exchangeRates'])->name('.exchange-rates');
+        Route::post('/exchange-rates', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'storeExchangeRate'])->name('.exchange-rates.store');
+        Route::delete('/exchange-rates/{exchangeRate}', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'destroyExchangeRate'])->name('.exchange-rates.destroy');
+    });
+
+    Route::middleware('permission:support.manage')->group(function () {
+        Route::get('/tickets', [SupportTicketAdminController::class, 'index'])->name('.tickets');
+        Route::get('/tickets/{ticket}', [SupportTicketAdminController::class, 'show'])->name('.tickets.show');
+        Route::post('/tickets/{ticket}/reply', [SupportTicketAdminController::class, 'reply'])->name('.tickets.reply');
+        Route::post('/tickets/{ticket}/status', [SupportTicketAdminController::class, 'updateStatus'])->name('.tickets.status');
+    });
+
+    Route::middleware('permission:system.manage')->group(function () {
+        Route::get('/settings', [AdminSettingsController::class, 'index'])->name('.settings');
+        Route::post('/settings', [AdminSettingsController::class, 'update'])->name('.settings.update');
+        Route::post('/settings/test-mail', [AdminSettingsController::class, 'testMail'])->name('.settings.test-mail');
+        Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('.audit-logs');
+    });
+
+    Route::middleware('permission:analytics.view')->group(function () {
+        Route::get('/analytics', [AdminDashboardController::class, 'analytics'])->name('.analytics');
+    });
+
     Route::get('/social', [AdminDashboardController::class, 'social'])->name('.social');
-    Route::get('/tickets', [SupportTicketAdminController::class, 'index'])->name('.tickets');
-    Route::get('/tickets/{ticket}', [SupportTicketAdminController::class, 'show'])->name('.tickets.show');
-    Route::post('/tickets/{ticket}/reply', [SupportTicketAdminController::class, 'reply'])->name('.tickets.reply');
-    Route::post('/tickets/{ticket}/status', [SupportTicketAdminController::class, 'updateStatus'])->name('.tickets.status');
-    Route::get('/settings', [AdminSettingsController::class, 'index'])->name('.settings');
-    Route::post('/settings', [AdminSettingsController::class, 'update'])->name('.settings.update');
-    Route::post('/settings/test-mail', [AdminSettingsController::class, 'testMail'])->name('.settings.test-mail');
-    Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('.audit-logs');
-    Route::get('/wallet-adjustment', [WalletAdjustmentController::class, 'create'])->name('.wallet-adjustment');
-    Route::post('/wallet-adjustment', [WalletAdjustmentController::class, 'store'])->name('.wallet-adjustment.store');
-    Route::get('/analytics', [AdminDashboardController::class, 'analytics'])->name('.analytics');
-    Route::get('/platform-products', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'index'])->name('.platform-products');
-    Route::get('/platform-products/create', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'create'])->name('.platform-products.create');
-    Route::post('/platform-products', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'store'])->name('.platform-products.store');
-    Route::get('/platform-products/{platformProduct}/edit', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'edit'])->name('.platform-products.edit');
-    Route::put('/platform-products/{platformProduct}', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'update'])->name('.platform-products.update');
-    Route::delete('/platform-products/{platformProduct}', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'destroy'])->name('.platform-products.destroy');
-    Route::get('/marketplace-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'marketplaceCategories'])->name('.marketplace-categories');
-    Route::post('/marketplace-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'storeMarketplaceCategory'])->name('.marketplace-categories.store');
-    Route::post('/marketplace-categories/{category}/toggle', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'toggleMarketplaceCategory'])->name('.marketplace-categories.toggle');
-    Route::get('/platform-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'platformCategories'])->name('.platform-categories');
-    Route::post('/platform-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'storePlatformCategory'])->name('.platform-categories.store');
-    Route::put('/platform-categories/{platformCategory}', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'updatePlatformCategory'])->name('.platform-categories.update');
-    Route::post('/platform-categories/{platformCategory}/toggle', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'togglePlatformCategory'])->name('.platform-categories.toggle');
-    Route::get('/catalog-pages', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'catalogPages'])->name('.catalog-pages');
-    Route::post('/catalog-pages', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'upsertCatalogPage'])->name('.catalog-pages.upsert');
-    Route::get('/exchange-rates', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'exchangeRates'])->name('.exchange-rates');
-    Route::post('/exchange-rates', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'storeExchangeRate'])->name('.exchange-rates.store');
-    Route::delete('/exchange-rates/{exchangeRate}', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'destroyExchangeRate'])->name('.exchange-rates.destroy');
 });
 
 Route::middleware('auth')->group(function () {
