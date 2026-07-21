@@ -13,7 +13,7 @@
 <div data-nav-group="{{ $groupId }}">
     <button
         type="button"
-        class="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition-colors focus-ring {{ $active ? 'text-primary' : 'text-text-primary hover:bg-muted/50' }}"
+        class="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition-colors focus-ring {{ $active ? 'text-primary' : 'text-text-primary hover:bg-muted/50' }}"
         @click="toggleGroup(@js($groupId))"
         @keydown.arrow-right.prevent="openGroup(@js($groupId))"
         @keydown.arrow-left.prevent="closeGroup(@js($groupId))"

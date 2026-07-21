@@ -41,6 +41,46 @@ class DashboardNavigationTest extends TestCase
         $this->assertFalse(DashboardNavigation::isActive($products, 'admin.platform-categories'));
     }
 
+    public function test_single_child_groups_flatten_to_plain_links(): void
+    {
+        config([
+            'menus.test-role' => [
+                [
+                    'type' => 'group',
+                    'id' => 'lonely',
+                    'label' => 'Lonely',
+                    'icon' => 'home',
+                    'sort' => 10,
+                    'children' => [
+                        ['route' => 'admin', 'match' => ['admin'], 'label' => 'Child', 'icon' => 'home', 'sort' => 10],
+                    ],
+                ],
+                [
+                    'type' => 'group',
+                    'id' => 'packed',
+                    'label' => 'Packed',
+                    'icon' => 'users',
+                    'sort' => 20,
+                    'children' => [
+                        ['route' => 'admin.users', 'match' => ['admin.users'], 'label' => 'A', 'icon' => 'users', 'sort' => 10],
+                        ['route' => 'admin.kyc', 'match' => ['admin.kyc'], 'label' => 'B', 'icon' => 'kyc', 'sort' => 20],
+                    ],
+                ],
+            ],
+        ]);
+
+        $entries = collect(DashboardNavigation::for('test-role'))->keyBy('id');
+
+        $this->assertSame('link', $entries['lonely']['type']);
+        $this->assertSame('Lonely', $entries['lonely']['label']);
+        $this->assertSame('admin', $entries['lonely']['route']);
+        $this->assertSame('group', $entries['packed']['type']);
+
+        $admin = collect(DashboardNavigation::for('admin'))->keyBy('id');
+        $this->assertSame('link', $admin['dashboard']['type']);
+        $this->assertSame('link', $admin['system']['type']);
+    }
+
     public function test_active_child_opens_its_parent_group(): void
     {
         $entries = DashboardNavigation::for('admin');

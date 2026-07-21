@@ -6,7 +6,7 @@
 <x-layout.page
     title="Withdraw to Bank"
     subtitle="Funds are locked until your request is processed."
-    width="form"
+    width="content-md"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
         ['Withdraw', route('dashboard.withdrawal.index')],

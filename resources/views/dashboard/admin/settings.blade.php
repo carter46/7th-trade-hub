@@ -6,7 +6,7 @@
 <x-layout.page
     title="Platform Settings"
     subtitle="Configure fees, contact details, live chat, and verify email delivery."
-    width="form"
+    width="content-md"
     :breadcrumb="[
         ['Admin', route('admin')],
         ['Settings', null],

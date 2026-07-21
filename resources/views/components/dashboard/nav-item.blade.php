@@ -10,8 +10,8 @@
         ? route($routeName)
         : '#';
     $base = $child
-        ? 'group flex min-h-10 items-center gap-2.5 rounded-lg py-2 pl-9 pr-3 text-[13px] transition-colors focus-ring'
-        : 'group flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors focus-ring';
+        ? 'group flex min-h-11 items-center gap-2.5 rounded-lg py-2 pl-9 pr-3 text-[13px] transition-colors focus-ring'
+        : 'group flex min-h-12 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors focus-ring';
     $state = $active
         ? 'sidebar-link-active font-semibold shadow-sm'
         : 'text-text-secondary hover:bg-muted/60 hover:text-text-primary';

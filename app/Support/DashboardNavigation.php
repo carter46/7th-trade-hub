@@ -38,6 +38,26 @@ class DashboardNavigation
             fn (array $entry): bool => ($entry['type'] ?? 'link') !== 'group' || count($entry['children'] ?? []) > 0,
         ));
 
+        // A group with a single child renders as a plain link — no pointless submenu.
+        $entries = array_map(function (array $entry): array {
+            if (($entry['type'] ?? 'link') !== 'group' || count($entry['children']) !== 1) {
+                return $entry;
+            }
+
+            $child = $entry['children'][0];
+
+            return [
+                'type' => 'link',
+                'id' => $entry['id'] ?? null,
+                'label' => $entry['label'] ?? $child['label'] ?? '',
+                'icon' => $entry['icon'] ?? $child['icon'] ?? null,
+                'route' => $child['route'] ?? null,
+                'match' => $child['match'] ?? null,
+                'badge' => $child['badge'] ?? null,
+                'sort' => $entry['sort'] ?? 0,
+            ];
+        }, $entries);
+
         usort($entries, fn (array $a, array $b): int => ($a['sort'] ?? 0) <=> ($b['sort'] ?? 0));
 
         return $entries;

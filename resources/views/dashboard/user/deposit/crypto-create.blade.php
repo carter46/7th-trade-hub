@@ -6,7 +6,7 @@
 <x-layout.page
     title="Sell Crypto"
     subtitle="Quote valid for 15 minutes."
-    width="form"
+    width="content-md"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
         ['Sell Crypto', route('dashboard.crypto-sell.index')],

@@ -21,7 +21,7 @@ export default {
                 'content': '80rem',
                 'content-lg': '96rem',
                 'content-full': '100%',
-                'form': '32rem',
+                'form': '44rem',
                 'auth': '28rem',
                 'marketing': '71.875rem', // 1150px
             },

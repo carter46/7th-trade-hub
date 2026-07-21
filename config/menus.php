@@ -62,23 +62,22 @@ return [
 
     'admin' => [
         [
-            'type' => 'group',
+            'type' => 'link',
             'id' => 'dashboard',
             'label' => 'Dashboard',
+            'route' => 'admin',
+            'match' => ['admin'],
             'icon' => 'dashboard',
             'sort' => 10,
-            'children' => [
-                ['route' => 'admin', 'match' => ['admin'], 'label' => 'Overview', 'icon' => 'home', 'sort' => 10],
-            ],
         ],
         [
             'type' => 'group',
-            'id' => 'compliance',
-            'label' => 'Compliance',
-            'icon' => 'verified',
-            'sort' => 20,
+            'id' => 'transactions',
+            'label' => 'Transactions',
+            'icon' => 'transactions',
+            'sort' => 50,
             'children' => [
-                ['route' => 'admin.kyc', 'match' => ['admin.kyc', 'admin.kyc.*'], 'label' => 'KYC Review', 'icon' => 'kyc', 'sort' => 10],
+                ['route' => 'admin.transactions', 'match' => ['admin.transactions', 'admin.transactions.*'], 'label' => 'All Transactions', 'icon' => 'transactions', 'sort' => 10],
                 ['route' => 'admin.fundings', 'match' => ['admin.fundings', 'admin.fundings.*'], 'label' => 'Deposits', 'icon' => 'deposit', 'sort' => 20],
                 ['route' => 'admin.crypto-sells', 'match' => ['admin.crypto-sells', 'admin.crypto-sells.*'], 'label' => 'Crypto Sells', 'icon' => 'bitcoin', 'sort' => 30],
                 ['route' => 'admin.withdrawals', 'match' => ['admin.withdrawals', 'admin.withdrawals.*'], 'label' => 'Withdrawals', 'icon' => 'withdraw', 'sort' => 40],
@@ -90,7 +89,7 @@ return [
             'id' => 'marketplace',
             'label' => 'Marketplace',
             'icon' => 'storefront',
-            'sort' => 30,
+            'sort' => 40,
             'children' => [
                 ['route' => 'admin.listings.pending', 'match' => ['admin.listings.*'], 'label' => 'Listings Review', 'icon' => 'inventory', 'sort' => 10],
                 ['route' => 'admin.marketplace-categories', 'match' => ['admin.marketplace-categories', 'admin.marketplace-categories.*'], 'label' => 'Market Categories', 'icon' => 'grid', 'sort' => 20],
@@ -101,7 +100,7 @@ return [
             'id' => 'platform-catalog',
             'label' => 'Platform Catalog',
             'icon' => 'grid',
-            'sort' => 40,
+            'sort' => 30,
             'children' => [
                 ['route' => 'admin.platform-products', 'match' => ['admin.platform-products', 'admin.platform-products.*'], 'label' => 'Platform Products', 'icon' => 'storefront', 'sort' => 10],
                 ['route' => 'admin.platform-categories', 'match' => ['admin.platform-categories', 'admin.platform-categories.*'], 'label' => 'Platform Categories', 'icon' => 'grid', 'sort' => 20],
@@ -114,7 +113,7 @@ return [
             'id' => 'users',
             'label' => 'Users',
             'icon' => 'users',
-            'sort' => 50,
+            'sort' => 20,
             'children' => [
                 ['route' => 'admin.users', 'match' => ['admin.users', 'admin.users.*'], 'label' => 'Users', 'icon' => 'users', 'sort' => 10],
                 ['route' => 'admin.wallet-adjustment', 'match' => ['admin.wallet-adjustment', 'admin.wallet-adjustment.*'], 'label' => 'Wallet Adjust', 'icon' => 'wallet-adjust', 'sort' => 20],
@@ -127,21 +126,20 @@ return [
             'icon' => 'tune',
             'sort' => 60,
             'children' => [
-                ['route' => 'admin.transactions', 'match' => ['admin.transactions', 'admin.transactions.*'], 'label' => 'Transactions', 'icon' => 'transactions', 'sort' => 10],
+                ['route' => 'admin.kyc', 'match' => ['admin.kyc', 'admin.kyc.*'], 'label' => 'KYC Review', 'icon' => 'kyc', 'sort' => 10],
                 ['route' => 'admin.tickets', 'match' => ['admin.tickets', 'admin.tickets.*'], 'label' => 'Support Tickets', 'icon' => 'support', 'sort' => 20],
                 ['route' => 'admin.audit-logs', 'match' => ['admin.audit-logs', 'admin.audit-logs.*'], 'label' => 'Audit Logs', 'icon' => 'audit', 'sort' => 30],
                 ['route' => 'admin.analytics', 'match' => ['admin.analytics', 'admin.analytics.*'], 'label' => 'Analytics', 'icon' => 'analytics', 'sort' => 40],
             ],
         ],
         [
-            'type' => 'group',
+            'type' => 'link',
             'id' => 'system',
-            'label' => 'System',
+            'label' => 'Settings',
+            'route' => 'admin.settings',
+            'match' => ['admin.settings', 'admin.settings.*'],
             'icon' => 'settings',
             'sort' => 70,
-            'children' => [
-                ['route' => 'admin.settings', 'match' => ['admin.settings', 'admin.settings.*'], 'label' => 'Settings', 'icon' => 'settings', 'sort' => 10],
-            ],
         ],
     ],
 ];

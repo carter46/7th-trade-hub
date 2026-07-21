@@ -16,7 +16,7 @@
         </button>
     </div>
 
-    <div class="flex min-h-0 flex-1 px-4 pb-2">
+    <div class="flex min-h-0 flex-1 px-4 pb-4">
         <x-dashboard.nav role="user" :user="auth()->user()" label="Member navigation" />
     </div>
 

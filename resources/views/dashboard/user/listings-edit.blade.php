@@ -13,7 +13,7 @@
 <x-layout.page
     title="Edit Listing"
     subtitle="Version {{ $version->version_number }} — {{ $version->status }}"
-    width="form"
+    width="content-md"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
         ['My Listings', route('dashboard.listings')],
