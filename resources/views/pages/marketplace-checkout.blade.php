@@ -12,6 +12,7 @@
     ],
     'title' => 'Checkout',
     'subtitle' => $listing->title,
+    'image' => 'assets/images/market_place.jpg',
 ])
 
 <section class="bg-white text-slate-900 border-t border-slate-200">

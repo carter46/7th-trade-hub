@@ -7,7 +7,7 @@ return [
     'intro' => 'Create your account, verify your email, set up your profile and wallet, and learn how to navigate the dashboard.',
     'summary' => 'This guide walks you from registration through your first transaction and where to find support.',
     'updated_at' => '2026-07-20',
-    'hero_image' => 'assets/images/business-person-using-laptop-multitasking-finish-daily-startup-tasks copy.jpg',
+    'hero_image' => 'assets/images/ai-powered-device-concept copy.jpg',
     'printable' => true,
     'related' => ['billing-wallets-payments', 'buying-selling-marketplace', 'keeping-account-secure'],
     'platform_actions' => [

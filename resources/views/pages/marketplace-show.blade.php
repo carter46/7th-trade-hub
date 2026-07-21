@@ -9,6 +9,7 @@
     ],
     'title' => $listing->title,
     'subtitle' => $listing->listingCategory?->name,
+    'image' => 'assets/images/market_place.jpg',
 ])
 
 <section class="max-w-marketing mx-auto px-5 sm:px-6 pb-12 sm:pb-16">

@@ -5,27 +5,30 @@
     $image = $image ?? null;
     $cta = $cta ?? null;
     $defaultHero = asset('assets/images/Image_ro410gro410gro41.png');
+    $heroUrl = $defaultHero;
+    if (is_string($image) && $image !== '') {
+        $relative = ltrim(str_replace('\\', '/', $image), '/');
+        if (is_file(public_path($relative))) {
+            $heroUrl = asset($relative);
+        }
+    }
 @endphp
 {{-- Full-bleed compact page hero. Extra top padding clears the fixed h-20 nav. --}}
 <header class="relative isolate overflow-hidden border-b border-white/10 pt-32 sm:pt-36 pb-10 sm:pb-12 mb-8 sm:mb-10">
     {{-- Decorative gradient base first, photo above it — .marketing-page-hero-bg is opaque and must not cover the image --}}
     <div class="pointer-events-none absolute inset-0 z-0 marketing-page-hero-bg" aria-hidden="true"></div>
     <div
-        class="pointer-events-none absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
-        @if($image)
-            style="background-image: url('{{ asset($image) }}')"
-        @else
-            style="background-image: url('{{ $defaultHero }}')"
-        @endif
+        class="pointer-events-none absolute inset-0 z-[1] bg-cover bg-center bg-no-repeat"
+        style="background-image: url('{{ $heroUrl }}')"
         aria-hidden="true"
     ></div>
     <div
-        class="pointer-events-none absolute inset-0 z-[1]"
-        style="background: linear-gradient(180deg, rgba(15, 23, 42, 0.78) 0%, rgba(15, 23, 42, 0.72) 45%, rgba(15, 23, 42, 0.88) 100%);"
+        class="pointer-events-none absolute inset-0 z-[2]"
+        style="background: linear-gradient(180deg, rgba(15, 23, 42, 0.62) 0%, rgba(15, 23, 42, 0.54) 45%, rgba(15, 23, 42, 0.72) 100%);"
         aria-hidden="true"
     ></div>
-    <div class="pointer-events-none absolute top-0 right-0 z-[1] w-[420px] h-[420px] bg-primary/20 blur-[120px] rounded-full" aria-hidden="true"></div>
-    <div class="pointer-events-none absolute bottom-0 left-0 z-[1] w-[320px] h-[320px] bg-accent/10 blur-[100px] rounded-full" aria-hidden="true"></div>
+    <div class="pointer-events-none absolute top-0 right-0 z-[2] w-[420px] h-[420px] bg-primary/20 blur-[120px] rounded-full" aria-hidden="true"></div>
+    <div class="pointer-events-none absolute bottom-0 left-0 z-[2] w-[320px] h-[320px] bg-accent/10 blur-[100px] rounded-full" aria-hidden="true"></div>
 
     <div class="relative z-10 max-w-marketing mx-auto px-5 sm:px-6">
         @if(count($breadcrumbs))

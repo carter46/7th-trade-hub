@@ -24,7 +24,16 @@ class HelpCenterTest extends TestCase
         $this->get(route('help.article', 'getting-started'))
             ->assertOk()
             ->assertSee('Getting Started with 7th Trade Hub')
-            ->assertSee('Creating an account');
+            ->assertSee('Creating an account')
+            ->assertSee('assets/images/ai-powered-device-concept copy.jpg', false);
+    }
+
+    public function test_every_help_article_has_an_existing_hero_image(): void
+    {
+        foreach (HelpContent::all() as $slug => $article) {
+            $this->assertArrayHasKey('hero_image', $article, "Missing hero image for {$slug}.");
+            $this->assertFileExists(public_path($article['hero_image']), "Hero image does not exist for {$slug}.");
+        }
     }
 
     public function test_unknown_help_article_404s(): void

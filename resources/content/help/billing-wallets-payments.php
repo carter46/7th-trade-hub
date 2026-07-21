@@ -7,7 +7,7 @@ return [
     'intro' => 'Fund your Naira wallet, understand deposits and withdrawals, and follow payment statuses through checkout and history.',
     'summary' => 'All platform purchases and escrow holds use your NGN wallet. Bank deposits and crypto sells credit the wallet after review.',
     'updated_at' => '2026-07-20',
-    'hero_image' => 'assets/images/bitcoin-coin-near-laptop-black-background-finance-crypto-money-concept copy.jpg',
+    'hero_image' => 'assets/images/crytpo_exchange.jpg',
     'printable' => true,
     'related' => ['selling-cryptocurrency', 'getting-started', 'buying-selling-marketplace'],
     'platform_actions' => [

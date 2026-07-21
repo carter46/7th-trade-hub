@@ -23,6 +23,7 @@
     ],
     'title' => 'Contact & Support',
     'subtitle' => 'Reach our team for wallet funding, crypto sells, marketplace orders, KYC, and account help — by email, phone, or live chat.',
+    'image' => 'assets/images/helpcenter.jpg',
     'cta' => [
         'href' => route('help'),
         'label' => 'Browse Help Center',
