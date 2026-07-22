@@ -193,7 +193,25 @@ class MediaLifecycleTest extends TestCase
 
         $url = media_url($asset->load('variants'), 'images/legacy.png');
         $this->assertNotNull($url);
+        $this->assertTrue(
+            str_starts_with($url, '/') || str_starts_with($url, 'http'),
+            'Media URL must be root-absolute or scheme-absolute, got: '.$url
+        );
         $this->assertStringContainsString('storage', $url);
+    }
+
+    public function test_media_url_normalizes_broken_app_url_style_paths(): void
+    {
+        Storage::fake('public');
+        config(['filesystems.disks.public.url' => '7th-tradehub.online/storage']);
+
+        $admin = $this->admin();
+        $asset = $this->makeAsset($admin, 'norm.png', 410, 310)->load('variants');
+
+        $url = $asset->thumbnailUrl();
+        $this->assertNotNull($url);
+        $this->assertStringStartsWith('/storage/', $url);
+        $this->assertStringNotContainsString('7th-tradehub.online', $url);
     }
 
     public function test_store_document_always_returns_array_path(): void

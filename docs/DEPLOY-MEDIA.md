@@ -14,9 +14,15 @@ Creates/updates `media_assets`, `media_variants`, `media_usages`, catalog `*_med
 
 ```bash
 php artisan storage:link
+php artisan config:clear
 ```
 
-Confirm URLs like `/storage/media/...` resolve.
+Confirm URLs like `https://yourdomain.com/storage/media/...` resolve (root `/storage/...`, **not** under `/admin/...`).
+
+**APP_URL must include the scheme**, e.g. `APP_URL=https://7th-tradehub.online`.  
+If set to `7th-tradehub.online` without `https://`, image URLs become relative and break on nested admin pages.
+
+Public disk URLs default to root-relative `/storage` (`FILESYSTEM_PUBLIC_URL`).
 
 ## 3. Frontend assets
 

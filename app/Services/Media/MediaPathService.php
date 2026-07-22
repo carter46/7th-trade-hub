@@ -48,22 +48,27 @@ class MediaPathService
             return null;
         }
 
-        if (preg_match('#^(https?:)?//#i', $path) || str_starts_with($path, 'data:')) {
+        if (preg_match('#^https?://#i', $path) || str_starts_with($path, 'data:')) {
+            return $path;
+        }
+
+        if (str_starts_with($path, '//')) {
             return $path;
         }
 
         $relative = ltrim(str_replace('\\', '/', $path), '/');
 
-        if (is_file(public_path($relative))) {
-            return asset($relative);
+        // Strip accidental host prefixes from bad APP_URL dual-writes
+        if (preg_match('#^(?:[^/]+/)+(storage/.+)$#', $relative, $matches)) {
+            $relative = $matches[1];
         }
 
-        // Storage symlink paths that may not be visible to is_file in some deploys
-        if (str_starts_with($relative, 'storage/')) {
-            return asset($relative);
+        // Prefer root-relative so nested dashboard routes cannot break img src
+        if (str_starts_with($relative, 'storage/') || is_file(public_path($relative))) {
+            return '/'.$relative;
         }
 
-        return asset($relative);
+        return '/'.$relative;
     }
 
     /**

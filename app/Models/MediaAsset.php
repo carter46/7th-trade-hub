@@ -100,7 +100,7 @@ class MediaAsset extends Model
             return null;
         }
 
-        return Storage::disk($this->disk)->url($path);
+        return $this->normalizePublicUrl(Storage::disk($this->disk)->url($path), $path);
     }
 
     public function thumbnailUrl(): ?string
@@ -113,14 +113,7 @@ class MediaAsset extends Model
      */
     public function legacyPublicPath(string $variant = 'medium'): ?string
     {
-        $url = $this->url($variant);
-        if (! $url) {
-            return null;
-        }
-
-        $path = parse_url($url, PHP_URL_PATH);
-
-        return $path ? ltrim($path, '/') : $url;
+        return $this->variantStoragePath($variant);
     }
 
     public function variantStoragePath(string $variant = 'medium'): ?string
@@ -136,5 +129,42 @@ class MediaAsset extends Model
         }
 
         return $this->disk === 'public' ? 'storage/'.$path : $path;
+    }
+
+    /**
+     * Ensure media URLs are root-absolute (/storage/...) or fully absolute (https://...).
+     * Prevents nested admin routes from resolving relative srcs like
+     * /admin/.../7th-tradehub.online/storage/...
+     */
+    protected function normalizePublicUrl(?string $url, ?string $storagePath = null): ?string
+    {
+        if (! is_string($url) || $url === '') {
+            return $storagePath && $this->disk === 'public'
+                ? '/storage/'.ltrim($storagePath, '/')
+                : null;
+        }
+
+        if (preg_match('#^https?://#i', $url) || str_starts_with($url, 'data:')) {
+            return $url;
+        }
+
+        if (str_starts_with($url, '//')) {
+            return $url;
+        }
+
+        if (str_starts_with($url, '/')) {
+            return $url;
+        }
+
+        // Broken APP_URL without scheme: "example.com/storage/media/..."
+        if (preg_match('#(?:^|/)(storage/.+)$#', str_replace('\\', '/', $url), $matches)) {
+            return '/'.$matches[1];
+        }
+
+        if ($storagePath && $this->disk === 'public') {
+            return '/storage/'.ltrim($storagePath, '/');
+        }
+
+        return '/'.ltrim(str_replace('\\', '/', $url), '/');
     }
 }
