@@ -7,8 +7,6 @@
     $featuresText = old('features_text', is_array($product->features) ? implode("\n", $product->features) : '');
     $requirementsText = old('requirements_text', is_array($product->requirements) ? implode("\n", $product->requirements) : '');
     $includedText = old('whats_included_text', is_array($product->whats_included) ? implode("\n", $product->whats_included) : '');
-    $faqsText = old('faqs_text', collect($product->faqs ?? [])->map(fn ($f) => 'Q: '.($f['q'] ?? '')."\nA: ".($f['a'] ?? ''))->implode("\n\n"));
-    $galleryText = old('gallery_paths', $product->relationLoaded('images') ? $product->images->pluck('path')->implode("\n") : '');
     $providerMetaText = old('provider_meta_text', $product->provider_meta ? json_encode($product->provider_meta, JSON_PRETTY_PRINT) : '');
     $selectedServiceId = (string) old('product_type_id', $product->product_type_id);
     $selectedCategoryId = (string) old(
@@ -31,6 +29,30 @@
         'name' => $s->name,
         'service_category_id' => $s->service_category_id,
     ])->values();
+    $heroId = old('hero_media_id', $product->hero_media_id);
+    $heroPreview = $heroId
+        ? \App\Models\MediaAsset::query()->with('variants')->find((int) $heroId)?->thumbnailUrl()
+        : null;
+    $galleryIds = old('gallery_media_ids', $galleryMediaIds ?? []);
+    if (! is_array($galleryIds)) {
+        $galleryIds = [];
+    }
+    $galleryIds = array_values(array_filter(array_map('intval', $galleryIds)));
+    $galleryAssets = $galleryIds === []
+        ? collect()
+        : \App\Models\MediaAsset::query()->with('variants')->whereIn('id', $galleryIds)->get()->keyBy('id');
+    $galleryPreviews = collect($galleryIds)
+        ->map(function ($id) use ($galleryAssets) {
+            $asset = $galleryAssets->get($id);
+
+            return $asset ? [
+                'id' => $asset->id,
+                'url' => $asset->thumbnailUrl() ?? $asset->url('medium'),
+            ] : null;
+        })
+        ->filter()
+        ->values()
+        ->all();
 @endphp
 <x-layout.page
     title="{{ isset($product->id) ? 'Edit Product' : 'New Product' }}"
@@ -92,8 +114,13 @@
             </x-dashboard.select>
             <p class="text-xs text-text-muted -mt-2">Published products require at least one active variant.</p>
             <x-dashboard.input label="Base price (NGN)" type="number" step="0.01" name="base_price" :value="old('base_price', $product->base_price)" required />
-            <x-dashboard.input label="Hero image path" name="hero_image" :value="old('hero_image', $product->hero_image)" />
-            <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="is_featured" value="1" @checked(old('is_featured', $product->is_featured))> Featured</label>
+            <x-dashboard.media-picker
+                name="hero_media_id"
+                label="Hero image"
+                :value="$heroId"
+                :preview-url="$heroPreview"
+            />
+            <x-dashboard.checkbox name="is_featured" label="Featured" :checked="(bool) old('is_featured', $product->is_featured)" />
 
             <div class="space-y-3 border-t border-border-default pt-4">
                 <h3 class="font-medium">Provider / fulfillment</h3>
@@ -105,14 +132,14 @@
                         <option value="{{ $value }}" @selected(old('fulfillment_mode', $product->fulfillment_mode ?? 'manual') === $value)>{{ $label }}</option>
                     @endforeach
                 </x-dashboard.select>
-                <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="auto_renew" value="1" @checked(old('auto_renew', $product->auto_renew))> Auto renew</label>
+                <x-dashboard.checkbox name="auto_renew" label="Auto renew" :checked="(bool) old('auto_renew', $product->auto_renew)" />
                 <x-dashboard.textarea label="Provider meta (JSON)" name="provider_meta_text">{{ $providerMetaText }}</x-dashboard.textarea>
             </div>
 
             <div class="space-y-3 border-t border-border-default pt-4">
                 <div class="flex items-center justify-between">
                     <h3 class="font-medium">Variants</h3>
-                    <button type="button" class="text-sm text-primary" @click="variants.push({ id: null, name: '', price: '', duration_months: '', is_default: false, is_active: true })">Add variant</button>
+                    <x-dashboard.button type="button" variant="secondary" size="sm" @click="variants.push({ id: null, name: '', price: '', duration_months: '', is_default: false, is_active: true })">Add variant</x-dashboard.button>
                 </div>
                 <template x-for="(variant, index) in variants" :key="index">
                     <div class="grid gap-2 sm:grid-cols-6 items-end border border-border-default rounded-xl p-3">
@@ -135,7 +162,7 @@
                         <label class="flex items-center gap-2 text-sm pb-2">
                             <input type="checkbox" value="1" :name="`variants[${index}][is_active]`" x-model="variant.is_active"> Active
                         </label>
-                        <button type="button" class="text-danger text-sm pb-2" @click="variants.splice(index, 1)">Remove</button>
+                        <x-dashboard.button type="button" variant="danger" size="sm" class="mb-2" @click="variants.splice(index, 1)">Remove</x-dashboard.button>
                     </div>
                 </template>
             </div>
@@ -143,8 +170,13 @@
             <x-dashboard.textarea label="Features (one per line)" name="features_text">{{ $featuresText }}</x-dashboard.textarea>
             <x-dashboard.textarea label="Requirements (one per line)" name="requirements_text">{{ $requirementsText }}</x-dashboard.textarea>
             <x-dashboard.textarea label="What's included (one per line)" name="whats_included_text">{{ $includedText }}</x-dashboard.textarea>
-            <x-dashboard.textarea label="FAQs (blank line between pairs; Q: / A: lines)" name="faqs_text">{{ $faqsText }}</x-dashboard.textarea>
-            <x-dashboard.textarea label="Gallery image paths (one per line)" name="gallery_paths">{{ $galleryText }}</x-dashboard.textarea>
+            <x-dashboard.faq-repeater name="faqs" label="FAQs" :items="old('faqs', $product->faqs ?? [])" />
+            <x-dashboard.gallery-picker
+                name="gallery_media_ids"
+                label="Gallery images"
+                :value="$galleryIds"
+                :previews="$galleryPreviews"
+            />
 
             <x-dashboard.input label="Demo URL" name="demo_url" :value="old('demo_url', $product->demo_url)" />
             <x-dashboard.input label="Demo username" name="demo_username" :value="old('demo_username', $product->demo_username)" />
@@ -153,8 +185,8 @@
             <x-dashboard.input label="Framework" name="framework" :value="old('framework', $product->framework)" />
             <x-dashboard.input label="Support period" name="support_period" :value="old('support_period', $product->support_period)" />
             <x-dashboard.textarea label="Support text" name="support_text">{{ old('support_text', $product->support_text) }}</x-dashboard.textarea>
-            <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="is_responsive" value="1" @checked(old('is_responsive', $product->is_responsive ?? true))> Responsive</label>
-            <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="is_seo_ready" value="1" @checked(old('is_seo_ready', $product->is_seo_ready))> SEO ready</label>
+            <x-dashboard.checkbox name="is_responsive" label="Responsive" :checked="(bool) old('is_responsive', $product->is_responsive ?? true)" />
+            <x-dashboard.checkbox name="is_seo_ready" label="SEO ready" :checked="(bool) old('is_seo_ready', $product->is_seo_ready)" />
             <x-dashboard.button type="submit">Save</x-dashboard.button>
         </form>
     </x-dashboard.card>

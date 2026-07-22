@@ -1,0 +1,15 @@
+---
+description: Media Library is the only admin image system — never path text inputs
+globs: resources/views/dashboard/**/*.blade.php,resources/views/account/**/*.blade.php,resources/views/components/dashboard/**/*.blade.php
+alwaysApply: false
+---
+
+# Media Library (platform-wide)
+
+1. **Never** add admin form fields that ask for an image path string (`banner_image`, `hero_image`, `card_image`, gallery path textareas, etc.).
+2. **Always** use `<x-dashboard.media-picker>` (single) or `<x-dashboard.gallery-picker>` (multiple) for any admin image selection.
+3. Pickers must stay **domain-agnostic** — no Service Category / Product-specific props beyond `name`, `value`, `label`, `required`, `accept`.
+4. Uploads go through `MediaUploadService` + `config/media.php` (size, mimes, types, derivatives). Do not hardcode 2MB in controllers.
+5. Rich text editors must open the same Media Library via `window.DashboardMedia.open(...)`.
+6. Do not delete media that has `media_usages` without Replace / View usages / Cancel flow.
+7. Private proofs/KYC use the documents subsection of `config/media.php`, not the public Media Library grid.

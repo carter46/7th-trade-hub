@@ -19,6 +19,8 @@ class DashboardSidebarTest extends TestCase
             ->assertOk()
             ->assertSee('data-dashboard-nav="admin"', false)
             ->assertSee('Operations')
+            ->assertSee('Overview')
+            ->assertSee('Media Library')
             ->assertSee('Platform Catalog')
             ->assertSee('Marketplace')
             ->assertSee('Crypto Exchange')

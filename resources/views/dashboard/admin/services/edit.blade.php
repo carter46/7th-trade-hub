@@ -4,8 +4,14 @@
 
 @section('content')
 @php
-    $benefitsText = old('benefits_text', is_array($service->benefits) ? implode("\n", $service->benefits) : '');
-    $faqText = old('faq_text', collect($service->faq ?? [])->map(fn ($f) => 'Q: '.($f['q'] ?? '')."\nA: ".($f['a'] ?? ''))->implode("\n\n"));
+    $bannerId = old('banner_media_id', $service->banner_media_id);
+    $cardId = old('card_media_id', $service->card_media_id);
+    $bannerPreview = $bannerId
+        ? \App\Models\MediaAsset::query()->with('variants')->find((int) $bannerId)?->thumbnailUrl()
+        : null;
+    $cardPreview = $cardId
+        ? \App\Models\MediaAsset::query()->with('variants')->find((int) $cardId)?->thumbnailUrl()
+        : null;
 @endphp
 <x-layout.page
     title="Edit Service"
@@ -32,10 +38,20 @@
             <x-dashboard.input label="Short description" name="short_description" :value="old('short_description', $service->short_description)" />
             <x-dashboard.input label="Hero title" name="hero_title" :value="old('hero_title', $service->hero_title)" />
             <x-dashboard.input label="Hero subtitle" name="hero_subtitle" :value="old('hero_subtitle', $service->hero_subtitle)" />
-            <x-dashboard.input label="Banner image path" name="banner_image" :value="old('banner_image', $service->banner_image)" />
-            <x-dashboard.input label="Card image path" name="card_image" :value="old('card_image', $service->card_image)" />
-            <x-dashboard.textarea label="Benefits (one per line)" name="benefits_text">{{ $benefitsText }}</x-dashboard.textarea>
-            <x-dashboard.textarea label="FAQ (Q: / A: blocks)" name="faq_text">{{ $faqText }}</x-dashboard.textarea>
+            <x-dashboard.media-picker
+                name="banner_media_id"
+                label="Banner image"
+                :value="$bannerId"
+                :preview-url="$bannerPreview"
+            />
+            <x-dashboard.media-picker
+                name="card_media_id"
+                label="Card image"
+                :value="$cardId"
+                :preview-url="$cardPreview"
+            />
+            <x-dashboard.string-list-repeater name="benefits" label="Benefits" :items="old('benefits', $service->benefits ?? [])" />
+            <x-dashboard.faq-repeater name="faq" label="FAQs" :items="old('faq', $service->faq ?? [])" />
             <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="is_active" value="1" @checked(old('is_active', $service->is_active))> Active</label>
             <div class="flex flex-wrap gap-2 pt-2">
                 <x-dashboard.button type="submit" variant="primary" x-bind:disabled="submitting">Save</x-dashboard.button>

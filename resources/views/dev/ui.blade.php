@@ -132,6 +132,27 @@
         </section>
 
         <section class="space-y-4">
+            <h2 class="text-xl font-semibold">Media & repeaters</h2>
+            <p class="text-sm text-text-secondary">
+                Use <code class="text-xs">x-dashboard.media-picker</code>, <code class="text-xs">x-dashboard.gallery-picker</code>,
+                <code class="text-xs">x-dashboard.faq-repeater</code>, <code class="text-xs">x-dashboard.string-list-repeater</code>,
+                and <code class="text-xs">x-dashboard.ajax-tabs</code>. The Media Library modal is included from the admin layout.
+            </p>
+            <x-ui.card class="space-y-4">
+                <x-dashboard.media-picker name="demo_media_id" label="Demo image" />
+                <x-dashboard.string-list-repeater name="demo_benefits" label="Benefits" :items="['Fast', 'Secure']" />
+                <x-dashboard.faq-repeater name="demo_faq" label="FAQ" :items="[['q' => 'Example?', 'a' => 'Answer', 'open' => true]]" />
+                <x-dashboard.ajax-tabs
+                    :tabs="[
+                        ['id' => 'one', 'label' => 'One', 'href' => '#'],
+                        ['id' => 'two', 'label' => 'Two', 'href' => '#'],
+                    ]"
+                    active="one"
+                />
+            </x-ui.card>
+        </section>
+
+        <section class="space-y-4">
             <h2 class="text-xl font-semibold">Skeletons</h2>
             <x-ui.skeleton.page-header />
             <x-ui.skeleton.stat-grid />

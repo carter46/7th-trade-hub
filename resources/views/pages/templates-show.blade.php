@@ -5,9 +5,12 @@
 @section('content')
 <section class="py-14 sm:py-20">
     <div class="max-w-marketing mx-auto px-5 sm:px-6 grid lg:grid-cols-2 gap-10">
+        @php
+            $heroUrl = $product->heroMedia?->url('medium') ?? ($product->hero_image ? asset($product->hero_image) : null);
+        @endphp
         <div class="aspect-[4/3] rounded-2xl bg-slate-900/70 overflow-hidden flex items-center justify-center">
-            @if($product->hero_image)
-                <img src="{{ asset($product->hero_image) }}" alt="{{ $product->title }}" class="w-full h-full object-cover">
+            @if($heroUrl)
+                <img src="{{ $heroUrl }}" alt="{{ $product->title }}" class="w-full h-full object-cover">
             @else
                 <x-ui.icon name="listings" class="w-16 h-16 text-accent" />
             @endif
@@ -65,7 +68,7 @@
             <h2 class="font-bold text-lg mb-3">FAQs</h2>
             <div class="space-y-3">
                 @forelse(($product->faqs ?? []) as $faq)
-                    <details class="rounded-xl border border-white/10 p-4">
+                    <details class="rounded-xl border border-white/10 p-4" @if(! empty($faq['open'])) open @endif>
                         <summary class="font-semibold cursor-pointer">{{ $faq['q'] ?? '' }}</summary>
                         <p class="text-sm text-slate-400 mt-2">{{ $faq['a'] ?? '' }}</p>
                     </details>

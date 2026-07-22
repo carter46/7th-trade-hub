@@ -273,7 +273,7 @@ class ServiceController extends Controller
         $product = PlatformProduct::query()
             ->published()
             ->where('slug', $productSlug)
-            ->with(['productType.serviceCategory', 'images', 'activeVariants'])
+            ->with(['productType.serviceCategory', 'images', 'activeVariants', 'heroMedia.variants'])
             ->firstOrFail();
 
         $typeSlug = $product->typeSlug();

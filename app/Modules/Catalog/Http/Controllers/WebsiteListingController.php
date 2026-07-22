@@ -85,7 +85,7 @@ class WebsiteListingController extends Controller
                 ]));
             })
             ->where('slug', $slug)
-            ->with(['productType', 'images', 'activeVariants'])
+            ->with(['productType', 'images', 'activeVariants', 'heroMedia.variants'])
             ->firstOrFail();
 
         return view('pages.website-listings-show', [

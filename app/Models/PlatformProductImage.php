@@ -9,6 +9,7 @@ class PlatformProductImage extends Model
 {
     protected $fillable = [
         'platform_product_id',
+        'media_asset_id',
         'path',
         'alt',
         'sort_order',
@@ -17,5 +18,10 @@ class PlatformProductImage extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(PlatformProduct::class, 'platform_product_id');
+    }
+
+    public function media(): BelongsTo
+    {
+        return $this->belongsTo(MediaAsset::class, 'media_asset_id');
     }
 }

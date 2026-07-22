@@ -64,13 +64,22 @@ return [
 
     'admin' => [
         [
+            'type' => 'link',
+            'id' => 'overview',
+            'label' => 'Overview',
+            'route' => 'admin',
+            'match' => ['admin'],
+            'icon' => 'home',
+            'keywords' => ['home', 'dashboard'],
+            'sort' => 5,
+        ],
+        [
             'type' => 'group',
             'id' => 'operations',
             'label' => 'Operations',
             'icon' => 'users',
             'sort' => 10,
             'children' => [
-                ['route' => 'admin', 'match' => ['admin'], 'label' => 'Overview', 'icon' => 'home', 'keywords' => ['home', 'dashboard'], 'sort' => 5],
                 ['route' => 'admin.users', 'match' => ['admin.users', 'admin.users.*'], 'label' => 'Users', 'icon' => 'users', 'keywords' => ['members', 'accounts'], 'permission' => 'users.manage', 'sort' => 10],
                 ['route' => 'admin.administrators', 'match' => ['admin.administrators', 'admin.administrators.*'], 'label' => 'Administrators', 'icon' => 'verified', 'keywords' => ['admins', 'staff'], 'permission' => 'admins.manage', 'sort' => 20],
                 ['route' => 'admin.kyc', 'match' => ['admin.kyc', 'admin.kyc.*'], 'label' => 'KYC', 'icon' => 'kyc', 'keywords' => ['identity', 'verification'], 'permission' => 'compliance.manage', 'sort' => 30],
@@ -136,6 +145,7 @@ return [
             'sort' => 60,
             'children' => [
                 ['route' => 'admin.analytics', 'match' => ['admin.analytics', 'admin.analytics.*'], 'label' => 'Analytics', 'icon' => 'analytics', 'keywords' => ['reports', 'metrics'], 'permission' => 'analytics.view', 'sort' => 10],
+                ['route' => 'admin.media', 'match' => ['admin.media', 'admin.media.*'], 'label' => 'Media Library', 'icon' => 'listings', 'keywords' => ['media', 'images', 'upload'], 'permission' => 'system.manage', 'sort' => 15],
                 ['route' => 'admin.settings', 'match' => ['admin.settings', 'admin.settings.*'], 'label' => 'Settings', 'icon' => 'settings', 'keywords' => ['platform', 'config'], 'permission' => 'system.manage', 'sort' => 20],
             ],
         ],

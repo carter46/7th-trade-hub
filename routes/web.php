@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AdministratorController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\ImpersonationController;
+use App\Http\Controllers\Admin\MediaLibraryController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Account\AccountController;
 use App\Http\Controllers\DashboardController;
@@ -151,7 +152,9 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
     Route::middleware('has_wallet')->group(function () {
         Route::get('/deposit', [DepositController::class, 'index'])->name('.deposit.index');
         Route::get('/deposit/bank', [DepositController::class, 'createBank'])->name('.deposit.create-bank');
-        Route::post('/deposit/bank', [DepositController::class, 'storeBank'])->name('.deposit.store-bank');
+        Route::post('/deposit/bank', [DepositController::class, 'storeBank'])
+            ->middleware('throttle:10,1')
+            ->name('.deposit.store-bank');
         Route::get('/crypto-sell', [CryptoSellController::class, 'index'])->name('.crypto-sell.index');
         Route::get('/crypto-sell/create', [CryptoSellController::class, 'create'])->name('.crypto-sell.create');
         Route::post('/crypto-sell', [CryptoSellController::class, 'store'])->name('.crypto-sell.store');
@@ -326,7 +329,18 @@ Route::middleware(['auth', 'verified', 'role:admin', 'throttle:60,1'])->prefix('
         Route::post('/tickets/{ticket}/status', [SupportTicketAdminController::class, 'updateStatus'])->name('.tickets.status');
     });
 
+    Route::middleware('permission:system.manage|catalog.manage')->group(function () {
+        Route::get('/media/json', [MediaLibraryController::class, 'jsonIndex'])->name('.media.json');
+        Route::post('/media', [MediaLibraryController::class, 'store'])->name('.media.store');
+        Route::get('/media/{mediaAsset}/usages', [MediaLibraryController::class, 'usages'])->name('.media.usages');
+    });
+
     Route::middleware('permission:system.manage')->group(function () {
+        Route::get('/media', [MediaLibraryController::class, 'index'])->name('.media');
+        Route::patch('/media/{mediaAsset}', [MediaLibraryController::class, 'update'])->name('.media.update');
+        Route::delete('/media/bulk', [MediaLibraryController::class, 'bulkDestroy'])->name('.media.bulk-destroy');
+        Route::delete('/media/{mediaAsset}', [MediaLibraryController::class, 'destroy'])->name('.media.destroy');
+        Route::post('/media/{mediaAsset}/replace', [MediaLibraryController::class, 'replace'])->name('.media.replace');
         Route::get('/settings', [AdminSettingsController::class, 'index'])->name('.settings');
         Route::post('/settings', [AdminSettingsController::class, 'update'])->name('.settings.update');
         Route::post('/settings/test-mail', [AdminSettingsController::class, 'testMail'])->name('.settings.test-mail');

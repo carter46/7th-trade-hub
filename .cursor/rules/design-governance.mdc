@@ -20,5 +20,6 @@ When editing Blade views or styles for 7th Trade Hub:
 8. Empty lists: `<x-ui.empty>` — never bare "No items found".
 9. New shared components: add to `/dev/ui` styleguide before using on pages.
 10. Semantic tokens (`bg-surface`, `text-secondary`, `border-default`) — not raw `bg-slate-900`.
+11. **Images:** never path text inputs in admin — use `<x-dashboard.media-picker>` / `<x-dashboard.gallery-picker>` only (see `media-library.mdc`).
 
 See `docs/DESIGN-SYSTEM.md` for the full catalog.

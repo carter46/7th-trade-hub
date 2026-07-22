@@ -124,6 +124,9 @@ Public API for authenticated user + admin pages:
 | `theme-switcher` | Light / Dark / System |
 | `sidebar` | Nav landmark wrapper for `$slot` |
 | `filter-bar` / `action-bar` / `section` | Page chrome helpers |
+| `media-picker` / `gallery-picker` / `media-library-modal` | Media Library selection (no path text inputs) |
+| `faq-repeater` / `string-list-repeater` | Structured content editors |
+| `ajax-tabs` | Progressive-enhancement tab nav (`X-Dashboard-Tab`) |
 
 Primitives live under `resources/views/components/ui/` and are wrapped by dashboard components where needed.
 

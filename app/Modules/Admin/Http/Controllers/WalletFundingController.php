@@ -143,11 +143,13 @@ class WalletFundingController extends Controller
     public function downloadProof(WalletFunding $funding): StreamedResponse|RedirectResponse
     {
         $path = $funding->metadata['proof_path'] ?? null;
+        $disk = $funding->metadata['proof_disk']
+            ?? config('media.documents.disk', 'local');
 
-        if (! $path || ! Storage::disk('local')->exists($path)) {
+        if (! $path || ! Storage::disk($disk)->exists($path)) {
             return back()->with('error', __('Deposit proof not found.'));
         }
 
-        return Storage::disk('local')->download($path, 'deposit-proof-'.$funding->reference);
+        return Storage::disk($disk)->download($path, 'deposit-proof-'.$funding->reference);
     }
 }

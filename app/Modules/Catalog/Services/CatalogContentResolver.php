@@ -27,7 +27,10 @@ class CatalogContentResolver
     public function forGroup(string $slug): array
     {
         if (Schema::hasTable('service_categories')) {
-            $category = ServiceCategory::query()->where('slug', $slug)->first();
+            $category = ServiceCategory::query()
+                ->with(['bannerMedia.variants', 'cardMedia.variants'])
+                ->where('slug', $slug)
+                ->first();
             if ($category) {
                 return $this->forServiceCategory($category);
             }
@@ -66,8 +69,10 @@ class CatalogContentResolver
             'short_description' => $category->short_description ?: ($config['short_description'] ?? null),
             'hero_title' => $category->hero_title ?: ($config['hero_title'] ?? $category->name),
             'hero_subtitle' => $category->hero_subtitle ?: ($config['hero_subtitle'] ?? null),
-            'banner_image' => $category->banner_image ?: ($config['banner_image'] ?? null),
-            'card_image' => $category->card_image ?: ($config['card_image'] ?? null),
+            'banner_image' => media_url($category->bannerMedia, $category->banner_image, 'large')
+                ?: ($config['banner_image'] ?? null),
+            'card_image' => media_url($category->cardMedia, $category->card_image, 'medium')
+                ?: ($config['card_image'] ?? null),
             'benefits' => $category->benefits ?: ($config['benefits'] ?? []),
             'faq' => $category->faq ?: ($config['faq'] ?? []),
         ];
@@ -99,7 +104,10 @@ class CatalogContentResolver
     public function forType(string $type): array
     {
         if (Schema::hasTable('product_types')) {
-            $service = ProductType::query()->where('slug', $type)->first();
+            $service = ProductType::query()
+                ->with(['bannerMedia.variants', 'cardMedia.variants'])
+                ->where('slug', $type)
+                ->first();
             if ($service) {
                 return $this->forService($service);
             }
@@ -135,8 +143,10 @@ class CatalogContentResolver
             'short_description' => $service->short_description ?: ($config['short_description'] ?? null),
             'hero_title' => $service->hero_title ?: ($config['hero_title'] ?? $service->name),
             'hero_subtitle' => $service->hero_subtitle ?: ($config['hero_subtitle'] ?? null),
-            'banner_image' => $service->banner_image ?: ($config['banner_image'] ?? null),
-            'card_image' => $service->card_image ?: ($config['card_image'] ?? null),
+            'banner_image' => media_url($service->bannerMedia, $service->banner_image, 'large')
+                ?: ($config['banner_image'] ?? null),
+            'card_image' => media_url($service->cardMedia, $service->card_image, 'medium')
+                ?: ($config['card_image'] ?? null),
             'benefits' => $service->benefits ?: ($config['benefits'] ?? []),
             'faq' => $service->faq ?: ($config['faq'] ?? []),
             'icon' => $config['icon'] ?? 'grid',
@@ -207,6 +217,10 @@ class CatalogContentResolver
      */
     private function merge(array $config, ?CatalogPageContent $db, array $extras): array
     {
+        if ($db) {
+            $db->loadMissing(['bannerMedia.variants', 'cardMedia.variants']);
+        }
+
         $pick = function (string $field, mixed $fallback = null) use ($config, $db) {
             $dbValue = $db?->{$field};
             if ($dbValue !== null && $dbValue !== '' && $dbValue !== []) {
@@ -219,13 +233,16 @@ class CatalogContentResolver
         $label = $extras['label'] ?? ($config['label'] ?? '');
         $heroTitle = $pick('hero_title', $label);
 
+        $bannerFromMedia = $db ? media_url($db->bannerMedia, $db->banner_image, 'large') : null;
+        $cardFromMedia = $db ? media_url($db->cardMedia, $db->card_image, 'medium') : null;
+
         return array_merge([
             'label' => $label,
             'short_description' => $pick('short_description'),
             'hero_title' => is_string($heroTitle) ? $heroTitle : $label,
             'hero_subtitle' => $pick('hero_subtitle'),
-            'banner_image' => $pick('banner_image'),
-            'card_image' => $pick('card_image'),
+            'banner_image' => $bannerFromMedia ?: $pick('banner_image'),
+            'card_image' => $cardFromMedia ?: $pick('card_image'),
             'benefits' => array_values($pick('benefits', []) ?: []),
             'faq' => array_values($pick('faq', []) ?: []),
         ], $extras);

@@ -18,6 +18,7 @@
     </div>
 
     <x-dashboard.command-palette role="admin" />
+    <x-dashboard.media-library-modal />
     <x-ui.toast />
     @stack('scripts')
     @RegisterServiceWorkerScript

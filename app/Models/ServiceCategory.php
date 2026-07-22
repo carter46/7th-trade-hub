@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ServiceCategory extends Model
@@ -15,6 +16,8 @@ class ServiceCategory extends Model
         'is_active',
         'banner_image',
         'card_image',
+        'banner_media_id',
+        'card_media_id',
         'short_description',
         'hero_title',
         'hero_subtitle',
@@ -32,6 +35,16 @@ class ServiceCategory extends Model
             'faq' => 'array',
             'sort_order' => 'integer',
         ];
+    }
+
+    public function bannerMedia(): BelongsTo
+    {
+        return $this->belongsTo(MediaAsset::class, 'banner_media_id');
+    }
+
+    public function cardMedia(): BelongsTo
+    {
+        return $this->belongsTo(MediaAsset::class, 'card_media_id');
     }
 
     /** Services (product_types) under this category. */

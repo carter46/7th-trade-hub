@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\CatalogPageContent;
 use App\Models\Category;
 use App\Models\ExchangeRate;
+use App\Services\Media\MediaPathService;
+use App\Services\Media\MediaUsageService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -14,6 +16,10 @@ use Illuminate\View\View;
 
 class CatalogMetaAdminController extends Controller
 {
+    public function __construct(
+        private MediaUsageService $mediaUsages,
+        private MediaPathService $mediaPaths,
+    ) {}
     public function marketplaceCategories(): View
     {
         $categories = Category::query()
@@ -141,6 +147,7 @@ class CatalogMetaAdminController extends Controller
     public function catalogPages(): View
     {
         $pages = CatalogPageContent::query()
+            ->with(['bannerMedia', 'cardMedia'])
             ->orderBy('scope')
             ->orderBy('key')
             ->get()
@@ -174,8 +181,8 @@ class CatalogMetaAdminController extends Controller
             'short_description' => ['nullable', 'string', 'max:500'],
             'hero_title' => ['nullable', 'string', 'max:255'],
             'hero_subtitle' => ['nullable', 'string', 'max:500'],
-            'banner_image' => ['nullable', 'string', 'max:255'],
-            'card_image' => ['nullable', 'string', 'max:255'],
+            'banner_media_id' => ['nullable', 'integer', $this->mediaPaths->existsRule()],
+            'card_media_id' => ['nullable', 'integer', $this->mediaPaths->existsRule()],
         ]);
 
         if ($data['scope'] === 'group') {
@@ -195,16 +202,26 @@ class CatalogMetaAdminController extends Controller
             }
         }
 
-        CatalogPageContent::updateOrCreate(
+        $bannerMediaId = isset($data['banner_media_id']) ? (int) $data['banner_media_id'] : null;
+        $cardMediaId = isset($data['card_media_id']) ? (int) $data['card_media_id'] : null;
+
+        $page = CatalogPageContent::updateOrCreate(
             ['scope' => $data['scope'], 'key' => $data['key']],
             [
-                'short_description' => $data['short_description'] ?: null,
-                'hero_title' => $data['hero_title'] ?: null,
-                'hero_subtitle' => $data['hero_subtitle'] ?: null,
-                'banner_image' => $data['banner_image'] ?: null,
-                'card_image' => $data['card_image'] ?: null,
+                'short_description' => ($data['short_description'] ?? null) ?: null,
+                'hero_title' => ($data['hero_title'] ?? null) ?: null,
+                'hero_subtitle' => ($data['hero_subtitle'] ?? null) ?: null,
+                'banner_media_id' => $bannerMediaId,
+                'card_media_id' => $cardMediaId,
+                'banner_image' => $this->mediaPaths->legacyPathFromMediaId($bannerMediaId, 'large'),
+                'card_image' => $this->mediaPaths->legacyPathFromMediaId($cardMediaId, 'medium'),
             ]
         );
+
+        $this->mediaUsages->syncUsages($page, [
+            'banner' => $data['banner_media_id'] ?? null,
+            'card' => $data['card_media_id'] ?? null,
+        ]);
 
         return back()->with('status', 'Catalog page content saved (overrides config defaults where set).');
     }

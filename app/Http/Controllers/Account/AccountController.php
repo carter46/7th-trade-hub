@@ -132,10 +132,15 @@ class AccountController extends Controller
     private function view(Request $request, string $page, array $data = []): View
     {
         $prefix = self::routePrefix($request);
-
-        return view('account.'.$page, array_merge($data, [
+        $payload = array_merge($data, [
             'layout' => $prefix === 'admin' ? 'layouts.dashboard-admin' : 'layouts.dashboard-user',
             'prefix' => $prefix,
-        ]));
+        ]);
+
+        if ($request->headers->get('X-Dashboard-Tab') === '1') {
+            return view('account.partials.panel-'.$page, $payload);
+        }
+
+        return view('account.'.$page, $payload);
     }
 }

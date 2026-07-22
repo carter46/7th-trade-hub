@@ -17,6 +17,8 @@ class ProductType extends Model
         'is_active',
         'banner_image',
         'card_image',
+        'banner_media_id',
+        'card_media_id',
         'short_description',
         'hero_title',
         'hero_subtitle',
@@ -37,6 +39,16 @@ class ProductType extends Model
     public function serviceCategory(): BelongsTo
     {
         return $this->belongsTo(ServiceCategory::class);
+    }
+
+    public function bannerMedia(): BelongsTo
+    {
+        return $this->belongsTo(MediaAsset::class, 'banner_media_id');
+    }
+
+    public function cardMedia(): BelongsTo
+    {
+        return $this->belongsTo(MediaAsset::class, 'card_media_id');
     }
 
     /** Alias for admin/UI "Service" naming. */

@@ -5,6 +5,7 @@ namespace App\Modules\Wallet\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\SystemSetting;
 use App\Models\WalletFunding;
+use App\Services\Media\MediaUploadService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -12,6 +13,7 @@ use Illuminate\View\View;
 
 class DepositController extends Controller
 {
+    public function __construct(private MediaUploadService $media) {}
     public function index(): View
     {
         $user = auth()->user();
@@ -50,9 +52,14 @@ class DepositController extends Controller
             'proof' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
         ]);
 
-        $proofPath = null;
+        $proofMeta = [];
         if ($request->hasFile('proof')) {
-            $proofPath = $request->file('proof')->store('deposit-proofs', 'local');
+            $stored = $this->media->storeDocument($request->file('proof'), $user);
+            $proofMeta = [
+                'proof_path' => $stored['path'],
+                'proof_disk' => $stored['disk'],
+                'proof_media_asset_id' => $stored['media_asset_id'],
+            ];
         }
 
         WalletFunding::create([
@@ -63,11 +70,10 @@ class DepositController extends Controller
             'currency' => 'NGN',
             'status' => 'pending',
             'reference' => 'DEP-'.strtoupper(Str::random(10)),
-            'metadata' => [
+            'metadata' => array_merge([
                 'bank_name' => $validated['bank_name'],
                 'transfer_reference' => $validated['transfer_reference'],
-                'proof_path' => $proofPath,
-            ],
+            ], $proofMeta),
         ]);
 
         return redirect()->route('dashboard.deposit.index')

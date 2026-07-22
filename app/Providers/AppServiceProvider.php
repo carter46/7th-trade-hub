@@ -25,6 +25,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(AuditLogService::class);
         $this->app->singleton(\App\Modules\Marketplace\Services\NotificationService::class);
         $this->app->singleton(ThemeManager::class);
+        $this->app->singleton(\App\Services\Media\MediaPathService::class);
     }
 
     public function boot(): void

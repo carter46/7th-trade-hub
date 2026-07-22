@@ -7,9 +7,18 @@
     $defaultHero = asset('assets/images/Image_ro410gro410gro41.png');
     $heroUrl = $defaultHero;
     if (is_string($image) && $image !== '') {
-        $relative = ltrim(str_replace('\\', '/', $image), '/');
-        if (is_file(public_path($relative))) {
-            $heroUrl = asset($relative);
+        $trimmed = trim($image);
+        if (preg_match('#^(https?:)?//#i', $trimmed)) {
+            $heroUrl = $trimmed;
+        } else {
+            $relative = ltrim(str_replace('\\', '/', $trimmed), '/');
+            if (is_file(public_path($relative))) {
+                $heroUrl = asset($relative);
+            } elseif (str_starts_with($relative, 'storage/')) {
+                $heroUrl = asset($relative);
+            } else {
+                $heroUrl = asset($relative);
+            }
         }
     }
 @endphp

@@ -106,23 +106,27 @@ class UserManagementController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return view('dashboard.admin.users', [
+        $data = [
             'users' => $users,
             'status' => $status,
             'activeCount' => $activeCount,
             'suspendedCount' => $suspendedCount,
-        ]);
+        ];
+
+        if ($this->wantsTabPartial($request)) {
+            return view('dashboard.admin.users._table', $data);
+        }
+
+        return view('dashboard.admin.users', $data);
     }
 
-    public function show(User $user): View
+    public function show(User $user, Request $request): View
     {
         $this->ensureMember($user);
 
         $user->load('wallet');
 
-        return view('dashboard.admin.users.show', [
-            'user' => $user,
-            'activeTab' => 'overview',
+        return $this->userTabView($request, $user, 'overview', [
             'wallet' => $user->wallet,
             'recentTransactions' => $user->transactions()->orderByDesc('created_at')->limit(5)->get(),
             'orderCount' => $user->orders()->count(),
@@ -131,52 +135,44 @@ class UserManagementController extends Controller
         ]);
     }
 
-    public function wallet(User $user): View
+    public function wallet(User $user, Request $request): View
     {
         $this->ensureMember($user);
         $user->load('wallet');
 
-        return view('dashboard.admin.users.show', [
-            'user' => $user,
-            'activeTab' => 'wallet',
+        return $this->userTabView($request, $user, 'wallet', [
             'wallet' => $user->wallet,
         ]);
     }
 
-    public function transactions(User $user): View
+    public function transactions(User $user, Request $request): View
     {
         $this->ensureMember($user);
 
-        return view('dashboard.admin.users.show', [
-            'user' => $user,
-            'activeTab' => 'transactions',
+        return $this->userTabView($request, $user, 'transactions', [
             'transactions' => $user->transactions()->orderByDesc('created_at')->paginate(20),
         ]);
     }
 
-    public function orders(User $user): View
+    public function orders(User $user, Request $request): View
     {
         $this->ensureMember($user);
 
-        return view('dashboard.admin.users.show', [
-            'user' => $user,
-            'activeTab' => 'orders',
+        return $this->userTabView($request, $user, 'orders', [
             'orders' => $user->orders()->with('listing')->orderByDesc('created_at')->paginate(20),
         ]);
     }
 
-    public function listings(User $user): View
+    public function listings(User $user, Request $request): View
     {
         $this->ensureMember($user);
 
-        return view('dashboard.admin.users.show', [
-            'user' => $user,
-            'activeTab' => 'listings',
+        return $this->userTabView($request, $user, 'listings', [
             'listings' => $user->listings()->orderByDesc('created_at')->paginate(20),
         ]);
     }
 
-    public function escrows(User $user): View
+    public function escrows(User $user, Request $request): View
     {
         $this->ensureMember($user);
 
@@ -194,25 +190,21 @@ class UserManagementController extends Controller
             ->orderByDesc('created_at')
             ->paginate(20);
 
-        return view('dashboard.admin.users.show', [
-            'user' => $user,
-            'activeTab' => 'escrows',
+        return $this->userTabView($request, $user, 'escrows', [
             'escrows' => $escrows,
         ]);
     }
 
-    public function tickets(User $user): View
+    public function tickets(User $user, Request $request): View
     {
         $this->ensureMember($user);
 
-        return view('dashboard.admin.users.show', [
-            'user' => $user,
-            'activeTab' => 'tickets',
+        return $this->userTabView($request, $user, 'tickets', [
             'tickets' => $user->supportTickets()->orderByDesc('created_at')->paginate(20),
         ]);
     }
 
-    public function activity(User $user): View
+    public function activity(User $user, Request $request): View
     {
         $this->ensureMember($user);
 
@@ -223,21 +215,16 @@ class UserManagementController extends Controller
             ->orderByDesc('created_at')
             ->paginate(20);
 
-        return view('dashboard.admin.users.show', [
-            'user' => $user,
-            'activeTab' => 'activity',
+        return $this->userTabView($request, $user, 'activity', [
             'activity' => $activity,
         ]);
     }
 
-    public function security(User $user): View
+    public function security(User $user, Request $request): View
     {
         $this->ensureMember($user);
 
-        return view('dashboard.admin.users.show', [
-            'user' => $user,
-            'activeTab' => 'security',
-        ]);
+        return $this->userTabView($request, $user, 'security');
     }
 
     public function edit(User $user): View
@@ -471,5 +458,27 @@ class UserManagementController extends Controller
     private function ensureMember(User $user): void
     {
         abort_unless($user->hasRole('user') && ! $user->hasRole('admin'), 404);
+    }
+
+    private function wantsTabPartial(Request $request): bool
+    {
+        return $request->headers->get('X-Dashboard-Tab') === '1';
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function userTabView(Request $request, User $user, string $activeTab, array $data = []): View
+    {
+        $payload = array_merge($data, [
+            'user' => $user,
+            'activeTab' => $activeTab,
+        ]);
+
+        if ($this->wantsTabPartial($request)) {
+            return view('dashboard.admin.users.show-panel', $payload);
+        }
+
+        return view('dashboard.admin.users.show', $payload);
     }
 }

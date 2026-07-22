@@ -25,6 +25,7 @@ class PlatformProduct extends Model
         'is_featured',
         'sort_order',
         'hero_image',
+        'hero_media_id',
         'demo_url',
         'demo_username',
         'demo_password',
@@ -75,6 +76,11 @@ class PlatformProduct extends Model
     public function productType(): BelongsTo
     {
         return $this->belongsTo(ProductType::class, 'product_type_id');
+    }
+
+    public function heroMedia(): BelongsTo
+    {
+        return $this->belongsTo(MediaAsset::class, 'hero_media_id');
     }
 
     /** UI alias: Service under Service Category. */

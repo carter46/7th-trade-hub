@@ -6,16 +6,8 @@
 <x-layout.page title="Security" subtitle="Update your password and protect your account." width="full">
     @include('account.partials.navigation')
 
-    <x-dashboard.card>
-        @include('profile.partials.update-password-form')
-    </x-dashboard.card>
-
-    @unless ($user->hasRole('admin'))
-        <x-dashboard.card>
-            @include('profile.partials.delete-user-form', [
-                'profileDestroyRoute' => $prefix.'.account.destroy',
-            ])
-        </x-dashboard.card>
-    @endunless
+    <div id="dashboard-tab-panel" class="mt-4 space-y-4">
+        @include('account.partials.panel-security')
+    </div>
 </x-layout.page>
 @endsection

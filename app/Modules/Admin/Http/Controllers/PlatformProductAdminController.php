@@ -5,11 +5,15 @@ namespace App\Modules\Admin\Http\Controllers;
 use App\Enums\PlatformProductStatus;
 use App\Enums\PlatformProductType;
 use App\Http\Controllers\Controller;
+use App\Models\MediaAsset;
 use App\Models\PlatformProduct;
 use App\Models\PlatformProductImage;
 use App\Models\PlatformProductVariant;
 use App\Models\ProductType;
 use App\Models\ServiceCategory;
+use App\Services\Media\MediaPathService;
+use App\Services\Media\MediaUsageService;
+use App\Support\FaqNormalizer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -20,6 +24,11 @@ use Illuminate\View\View;
 
 class PlatformProductAdminController extends Controller
 {
+    public function __construct(
+        private MediaUsageService $mediaUsages,
+        private MediaPathService $mediaPaths,
+    ) {}
+
     public function index(Request $request): View
     {
         $products = PlatformProduct::query()
@@ -77,6 +86,7 @@ class PlatformProductAdminController extends Controller
                 'fulfillment_mode' => 'manual',
                 'auto_renew' => false,
             ]),
+            'galleryMediaIds' => [],
             'serviceCategories' => ServiceCategory::query()->orderBy('sort_order')->orderBy('name')->get(),
             'services' => ProductType::query()->with('serviceCategory')->orderBy('sort_order')->orderBy('name')->get(),
             'types' => PlatformProductType::cases(),
@@ -87,9 +97,12 @@ class PlatformProductAdminController extends Controller
     {
         $data = $this->validated($request);
         $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
+        $galleryIds = $data['gallery_media_ids'];
+        unset($data['gallery_media_ids']);
+
         $product = PlatformProduct::create($data);
         $this->syncVariants($product, $request->input('variants', []), (float) $data['base_price']);
-        $this->syncImages($product, (string) $request->input('gallery_paths', ''));
+        $this->syncGallery($product, $galleryIds);
         $this->assertPublishable($product, $data['status']);
 
         return redirect()->route('admin.platform-products')->with('status', 'Product created.');
@@ -97,8 +110,21 @@ class PlatformProductAdminController extends Controller
 
     public function edit(PlatformProduct $platformProduct): View
     {
+        $platformProduct->load(['variants', 'images', 'productType', 'heroMedia.variants']);
+
+        $galleryMediaIds = MediaUsage::query()
+            ->where('usable_type', $platformProduct->getMorphClass())
+            ->where('usable_id', $platformProduct->id)
+            ->where('field', 'gallery')
+            ->orderBy('id')
+            ->pluck('media_asset_id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+
         return view('dashboard.admin.platform-product-form', [
-            'product' => $platformProduct->load(['variants', 'images', 'productType']),
+            'product' => $platformProduct,
+            'galleryMediaIds' => $galleryMediaIds,
             'serviceCategories' => ServiceCategory::query()->orderBy('sort_order')->orderBy('name')->get(),
             'services' => ProductType::query()->with('serviceCategory')->orderBy('sort_order')->orderBy('name')->get(),
             'types' => PlatformProductType::cases(),
@@ -111,9 +137,12 @@ class PlatformProductAdminController extends Controller
         if (empty($data['slug'])) {
             $data['slug'] = $platformProduct->slug ?: Str::slug($data['title']);
         }
+        $galleryIds = $data['gallery_media_ids'];
+        unset($data['gallery_media_ids']);
+
         $platformProduct->update($data);
         $this->syncVariants($platformProduct, $request->input('variants', []), (float) $data['base_price']);
-        $this->syncImages($platformProduct, (string) $request->input('gallery_paths', ''));
+        $this->syncGallery($platformProduct, $galleryIds);
         $this->assertPublishable($platformProduct->fresh(['variants']), $data['status']);
 
         return redirect()->route('admin.platform-products')->with('status', 'Product updated.');
@@ -121,6 +150,7 @@ class PlatformProductAdminController extends Controller
 
     public function destroy(PlatformProduct $platformProduct): RedirectResponse
     {
+        $this->mediaUsages->detachAllFor($platformProduct);
         $platformProduct->delete();
 
         return back()->with('status', 'Product deleted.');
@@ -142,7 +172,9 @@ class PlatformProductAdminController extends Controller
             'status' => ['required', 'in:draft,published,archived'],
             'is_featured' => ['sometimes', 'boolean'],
             'base_price' => ['required', 'numeric', 'min:0'],
-            'hero_image' => ['nullable', 'string', 'max:500'],
+            'hero_media_id' => ['nullable', 'integer', $this->mediaPaths->existsRule()],
+            'gallery_media_ids' => ['nullable', 'array'],
+            'gallery_media_ids.*' => ['integer', $this->mediaPaths->existsRule()],
             'demo_url' => ['nullable', 'url'],
             'demo_username' => ['nullable', 'string', 'max:255'],
             'demo_password' => ['nullable', 'string', 'max:255'],
@@ -160,7 +192,10 @@ class PlatformProductAdminController extends Controller
             'features_text' => ['nullable', 'string'],
             'requirements_text' => ['nullable', 'string'],
             'whats_included_text' => ['nullable', 'string'],
-            'faqs_text' => ['nullable', 'string'],
+            'faqs' => ['nullable', 'array'],
+            'faqs.*.q' => ['nullable', 'string', 'max:500'],
+            'faqs.*.a' => ['nullable', 'string'],
+            'faqs.*.open' => ['nullable'],
             'variants' => ['nullable', 'array'],
             'variants.*.id' => ['nullable', 'integer'],
             'variants.*.name' => ['nullable', 'string', 'max:255'],
@@ -168,7 +203,6 @@ class PlatformProductAdminController extends Controller
             'variants.*.duration_months' => ['nullable', 'integer', 'min:1'],
             'variants.*.is_default' => ['sometimes', 'boolean'],
             'variants.*.is_active' => ['sometimes', 'boolean'],
-            'gallery_paths' => ['nullable', 'string'],
         ]);
 
         $service = ProductType::query()->findOrFail($data['product_type_id']);
@@ -184,6 +218,14 @@ class PlatformProductAdminController extends Controller
             $providerMeta = $decoded;
         }
 
+        $heroMediaId = isset($data['hero_media_id']) ? (int) $data['hero_media_id'] : null;
+        $galleryIds = collect($data['gallery_media_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
         $payload = [
             'title' => $data['title'],
             'slug' => $data['slug'] ?? null,
@@ -193,7 +235,9 @@ class PlatformProductAdminController extends Controller
             'description' => $data['description'] ?? null,
             'status' => $data['status'],
             'base_price' => $data['base_price'],
-            'hero_image' => $data['hero_image'] ?? null,
+            'hero_media_id' => $heroMediaId,
+            'hero_image' => $this->mediaPaths->legacyPathFromMediaId($heroMediaId),
+            'gallery_media_ids' => $galleryIds,
             'demo_url' => $data['demo_url'] ?? null,
             'demo_username' => $data['demo_username'] ?? null,
             'demo_password' => $data['demo_password'] ?? null,
@@ -211,10 +255,10 @@ class PlatformProductAdminController extends Controller
             'provider_meta' => $providerMeta,
             'fulfillment_mode' => $data['fulfillment_mode'],
             'auto_renew' => $request->boolean('auto_renew'),
-            'features' => $this->linesToList($data['features_text'] ?? ''),
-            'requirements' => $this->linesToList($data['requirements_text'] ?? ''),
-            'whats_included' => $this->linesToList($data['whats_included_text'] ?? ''),
-            'faqs' => $this->parseFaqs($data['faqs_text'] ?? ''),
+            'features' => FaqNormalizer::stringList($data['features_text'] ?? null),
+            'requirements' => FaqNormalizer::stringList($data['requirements_text'] ?? null),
+            'whats_included' => FaqNormalizer::stringList($data['whats_included_text'] ?? null),
+            'faqs' => FaqNormalizer::fromRequest($data['faqs'] ?? null),
         ];
 
         if (Schema::hasColumn('platform_products', 'platform_category_id')) {
@@ -236,35 +280,6 @@ class PlatformProductAdminController extends Controller
                 'status' => 'Published products require at least one active variant.',
             ]);
         }
-    }
-
-    private function parseFaqs(string $text): ?array
-    {
-        $blocks = preg_split('/\n\s*\n/', trim($text)) ?: [];
-        $faqs = [];
-        foreach ($blocks as $block) {
-            $lines = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $block) ?: [])));
-            if (count($lines) < 2) {
-                continue;
-            }
-            $faqs[] = [
-                'q' => preg_replace('/^q:\s*/i', '', $lines[0]),
-                'a' => preg_replace('/^a:\s*/i', '', implode(' ', array_slice($lines, 1))),
-            ];
-        }
-
-        return $faqs === [] ? null : $faqs;
-    }
-
-    private function linesToList(string $text): ?array
-    {
-        $lines = collect(preg_split('/\r\n|\r|\n/', $text) ?: [])
-            ->map(fn ($line) => trim($line))
-            ->filter()
-            ->values()
-            ->all();
-
-        return $lines === [] ? null : $lines;
     }
 
     private function syncVariants(PlatformProduct $product, array $variants, float $fallbackPrice): void
@@ -337,21 +352,36 @@ class PlatformProductAdminController extends Controller
             ->delete();
     }
 
-    private function syncImages(PlatformProduct $product, string $galleryPaths): void
+    /**
+     * @param  list<int>  $galleryIds
+     */
+    private function syncGallery(PlatformProduct $product, array $galleryIds): void
     {
-        $paths = collect(preg_split('/\r\n|\r|\n/', $galleryPaths) ?: [])
-            ->map(fn ($line) => trim($line))
-            ->filter()
-            ->values();
+        $assets = MediaAsset::query()
+            ->with('variants')
+            ->whereIn('id', $galleryIds)
+            ->get()
+            ->keyBy('id');
 
         $product->images()->delete();
-        foreach ($paths as $i => $path) {
+        foreach ($galleryIds as $i => $id) {
+            $asset = $assets->get($id);
+            if (! $asset) {
+                continue;
+            }
+
             PlatformProductImage::create([
                 'platform_product_id' => $product->id,
-                'path' => $path,
-                'alt' => $product->title,
+                'media_asset_id' => $asset->id,
+                'path' => $asset->variantStoragePath('medium') ?? $asset->legacyPublicPath('medium'),
+                'alt' => $asset->alt ?: $product->title,
                 'sort_order' => $i,
             ]);
         }
+
+        $this->mediaUsages->syncUsages($product, [
+            'hero' => $product->hero_media_id,
+            'gallery' => $galleryIds === [] ? null : $galleryIds,
+        ]);
     }
 }

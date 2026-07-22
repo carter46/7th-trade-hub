@@ -7,9 +7,12 @@
     <div class="max-w-marketing mx-auto px-5 sm:px-6 space-y-10">
         <div class="grid lg:grid-cols-2 gap-10">
             <div>
+                @php
+                    $heroUrl = $product->heroMedia?->url('medium') ?? ($product->hero_image ? asset($product->hero_image) : null);
+                @endphp
                 <div class="aspect-video rounded-2xl bg-slate-900/70 overflow-hidden mb-4">
-                    @if($product->hero_image)
-                        <img src="{{ asset($product->hero_image) }}" alt="" class="w-full h-full object-cover">
+                    @if($heroUrl)
+                        <img src="{{ $heroUrl }}" alt="" class="w-full h-full object-cover">
                     @elseif($product->images->first())
                         <img src="{{ asset($product->images->first()->path) }}" alt="" class="w-full h-full object-cover">
                     @else
@@ -83,7 +86,7 @@
             <div class="glassmorphism rounded-2xl p-6 md:col-span-2">
                 <h2 class="font-bold mb-3">FAQs</h2>
                 @foreach(($product->faqs ?? []) as $faq)
-                    <details class="border-b border-white/10 py-3">
+                    <details class="border-b border-white/10 py-3" @if(! empty($faq['open'])) open @endif>
                         <summary class="cursor-pointer font-semibold">{{ $faq['q'] ?? '' }}</summary>
                         <p class="text-sm text-slate-400 mt-2">{{ $faq['a'] ?? '' }}</p>
                     </details>

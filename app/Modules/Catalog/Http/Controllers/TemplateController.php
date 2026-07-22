@@ -60,7 +60,7 @@ class TemplateController extends Controller
             ->published()
             ->ofType(PlatformProductType::DocumentTemplate)
             ->where('slug', $slug)
-            ->with(['productType', 'activeVariants', 'images'])
+            ->with(['productType', 'activeVariants', 'images', 'heroMedia.variants'])
             ->firstOrFail();
 
         return view('pages.templates-show', [

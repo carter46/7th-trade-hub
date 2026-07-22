@@ -20,9 +20,11 @@
     }
     $crumbs[] = ['label' => $product->title];
 
+    $heroUrl = $product->heroMedia?->url('medium') ?? ($product->hero_image ? asset($product->hero_image) : null);
+
     $gallery = collect();
-    if ($product->hero_image) {
-        $gallery->push(['src' => asset($product->hero_image), 'alt' => $product->title]);
+    if ($heroUrl) {
+        $gallery->push(['src' => $heroUrl, 'alt' => $product->title]);
     }
     foreach ($product->images ?? [] as $img) {
         $gallery->push([
@@ -382,7 +384,7 @@
                 <p class="text-sm text-slate-500 mb-5">About {{ $product->title }}</p>
                 <div class="space-y-3">
                     @foreach($faqs as $faq)
-                        <details class="group rounded-xl border border-slate-200 bg-white overflow-hidden [&_summary::-webkit-details-marker]:hidden">
+                        <details class="group rounded-xl border border-slate-200 bg-white overflow-hidden [&_summary::-webkit-details-marker]:hidden" @if(! empty($faq['open'])) open @endif>
                             <summary class="flex justify-between items-center gap-4 p-4 sm:p-5 cursor-pointer hover:bg-slate-50 transition-colors">
                                 <h3 class="font-semibold text-sm sm:text-base text-slate-900 text-left">{{ $faq['q'] }}</h3>
                                 <span class="text-slate-400 transition-transform group-open:rotate-180 shrink-0">

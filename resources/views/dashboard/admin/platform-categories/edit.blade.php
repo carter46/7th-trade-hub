@@ -27,6 +27,7 @@
             <x-dashboard.input label="Short description" name="short_description" :value="old('short_description', $category->short_description)" />
             <x-dashboard.input label="Hero title" name="hero_title" :value="old('hero_title', $category->hero_title)" />
             <x-dashboard.input label="Hero subtitle" name="hero_subtitle" :value="old('hero_subtitle', $category->hero_subtitle)" />
+            {{-- Path fields are legacy: PlatformCategory has banner_image/card_image strings only (no banner_media_id / card_media_id). --}}
             <x-dashboard.input label="Banner image path" name="banner_image" :value="old('banner_image', $category->banner_image)" placeholder="/images/..." />
             <x-dashboard.input label="Card image path" name="card_image" :value="old('card_image', $category->card_image)" placeholder="/images/..." />
             <div class="flex flex-wrap gap-2 pt-2">

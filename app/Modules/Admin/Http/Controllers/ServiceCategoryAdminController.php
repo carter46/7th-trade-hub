@@ -4,6 +4,9 @@ namespace App\Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\ServiceCategory;
+use App\Services\Media\MediaPathService;
+use App\Services\Media\MediaUsageService;
+use App\Support\FaqNormalizer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -12,6 +15,11 @@ use Illuminate\View\View;
 
 class ServiceCategoryAdminController extends Controller
 {
+    public function __construct(
+        private MediaUsageService $mediaUsages,
+        private MediaPathService $mediaPaths,
+    ) {}
+
     public function index(): View
     {
         $categories = ServiceCategory::query()
@@ -39,7 +47,8 @@ class ServiceCategoryAdminController extends Controller
         $data = $this->validated($request);
         $data['slug'] = $data['slug'] ?: Str::slug($data['name']);
 
-        ServiceCategory::create($data);
+        $category = ServiceCategory::create($data);
+        $this->syncMedia($category, $data);
 
         return redirect()
             ->route('admin.service-categories')
@@ -48,6 +57,8 @@ class ServiceCategoryAdminController extends Controller
 
     public function edit(ServiceCategory $serviceCategory): View
     {
+        $serviceCategory->load(['bannerMedia.variants', 'cardMedia.variants']);
+
         return view('dashboard.admin.service-categories.edit', [
             'category' => $serviceCategory,
         ]);
@@ -61,6 +72,7 @@ class ServiceCategoryAdminController extends Controller
         }
 
         $serviceCategory->update($data);
+        $this->syncMedia($serviceCategory, $data);
 
         return redirect()
             ->route('admin.service-categories')
@@ -76,6 +88,7 @@ class ServiceCategoryAdminController extends Controller
 
     public function destroy(ServiceCategory $serviceCategory): RedirectResponse
     {
+        $this->mediaUsages->detachAllFor($serviceCategory);
         $serviceCategory->delete();
 
         return redirect()
@@ -99,11 +112,18 @@ class ServiceCategoryAdminController extends Controller
             'short_description' => ['nullable', 'string', 'max:500'],
             'hero_title' => ['nullable', 'string', 'max:255'],
             'hero_subtitle' => ['nullable', 'string', 'max:500'],
-            'banner_image' => ['nullable', 'string', 'max:255'],
-            'card_image' => ['nullable', 'string', 'max:255'],
-            'benefits_text' => ['nullable', 'string'],
-            'faq_text' => ['nullable', 'string'],
+            'banner_media_id' => ['nullable', 'integer', $this->mediaPaths->existsRule()],
+            'card_media_id' => ['nullable', 'integer', $this->mediaPaths->existsRule()],
+            'benefits' => ['nullable', 'array'],
+            'benefits.*' => ['nullable', 'string', 'max:500'],
+            'faq' => ['nullable', 'array'],
+            'faq.*.q' => ['nullable', 'string', 'max:500'],
+            'faq.*.a' => ['nullable', 'string'],
+            'faq.*.open' => ['nullable'],
         ]);
+
+        $bannerMediaId = isset($data['banner_media_id']) ? (int) $data['banner_media_id'] : null;
+        $cardMediaId = isset($data['card_media_id']) ? (int) $data['card_media_id'] : null;
 
         return [
             'name' => $data['name'],
@@ -115,39 +135,20 @@ class ServiceCategoryAdminController extends Controller
             'short_description' => $data['short_description'] ?? null,
             'hero_title' => $data['hero_title'] ?? null,
             'hero_subtitle' => $data['hero_subtitle'] ?? null,
-            'banner_image' => $data['banner_image'] ?? null,
-            'card_image' => $data['card_image'] ?? null,
-            'benefits' => $this->linesToList($data['benefits_text'] ?? ''),
-            'faq' => $this->parseFaqs($data['faq_text'] ?? ''),
+            'banner_media_id' => $bannerMediaId,
+            'card_media_id' => $cardMediaId,
+            'banner_image' => $this->mediaPaths->legacyPathFromMediaId($bannerMediaId),
+            'card_image' => $this->mediaPaths->legacyPathFromMediaId($cardMediaId),
+            'benefits' => FaqNormalizer::stringList($data['benefits'] ?? null),
+            'faq' => FaqNormalizer::fromRequest($data['faq'] ?? null),
         ];
     }
 
-    private function linesToList(string $text): ?array
+    private function syncMedia(ServiceCategory $category, array $data): void
     {
-        $lines = collect(preg_split('/\r\n|\r|\n/', $text) ?: [])
-            ->map(fn ($line) => trim($line))
-            ->filter()
-            ->values()
-            ->all();
-
-        return $lines === [] ? null : $lines;
-    }
-
-    private function parseFaqs(string $text): ?array
-    {
-        $blocks = preg_split('/\n\s*\n/', trim($text)) ?: [];
-        $faqs = [];
-        foreach ($blocks as $block) {
-            $lines = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $block) ?: [])));
-            if (count($lines) < 2) {
-                continue;
-            }
-            $faqs[] = [
-                'q' => preg_replace('/^q:\s*/i', '', $lines[0]),
-                'a' => preg_replace('/^a:\s*/i', '', implode(' ', array_slice($lines, 1))),
-            ];
-        }
-
-        return $faqs === [] ? null : $faqs;
+        $this->mediaUsages->syncUsages($category, [
+            'banner' => $data['banner_media_id'] ?? null,
+            'card' => $data['card_media_id'] ?? null,
+        ]);
     }
 }
