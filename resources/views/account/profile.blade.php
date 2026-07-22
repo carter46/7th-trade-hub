@@ -3,7 +3,7 @@
 @section('title', 'Profile')
 
 @section('content')
-<x-layout.page title="My Account" subtitle="Manage your profile and account settings." width="form">
+<x-layout.page title="My Account" subtitle="Manage your profile and account settings." width="full">
     @include('account.partials.navigation')
 
     <x-dashboard.card>

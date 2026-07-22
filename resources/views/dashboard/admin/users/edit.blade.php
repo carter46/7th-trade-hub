@@ -6,7 +6,7 @@
 <x-layout.page
     title="Edit User"
     subtitle="{{ $user->email }}"
-    width="form"
+    width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
         ['Users', route('admin.users')],
@@ -15,7 +15,7 @@
     ]"
 >
     <x-dashboard.card>
-        <form method="POST" action="{{ route('admin.users.update', $user) }}" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
+        <form method="POST" action="{{ route('admin.users.update', $user) }}" class="max-w-form space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
             @method('PUT')
 
@@ -25,6 +25,12 @@
             <x-dashboard.input name="phone" label="Phone" :value="old('phone', $user->phone)" />
             <x-dashboard.input name="country" label="Country (ISO-2)" :value="old('country', $user->country)" maxlength="2" />
             <x-dashboard.textarea name="bio" label="Bio">{{ old('bio', $user->bio) }}</x-dashboard.textarea>
+
+            <x-dashboard.select label="KYC level" name="kyc_level">
+                @foreach ([0 => '0 — None', 1 => '1 — Basic', 2 => '2 — Identity', 3 => '3 — Address', 4 => '4 — Enhanced'] as $value => $label)
+                    <option value="{{ $value }}" @selected((string) old('kyc_level', $user->kyc_level) === (string) $value)>{{ $label }}</option>
+                @endforeach
+            </x-dashboard.select>
 
             <div class="flex gap-3">
                 <x-dashboard.button type="submit" x-bind:disabled="submitting">Save</x-dashboard.button>

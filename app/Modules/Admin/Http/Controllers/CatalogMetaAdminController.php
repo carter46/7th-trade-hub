@@ -2,12 +2,10 @@
 
 namespace App\Modules\Admin\Http\Controllers;
 
-use App\Enums\PlatformProductType;
 use App\Http\Controllers\Controller;
 use App\Models\CatalogPageContent;
 use App\Models\Category;
 use App\Models\ExchangeRate;
-use App\Models\PlatformCategory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -103,97 +101,34 @@ class CatalogMetaAdminController extends Controller
             ->with('status', 'Category updated.');
     }
 
-    public function platformCategories(): View
+    public function platformCategories(): RedirectResponse
     {
-        $categories = PlatformCategory::query()
-            ->withCount('products')
-            ->orderBy('product_type')
-            ->orderBy('sort_order')
-            ->paginate(20);
-
-        return view('dashboard.admin.platform-categories.index', compact('categories'));
+        return redirect()->route('admin.service-categories');
     }
 
-    public function createPlatformCategory(): View
+    public function createPlatformCategory(): RedirectResponse
     {
-        return view('dashboard.admin.platform-categories.create', [
-            'types' => PlatformProductType::cases(),
-        ]);
+        return redirect()->route('admin.service-categories.create');
     }
 
     public function storePlatformCategory(Request $request): RedirectResponse
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'product_type' => ['required', Rule::enum(PlatformProductType::class)],
-            'sort_order' => ['nullable', 'integer', 'min:0'],
-            'short_description' => ['nullable', 'string', 'max:500'],
-            'hero_title' => ['nullable', 'string', 'max:255'],
-            'hero_subtitle' => ['nullable', 'string', 'max:500'],
-            'banner_image' => ['nullable', 'string', 'max:255'],
-            'card_image' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        PlatformCategory::create([
-            'name' => $data['name'],
-            'slug' => Str::slug($data['name']).'-'.Str::random(4),
-            'product_type' => $data['product_type'],
-            'is_active' => true,
-            'sort_order' => $data['sort_order'] ?? 0,
-            'short_description' => $data['short_description'] ?? null,
-            'hero_title' => $data['hero_title'] ?? null,
-            'hero_subtitle' => $data['hero_subtitle'] ?? null,
-            'banner_image' => $data['banner_image'] ?? null,
-            'card_image' => $data['card_image'] ?? null,
-        ]);
-
-        return redirect()
-            ->route('admin.platform-categories')
-            ->with('status', 'Platform category created.');
+        return redirect()->route('admin.service-categories');
     }
 
-    public function editPlatformCategory(PlatformCategory $platformCategory): View
+    public function editPlatformCategory($platformCategory = null): RedirectResponse
     {
-        return view('dashboard.admin.platform-categories.edit', [
-            'category' => $platformCategory,
-            'types' => PlatformProductType::cases(),
-        ]);
+        return redirect()->route('admin.service-categories');
     }
 
-    public function updatePlatformCategory(Request $request, PlatformCategory $platformCategory): RedirectResponse
+    public function updatePlatformCategory(Request $request, $platformCategory = null): RedirectResponse
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'product_type' => ['required', Rule::enum(PlatformProductType::class)],
-            'sort_order' => ['nullable', 'integer', 'min:0'],
-            'short_description' => ['nullable', 'string', 'max:500'],
-            'hero_title' => ['nullable', 'string', 'max:255'],
-            'hero_subtitle' => ['nullable', 'string', 'max:500'],
-            'banner_image' => ['nullable', 'string', 'max:255'],
-            'card_image' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        $platformCategory->update([
-            'name' => $data['name'],
-            'product_type' => $data['product_type'],
-            'sort_order' => $data['sort_order'] ?? 0,
-            'short_description' => $data['short_description'] ?? null,
-            'hero_title' => $data['hero_title'] ?? null,
-            'hero_subtitle' => $data['hero_subtitle'] ?? null,
-            'banner_image' => $data['banner_image'] ?? null,
-            'card_image' => $data['card_image'] ?? null,
-        ]);
-
-        return redirect()
-            ->route('admin.platform-categories')
-            ->with('status', 'Platform category updated.');
+        return redirect()->route('admin.service-categories');
     }
 
-    public function togglePlatformCategory(PlatformCategory $platformCategory): RedirectResponse
+    public function togglePlatformCategory($platformCategory = null): RedirectResponse
     {
-        $platformCategory->update(['is_active' => ! $platformCategory->is_active]);
-
-        return back()->with('status', 'Category '.($platformCategory->is_active ? 'activated' : 'deactivated').'.');
+        return redirect()->route('admin.service-categories');
     }
 
     public function toggleMarketplaceCategory(Category $category): RedirectResponse
@@ -212,11 +147,20 @@ class CatalogMetaAdminController extends Controller
             ->keyBy(fn ($row) => $row->scope.'.'.$row->key);
 
         $keys = [];
-        foreach (array_keys(config('catalog.groups', [])) as $slug) {
-            $keys[] = ['scope' => 'group', 'key' => $slug, 'label' => config('catalog.groups.'.$slug.'.label', $slug)];
-        }
-        foreach (array_keys(config('catalog.types', [])) as $type) {
-            $keys[] = ['scope' => 'type', 'key' => $type, 'label' => config('catalog.types.'.$type.'.label', $type)];
+        if (\Illuminate\Support\Facades\Schema::hasTable('service_categories') && \App\Models\ServiceCategory::query()->exists()) {
+            foreach (\App\Models\ServiceCategory::query()->orderBy('sort_order')->get(['slug', 'name']) as $category) {
+                $keys[] = ['scope' => 'group', 'key' => $category->slug, 'label' => $category->name];
+            }
+            foreach (\App\Models\ProductType::query()->orderBy('sort_order')->get(['slug', 'name']) as $service) {
+                $keys[] = ['scope' => 'type', 'key' => $service->slug, 'label' => $service->name];
+            }
+        } else {
+            foreach (array_keys(config('catalog.groups', [])) as $slug) {
+                $keys[] = ['scope' => 'group', 'key' => $slug, 'label' => config('catalog.groups.'.$slug.'.label', $slug)];
+            }
+            foreach (array_keys(config('catalog.types', [])) as $type) {
+                $keys[] = ['scope' => 'type', 'key' => $type, 'label' => config('catalog.types.'.$type.'.label', $type)];
+            }
         }
 
         return view('dashboard.admin.catalog-pages', compact('pages', 'keys'));
@@ -234,11 +178,21 @@ class CatalogMetaAdminController extends Controller
             'card_image' => ['nullable', 'string', 'max:255'],
         ]);
 
-        if ($data['scope'] === 'group' && ! isset(config('catalog.groups')[$data['key']])) {
-            return back()->withErrors(['key' => 'Unknown group key.']);
+        if ($data['scope'] === 'group') {
+            $knownGroup = isset(config('catalog.groups')[$data['key']])
+                || (\Illuminate\Support\Facades\Schema::hasTable('service_categories')
+                    && \App\Models\ServiceCategory::query()->where('slug', $data['key'])->exists());
+            if (! $knownGroup) {
+                return back()->withErrors(['key' => 'Unknown group key.']);
+            }
         }
-        if ($data['scope'] === 'type' && ! isset(config('catalog.types')[$data['key']])) {
-            return back()->withErrors(['key' => 'Unknown type key.']);
+        if ($data['scope'] === 'type') {
+            $knownType = isset(config('catalog.types')[$data['key']])
+                || (\Illuminate\Support\Facades\Schema::hasTable('product_types')
+                    && \App\Models\ProductType::query()->where('slug', $data['key'])->exists());
+            if (! $knownType) {
+                return back()->withErrors(['key' => 'Unknown type key.']);
+            }
         }
 
         CatalogPageContent::updateOrCreate(

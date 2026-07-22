@@ -3,7 +3,15 @@
 @section('title', 'Dashboard')
 
 @section('content')
-<x-layout.page title="Welcome back, {{ auth()->user()->name ?? 'User' }}" subtitle="Here's what's happening with your account today." width="full">
+<x-layout.page
+    title="Welcome back, {{ auth()->user()->name ?? 'User' }}"
+    subtitle="Here's what's happening with your account today."
+    width="full"
+    :breadcrumb="[
+        ['Dashboard', route('dashboard')],
+        ['Overview', null],
+    ]"
+>
     <x-dashboard.stat-grid>
         <x-dashboard.stats-card
             label="Total Balance"

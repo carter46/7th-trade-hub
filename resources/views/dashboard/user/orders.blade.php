@@ -3,7 +3,15 @@
 @section('title', 'Orders')
 
 @section('content')
-<x-layout.page title="Orders" subtitle="View and manage your purchases." width="full">
+<x-layout.page
+    title="Orders"
+    subtitle="View and manage your purchases."
+    width="full"
+    :breadcrumb="[
+        ['Dashboard', route('dashboard')],
+        ['Orders', null],
+    ]"
+>
     <x-dashboard.table
         :empty="$orders->isEmpty()"
         empty-title="No orders yet"

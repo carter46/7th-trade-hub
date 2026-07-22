@@ -2,6 +2,12 @@
 
 return [
 
+    /*
+    | Prefer DB service_categories → product_types → platform_products when
+    | hierarchy tables have rows. Config remains seed defaults / dual-read fallback.
+    */
+    'use_db_hierarchy' => env('CATALOG_USE_DB_HIERARCHY', true),
+
     'types' => [
         'website_template' => [
             'label' => 'Website Templates',

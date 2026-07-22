@@ -6,7 +6,7 @@
 <x-layout.page
     title="{{ $ticket->subject }}"
     subtitle="{{ $ticket->category }} — {{ $ticket->status }}"
-    width="content"
+    width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
         ['Support', route('dashboard.support.index')],

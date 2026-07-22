@@ -4,9 +4,11 @@ namespace Tests\Feature\Catalog;
 
 use App\Enums\PlatformProductStatus;
 use App\Enums\PlatformProductType;
-use App\Models\PlatformCategory;
 use App\Models\PlatformProduct;
+use App\Models\PlatformProductVariant;
+use App\Models\ProductType;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
 class ServicesHubTest extends TestCase
@@ -15,16 +17,11 @@ class ServicesHubTest extends TestCase
 
     private function seedVpnProduct(string $slug = 'residential-vpn-demo', bool $featured = false): PlatformProduct
     {
-        $category = PlatformCategory::create([
-            'name' => 'Residential',
-            'slug' => 'vpn-residential-test-'.uniqid(),
-            'product_type' => PlatformProductType::Vpn,
-            'is_active' => true,
-            'sort_order' => 1,
-        ]);
+        Artisan::call('catalog:backfill-hierarchy');
+        $service = ProductType::query()->where('slug', 'vpn')->firstOrFail();
 
-        return PlatformProduct::create([
-            'platform_category_id' => $category->id,
+        $product = PlatformProduct::create([
+            'product_type_id' => $service->id,
             'product_type' => PlatformProductType::Vpn,
             'title' => 'Residential VPN Demo',
             'slug' => $slug,
@@ -34,7 +31,22 @@ class ServicesHubTest extends TestCase
             'is_featured' => $featured,
             'base_price' => 3500,
             'sort_order' => 1,
+            'provider' => 'manual',
+            'fulfillment_mode' => 'manual',
+            'auto_renew' => false,
         ]);
+
+        PlatformProductVariant::create([
+            'platform_product_id' => $product->id,
+            'name' => 'Standard',
+            'label' => 'Standard',
+            'sku' => $slug.'-std',
+            'price' => 3500,
+            'is_default' => true,
+            'is_active' => true,
+        ]);
+
+        return $product;
     }
 
     public function test_services_landing_shows_groups_not_product_grid(): void
@@ -77,31 +89,6 @@ class ServicesHubTest extends TestCase
             ->assertSee('Residential VPN Demo');
     }
 
-    public function test_type_page_filters_by_category(): void
-    {
-        $product = $this->seedVpnProduct();
-        $other = PlatformCategory::create([
-            'name' => 'Gaming',
-            'slug' => 'vpn-gaming-test-'.uniqid(),
-            'product_type' => PlatformProductType::Vpn,
-            'is_active' => true,
-        ]);
-
-        PlatformProduct::create([
-            'platform_category_id' => $other->id,
-            'product_type' => PlatformProductType::Vpn,
-            'title' => 'Gaming VPN Only',
-            'slug' => 'gaming-vpn-only-'.uniqid(),
-            'status' => PlatformProductStatus::Published,
-            'base_price' => 4000,
-        ]);
-
-        $this->get(route('services.segment', ['segment' => 'vpn', 'category' => $product->platform_category_id]))
-            ->assertOk()
-            ->assertSee('Residential VPN Demo')
-            ->assertDontSee('Gaming VPN Only');
-    }
-
     public function test_product_show_url_and_legacy_redirect(): void
     {
         $this->seedVpnProduct('legacy-vpn-slug');
@@ -126,18 +113,24 @@ class ServicesHubTest extends TestCase
 
     public function test_unknown_segment_returns_404(): void
     {
+        Artisan::call('catalog:backfill-hierarchy');
+
         $this->get('/services/not-a-real-group-or-type')
             ->assertNotFound();
     }
 
     public function test_legacy_division_redirects_to_group(): void
     {
+        Artisan::call('catalog:backfill-hierarchy');
+
         $this->get('/services/digital-services')
             ->assertRedirect('/services/network-services');
     }
 
     public function test_trust_and_escrow_routes_to_marketplace(): void
     {
+        Artisan::call('catalog:backfill-hierarchy');
+
         $this->get('/services/trust-escrow')
             ->assertRedirect(route('marketplace'));
     }
@@ -148,18 +141,5 @@ class ServicesHubTest extends TestCase
 
         $this->get('/services/email/canonical-vpn-slug')
             ->assertRedirect('/services/vpn/canonical-vpn-slug');
-    }
-
-    public function test_category_filter_uses_category_hero_override(): void
-    {
-        $product = $this->seedVpnProduct();
-        $product->category->update([
-            'hero_title' => 'Residential Only Hero',
-            'short_description' => 'Category short copy',
-        ]);
-
-        $this->get(route('services.segment', ['segment' => 'vpn', 'category' => $product->platform_category_id]))
-            ->assertOk()
-            ->assertSee('Residential Only Hero');
     }
 }

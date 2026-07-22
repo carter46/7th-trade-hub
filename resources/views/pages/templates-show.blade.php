@@ -13,7 +13,7 @@
             @endif
         </div>
         <div>
-            <p class="text-sm text-accent mb-2">{{ $product->category?->name ?? 'Document' }}</p>
+            <p class="text-sm text-accent mb-2">{{ $product->productType?->name ?? 'Document' }}</p>
             <h1 class="text-3xl font-bold font-display mb-3">{{ $product->title }}</h1>
             <p class="text-slate-400 mb-6">{{ $product->description }}</p>
             @if($product->activeVariants->isNotEmpty())

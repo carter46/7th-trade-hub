@@ -1,0 +1,57 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class ProductType extends Model
+{
+    protected $fillable = [
+        'service_category_id',
+        'name',
+        'slug',
+        'sort_order',
+        'is_active',
+        'banner_image',
+        'card_image',
+        'short_description',
+        'hero_title',
+        'hero_subtitle',
+        'benefits',
+        'faq',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+            'benefits' => 'array',
+            'faq' => 'array',
+            'sort_order' => 'integer',
+        ];
+    }
+
+    public function serviceCategory(): BelongsTo
+    {
+        return $this->belongsTo(ServiceCategory::class);
+    }
+
+    /** Alias for admin/UI "Service" naming. */
+    public function category(): BelongsTo
+    {
+        return $this->serviceCategory();
+    }
+
+    public function products(): HasMany
+    {
+        return $this->hasMany(PlatformProduct::class, 'product_type_id');
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('is_active', true);
+    }
+}

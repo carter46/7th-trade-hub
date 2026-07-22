@@ -3,7 +3,15 @@
 @section('title', 'Watchlist')
 
 @section('content')
-<x-layout.page title="Watchlist" subtitle="Listings you saved for later." width="content">
+<x-layout.page
+    title="Watchlist"
+    subtitle="Listings you saved for later."
+    width="full"
+    :breadcrumb="[
+        ['Dashboard', route('dashboard')],
+        ['Watchlist', null],
+    ]"
+>
     @if ($items->isEmpty())
         <x-dashboard.card :padding="false">
             <x-dashboard.empty

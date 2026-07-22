@@ -6,7 +6,7 @@
 <x-layout.page
     title="Deposit Money"
     subtitle="Bank transfer — upload proof after payment."
-    width="form"
+    width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
         ['Deposit', route('dashboard.deposit.index')],
@@ -14,7 +14,7 @@
     ]"
 >
     <x-dashboard.card>
-        <form method="POST" action="{{ route('dashboard.deposit.store-bank') }}" enctype="multipart/form-data" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
+        <form method="POST" action="{{ route('dashboard.deposit.store-bank') }}" enctype="multipart/form-data" class="max-w-form space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
             <x-dashboard.input label="Amount (NGN)" type="number" name="amount" min="100" step="0.01" required />
             <x-dashboard.input label="Bank name" name="bank_name" required />

@@ -3,7 +3,15 @@
 @section('title', 'Withdrawals')
 
 @section('content')
-<x-layout.page title="Withdrawals" subtitle="Approve or reject user withdrawal requests." width="full">
+<x-layout.page
+    title="Withdrawals"
+    subtitle="Approve or reject user withdrawal requests."
+    width="full"
+    :breadcrumb="[
+        ['Admin', route('admin')],
+        ['Withdrawals', null],
+    ]"
+>
     <x-dashboard.table :empty="$withdrawals->isEmpty()" empty-title="No withdrawals" empty-description="Pending bank withdrawal requests will appear here." empty-icon="withdraw" striped>
         <x-slot:head>
             <x-dashboard.th>Reference</x-dashboard.th>

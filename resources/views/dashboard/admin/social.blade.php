@@ -3,7 +3,15 @@
 @section('title', 'Social Media Services')
 
 @section('content')
-<x-layout.page title="Social Media Services" subtitle="Manage social media service offerings." width="content">
+<x-layout.page
+    title="Social Media Services"
+    subtitle="Manage social media service offerings."
+    width="full"
+    :breadcrumb="[
+        ['Admin', route('admin')],
+        ['Social Media Services', null],
+    ]"
+>
     @if (isset($items) && $items->isNotEmpty())
         <x-dashboard.card variant="solid">
             <ul class="space-y-2">

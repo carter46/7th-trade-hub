@@ -16,6 +16,10 @@
         ['Users', null],
     ]"
 >
+    <x-slot:actions>
+        <x-dashboard.button :href="route('admin.users.create')" size="sm">Create user</x-dashboard.button>
+    </x-slot:actions>
+
     <x-dashboard.tabs
         :active="$status"
         :tabs="[
@@ -60,7 +64,18 @@
                         <span class="text-xs text-text-muted">—</span>
                     @else
                         <x-dashboard.row-actions>
+                            <x-dashboard.menu-item :href="route('admin.users.show', $u)">View</x-dashboard.menu-item>
                             <x-dashboard.menu-item :href="route('admin.users.edit', $u)">Edit</x-dashboard.menu-item>
+                            @if (! $u->is_suspended)
+                                <form method="POST" action="{{ route('admin.users.impersonate', $u) }}">
+                                    @csrf
+                                    <x-dashboard.menu-item type="submit">Login as user</x-dashboard.menu-item>
+                                </form>
+                            @endif
+                            <form method="POST" action="{{ route('admin.users.password-reset', $u) }}">
+                                @csrf
+                                <x-dashboard.menu-item type="submit">Send password reset</x-dashboard.menu-item>
+                            </form>
 
                             @if ($u->is_suspended)
                                 <form method="POST" action="{{ route('admin.users.restore', $u) }}">

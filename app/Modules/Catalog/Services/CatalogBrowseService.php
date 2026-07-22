@@ -5,25 +5,65 @@ namespace App\Modules\Catalog\Services;
 use App\Enums\PlatformProductStatus;
 use App\Models\PlatformProduct;
 use App\Models\PlatformProductVariant;
+use App\Models\ProductType;
+use App\Models\ServiceCategory;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 
 class CatalogBrowseService
 {
+    public function usesDbHierarchy(): bool
+    {
+        if (! config('catalog.use_db_hierarchy', true)) {
+            return false;
+        }
+
+        if (! Schema::hasTable('service_categories')) {
+            return false;
+        }
+
+        return ServiceCategory::query()->exists();
+    }
+
     /** @return list<string> */
     public function groupSlugs(): array
     {
+        if ($this->usesDbHierarchy()) {
+            return ServiceCategory::query()
+                ->orderBy('sort_order')
+                ->pluck('slug')
+                ->all();
+        }
+
         return array_keys(config('catalog.groups', []));
     }
 
     /** @return list<string> */
     public function typeKeys(): array
     {
+        if ($this->usesDbHierarchy()) {
+            return ProductType::query()
+                ->orderBy('sort_order')
+                ->pluck('slug')
+                ->all();
+        }
+
         return array_keys(config('catalog.types', []));
     }
 
     /** @return list<string> */
     public function allGroupTypeValues(): array
     {
+        if ($this->usesDbHierarchy()) {
+            return ProductType::query()
+                ->whereHas('serviceCategory', fn ($q) => $q->where('mode', 'catalog')->active())
+                ->active()
+                ->pluck('slug')
+                ->unique()
+                ->values()
+                ->all();
+        }
+
         return collect(config('catalog.groups', []))
             ->flatMap(fn (array $group) => $group['types'] ?? [])
             ->unique()
@@ -33,16 +73,30 @@ class CatalogBrowseService
 
     public function isGroup(string $slug): bool
     {
+        if ($this->usesDbHierarchy()) {
+            return ServiceCategory::query()->where('slug', $slug)->exists();
+        }
+
         return isset(config('catalog.groups')[$slug]);
     }
 
     public function isType(string $key): bool
     {
+        if ($this->usesDbHierarchy()) {
+            return ProductType::query()->where('slug', $key)->exists();
+        }
+
         return isset(config('catalog.types')[$key]);
     }
 
     public function groupForType(string $type): ?string
     {
+        if ($this->usesDbHierarchy()) {
+            $service = ProductType::query()->with('serviceCategory')->where('slug', $type)->first();
+
+            return $service?->serviceCategory?->slug;
+        }
+
         foreach (config('catalog.groups', []) as $slug => $group) {
             if (in_array($type, $group['types'] ?? [], true)) {
                 return $slug;
@@ -50,6 +104,16 @@ class CatalogBrowseService
         }
 
         return null;
+    }
+
+    public function findServiceCategory(string $slug): ?ServiceCategory
+    {
+        return ServiceCategory::query()->where('slug', $slug)->first();
+    }
+
+    public function findService(string $slug): ?ProductType
+    {
+        return ProductType::query()->with('serviceCategory')->where('slug', $slug)->first();
     }
 
     /**
@@ -64,12 +128,22 @@ class CatalogBrowseService
 
         $count = PlatformProduct::query()
             ->published()
-            ->whereIn('product_type', $types)
+            ->where(function ($q) use ($types) {
+                $q->whereIn('product_type', $types);
+                if (Schema::hasColumn('platform_products', 'product_type_id')) {
+                    $q->orWhereHas('productType', fn ($inner) => $inner->whereIn('slug', $types));
+                }
+            })
             ->count();
 
         $productMin = PlatformProduct::query()
             ->published()
-            ->whereIn('product_type', $types)
+            ->where(function ($q) use ($types) {
+                $q->whereIn('product_type', $types);
+                if (Schema::hasColumn('platform_products', 'product_type_id')) {
+                    $q->orWhereHas('productType', fn ($inner) => $inner->whereIn('slug', $types));
+                }
+            })
             ->where('base_price', '>', 0)
             ->min('base_price');
 
@@ -77,7 +151,12 @@ class CatalogBrowseService
             ->where('is_active', true)
             ->whereHas('product', function ($q) use ($types) {
                 $q->where('status', PlatformProductStatus::Published)
-                    ->whereIn('product_type', $types);
+                    ->where(function ($inner) use ($types) {
+                        $inner->whereIn('product_type', $types);
+                        if (Schema::hasColumn('platform_products', 'product_type_id')) {
+                            $inner->orWhereHas('productType', fn ($pt) => $pt->whereIn('slug', $types));
+                        }
+                    });
             })
             ->min('price');
 
@@ -97,6 +176,30 @@ class CatalogBrowseService
      */
     public function groupCards(CatalogContentResolver $content): Collection
     {
+        if ($this->usesDbHierarchy()) {
+            return ServiceCategory::query()
+                ->active()
+                ->orderBy('sort_order')
+                ->with(['services' => fn ($q) => $q->active()->orderBy('sort_order')])
+                ->get()
+                ->map(function (ServiceCategory $category) use ($content) {
+                    $resolved = $content->forServiceCategory($category);
+                    $typeSlugs = $category->services->pluck('slug')->all();
+                    $stats = $this->statsForTypes($typeSlugs);
+                    $isLink = $category->isMarketplaceLink();
+
+                    return array_merge($resolved, [
+                        'slug' => $category->slug,
+                        'count' => $stats['count'],
+                        'from_price' => $stats['from_price'],
+                        'href' => $isLink ? route('marketplace') : route('services.segment', $category->slug),
+                        'cta' => $category->cta_label ?: ($isLink ? 'Open marketplace' : 'Explore'),
+                        'mode' => $category->mode,
+                    ]);
+                })
+                ->values();
+        }
+
         return collect(config('catalog.groups', []))->map(function (array $group, string $slug) use ($content) {
             $resolved = $content->forGroup($slug);
             $stats = $this->statsForTypes($group['types'] ?? []);
@@ -118,6 +221,26 @@ class CatalogBrowseService
      */
     public function typeCards(array $types, CatalogContentResolver $content): Collection
     {
+        if ($this->usesDbHierarchy()) {
+            return ProductType::query()
+                ->active()
+                ->whereIn('slug', $types)
+                ->orderBy('sort_order')
+                ->get()
+                ->map(function (ProductType $service) use ($content) {
+                    $resolved = $content->forService($service);
+                    $stats = $this->statsForTypes([$service->slug]);
+
+                    return array_merge($resolved, [
+                        'slug' => $service->slug,
+                        'count' => $stats['count'],
+                        'from_price' => $stats['from_price'],
+                        'href' => route('services.segment', $service->slug),
+                    ]);
+                })
+                ->values();
+        }
+
         return collect($types)->map(function (string $type) use ($content) {
             $resolved = $content->forType($type);
             $stats = $this->statsForTypes([$type]);
@@ -130,4 +253,28 @@ class CatalogBrowseService
             ]);
         })->values();
     }
-};
+
+    /**
+     * Service (product_type) cards for a service category.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function serviceCardsForCategory(ServiceCategory $category, CatalogContentResolver $content): Collection
+    {
+        $services = $category->relationLoaded('services')
+            ? $category->services->where('is_active', true)->sortBy('sort_order')->values()
+            : $category->services()->active()->orderBy('sort_order')->get();
+
+        return $services->map(function (ProductType $service) use ($content) {
+            $resolved = $content->forService($service);
+            $stats = $this->statsForTypes([$service->slug]);
+
+            return array_merge($resolved, [
+                'slug' => $service->slug,
+                'count' => $stats['count'],
+                'from_price' => $stats['from_price'],
+                'href' => route('services.segment', $service->slug),
+            ]);
+        })->values();
+    }
+}

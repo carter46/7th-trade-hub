@@ -3,7 +3,15 @@
 @section('title', 'Support Tickets')
 
 @section('content')
-<x-layout.page title="Support Tickets" subtitle="Handle support requests and tickets." width="full">
+<x-layout.page
+    title="Support Tickets"
+    subtitle="Handle support requests and tickets."
+    width="full"
+    :breadcrumb="[
+        ['Admin', route('admin')],
+        ['Support Tickets', null],
+    ]"
+>
     <x-dashboard.table
         :empty="$tickets->isEmpty()"
         empty-title="No support tickets yet"

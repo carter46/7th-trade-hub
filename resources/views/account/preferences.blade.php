@@ -3,7 +3,7 @@
 @section('title', 'Preferences')
 
 @section('content')
-<x-layout.page title="Preferences" subtitle="Choose how your dashboard looks and feels." width="form">
+<x-layout.page title="Preferences" subtitle="Choose how your dashboard looks and feels." width="full">
     @include('account.partials.navigation')
 
     <x-dashboard.card>

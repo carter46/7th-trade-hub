@@ -3,7 +3,15 @@
 @section('title', 'Wallet')
 
 @section('content')
-<x-layout.page title="Wallet" subtitle="Your NGN platform wallet." width="full">
+<x-layout.page
+    title="Wallet"
+    subtitle="Your NGN platform wallet."
+    width="full"
+    :breadcrumb="[
+        ['Dashboard', route('dashboard')],
+        ['Wallet', null],
+    ]"
+>
     @if (! $wallet)
         <x-dashboard.card>
             @if (($kycLevel ?? 0) < 1)

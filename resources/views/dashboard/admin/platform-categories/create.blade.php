@@ -6,7 +6,7 @@
 <x-layout.page
     title="Add Platform Category"
     subtitle="Create a category for platform products."
-    width="form"
+    width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
         ['Platform Categories', route('admin.platform-categories')],
@@ -14,7 +14,7 @@
     ]"
 >
     <x-dashboard.card>
-        <form method="POST" action="{{ route('admin.platform-categories.store') }}" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
+        <form method="POST" action="{{ route('admin.platform-categories.store') }}" class="max-w-form space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
             <x-dashboard.input label="Name" name="name" :value="old('name')" required />
             <x-dashboard.select label="Product type" name="product_type" required>

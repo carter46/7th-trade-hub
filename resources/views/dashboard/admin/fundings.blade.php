@@ -3,7 +3,15 @@
 @section('title', 'Deposits')
 
 @section('content')
-<x-layout.page title="Wallet fundings" subtitle="Review and approve bank deposit proofs." width="full">
+<x-layout.page
+    title="Wallet fundings"
+    subtitle="Review and approve bank deposit proofs."
+    width="full"
+    :breadcrumb="[
+        ['Admin', route('admin')],
+        ['Wallet fundings', null],
+    ]"
+>
     <x-dashboard.table :empty="$fundings->isEmpty()" empty-title="No deposit requests" empty-description="New bank transfer proofs will show up here for review." empty-icon="deposit" striped>
         <x-slot:head>
             <x-dashboard.th>Ref</x-dashboard.th>

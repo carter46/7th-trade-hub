@@ -6,7 +6,7 @@
 <x-layout.page
     title="Edit Platform Category"
     subtitle="Update category details and marketing content."
-    width="form"
+    width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
         ['Platform Categories', route('admin.platform-categories')],
@@ -14,7 +14,7 @@
     ]"
 >
     <x-dashboard.card>
-        <form method="POST" action="{{ route('admin.platform-categories.update', $category) }}" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
+        <form method="POST" action="{{ route('admin.platform-categories.update', $category) }}" class="max-w-form space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
             @method('PUT')
             <x-dashboard.input label="Name" name="name" :value="old('name', $category->name)" required />

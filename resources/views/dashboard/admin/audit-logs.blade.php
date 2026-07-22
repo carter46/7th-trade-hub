@@ -3,7 +3,15 @@
 @section('title', 'Audit Logs')
 
 @section('content')
-<x-layout.page title="Audit Logs" subtitle="Admin actions and system changes." width="full">
+<x-layout.page
+    title="Audit Logs"
+    subtitle="Admin actions and system changes."
+    width="full"
+    :breadcrumb="[
+        ['Admin', route('admin')],
+        ['Audit Logs', null],
+    ]"
+>
     <x-dashboard.table
         :empty="$logs->isEmpty()"
         empty-title="No audit logs yet"

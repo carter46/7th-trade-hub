@@ -6,7 +6,7 @@
 <x-layout.page
     :title="$ticket->subject"
     :subtitle="$ticket->category . ' — ' . ($ticket->user?->email ?? '—') . ' — opened ' . $ticket->created_at->format('M j, Y H:i')"
-    width="content"
+    width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
         ['Support Tickets', route('admin.tickets')],

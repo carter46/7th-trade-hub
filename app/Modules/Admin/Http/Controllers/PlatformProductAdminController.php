@@ -5,14 +5,17 @@ namespace App\Modules\Admin\Http\Controllers;
 use App\Enums\PlatformProductStatus;
 use App\Enums\PlatformProductType;
 use App\Http\Controllers\Controller;
-use App\Models\PlatformCategory;
 use App\Models\PlatformProduct;
 use App\Models\PlatformProductImage;
 use App\Models\PlatformProductVariant;
+use App\Models\ProductType;
+use App\Models\ServiceCategory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class PlatformProductAdminController extends Controller
@@ -20,23 +23,63 @@ class PlatformProductAdminController extends Controller
     public function index(Request $request): View
     {
         $products = PlatformProduct::query()
-            ->with('category')
-            ->when($request->filled('type'), fn ($q) => $q->where('product_type', $request->get('type')))
+            ->with(['productType.serviceCategory'])
+            ->when($request->filled('q'), function ($q) use ($request) {
+                $term = '%'.$request->string('q')->toString().'%';
+                $q->where(function ($inner) use ($term) {
+                    $inner->where('title', 'like', $term)
+                        ->orWhere('slug', 'like', $term)
+                        ->orWhere('short_description', 'like', $term);
+                });
+            })
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->get('status')))
+            ->when($request->filled('service'), fn ($q) => $q->where('product_type_id', $request->integer('service')))
+            ->when($request->filled('category'), function ($q) use ($request) {
+                $q->whereHas('productType', fn ($inner) => $inner->where('service_category_id', $request->integer('category')));
+            })
+            ->when($request->filled('type') && ! $request->filled('service'), function ($q) use ($request) {
+                $q->ofType($request->string('type')->toString());
+            })
+            ->when($request->filled('featured'), function ($q) use ($request) {
+                if ($request->get('featured') === '1') {
+                    $q->where('is_featured', true);
+                } elseif ($request->get('featured') === '0') {
+                    $q->where('is_featured', false);
+                }
+            })
             ->orderByDesc('updated_at')
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
         return view('dashboard.admin.platform-products', [
             'products' => $products,
             'types' => PlatformProductType::cases(),
+            'serviceCategories' => ServiceCategory::query()->orderBy('sort_order')->orderBy('name')->get(),
+            'services' => ProductType::query()->with('serviceCategory')->orderBy('sort_order')->orderBy('name')->get(),
+            'filters' => [
+                'q' => $request->string('q')->toString(),
+                'status' => $request->get('status'),
+                'category' => $request->get('category'),
+                'service' => $request->get('service'),
+                'type' => $request->get('type'),
+                'featured' => $request->get('featured'),
+            ],
         ]);
     }
 
     public function create(): View
     {
         return view('dashboard.admin.platform-product-form', [
-            'product' => new PlatformProduct(['status' => PlatformProductStatus::Draft, 'base_price' => 0]),
+            'product' => new PlatformProduct([
+                'status' => PlatformProductStatus::Draft,
+                'base_price' => 0,
+                'provider' => 'manual',
+                'fulfillment_mode' => 'manual',
+                'auto_renew' => false,
+            ]),
+            'serviceCategories' => ServiceCategory::query()->orderBy('sort_order')->orderBy('name')->get(),
+            'services' => ProductType::query()->with('serviceCategory')->orderBy('sort_order')->orderBy('name')->get(),
             'types' => PlatformProductType::cases(),
-            'categories' => PlatformCategory::orderBy('name')->get(),
         ]);
     }
 
@@ -47,6 +90,7 @@ class PlatformProductAdminController extends Controller
         $product = PlatformProduct::create($data);
         $this->syncVariants($product, $request->input('variants', []), (float) $data['base_price']);
         $this->syncImages($product, (string) $request->input('gallery_paths', ''));
+        $this->assertPublishable($product, $data['status']);
 
         return redirect()->route('admin.platform-products')->with('status', 'Product created.');
     }
@@ -54,9 +98,10 @@ class PlatformProductAdminController extends Controller
     public function edit(PlatformProduct $platformProduct): View
     {
         return view('dashboard.admin.platform-product-form', [
-            'product' => $platformProduct->load(['variants', 'images']),
+            'product' => $platformProduct->load(['variants', 'images', 'productType']),
+            'serviceCategories' => ServiceCategory::query()->orderBy('sort_order')->orderBy('name')->get(),
+            'services' => ProductType::query()->with('serviceCategory')->orderBy('sort_order')->orderBy('name')->get(),
             'types' => PlatformProductType::cases(),
-            'categories' => PlatformCategory::orderBy('name')->get(),
         ]);
     }
 
@@ -69,6 +114,7 @@ class PlatformProductAdminController extends Controller
         $platformProduct->update($data);
         $this->syncVariants($platformProduct, $request->input('variants', []), (float) $data['base_price']);
         $this->syncImages($platformProduct, (string) $request->input('gallery_paths', ''));
+        $this->assertPublishable($platformProduct->fresh(['variants']), $data['status']);
 
         return redirect()->route('admin.platform-products')->with('status', 'Product updated.');
     }
@@ -90,8 +136,7 @@ class PlatformProductAdminController extends Controller
                 'max:255',
                 Rule::unique('platform_products', 'slug')->ignore($ignoreId),
             ],
-            'product_type' => ['required', Rule::enum(PlatformProductType::class)],
-            'platform_category_id' => ['nullable', 'exists:platform_categories,id'],
+            'product_type_id' => ['required', 'exists:product_types,id'],
             'short_description' => ['nullable', 'string', 'max:500'],
             'description' => ['nullable', 'string'],
             'status' => ['required', 'in:draft,published,archived'],
@@ -106,6 +151,12 @@ class PlatformProductAdminController extends Controller
             'support_period' => ['nullable', 'string', 'max:100'],
             'support_text' => ['nullable', 'string'],
             'sort_order' => ['nullable', 'integer'],
+            'provider' => ['nullable', 'string', 'max:80'],
+            'provider_product_id' => ['nullable', 'string', 'max:255'],
+            'provider_sku' => ['nullable', 'string', 'max:255'],
+            'provider_meta_text' => ['nullable', 'string'],
+            'fulfillment_mode' => ['required', Rule::in(['manual', 'auto_provision'])],
+            'auto_renew' => ['sometimes', 'boolean'],
             'features_text' => ['nullable', 'string'],
             'requirements_text' => ['nullable', 'string'],
             'whats_included_text' => ['nullable', 'string'],
@@ -116,16 +167,28 @@ class PlatformProductAdminController extends Controller
             'variants.*.price' => ['nullable', 'numeric', 'min:0'],
             'variants.*.duration_months' => ['nullable', 'integer', 'min:1'],
             'variants.*.is_default' => ['sometimes', 'boolean'],
+            'variants.*.is_active' => ['sometimes', 'boolean'],
             'gallery_paths' => ['nullable', 'string'],
         ]);
 
-        return [
+        $service = ProductType::query()->findOrFail($data['product_type_id']);
+
+        $providerMeta = null;
+        if (! empty($data['provider_meta_text'])) {
+            $decoded = json_decode($data['provider_meta_text'], true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw ValidationException::withMessages([
+                    'provider_meta_text' => 'Provider meta must be valid JSON.',
+                ]);
+            }
+            $providerMeta = $decoded;
+        }
+
+        $payload = [
             'title' => $data['title'],
             'slug' => $data['slug'] ?? null,
-            'product_type' => $data['product_type'] instanceof PlatformProductType
-                ? $data['product_type']->value
-                : $data['product_type'],
-            'platform_category_id' => $data['platform_category_id'] ?? null,
+            'product_type_id' => $service->id,
+            'product_type' => $service->slug,
             'short_description' => $data['short_description'] ?? null,
             'description' => $data['description'] ?? null,
             'status' => $data['status'],
@@ -142,11 +205,37 @@ class PlatformProductAdminController extends Controller
             'is_featured' => $request->boolean('is_featured'),
             'is_responsive' => $request->boolean('is_responsive', true),
             'is_seo_ready' => $request->boolean('is_seo_ready'),
+            'provider' => $data['provider'] ?? 'manual',
+            'provider_product_id' => $data['provider_product_id'] ?? null,
+            'provider_sku' => $data['provider_sku'] ?? null,
+            'provider_meta' => $providerMeta,
+            'fulfillment_mode' => $data['fulfillment_mode'],
+            'auto_renew' => $request->boolean('auto_renew'),
             'features' => $this->linesToList($data['features_text'] ?? ''),
             'requirements' => $this->linesToList($data['requirements_text'] ?? ''),
             'whats_included' => $this->linesToList($data['whats_included_text'] ?? ''),
             'faqs' => $this->parseFaqs($data['faqs_text'] ?? ''),
         ];
+
+        if (Schema::hasColumn('platform_products', 'platform_category_id')) {
+            $payload['platform_category_id'] = null;
+        }
+
+        return $payload;
+    }
+
+    private function assertPublishable(PlatformProduct $product, string $status): void
+    {
+        if ($status !== PlatformProductStatus::Published->value) {
+            return;
+        }
+
+        $hasActive = $product->variants()->where('is_active', true)->exists();
+        if (! $hasActive) {
+            throw ValidationException::withMessages([
+                'status' => 'Published products require at least one active variant.',
+            ]);
+        }
     }
 
     private function parseFaqs(string $text): ?array
@@ -203,7 +292,7 @@ class PlatformProductAdminController extends Controller
                 'price' => $price,
                 'sort_order' => $sort++,
                 'is_default' => $isDefault,
-                'is_active' => true,
+                'is_active' => array_key_exists('is_active', $row) ? ! empty($row['is_active']) : true,
             ];
 
             if (! empty($row['id'])) {

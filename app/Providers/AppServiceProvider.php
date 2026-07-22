@@ -38,10 +38,18 @@ class AppServiceProvider extends ServiceProvider
             $resolved = $themes->resolve($preference, ThemeManager::PREFERENCE_LIGHT);
             $payload = $themes->payloadFor($user, ThemeManager::PREFERENCE_LIGHT);
 
+            $impersonatorName = null;
+            if (session('impersonating') && session('impersonator_id')) {
+                $impersonatorName = \App\Models\User::query()
+                    ->whereKey(session('impersonator_id'))
+                    ->value('name');
+            }
+
             $view->with([
                 'dashboardThemePreference' => $preference,
                 'dashboardThemeResolved' => $resolved,
                 'dashboardThemePayload' => $payload,
+                'impersonatorName' => $impersonatorName,
             ]);
         });
     }

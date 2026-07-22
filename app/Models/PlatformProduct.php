@@ -9,11 +9,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Facades\Schema;
 
 class PlatformProduct extends Model
 {
     protected $fillable = [
         'platform_category_id',
+        'product_type_id',
         'product_type',
         'title',
         'slug',
@@ -38,6 +40,12 @@ class PlatformProduct extends Model
         'support_text',
         'base_price',
         'meta',
+        'provider',
+        'provider_product_id',
+        'provider_sku',
+        'provider_meta',
+        'fulfillment_mode',
+        'auto_renew',
     ];
 
     protected function casts(): array
@@ -48,11 +56,13 @@ class PlatformProduct extends Model
             'is_featured' => 'boolean',
             'is_responsive' => 'boolean',
             'is_seo_ready' => 'boolean',
+            'auto_renew' => 'boolean',
             'features' => 'array',
             'requirements' => 'array',
             'whats_included' => 'array',
             'faqs' => 'array',
             'meta' => 'array',
+            'provider_meta' => 'array',
             'base_price' => 'decimal:2',
         ];
     }
@@ -60,6 +70,17 @@ class PlatformProduct extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(PlatformCategory::class, 'platform_category_id');
+    }
+
+    public function productType(): BelongsTo
+    {
+        return $this->belongsTo(ProductType::class, 'product_type_id');
+    }
+
+    /** UI alias: Service under Service Category. */
+    public function service(): BelongsTo
+    {
+        return $this->productType();
     }
 
     public function images(): HasMany
@@ -101,7 +122,51 @@ class PlatformProduct extends Model
     {
         $value = $type instanceof PlatformProductType ? $type->value : $type;
 
-        return $query->where('product_type', $value);
+        return $query->where(function (Builder $inner) use ($value) {
+            $inner->where('product_type', $value);
+            if (Schema::hasColumn('platform_products', 'product_type_id')) {
+                $inner->orWhereHas('productType', fn (Builder $q) => $q->where('slug', $value));
+            }
+        });
+    }
+
+    /**
+     * @param  list<string>  $types
+     */
+    public function scopeOfTypeMany(Builder $query, array $types): Builder
+    {
+        if ($types === []) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where(function (Builder $inner) use ($types) {
+            $inner->whereIn('product_type', $types);
+            if (Schema::hasColumn('platform_products', 'product_type_id')) {
+                $inner->orWhereHas('productType', fn (Builder $q) => $q->whereIn('slug', $types));
+            }
+        });
+    }
+
+    public function scopeOfService(Builder $query, int|ProductType $service): Builder
+    {
+        $id = $service instanceof ProductType ? $service->id : $service;
+
+        return $query->where('product_type_id', $id);
+    }
+
+    public function typeSlug(): ?string
+    {
+        if ($this->relationLoaded('productType') && $this->productType) {
+            return $this->productType->slug;
+        }
+
+        if ($this->product_type_id) {
+            return ProductType::query()->where('id', $this->product_type_id)->value('slug');
+        }
+
+        $type = $this->product_type;
+
+        return $type instanceof PlatformProductType ? $type->value : $type;
     }
 
     public function displayPrice(): float

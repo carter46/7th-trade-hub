@@ -6,7 +6,15 @@
 @php
     $notificationPrefix = $notificationPrefix ?? 'dashboard';
 @endphp
-<x-layout.page title="Notifications" subtitle="Updates on orders, listings, and messages." width="content">
+<x-layout.page
+    title="Notifications"
+    subtitle="Updates on orders, listings, and messages."
+    width="full"
+    :breadcrumb="[
+        ['Dashboard', route('dashboard')],
+        ['Notifications', null],
+    ]"
+>
     <x-slot:actions>
         <form method="POST" action="{{ route($notificationPrefix.'.notifications.read-all') }}" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf

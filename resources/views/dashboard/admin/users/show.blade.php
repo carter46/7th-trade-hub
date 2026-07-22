@@ -29,6 +29,33 @@
     <x-slot:actions>
         @if (! $user->anonymized_at)
             <x-dashboard.button :href="route('admin.users.edit', $user)" variant="secondary" size="sm">Edit</x-dashboard.button>
+            @if (! $user->is_suspended)
+                <form method="POST" action="{{ route('admin.users.impersonate', $user) }}">
+                    @csrf
+                    <x-dashboard.button type="submit" variant="secondary" size="sm">Login as user</x-dashboard.button>
+                </form>
+            @endif
+            <form method="POST" action="{{ route('admin.users.password-reset', $user) }}">
+                @csrf
+                <x-dashboard.button type="submit" variant="secondary" size="sm">Send password reset</x-dashboard.button>
+            </form>
+            @if ($user->email_verified_at)
+                <form method="POST" action="{{ route('admin.users.unverify-email', $user) }}">
+                    @csrf
+                    <x-dashboard.button type="submit" variant="secondary" size="sm">Unverify email</x-dashboard.button>
+                </form>
+            @else
+                <form method="POST" action="{{ route('admin.users.verify-email', $user) }}">
+                    @csrf
+                    <x-dashboard.button type="submit" variant="secondary" size="sm">Verify email</x-dashboard.button>
+                </form>
+            @endif
+            @if (! ($wallet ?? $user->wallet) && $user->kyc_level >= 1)
+                <form method="POST" action="{{ route('admin.users.provision-wallet', $user) }}">
+                    @csrf
+                    <x-dashboard.button type="submit" variant="secondary" size="sm">Provision wallet</x-dashboard.button>
+                </form>
+            @endif
             @if ($user->is_suspended)
                 <form method="POST" action="{{ route('admin.users.restore', $user) }}">
                     @csrf

@@ -80,8 +80,8 @@ class MarketplaceCategoryAdminTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin'))
             ->assertOk()
-            ->assertSee('Platform Services')
+            ->assertSee('Platform Catalog')
             ->assertSee('Crypto Exchange')
-            ->assertSee('Identity & Users');
+            ->assertSee('Operations');
     }
 }

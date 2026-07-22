@@ -3,7 +3,15 @@
 @section('title', 'Platform Products')
 
 @section('content')
-<x-layout.page title="Platform Products" subtitle="Admin-owned catalog items." width="full">
+<x-layout.page
+    title="Products"
+    subtitle="Admin-owned catalog SKUs under Services."
+    width="full"
+    :breadcrumb="[
+        ['Admin', route('admin')],
+        ['Products', null],
+    ]"
+>
     <x-slot:actions>
         <x-dashboard.button :href="route('admin.platform-products.create')" icon="plus">New product</x-dashboard.button>
     </x-slot:actions>
@@ -15,9 +23,51 @@
         empty-icon="storefront"
         striped
     >
+        <x-slot:filters>
+            <x-dashboard.filter-bar>
+                <form method="GET" class="contents">
+                    <div class="min-w-[10rem] flex-1">
+                        <x-dashboard.input name="q" type="text" :value="$filters['q'] ?? ''" placeholder="Search products..." />
+                    </div>
+                    <div class="min-w-[8rem]">
+                        <x-dashboard.select name="status">
+                            <option value="">All statuses</option>
+                            @foreach(['draft','published','archived'] as $status)
+                                <option value="{{ $status }}" @selected(($filters['status'] ?? '') === $status)>{{ ucfirst($status) }}</option>
+                            @endforeach
+                        </x-dashboard.select>
+                    </div>
+                    <div class="min-w-[10rem]">
+                        <x-dashboard.select name="category">
+                            <option value="">All categories</option>
+                            @foreach($serviceCategories as $category)
+                                <option value="{{ $category->id }}" @selected((string) ($filters['category'] ?? '') === (string) $category->id)>{{ $category->name }}</option>
+                            @endforeach
+                        </x-dashboard.select>
+                    </div>
+                    <div class="min-w-[10rem]">
+                        <x-dashboard.select name="service">
+                            <option value="">All services</option>
+                            @foreach($services as $service)
+                                <option value="{{ $service->id }}" @selected((string) ($filters['service'] ?? '') === (string) $service->id)>{{ $service->name }}</option>
+                            @endforeach
+                        </x-dashboard.select>
+                    </div>
+                    <div class="min-w-[8rem]">
+                        <x-dashboard.select name="featured">
+                            <option value="">Featured: any</option>
+                            <option value="1" @selected(($filters['featured'] ?? '') === '1')>Featured</option>
+                            <option value="0" @selected(($filters['featured'] ?? '') === '0')>Not featured</option>
+                        </x-dashboard.select>
+                    </div>
+                    <x-dashboard.button type="submit" variant="secondary" size="md">Filter</x-dashboard.button>
+                </form>
+            </x-dashboard.filter-bar>
+        </x-slot:filters>
+
         <x-slot:head>
             <x-dashboard.th>Title</x-dashboard.th>
-            <x-dashboard.th>Type</x-dashboard.th>
+            <x-dashboard.th>Service</x-dashboard.th>
             <x-dashboard.th>Status</x-dashboard.th>
             <x-dashboard.th>Price</x-dashboard.th>
             <x-dashboard.th>Actions</x-dashboard.th>
@@ -30,7 +80,7 @@
                         <x-dashboard.badge status="warning">Featured</x-dashboard.badge>
                     @endif
                 </x-dashboard.td>
-                <x-dashboard.td>{{ $product->product_type->label() }}</x-dashboard.td>
+                <x-dashboard.td>{{ $product->productType?->name ?? ($product->product_type?->label() ?? '—') }}</x-dashboard.td>
                 <x-dashboard.td>
                     <x-dashboard.badge :status="$product->status->value === 'published' ? 'success' : 'neutral'">
                         {{ $product->status->value }}

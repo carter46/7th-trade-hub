@@ -3,7 +3,15 @@
 @section('title', 'Analytics')
 
 @section('content')
-<x-layout.page title="Analytics" subtitle="Platform analytics and reports." width="full">
+<x-layout.page
+    title="Analytics"
+    subtitle="Platform analytics and reports."
+    width="full"
+    :breadcrumb="[
+        ['Admin', route('admin')],
+        ['Analytics', null],
+    ]"
+>
     <x-dashboard.stat-grid>
         <x-dashboard.stats-card
             label="Total users"

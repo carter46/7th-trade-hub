@@ -6,7 +6,7 @@
 <x-layout.page
     title="New Message"
     subtitle="Send a private message to another user."
-    width="form"
+    width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
         ['Messages', route('dashboard.messages')],
@@ -14,7 +14,7 @@
     ]"
 >
     <x-dashboard.card>
-        <form method="POST" action="{{ route('dashboard.messages.store') }}" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
+        <form method="POST" action="{{ route('dashboard.messages.store') }}" class="max-w-form space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
             <x-dashboard.input label="Recipient email" type="email" name="to_email" :value="old('to_email')" required />
             <x-dashboard.input label="Subject" name="subject" :value="old('subject')" required />

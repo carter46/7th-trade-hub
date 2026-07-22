@@ -6,7 +6,7 @@
 <x-layout.page
     title="Sell Crypto"
     subtitle="Quote valid for 15 minutes."
-    width="form"
+    width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
         ['Sell Crypto', route('dashboard.crypto-sell.index')],
@@ -14,7 +14,7 @@
     ]"
 >
     <x-dashboard.card>
-        <form method="POST" action="{{ route('dashboard.crypto-sell.store') }}" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
+        <form method="POST" action="{{ route('dashboard.crypto-sell.store') }}" class="max-w-form space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
             <x-dashboard.select label="Coin" name="coin">
                 @foreach ($coins as $c)

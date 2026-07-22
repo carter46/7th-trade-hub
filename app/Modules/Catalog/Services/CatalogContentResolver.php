@@ -4,6 +4,9 @@ namespace App\Modules\Catalog\Services;
 
 use App\Models\CatalogPageContent;
 use App\Models\PlatformCategory;
+use App\Models\ProductType;
+use App\Models\ServiceCategory;
+use Illuminate\Support\Facades\Schema;
 
 class CatalogContentResolver
 {
@@ -23,6 +26,13 @@ class CatalogContentResolver
      */
     public function forGroup(string $slug): array
     {
+        if (Schema::hasTable('service_categories')) {
+            $category = ServiceCategory::query()->where('slug', $slug)->first();
+            if ($category) {
+                return $this->forServiceCategory($category);
+            }
+        }
+
         $config = config('catalog.groups.'.$slug, []);
         $db = CatalogPageContent::query()
             ->where('scope', 'group')
@@ -33,6 +43,41 @@ class CatalogContentResolver
             'label' => $config['label'] ?? str_replace('-', ' ', ucfirst($slug)),
             'types' => $config['types'] ?? [],
             'icon' => null,
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function forServiceCategory(ServiceCategory $category): array
+    {
+        $config = config('catalog.groups.'.$category->slug, []);
+        $db = CatalogPageContent::query()
+            ->where('scope', 'group')
+            ->where('key', $category->slug)
+            ->first();
+
+        $types = $category->relationLoaded('services')
+            ? $category->services->pluck('slug')->all()
+            : $category->services()->pluck('slug')->all();
+
+        $base = [
+            'label' => $category->name,
+            'short_description' => $category->short_description ?: ($config['short_description'] ?? null),
+            'hero_title' => $category->hero_title ?: ($config['hero_title'] ?? $category->name),
+            'hero_subtitle' => $category->hero_subtitle ?: ($config['hero_subtitle'] ?? null),
+            'banner_image' => $category->banner_image ?: ($config['banner_image'] ?? null),
+            'card_image' => $category->card_image ?: ($config['card_image'] ?? null),
+            'benefits' => $category->benefits ?: ($config['benefits'] ?? []),
+            'faq' => $category->faq ?: ($config['faq'] ?? []),
+        ];
+
+        return $this->merge($base, $db, [
+            'label' => $category->name,
+            'types' => $types !== [] ? $types : ($config['types'] ?? []),
+            'icon' => null,
+            'mode' => $category->mode,
+            'cta_label' => $category->cta_label,
         ]);
     }
 
@@ -53,6 +98,13 @@ class CatalogContentResolver
      */
     public function forType(string $type): array
     {
+        if (Schema::hasTable('product_types')) {
+            $service = ProductType::query()->where('slug', $type)->first();
+            if ($service) {
+                return $this->forService($service);
+            }
+        }
+
         $config = config('catalog.types.'.$type, []);
         $db = CatalogPageContent::query()
             ->where('scope', 'type')
@@ -64,6 +116,37 @@ class CatalogContentResolver
             'icon' => $config['icon'] ?? 'grid',
             'default_route' => $config['default_route'] ?? 'services',
             'types' => [$type],
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function forService(ProductType $service): array
+    {
+        $config = config('catalog.types.'.$service->slug, []);
+        $db = CatalogPageContent::query()
+            ->where('scope', 'type')
+            ->where('key', $service->slug)
+            ->first();
+
+        $base = [
+            'label' => $service->name,
+            'short_description' => $service->short_description ?: ($config['short_description'] ?? null),
+            'hero_title' => $service->hero_title ?: ($config['hero_title'] ?? $service->name),
+            'hero_subtitle' => $service->hero_subtitle ?: ($config['hero_subtitle'] ?? null),
+            'banner_image' => $service->banner_image ?: ($config['banner_image'] ?? null),
+            'card_image' => $service->card_image ?: ($config['card_image'] ?? null),
+            'benefits' => $service->benefits ?: ($config['benefits'] ?? []),
+            'faq' => $service->faq ?: ($config['faq'] ?? []),
+            'icon' => $config['icon'] ?? 'grid',
+        ];
+
+        return $this->merge($base, $db, [
+            'label' => $service->name,
+            'icon' => $config['icon'] ?? 'grid',
+            'default_route' => $config['default_route'] ?? 'services',
+            'types' => [$service->slug],
         ]);
     }
 
@@ -83,7 +166,10 @@ class CatalogContentResolver
      */
     public function forCategory(PlatformCategory $category): array
     {
-        $typeDefaults = config('catalog.types.'.$category->product_type->value, []);
+        $typeValue = $category->product_type instanceof \BackedEnum
+            ? $category->product_type->value
+            : (string) $category->product_type;
+        $typeDefaults = config('catalog.types.'.$typeValue, []);
 
         $config = [
             'label' => $category->name,
@@ -97,7 +183,6 @@ class CatalogContentResolver
             'icon' => $typeDefaults['icon'] ?? 'grid',
         ];
 
-        // Prefer non-empty category fields; fall back type config for empty arrays/nulls
         foreach (['short_description', 'hero_subtitle', 'banner_image', 'card_image'] as $field) {
             if (blank($config[$field]) && ! blank($typeDefaults[$field] ?? null)) {
                 $config[$field] = $typeDefaults[$field];
@@ -111,7 +196,7 @@ class CatalogContentResolver
         }
 
         return array_merge($config, [
-            'types' => [$category->product_type->value],
+            'types' => [$typeValue],
         ]);
     }
 
@@ -145,4 +230,4 @@ class CatalogContentResolver
             'faq' => array_values($pick('faq', []) ?: []),
         ], $extras);
     }
-};
+}

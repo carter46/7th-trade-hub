@@ -3,7 +3,15 @@
 @section('title', 'Site Listings')
 
 @section('content')
-<x-layout.page title="Site Listings" subtitle="Manage website listings." width="full">
+<x-layout.page
+    title="Site Listings"
+    subtitle="Manage website listings."
+    width="full"
+    :breadcrumb="[
+        ['Admin', route('admin')],
+        ['Site Listings', null],
+    ]"
+>
     <x-dashboard.table
         :empty="$listings->isEmpty()"
         empty-title="No listings yet"

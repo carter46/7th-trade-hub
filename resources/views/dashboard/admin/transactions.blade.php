@@ -3,7 +3,15 @@
 @section('title', 'Transactions')
 
 @section('content')
-<x-layout.page title="Transactions" subtitle="View and manage all transactions." width="full">
+<x-layout.page
+    title="Transactions"
+    subtitle="View and manage all transactions."
+    width="full"
+    :breadcrumb="[
+        ['Admin', route('admin')],
+        ['Transactions', null],
+    ]"
+>
     <x-dashboard.table
         :empty="$transactions->isEmpty()"
         empty-title="No transactions yet"

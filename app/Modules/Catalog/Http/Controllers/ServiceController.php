@@ -10,6 +10,7 @@ use App\Modules\Catalog\Services\CatalogBrowseService;
 use App\Modules\Catalog\Services\CatalogContentResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class ServiceController extends Controller
@@ -36,8 +37,8 @@ class ServiceController extends Controller
             $types = $this->browse->allGroupTypeValues();
             $searchResults = PlatformProduct::query()
                 ->published()
-                ->whereIn('product_type', $types)
-                ->with(['category', 'activeVariants'])
+                ->ofTypeMany($types)
+                ->with(['productType', 'activeVariants'])
                 ->where(function ($inner) use ($q) {
                     $inner->where('title', 'like', "%{$q}%")
                         ->orWhere('short_description', 'like', "%{$q}%")
@@ -54,7 +55,7 @@ class ServiceController extends Controller
         $types = $this->browse->allGroupTypeValues();
         $serviceCount = PlatformProduct::query()
             ->published()
-            ->whereIn('product_type', $types)
+            ->ofTypeMany($types)
             ->count();
 
         return view('pages.services', [
@@ -86,7 +87,13 @@ class ServiceController extends Controller
         abort_unless($this->browse->isGroup($group), 404);
 
         $resolved = $this->content->forGroup($group);
-        $typeKeys = config('catalog.groups.'.$group.'.types', []);
+        $typeKeys = $resolved['types'] ?? config('catalog.groups.'.$group.'.types', []);
+
+        if ($this->browse->usesDbHierarchy()) {
+            $category = $this->browse->findServiceCategory($group);
+            abort_unless($category, 404);
+            $typeKeys = $category->services()->active()->orderBy('sort_order')->pluck('slug')->all();
+        }
 
         // Single-type groups (e.g. social-media → social_service): skip the extra type card layer.
         if (count($typeKeys) === 1) {
@@ -102,20 +109,45 @@ class ServiceController extends Controller
         $categoryId = $request->integer('category') ?: null;
         $q = $request->string('q')->toString();
 
-        $categories = PlatformCategory::query()
-            ->where('is_active', true)
-            ->whereIn('product_type', $activeTypes)
-            ->orderBy('sort_order')
-            ->get();
+        $categories = collect();
+        if (Schema::hasTable('platform_categories')) {
+            $categories = PlatformCategory::query()
+                ->where('is_active', true)
+                ->whereIn('product_type', $activeTypes)
+                ->orderBy('sort_order')
+                ->get();
 
-        if ($categoryId && ! $categories->contains('id', $categoryId)) {
+            if ($categoryId && ! $categories->contains('id', $categoryId)) {
+                $categoryId = null;
+            }
+        } else {
             $categoryId = null;
+        }
+
+        // Multi-service category: prefer service cards over a flat product grid when no filters.
+        if ($this->browse->usesDbHierarchy() && $typeFilter === '' && $q === '' && ! $categoryId) {
+            $serviceCategory = $this->browse->findServiceCategory($group);
+            $typeCards = $this->browse->serviceCardsForCategory($serviceCategory->load('services'), $this->content);
+
+            return view('pages.services-group', [
+                'groupSlug' => $group,
+                'content' => $resolved,
+                'typeKeys' => $typeKeys,
+                'typeCards' => $typeCards,
+                'categories' => $categories,
+                'products' => null,
+                'filters' => [
+                    'q' => $q,
+                    'category' => null,
+                    'type' => null,
+                ],
+            ]);
         }
 
         $products = PlatformProduct::query()
             ->published()
-            ->whereIn('product_type', $activeTypes)
-            ->with(['category', 'activeVariants'])
+            ->ofTypeMany($activeTypes)
+            ->with(['productType', 'activeVariants'])
             ->when($categoryId, fn ($builder) => $builder->where('platform_category_id', $categoryId))
             ->when($q !== '', function ($builder) use ($q) {
                 $builder->where(function ($inner) use ($q) {
@@ -152,7 +184,6 @@ class ServiceController extends Controller
         $groupSlug = $preferGroupSlug ?? $this->browse->groupForType($type);
         $groupContent = $groupSlug ? $this->content->forGroup($groupSlug) : null;
 
-        // Prefer group page copy when opened via a single-type group URL (e.g. /services/social-media).
         if ($preferGroupSlug && $groupContent) {
             $resolved = array_merge($resolved, [
                 'label' => $groupContent['label'] ?? $resolved['label'],
@@ -166,27 +197,32 @@ class ServiceController extends Controller
         $categoryId = $request->integer('category') ?: null;
         $q = $request->string('q')->toString();
 
-        $categories = PlatformCategory::query()
-            ->where('is_active', true)
-            ->where('product_type', $type)
-            ->orderBy('sort_order')
-            ->get();
-
+        $categories = collect();
         $activeCategory = null;
-        if ($categoryId) {
-            $activeCategory = $categories->firstWhere('id', $categoryId);
-            if ($activeCategory) {
-                $resolved = $this->content->forCategory($activeCategory);
-            } else {
-                $categoryId = null;
+        if (Schema::hasTable('platform_categories')) {
+            $categories = PlatformCategory::query()
+                ->where('is_active', true)
+                ->where('product_type', $type)
+                ->orderBy('sort_order')
+                ->get();
+
+            if ($categoryId) {
+                $activeCategory = $categories->firstWhere('id', $categoryId);
+                if ($activeCategory) {
+                    $resolved = $this->content->forCategory($activeCategory);
+                } else {
+                    $categoryId = null;
+                }
             }
+        } else {
+            $categoryId = null;
         }
 
         $products = PlatformProduct::query()
             ->published()
             ->ofType($type)
-            ->with(['category', 'activeVariants'])
-            ->when($categoryId, fn ($builder) => $builder->where('platform_category_id', $categoryId))
+            ->with(['productType', 'activeVariants'])
+            ->when($categoryId && Schema::hasColumn('platform_products', 'platform_category_id'), fn ($builder) => $builder->where('platform_category_id', $categoryId))
             ->when($q !== '', function ($builder) use ($q) {
                 $builder->where(function ($inner) use ($q) {
                     $inner->where('title', 'like', "%{$q}%")
@@ -204,7 +240,7 @@ class ServiceController extends Controller
             ->featured()
             ->ofType($type)
             ->with('activeVariants')
-            ->when($categoryId, fn ($builder) => $builder->where('platform_category_id', $categoryId))
+            ->when($categoryId && Schema::hasColumn('platform_products', 'platform_category_id'), fn ($builder) => $builder->where('platform_category_id', $categoryId))
             ->orderBy('sort_order')
             ->limit(6);
 
@@ -237,28 +273,39 @@ class ServiceController extends Controller
         $product = PlatformProduct::query()
             ->published()
             ->where('slug', $productSlug)
-            ->with(['category', 'images', 'activeVariants'])
+            ->with(['productType.serviceCategory', 'images', 'activeVariants'])
             ->firstOrFail();
 
-        if ($product->product_type->value !== $type) {
+        $typeSlug = $product->typeSlug();
+        if ($typeSlug !== $type) {
             return $this->redirectToCanonicalProduct($product);
         }
 
-        return match ($product->product_type) {
-            PlatformProductType::DocumentTemplate => redirect()->route('templates.show', $product->slug),
-            PlatformProductType::WebsitePackage,
-            PlatformProductType::WebsiteTemplate => redirect()->route('website-listings.show', $product->slug),
-            default => view('pages.services-show', [
-                'product' => $product,
-                'typeKey' => $product->product_type->value,
-                'groupSlug' => $this->browse->groupForType($product->product_type->value),
-                'groupContent' => ($g = $this->browse->groupForType($product->product_type->value))
-                    ? $this->content->forGroup($g)
-                    : null,
-                'typeContent' => $this->content->forType($product->product_type->value),
-                'isFavorited' => $this->isFavorited($product),
-            ]),
-        };
+        $enumType = null;
+        try {
+            $enumType = PlatformProductType::from($typeSlug);
+        } catch (\ValueError) {
+            // custom DB service slug
+        }
+
+        if ($enumType === PlatformProductType::DocumentTemplate) {
+            return redirect()->route('templates.show', $product->slug);
+        }
+        if (in_array($enumType, [PlatformProductType::WebsitePackage, PlatformProductType::WebsiteTemplate], true)) {
+            return redirect()->route('website-listings.show', $product->slug);
+        }
+
+        $groupSlug = $product->productType?->serviceCategory?->slug
+            ?? $this->browse->groupForType($typeSlug);
+
+        return view('pages.services-show', [
+            'product' => $product,
+            'typeKey' => $typeSlug,
+            'groupSlug' => $groupSlug,
+            'groupContent' => $groupSlug ? $this->content->forGroup($groupSlug) : null,
+            'typeContent' => $this->content->forType($typeSlug),
+            'isFavorited' => $this->isFavorited($product),
+        ]);
     }
 
     /**
@@ -271,9 +318,16 @@ class ServiceController extends Controller
         }
 
         if ($this->browse->isGroup($segment)) {
-            $routeName = config('catalog.groups.'.$segment.'.route');
-            if ($routeName) {
-                return redirect()->route($routeName, status: 301);
+            if ($this->browse->usesDbHierarchy()) {
+                $category = $this->browse->findServiceCategory($segment);
+                if ($category?->isMarketplaceLink()) {
+                    return redirect()->route('marketplace', status: 301);
+                }
+            } else {
+                $routeName = config('catalog.groups.'.$segment.'.route');
+                if ($routeName) {
+                    return redirect()->route($routeName, status: 301);
+                }
             }
 
             return $this->group(request(), $segment);
@@ -297,15 +351,25 @@ class ServiceController extends Controller
 
     private function redirectToCanonicalProduct(PlatformProduct $product): RedirectResponse
     {
-        return match ($product->product_type) {
-            PlatformProductType::DocumentTemplate => redirect()->route('templates.show', $product->slug, 301),
-            PlatformProductType::WebsitePackage,
-            PlatformProductType::WebsiteTemplate => redirect()->route('website-listings.show', $product->slug, 301),
-            default => redirect()->route('services.show', [
-                'type' => $product->product_type->value,
-                'productSlug' => $product->slug,
-            ], 301),
-        };
+        $typeSlug = $product->typeSlug() ?? 'vpn';
+
+        try {
+            $enumType = PlatformProductType::from($typeSlug);
+        } catch (\ValueError) {
+            $enumType = null;
+        }
+
+        if ($enumType === PlatformProductType::DocumentTemplate) {
+            return redirect()->route('templates.show', $product->slug, 301);
+        }
+        if (in_array($enumType, [PlatformProductType::WebsitePackage, PlatformProductType::WebsiteTemplate], true)) {
+            return redirect()->route('website-listings.show', $product->slug, 301);
+        }
+
+        return redirect()->route('services.show', [
+            'type' => $typeSlug,
+            'productSlug' => $product->slug,
+        ], 301);
     }
 
     private function isFavorited(PlatformProduct $product): bool

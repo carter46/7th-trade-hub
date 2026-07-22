@@ -9,6 +9,7 @@ use App\Models\PlatformProduct;
 use App\Models\PlatformProductImage;
 use App\Models\PlatformProductVariant;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class PlatformCatalogSeeder extends Seeder
@@ -83,9 +84,13 @@ class PlatformCatalogSeeder extends Seeder
 
         foreach ($catalog as $type => $titles) {
             foreach ($titles as $i => $title) {
+                if ($type === PlatformProductType::EscrowService->value) {
+                    continue;
+                }
+
                 $slug = Str::slug($title);
                 $categoryId = null;
-                if (isset($categoryMap[$type][$i])) {
+                if (Schema::hasTable('platform_categories') && isset($categoryMap[$type][$i])) {
                     $categoryId = PlatformCategory::where('slug', $categoryMap[$type][$i])->value('id');
                 }
 
@@ -94,37 +99,45 @@ class PlatformCatalogSeeder extends Seeder
                     $base = 15000 + ($i * 5000);
                 }
 
+                $attrs = [
+                    'product_type' => $type,
+                    'title' => $title,
+                    'short_description' => "Ready-to-use {$title} from 7th Trade Hub.",
+                    'description' => "Get started quickly with {$title}. Includes setup guidance, support, and clear deliverables. Admin can edit or remove this seeded product anytime.",
+                    'status' => PlatformProductStatus::Published,
+                    'is_featured' => $i < 2,
+                    'sort_order' => $i,
+                    'hero_image' => null,
+                    'demo_url' => $type === PlatformProductType::WebsitePackage->value ? 'https://example.com/demo/'.$slug : null,
+                    'demo_username' => $type === PlatformProductType::WebsitePackage->value ? 'demo@7thtrade.local' : null,
+                    'demo_password' => $type === PlatformProductType::WebsitePackage->value ? 'DemoPass123!' : null,
+                    'industry' => $type === PlatformProductType::WebsitePackage->value ? ['Business', 'Agency', 'Food', 'Legal', 'Health', 'Retail'][$i] : null,
+                    'framework' => $type === PlatformProductType::WebsitePackage->value ? ['Laravel', 'WordPress', 'Next.js', 'Laravel', 'WordPress', 'Shopify'][$i] : null,
+                    'is_responsive' => true,
+                    'is_seo_ready' => $type === PlatformProductType::WebsitePackage->value,
+                    'support_period' => $type === PlatformProductType::WebsitePackage->value ? '30 days' : null,
+                    'features' => ['Fast setup', 'NGN wallet checkout', 'Email support'],
+                    'requirements' => ['Active 7th Trade Hub account', 'Funded wallet for purchase'],
+                    'whats_included' => ['Product access', 'Basic setup guide', 'Support window'],
+                    'faqs' => [
+                        ['q' => 'How fast is delivery?', 'a' => 'Most digital products are available right after payment.'],
+                        ['q' => 'Can I get a refund?', 'a' => 'Refunds follow our support policy for unused digital goods.'],
+                    ],
+                    'support_text' => 'Open a support ticket from your dashboard if you need help.',
+                    'base_price' => $base,
+                    'meta' => null,
+                    'provider' => 'manual',
+                    'fulfillment_mode' => 'manual',
+                    'auto_renew' => false,
+                ];
+
+                if (Schema::hasColumn('platform_products', 'platform_category_id')) {
+                    $attrs['platform_category_id'] = $categoryId;
+                }
+
                 $product = PlatformProduct::firstOrCreate(
                     ['slug' => $slug],
-                    [
-                        'platform_category_id' => $categoryId,
-                        'product_type' => $type,
-                        'title' => $title,
-                        'short_description' => "Ready-to-use {$title} from 7th Trade Hub.",
-                        'description' => "Get started quickly with {$title}. Includes setup guidance, support, and clear deliverables. Admin can edit or remove this seeded product anytime.",
-                        'status' => PlatformProductStatus::Published,
-                        'is_featured' => $i < 2,
-                        'sort_order' => $i,
-                        'hero_image' => null,
-                        'demo_url' => $type === PlatformProductType::WebsitePackage->value ? 'https://example.com/demo/'.$slug : null,
-                        'demo_username' => $type === PlatformProductType::WebsitePackage->value ? 'demo@7thtrade.local' : null,
-                        'demo_password' => $type === PlatformProductType::WebsitePackage->value ? 'DemoPass123!' : null,
-                        'industry' => $type === PlatformProductType::WebsitePackage->value ? ['Business', 'Agency', 'Food', 'Legal', 'Health', 'Retail'][$i] : null,
-                        'framework' => $type === PlatformProductType::WebsitePackage->value ? ['Laravel', 'WordPress', 'Next.js', 'Laravel', 'WordPress', 'Shopify'][$i] : null,
-                        'is_responsive' => true,
-                        'is_seo_ready' => $type === PlatformProductType::WebsitePackage->value,
-                        'support_period' => $type === PlatformProductType::WebsitePackage->value ? '30 days' : null,
-                        'features' => ['Fast setup', 'NGN wallet checkout', 'Email support'],
-                        'requirements' => ['Active 7th Trade Hub account', 'Funded wallet for purchase'],
-                        'whats_included' => ['Product access', 'Basic setup guide', 'Support window'],
-                        'faqs' => [
-                            ['q' => 'How fast is delivery?', 'a' => 'Most digital products are available right after payment.'],
-                            ['q' => 'Can I get a refund?', 'a' => 'Refunds follow our support policy for unused digital goods.'],
-                        ],
-                        'support_text' => 'Open a support ticket from your dashboard if you need help.',
-                        'base_price' => $base,
-                        'meta' => null,
-                    ]
+                    $attrs
                 );
 
                 $this->seedVariants($product, $type, (float) $product->base_price);

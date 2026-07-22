@@ -16,7 +16,7 @@ When editing Blade views or styles for 7th Trade Hub:
 4. **Never** use `onsubmit="return confirm(...)"` — use `<x-ui.modal>`.
 5. **Never** add inline session flash `<p class="text-green-400">` — flashes are handled by `<x-ui.toast>` in layouts.
 6. Page structure: `<x-layout.page>` with `title`/`subtitle`; no raw `<h1>` for page titles.
-7. Page widths: `width` prop on `<x-layout.page>` only — no ad-hoc `max-w-5xl` etc.
+7. Page widths: dashboard/account pages use `<x-layout.page width="full">` only — never `form`/`content` on the page shell (see `dashboard-page-shell.mdc`). Readable line length belongs on the inner `<form>`, not the page.
 8. Empty lists: `<x-ui.empty>` — never bare "No items found".
 9. New shared components: add to `/dev/ui` styleguide before using on pages.
 10. Semantic tokens (`bg-surface`, `text-secondary`, `border-default`) — not raw `bg-slate-900`.

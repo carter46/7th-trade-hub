@@ -1,29 +1,28 @@
 @props([
     'title',
     'subtitle' => null,
-    'width' => 'content',
+    'width' => 'full',
     'breadcrumb' => [],
 ])
 
 {{--
-  Width conventions (authenticated dashboards):
-  - full: data tables / dense indexes / admin queues
-  - content: dashboards, multi-card detail, long multi-section forms
-  - form: short create/edit forms
-  - content-md: legacy; prefer form for short forms
+  Authenticated dashboard page shell.
+  All dashboard widths resolve to full-bleed of the main content area so
+  list, detail, and create/edit pages share one consistent chrome.
+  (Do not reintroduce narrow form/content caps on the page shell.)
 --}}
 @php
     $widths = [
-        'content-sm' => 'max-w-content-sm',
-        'content-md' => 'max-w-content-md',
-        'content' => 'max-w-content',
-        'content-lg' => 'max-w-content-lg',
+        'content-sm' => 'max-w-content-full',
+        'content-md' => 'max-w-content-full',
+        'content' => 'max-w-content-full',
+        'content-lg' => 'max-w-content-full',
         'full' => 'max-w-content-full',
-        'form' => 'max-w-form',
+        'form' => 'max-w-content-full',
         'auth' => 'max-w-auth',
         'marketing' => 'max-w-marketing',
     ];
-    $max = $widths[$width] ?? $widths['content'];
+    $max = $widths[$width] ?? $widths['full'];
 @endphp
 
 <div {{ $attributes->merge(['class' => $max . ' mx-auto w-full space-y-section']) }}>

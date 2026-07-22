@@ -6,7 +6,7 @@
 <x-layout.page
     title="Add Category"
     subtitle="Create a marketplace category for listings."
-    width="form"
+    width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
         ['Categories', route('admin.marketplace-categories')],
@@ -14,7 +14,7 @@
     ]"
 >
     <x-dashboard.card>
-        <form method="POST" action="{{ route('admin.marketplace-categories.store') }}" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
+        <form method="POST" action="{{ route('admin.marketplace-categories.store') }}" class="max-w-form space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
 
             <x-dashboard.input label="Name" name="name" :value="old('name')" required />

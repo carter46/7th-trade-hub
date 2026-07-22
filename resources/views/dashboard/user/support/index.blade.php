@@ -3,7 +3,15 @@
 @section('title', 'Support')
 
 @section('content')
-<x-layout.page title="Support Tickets" subtitle="Get help with deposits, orders, and account issues." width="full">
+<x-layout.page
+    title="Support Tickets"
+    subtitle="Get help with deposits, orders, and account issues."
+    width="full"
+    :breadcrumb="[
+        ['Dashboard', route('dashboard')],
+        ['Support Tickets', null],
+    ]"
+>
     <x-slot:actions>
         <x-dashboard.button :href="route('dashboard.support.create')" icon="plus">New Ticket</x-dashboard.button>
     </x-slot:actions>

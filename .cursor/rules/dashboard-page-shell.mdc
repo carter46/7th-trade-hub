@@ -1,0 +1,29 @@
+---
+description: Keep admin/user dashboard page shells full-width and consistent (no stub create/edit pages).
+globs: resources/views/dashboard/**/*.blade.php,resources/views/account/**/*.blade.php,resources/views/components/layout/page.blade.php
+alwaysApply: false
+---
+
+# Dashboard page shell consistency
+
+## Page width (critical)
+
+- Every authenticated dashboard/account page must use `<x-layout.page … width="full">`.
+- **Never** put `width="form"`, `width="content"`, or `width="content-md"` on `x-layout.page` for dashboard pages. Those values historically produced narrow “stub” create/edit pages next to full-width lists.
+- `resources/views/components/layout/page.blade.php` maps legacy form/content widths to `max-w-content-full` as a safety net — do **not** rely on that; always pass `width="full"`.
+- Do **not** reintroduce a narrow `max-w-*` on the **page shell**. If a short form needs a readable line length, constrain the **inner form** (e.g. `class="max-w-xl space-y-4"` on the `<form>`), not `x-layout.page`.
+
+## Chrome parity
+
+- List, detail, and create/edit siblings must share the same page chrome: `x-layout.page`, breadcrumbs (where the section uses them), `x-ui.page-header` via the layout, and the same layout extend (`layouts.dashboard-admin` or `layouts.dashboard-user`).
+- Prefer dedicated create/edit Blade pages over modal-only CRUD for catalog/admin entities (unless the existing pattern for that screen is modal).
+- Session flash is toast-only in dashboard layouts — do not add duplicate success/error alert banners on the page body.
+
+## Orphans
+
+- Do not leave flat leftover views when a resource moves to a folder (`…/index|create|edit`). Delete the old flat Blade once controllers point at the folder views.
+- Do not leave views that controllers no longer render (redirect-only routes).
+
+## Row actions
+
+- Multi-action table rows use `<x-dashboard.row-actions>` + menu items; destructive/approve flows use modals, not a row of naked buttons.

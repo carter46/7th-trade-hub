@@ -3,7 +3,15 @@
 @section('title', 'Document Templates')
 
 @section('content')
-<x-layout.page title="Document Templates" subtitle="Create and manage document templates." width="content">
+<x-layout.page
+    title="Document Templates"
+    subtitle="Create and manage document templates."
+    width="full"
+    :breadcrumb="[
+        ['Dashboard', route('dashboard')],
+        ['Document Templates', null],
+    ]"
+>
     <x-dashboard.card :padding="false">
         @if (isset($templates) && $templates->isNotEmpty())
             <ul class="divide-y divide-border-default">

@@ -3,7 +3,15 @@
 @section('title', 'My Listings')
 
 @section('content')
-<x-layout.page title="My Listings" subtitle="Create, submit, and track your marketplace listings." width="full">
+<x-layout.page
+    title="My Listings"
+    subtitle="Create, submit, and track your marketplace listings."
+    width="full"
+    :breadcrumb="[
+        ['Dashboard', route('dashboard')],
+        ['My Listings', null],
+    ]"
+>
     <x-slot:actions>
         <x-dashboard.button :href="route('dashboard.listings.create')" icon="plus">Create Listing</x-dashboard.button>
     </x-slot:actions>

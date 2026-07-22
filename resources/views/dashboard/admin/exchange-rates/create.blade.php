@@ -6,7 +6,7 @@
 <x-layout.page
     title="Add Exchange Rate"
     subtitle="Define buy and sell rates for an asset."
-    width="form"
+    width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
         ['Exchange Rates', route('admin.exchange-rates')],
@@ -14,7 +14,7 @@
     ]"
 >
     <x-dashboard.card>
-        <form method="POST" action="{{ route('admin.exchange-rates.store') }}" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
+        <form method="POST" action="{{ route('admin.exchange-rates.store') }}" class="max-w-form space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
             @include('dashboard.admin.exchange-rates._form')
             <div class="flex flex-wrap gap-2 pt-2">

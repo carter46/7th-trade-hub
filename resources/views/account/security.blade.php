@@ -3,7 +3,7 @@
 @section('title', 'Security')
 
 @section('content')
-<x-layout.page title="Security" subtitle="Update your password and protect your account." width="form">
+<x-layout.page title="Security" subtitle="Update your password and protect your account." width="full">
     @include('account.partials.navigation')
 
     <x-dashboard.card>

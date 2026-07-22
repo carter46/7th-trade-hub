@@ -6,7 +6,7 @@
 <x-layout.page
     title="Wallet Adjustment"
     subtitle="Credit or debit a user wallet with a recorded reason."
-    width="form"
+    width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
         ['Wallet Adjust', null],
@@ -16,7 +16,7 @@
         <form
             method="POST"
             action="{{ route('admin.wallet-adjustment.store') }}"
-            class="space-y-4"
+            class="max-w-form space-y-4"
             x-data="{ pending: false }"
             @submit="if (!pending) { $event.preventDefault(); $dispatch('open-modal', 'confirm-wallet-adjust') }"
             @modal-confirmed.window="if ($event.detail === 'confirm-wallet-adjust') { pending = true; $el.submit() }"

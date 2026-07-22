@@ -6,7 +6,7 @@
 <x-layout.page
     title="Catalog Pages"
     subtitle="Override group and type marketing copy. Empty fields fall back to config defaults."
-    width="content"
+    width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
         ['Catalog Pages', null],

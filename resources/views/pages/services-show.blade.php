@@ -164,8 +164,8 @@
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-wider text-primary mb-2">
                         {{ $product->product_type->label() }}
-                        @if($product->category)
-                            <span class="text-slate-400 font-normal">· {{ $product->category->name }}</span>
+                        @if($product->productType)
+                            <span class="text-slate-400 font-normal">· {{ $product->productType->name }}</span>
                         @endif
                     </p>
                     <h1 class="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 tracking-tight leading-tight">

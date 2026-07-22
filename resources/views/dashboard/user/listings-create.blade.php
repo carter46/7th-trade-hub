@@ -13,7 +13,7 @@
 <x-layout.page
     title="Create Listing"
     subtitle="Pick a subcategory, then save a draft for review."
-    width="form"
+    width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
         ['My Listings', route('dashboard.listings')],
@@ -24,7 +24,7 @@
         <form
             method="POST"
             action="{{ route('dashboard.listings.store') }}"
-            class="space-y-4"
+            class="max-w-form space-y-4"
             x-data="listingCategoryForm(@js($tree), {{ (int) old('parent_id', 0) }}, {{ (int) old('category_id', 0) }})"
             @submit="submitting = true"
         >

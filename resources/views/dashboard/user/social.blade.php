@@ -3,7 +3,15 @@
 @section('title', 'Social Services')
 
 @section('content')
-<x-layout.page title="Social Services" subtitle="Manage your social media services." width="content">
+<x-layout.page
+    title="Social Services"
+    subtitle="Manage your social media services."
+    width="full"
+    :breadcrumb="[
+        ['Dashboard', route('dashboard')],
+        ['Social Services', null],
+    ]"
+>
     <x-dashboard.card :padding="false">
         @if (isset($items) && $items->isNotEmpty())
             <ul class="divide-y divide-border-default">

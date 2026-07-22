@@ -3,7 +3,15 @@
 @section('title', 'Escrows')
 
 @section('content')
-<x-layout.page title="Escrows" subtitle="Release or refund locked marketplace funds." width="full">
+<x-layout.page
+    title="Escrows"
+    subtitle="Release or refund locked marketplace funds."
+    width="full"
+    :breadcrumb="[
+        ['Admin', route('admin')],
+        ['Escrows', null],
+    ]"
+>
     <x-dashboard.table :empty="$escrows->isEmpty()" empty-title="No escrows" empty-description="Locked order escrows will appear here for release or refund." empty-icon="lock" striped>
         <x-slot:head>
             <x-dashboard.th>Order</x-dashboard.th>

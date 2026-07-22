@@ -6,7 +6,7 @@
 <x-layout.page
     title="Edit Category"
     subtitle="Update category details and hierarchy."
-    width="form"
+    width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
         ['Categories', route('admin.marketplace-categories')],
@@ -14,7 +14,7 @@
     ]"
 >
     <x-dashboard.card>
-        <form method="POST" action="{{ route('admin.marketplace-categories.update', $category) }}" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
+        <form method="POST" action="{{ route('admin.marketplace-categories.update', $category) }}" class="max-w-form space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
             @method('PUT')
 

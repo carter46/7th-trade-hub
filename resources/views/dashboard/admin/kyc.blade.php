@@ -3,7 +3,15 @@
 @section('title', 'KYC Review')
 
 @section('content')
-<x-layout.page title="KYC submissions" subtitle="Approve or reject identity verification requests." width="full">
+<x-layout.page
+    title="KYC submissions"
+    subtitle="Approve or reject identity verification requests."
+    width="full"
+    :breadcrumb="[
+        ['Admin', route('admin')],
+        ['KYC submissions', null],
+    ]"
+>
     <x-dashboard.table :empty="$submissions->isEmpty()" empty-title="No KYC submissions" empty-description="Pending identity checks will appear here." empty-icon="kyc" striped>
         <x-slot:head>
             <x-dashboard.th>User</x-dashboard.th>

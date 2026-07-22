@@ -6,7 +6,15 @@
 @php
     $txs = collect($recentTransactions ?? []);
 @endphp
-<x-layout.page title="Dashboard Overview" subtitle="Welcome back. Here's what's happening with your platform today." width="full">
+<x-layout.page
+    title="Dashboard Overview"
+    subtitle="Welcome back. Here's what's happening with your platform today."
+    width="full"
+    :breadcrumb="[
+        ['Admin', route('admin')],
+        ['Overview', null],
+    ]"
+>
     <x-dashboard.stat-grid>
         @if ($canUsers ?? false)
             <x-dashboard.stats-card

@@ -3,7 +3,15 @@
 @section('title', 'Messages')
 
 @section('content')
-<x-layout.page title="Messages" subtitle="Your inbox and conversations." width="content">
+<x-layout.page
+    title="Messages"
+    subtitle="Your inbox and conversations."
+    width="full"
+    :breadcrumb="[
+        ['Dashboard', route('dashboard')],
+        ['Messages', null],
+    ]"
+>
     <x-slot:actions>
         <x-dashboard.button :href="route('dashboard.messages.create')" icon="plus">New message</x-dashboard.button>
     </x-slot:actions>

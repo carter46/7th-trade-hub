@@ -3,7 +3,15 @@
 @section('title', 'Crypto Sells')
 
 @section('content')
-<x-layout.page title="Crypto sell requests" subtitle="Confirm inbound crypto and credit NGN wallets." width="full">
+<x-layout.page
+    title="Crypto sell requests"
+    subtitle="Confirm inbound crypto and credit NGN wallets."
+    width="full"
+    :breadcrumb="[
+        ['Admin', route('admin')],
+        ['Crypto sell requests', null],
+    ]"
+>
     <x-dashboard.table :empty="$requests->isEmpty()" empty-title="No crypto sell requests" empty-description="User sell quotes awaiting on-chain confirmation will appear here." empty-icon="bitcoin" striped>
         <x-slot:head>
             <x-dashboard.th>User</x-dashboard.th>

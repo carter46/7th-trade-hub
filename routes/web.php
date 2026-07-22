@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AdministratorController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Account\AccountController;
 use App\Http\Controllers\DashboardController;
@@ -206,6 +207,8 @@ Route::middleware(['auth', 'verified', 'role:admin', 'throttle:60,1'])->prefix('
     });
     Route::middleware('permission:users.manage')->group(function () {
         Route::get('/users', [UserManagementController::class, 'index'])->name('.users');
+        Route::get('/users/create', [UserManagementController::class, 'create'])->name('.users.create');
+        Route::post('/users', [UserManagementController::class, 'store'])->name('.users.store');
         Route::get('/users/{user}', [UserManagementController::class, 'show'])->name('.users.show');
         Route::get('/users/{user}/edit', [UserManagementController::class, 'edit'])->name('.users.edit');
         Route::put('/users/{user}', [UserManagementController::class, 'update'])->name('.users.update');
@@ -221,6 +224,11 @@ Route::middleware(['auth', 'verified', 'role:admin', 'throttle:60,1'])->prefix('
         Route::post('/users/{user}/restore', [UserManagementController::class, 'restore'])->name('.users.restore');
         Route::delete('/users/{user}', [UserManagementController::class, 'destroy'])->name('.users.destroy');
         Route::post('/users/{user}/role', [UserManagementController::class, 'assignRole'])->name('.users.role');
+        Route::post('/users/{user}/password-reset', [UserManagementController::class, 'sendPasswordReset'])->name('.users.password-reset');
+        Route::post('/users/{user}/verify-email', [UserManagementController::class, 'verifyEmail'])->name('.users.verify-email');
+        Route::post('/users/{user}/unverify-email', [UserManagementController::class, 'unverifyEmail'])->name('.users.unverify-email');
+        Route::post('/users/{user}/provision-wallet', [UserManagementController::class, 'provisionWallet'])->name('.users.provision-wallet');
+        Route::post('/users/{user}/impersonate', [ImpersonationController::class, 'start'])->name('.users.impersonate');
     });
 
     Route::middleware('permission:admins.manage')->group(function () {
@@ -274,12 +282,27 @@ Route::middleware(['auth', 'verified', 'role:admin', 'throttle:60,1'])->prefix('
         Route::get('/platform-products/{platformProduct}/edit', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'edit'])->name('.platform-products.edit');
         Route::put('/platform-products/{platformProduct}', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'update'])->name('.platform-products.update');
         Route::delete('/platform-products/{platformProduct}', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'destroy'])->name('.platform-products.destroy');
+        Route::get('/service-categories', [\App\Modules\Admin\Http\Controllers\ServiceCategoryAdminController::class, 'index'])->name('.service-categories');
+        Route::get('/service-categories/create', [\App\Modules\Admin\Http\Controllers\ServiceCategoryAdminController::class, 'create'])->name('.service-categories.create');
+        Route::post('/service-categories', [\App\Modules\Admin\Http\Controllers\ServiceCategoryAdminController::class, 'store'])->name('.service-categories.store');
+        Route::get('/service-categories/{serviceCategory}/edit', [\App\Modules\Admin\Http\Controllers\ServiceCategoryAdminController::class, 'edit'])->name('.service-categories.edit');
+        Route::put('/service-categories/{serviceCategory}', [\App\Modules\Admin\Http\Controllers\ServiceCategoryAdminController::class, 'update'])->name('.service-categories.update');
+        Route::post('/service-categories/{serviceCategory}/toggle', [\App\Modules\Admin\Http\Controllers\ServiceCategoryAdminController::class, 'toggle'])->name('.service-categories.toggle');
+        Route::delete('/service-categories/{serviceCategory}', [\App\Modules\Admin\Http\Controllers\ServiceCategoryAdminController::class, 'destroy'])->name('.service-categories.destroy');
+        Route::get('/services', [\App\Modules\Admin\Http\Controllers\ServiceAdminController::class, 'index'])->name('.services');
+        Route::get('/services/create', [\App\Modules\Admin\Http\Controllers\ServiceAdminController::class, 'create'])->name('.services.create');
+        Route::post('/services', [\App\Modules\Admin\Http\Controllers\ServiceAdminController::class, 'store'])->name('.services.store');
+        Route::get('/services/{service}/edit', [\App\Modules\Admin\Http\Controllers\ServiceAdminController::class, 'edit'])->name('.services.edit');
+        Route::put('/services/{service}', [\App\Modules\Admin\Http\Controllers\ServiceAdminController::class, 'update'])->name('.services.update');
+        Route::post('/services/{service}/toggle', [\App\Modules\Admin\Http\Controllers\ServiceAdminController::class, 'toggle'])->name('.services.toggle');
+        Route::delete('/services/{service}', [\App\Modules\Admin\Http\Controllers\ServiceAdminController::class, 'destroy'])->name('.services.destroy');
         Route::get('/marketplace-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'marketplaceCategories'])->name('.marketplace-categories');
         Route::get('/marketplace-categories/create', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'createMarketplaceCategory'])->name('.marketplace-categories.create');
         Route::post('/marketplace-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'storeMarketplaceCategory'])->name('.marketplace-categories.store');
         Route::get('/marketplace-categories/{category}/edit', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'editMarketplaceCategory'])->name('.marketplace-categories.edit');
         Route::put('/marketplace-categories/{category}', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'updateMarketplaceCategory'])->name('.marketplace-categories.update');
         Route::post('/marketplace-categories/{category}/toggle', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'toggleMarketplaceCategory'])->name('.marketplace-categories.toggle');
+        // Legacy platform-categories → service-categories
         Route::get('/platform-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'platformCategories'])->name('.platform-categories');
         Route::get('/platform-categories/create', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'createPlatformCategory'])->name('.platform-categories.create');
         Route::post('/platform-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'storePlatformCategory'])->name('.platform-categories.store');
@@ -318,6 +341,7 @@ Route::middleware(['auth', 'verified', 'role:admin', 'throttle:60,1'])->prefix('
 });
 
 Route::middleware('auth')->group(function () {
+    Route::post('/impersonation/leave', [ImpersonationController::class, 'leave'])->name('impersonation.leave');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
