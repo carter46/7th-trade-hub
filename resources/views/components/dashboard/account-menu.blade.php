@@ -34,11 +34,11 @@
                 <span class="mt-0.5 block text-xs text-text-secondary">{{ $isAdmin ? 'Admin' : 'Member' }}</span>
             </span>
         @endunless
-        <span class="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-border-default bg-primary/20">
-            @if ($user->avatar)
-                <img src="{{ $user->avatar }}" alt="" class="h-full w-full object-cover">
+        <span class="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-border-default bg-primary/20 text-xs font-semibold text-primary">
+            @if ($user->avatarUrl())
+                <img src="{{ $user->avatarUrl() }}" alt="" class="h-full w-full object-cover">
             @else
-                <x-ui.icon name="user" class="h-5 w-5 text-primary" />
+                <span aria-hidden="true">{{ $user->initials() }}</span>
             @endif
         </span>
         @unless ($compact)

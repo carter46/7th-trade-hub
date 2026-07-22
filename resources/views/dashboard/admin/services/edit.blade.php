@@ -24,7 +24,7 @@
     ]"
 >
     <x-dashboard.card>
-        <form method="POST" action="{{ route('admin.services.update', $service) }}" class="max-w-form space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
+        <form method="POST" action="{{ route('admin.services.update', $service) }}" class="w-full space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
             @method('PUT')
             <x-dashboard.input label="Name" name="name" :value="old('name', $service->name)" required />

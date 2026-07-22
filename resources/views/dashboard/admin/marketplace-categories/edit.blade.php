@@ -14,7 +14,7 @@
     ]"
 >
     <x-dashboard.card>
-        <form method="POST" action="{{ route('admin.marketplace-categories.update', $category) }}" class="max-w-form space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
+        <form method="POST" action="{{ route('admin.marketplace-categories.update', $category) }}" class="w-full space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
             @method('PUT')
 

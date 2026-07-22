@@ -47,6 +47,17 @@ class ServiceCategory extends Model
         return $this->belongsTo(MediaAsset::class, 'card_media_id');
     }
 
+    /** Thumbnail for admin list tables (card preferred, then banner). */
+    public function listThumbnailUrl(): ?string
+    {
+        $media = $this->cardMedia ?? $this->bannerMedia;
+        if ($media) {
+            return $media->thumbnailUrl() ?? $media->url('small') ?? $media->url('medium');
+        }
+
+        return media_url(null, $this->card_image ?: $this->banner_image, 'thumbnail');
+    }
+
     /** Services (product_types) under this category. */
     public function services(): HasMany
     {

@@ -11,19 +11,31 @@
     striped
 >
     <x-slot:head>
-        <x-dashboard.th>Name</x-dashboard.th>
+        <x-dashboard.th>User</x-dashboard.th>
         <x-dashboard.th>Email</x-dashboard.th>
         <x-dashboard.th>Status</x-dashboard.th>
         <x-dashboard.th>Actions</x-dashboard.th>
     </x-slot:head>
 
     @foreach ($userRows as $u)
+        @php $avatarUrl = $u->avatarUrl(); @endphp
         <tr>
             <x-dashboard.td>
-                <a href="{{ route('admin.users.show', $u) }}" class="font-medium text-text-primary hover:text-primary focus-ring rounded">
-                    {{ $u->name }}
-                </a>
-                <div class="text-xs text-text-muted mt-0.5">Joined {{ $u->created_at->format('j M Y') }}</div>
+                <div class="flex items-center gap-3">
+                    <span class="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border-default bg-primary/15 text-xs font-semibold text-primary">
+                        @if ($avatarUrl)
+                            <img src="{{ $avatarUrl }}" alt="" class="h-full w-full object-cover">
+                        @else
+                            <span aria-hidden="true">{{ $u->initials() }}</span>
+                        @endif
+                    </span>
+                    <div class="min-w-0">
+                        <a href="{{ route('admin.users.show', $u) }}" class="font-medium text-text-primary hover:text-primary focus-ring rounded">
+                            {{ $u->name }}
+                        </a>
+                        <div class="text-xs text-text-muted mt-0.5">Joined {{ $u->created_at->format('j M Y') }}</div>
+                    </div>
+                </div>
             </x-dashboard.td>
             <x-dashboard.td class="text-text-secondary">{{ $u->email }}</x-dashboard.td>
             <x-dashboard.td>

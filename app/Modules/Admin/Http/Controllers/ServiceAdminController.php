@@ -24,7 +24,7 @@ class ServiceAdminController extends Controller
     public function index(Request $request): View
     {
         $services = ProductType::query()
-            ->with('serviceCategory')
+            ->with(['serviceCategory', 'cardMedia.variants', 'bannerMedia.variants'])
             ->withCount('products')
             ->when($request->filled('category'), fn ($q) => $q->where('service_category_id', $request->integer('category')))
             ->when($request->filled('q'), function ($q) use ($request) {
@@ -159,5 +159,17 @@ class ServiceAdminController extends Controller
             'banner' => $data['banner_media_id'] ?? null,
             'card' => $data['card_media_id'] ?? null,
         ]);
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('catalog_page_contents')) {
+            \App\Models\CatalogPageContent::query()->updateOrCreate(
+                ['scope' => 'type', 'key' => $service->slug],
+                [
+                    'banner_media_id' => $data['banner_media_id'] ?? null,
+                    'card_media_id' => $data['card_media_id'] ?? null,
+                    'banner_image' => $data['banner_image'] ?? null,
+                    'card_image' => $data['card_image'] ?? null,
+                ]
+            );
+        }
     }
 }

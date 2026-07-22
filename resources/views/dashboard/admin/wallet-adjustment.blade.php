@@ -16,7 +16,7 @@
         <form
             method="POST"
             action="{{ route('admin.wallet-adjustment.store') }}"
-            class="max-w-form space-y-4"
+            class="w-full space-y-4"
             x-data="{ pending: false }"
             @submit="if (!pending) { $event.preventDefault(); $dispatch('open-modal', 'confirm-wallet-adjust') }"
             @modal-confirmed.window="if ($event.detail === 'confirm-wallet-adjust') { pending = true; $el.submit() }"

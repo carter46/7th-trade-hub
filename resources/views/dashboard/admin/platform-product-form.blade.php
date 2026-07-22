@@ -65,7 +65,7 @@
     ]"
 >
     <x-dashboard.card>
-        <form method="POST" action="{{ isset($product->id) ? route('admin.platform-products.update', $product) : route('admin.platform-products.store') }}" class="max-w-form space-y-4"
+        <form method="POST" action="{{ isset($product->id) ? route('admin.platform-products.update', $product) : route('admin.platform-products.store') }}" class="w-full space-y-4"
               x-data="{
                   variants: @js($variantRows),
                   categoryId: @js($selectedCategoryId),

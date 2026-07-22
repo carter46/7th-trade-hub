@@ -27,6 +27,13 @@
     ]"
 >
     <x-slot:actions>
+        <span class="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border-default bg-primary/15 text-sm font-semibold text-primary">
+            @if ($user->avatarUrl())
+                <img src="{{ $user->avatarUrl() }}" alt="" class="h-full w-full object-cover">
+            @else
+                <span aria-hidden="true">{{ $user->initials() }}</span>
+            @endif
+        </span>
         @if (! $user->anonymized_at)
             <x-dashboard.button :href="route('admin.users.edit', $user)" variant="secondary" size="sm">Edit</x-dashboard.button>
             @if (! $user->is_suspended)

@@ -15,7 +15,7 @@
     ]"
 >
     <x-dashboard.card>
-        <form method="POST" action="{{ route('admin.users.update', $user) }}" class="max-w-form space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
+        <form method="POST" action="{{ route('admin.users.update', $user) }}" class="w-full space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
             @method('PUT')
 

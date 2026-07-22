@@ -23,6 +23,7 @@ class ServiceCategoryAdminController extends Controller
     public function index(): View
     {
         $categories = ServiceCategory::query()
+            ->with(['cardMedia.variants', 'bannerMedia.variants'])
             ->withCount('services')
             ->orderBy('sort_order')
             ->orderBy('name')
@@ -150,5 +151,18 @@ class ServiceCategoryAdminController extends Controller
             'banner' => $data['banner_media_id'] ?? null,
             'card' => $data['card_media_id'] ?? null,
         ]);
+
+        // Keep Catalog Pages override row in sync so stale config paths cannot win.
+        if (\Illuminate\Support\Facades\Schema::hasTable('catalog_page_contents')) {
+            \App\Models\CatalogPageContent::query()->updateOrCreate(
+                ['scope' => 'group', 'key' => $category->slug],
+                [
+                    'banner_media_id' => $data['banner_media_id'] ?? null,
+                    'card_media_id' => $data['card_media_id'] ?? null,
+                    'banner_image' => $data['banner_image'] ?? null,
+                    'card_image' => $data['card_image'] ?? null,
+                ]
+            );
+        }
     }
 }

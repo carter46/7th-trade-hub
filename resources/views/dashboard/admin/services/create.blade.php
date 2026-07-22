@@ -22,7 +22,7 @@
     ]"
 >
     <x-dashboard.card>
-        <form method="POST" action="{{ route('admin.services.store') }}" class="max-w-form space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
+        <form method="POST" action="{{ route('admin.services.store') }}" class="w-full space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
             <x-dashboard.input label="Name" name="name" :value="old('name')" required />
             <x-dashboard.input label="Slug (optional)" name="slug" :value="old('slug')" />

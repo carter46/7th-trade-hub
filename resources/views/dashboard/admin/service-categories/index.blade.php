@@ -27,6 +27,7 @@
         striped
     >
         <x-slot:head>
+            <x-dashboard.th class="w-14"> </x-dashboard.th>
             <x-dashboard.th>Name</x-dashboard.th>
             <x-dashboard.th>Mode</x-dashboard.th>
             <x-dashboard.th>Sort</x-dashboard.th>
@@ -35,7 +36,21 @@
             <x-dashboard.th>Actions</x-dashboard.th>
         </x-slot:head>
         @foreach ($categories as $category)
+            @php $thumb = $category->listThumbnailUrl(); @endphp
             <tr>
+                <x-dashboard.td>
+                    @if ($thumb)
+                        <img
+                            src="{{ $thumb }}"
+                            alt=""
+                            class="h-10 w-10 rounded-lg object-cover bg-muted"
+                        >
+                    @else
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-text-muted" aria-hidden="true">
+                            <x-dashboard.icon name="grid" class="h-4 w-4" />
+                        </span>
+                    @endif
+                </x-dashboard.td>
                 <x-dashboard.td class="font-medium">{{ $category->name }}</x-dashboard.td>
                 <x-dashboard.td>{{ $category->mode === 'marketplace_link' ? 'Marketplace link' : 'Catalog' }}</x-dashboard.td>
                 <x-dashboard.td>{{ $category->sort_order }}</x-dashboard.td>

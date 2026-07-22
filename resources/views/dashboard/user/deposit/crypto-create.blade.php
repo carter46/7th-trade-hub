@@ -14,7 +14,7 @@
     ]"
 >
     <x-dashboard.card>
-        <form method="POST" action="{{ route('dashboard.crypto-sell.store') }}" class="max-w-form space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
+        <form method="POST" action="{{ route('dashboard.crypto-sell.store') }}" class="w-full space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
             <x-dashboard.select label="Coin" name="coin">
                 @foreach ($coins as $c)

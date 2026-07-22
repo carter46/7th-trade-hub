@@ -24,7 +24,7 @@
         <form
             method="POST"
             action="{{ route('dashboard.listings.update', $listing) }}"
-            class="max-w-form space-y-4"
+            class="w-full space-y-4"
             x-data="listingCategoryForm(@js($tree), {{ (int) old('parent_id', $selectedParentId) }}, {{ (int) old('category_id', $selectedCategoryId) }})"
             @submit="submitting = true"
         >

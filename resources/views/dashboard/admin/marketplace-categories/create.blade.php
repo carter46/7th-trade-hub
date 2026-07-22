@@ -14,7 +14,7 @@
     ]"
 >
     <x-dashboard.card>
-        <form method="POST" action="{{ route('admin.marketplace-categories.store') }}" class="max-w-form space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
+        <form method="POST" action="{{ route('admin.marketplace-categories.store') }}" class="w-full space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
 
             <x-dashboard.input label="Name" name="name" :value="old('name')" required />

@@ -14,7 +14,7 @@
     ]"
 >
     <x-dashboard.card>
-        <form method="POST" action="{{ route('dashboard.withdrawal.store') }}" class="max-w-form space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
+        <form method="POST" action="{{ route('dashboard.withdrawal.store') }}" class="w-full space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
             <x-dashboard.input label="Amount (NGN)" type="number" name="amount" min="100" required />
             <x-dashboard.input label="Bank name" name="bank_name" required />

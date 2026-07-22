@@ -91,6 +91,36 @@ class User extends Authenticatable
         return $this->hasMany(Review::class);
     }
 
+    /**
+     * Root-absolute (or scheme-absolute) avatar URL for img src.
+     */
+    public function avatarUrl(): ?string
+    {
+        if (! is_string($this->avatar) || $this->avatar === '') {
+            return null;
+        }
+
+        return app(\App\Services\Media\MediaPathService::class)->urlFromLegacyPath($this->avatar);
+    }
+
+    public function initials(): string
+    {
+        $parts = preg_split('/\s+/', trim((string) $this->name)) ?: [];
+        $letters = collect($parts)
+            ->filter()
+            ->map(fn (string $part) => mb_strtoupper(mb_substr($part, 0, 1)))
+            ->take(2)
+            ->implode('');
+
+        if ($letters !== '') {
+            return $letters;
+        }
+
+        $fallback = (string) ($this->username ?: $this->email ?: '?');
+
+        return mb_strtoupper(mb_substr($fallback, 0, 1));
+    }
+
     public function supportTickets(): HasMany
     {
         return $this->hasMany(SupportTicket::class);

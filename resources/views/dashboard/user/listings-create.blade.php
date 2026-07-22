@@ -24,7 +24,7 @@
         <form
             method="POST"
             action="{{ route('dashboard.listings.store') }}"
-            class="max-w-form space-y-4"
+            class="w-full space-y-4"
             x-data="listingCategoryForm(@js($tree), {{ (int) old('parent_id', 0) }}, {{ (int) old('category_id', 0) }})"
             @submit="submitting = true"
         >
