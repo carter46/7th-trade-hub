@@ -12,12 +12,14 @@
         striped
     >
         <x-slot:filters>
-            <form method="GET" class="flex flex-col sm:flex-row gap-3 max-w-md">
-                <div class="flex-1">
-                    <x-dashboard.input name="action" type="text" :value="request('action')" placeholder="Filter by action..." />
-                </div>
-                <x-dashboard.button type="submit" variant="secondary" size="md">Filter</x-dashboard.button>
-            </form>
+            <x-dashboard.filter-bar>
+                <form method="GET" class="contents">
+                    <div class="min-w-[12rem] flex-1">
+                        <x-dashboard.input name="action" type="text" :value="request('action')" placeholder="Filter by action..." />
+                    </div>
+                    <x-dashboard.button type="submit" variant="secondary" size="md">Filter</x-dashboard.button>
+                </form>
+            </x-dashboard.filter-bar>
         </x-slot:filters>
 
         <x-slot:head>

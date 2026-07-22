@@ -19,7 +19,16 @@
         ])->values()->all()
         : [['id' => null, 'name' => 'Standard', 'price' => $product->base_price, 'duration_months' => null, 'is_default' => true]]);
 @endphp
-<x-layout.page title="{{ isset($product->id) ? 'Edit Product' : 'New Product' }}" width="content-md">
+<x-layout.page
+    title="{{ isset($product->id) ? 'Edit Product' : 'New Product' }}"
+    subtitle="{{ isset($product->id) ? 'Update this platform catalog product.' : 'Create an admin-owned catalog product.' }}"
+    width="content"
+    :breadcrumb="[
+        ['Admin', route('admin')],
+        ['Platform Products', route('admin.platform-products')],
+        [isset($product->id) ? 'Edit' : 'Create', null],
+    ]"
+>
     <x-dashboard.card>
         <form method="POST" action="{{ isset($product->id) ? route('admin.platform-products.update', $product) : route('admin.platform-products.store') }}" class="space-y-4"
               x-data="{ variants: @js($variantRows) }">

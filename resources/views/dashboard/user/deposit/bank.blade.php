@@ -6,7 +6,7 @@
 <x-layout.page
     title="Deposit Money"
     subtitle="Bank transfer — upload proof after payment."
-    width="content-md"
+    width="form"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
         ['Deposit', route('dashboard.deposit.index')],

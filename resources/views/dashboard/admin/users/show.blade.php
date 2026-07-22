@@ -48,13 +48,6 @@
         @endif
     </x-slot:actions>
 
-    @if (session('status'))
-        <x-dashboard.alert variant="success">{{ session('status') }}</x-dashboard.alert>
-    @endif
-    @if (session('error'))
-        <x-dashboard.alert variant="error">{{ session('error') }}</x-dashboard.alert>
-    @endif
-
     <div class="flex flex-wrap items-center gap-3 text-sm text-text-secondary">
         <x-dashboard.badge :status="$user->anonymized_at ? 'neutral' : ($user->is_suspended ? 'suspended' : 'active')" />
         <span>Joined {{ $user->created_at->format('j M Y') }}</span>

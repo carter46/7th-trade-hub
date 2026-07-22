@@ -9,8 +9,9 @@
 >
     <button
         type="button"
+        x-ref="trigger"
         class="inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg text-text-secondary hover:bg-muted/60 hover:text-text-primary focus-ring"
-        @click="toggle()"
+        @click.stop="toggle()"
         :aria-expanded="open.toString()"
         aria-haspopup="menu"
         aria-label="Row actions"
@@ -18,13 +19,18 @@
         <span class="text-lg leading-none" aria-hidden="true">⋮</span>
     </button>
 
-    <div
-        x-show="open"
-        x-cloak
-        @click.outside="close()"
-        class="absolute z-40 mt-1 min-w-[11rem] rounded-xl border border-border-default bg-surface p-1 shadow-panel {{ $align === 'left' ? 'left-0' : 'right-0' }}"
-        role="menu"
-    >
-        {{ $slot }}
-    </div>
+    <template x-teleport="body">
+        <div
+            x-ref="menu"
+            x-show="open"
+            x-cloak
+            x-bind:style="`position:fixed;z-index:70;top:${menuStyle.top};left:${menuStyle.left};min-width:${menuStyle.minWidth}`"
+            @click.outside="close()"
+            class="rounded-xl border border-border-default bg-surface p-1 shadow-panel"
+            role="menu"
+            @click="close()"
+        >
+            {{ $slot }}
+        </div>
+    </template>
 </div>

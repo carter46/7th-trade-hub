@@ -13,7 +13,7 @@
 <x-layout.page
     title="Create Listing"
     subtitle="Pick a subcategory, then save a draft for review."
-    width="content-md"
+    width="form"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
         ['My Listings', route('dashboard.listings')],

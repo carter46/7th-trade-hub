@@ -15,6 +15,7 @@
         'warning' => 'warning',
         default => 'primary',
     };
+    $hasBody = isset($slot) && trim((string) $slot) !== '';
 @endphp
 
 {{-- Theme-aware confirm modal. Open via $dispatch('open-modal', 'name') --}}
@@ -103,38 +104,53 @@
                     </button>
                 </div>
 
-                @if (isset($slot) && trim((string) $slot) !== '')
-                    <div class="mt-4 text-sm text-text-secondary">{{ $slot }}</div>
-                @endif
+                @if ($formAction)
+                    <form method="POST" action="{{ $formAction }}" class="mt-4" x-data="{ submitting: false }" @submit="submitting = true">
+                        @csrf
+                        @if (strtoupper($method) !== 'POST')
+                            @method($method)
+                        @endif
 
-                <div class="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5">
-                    @isset($footer)
-                        {{ $footer }}
-                    @else
-                        <x-ui.button type="button" variant="secondary" @click="closeModal()">{{ $cancelLabel }}</x-ui.button>
-                        @if ($formAction)
-                            <form method="POST" action="{{ $formAction }}" x-data="{ submitting: false }" @submit="submitting = true">
-                                @csrf
-                                @if (strtoupper($method) !== 'POST')
-                                    @method($method)
-                                @endif
-                                @isset($form)
-                                    {{ $form }}
-                                @endisset
+                        @if ($hasBody)
+                            <div class="text-sm text-text-secondary">{{ $slot }}</div>
+                        @endif
+
+                        @isset($form)
+                            <div @class(['space-y-4', 'mt-4' => $hasBody])>
+                                {{ $form }}
+                            </div>
+                        @endisset
+
+                        <div class="mt-6 flex flex-col-reverse gap-2.5 sm:flex-row sm:justify-end">
+                            @isset($footer)
+                                {{ $footer }}
+                            @else
+                                <x-ui.button type="button" variant="secondary" @click="closeModal()">{{ $cancelLabel }}</x-ui.button>
                                 <x-ui.button type="submit" :variant="$confirmVariant" x-bind:disabled="submitting">
                                     <span class="inline-flex items-center gap-2">
                                         <span x-show="submitting" x-cloak><x-ui.icon name="spinner" class="w-4 h-4 animate-spin" /></span>
                                         {{ $confirmLabel }}
                                     </span>
                                 </x-ui.button>
-                            </form>
+                            @endisset
+                        </div>
+                    </form>
+                @else
+                    @if ($hasBody)
+                        <div class="mt-4 text-sm text-text-secondary">{{ $slot }}</div>
+                    @endif
+
+                    <div class="mt-6 flex flex-col-reverse gap-2.5 sm:flex-row sm:justify-end">
+                        @isset($footer)
+                            {{ $footer }}
                         @else
+                            <x-ui.button type="button" variant="secondary" @click="closeModal()">{{ $cancelLabel }}</x-ui.button>
                             <x-ui.button type="button" :variant="$confirmVariant" @click="closeModal(); $dispatch('modal-confirmed', '{{ $name }}')">
                                 {{ $confirmLabel }}
                             </x-ui.button>
-                        @endif
-                    @endisset
-                </div>
+                        @endisset
+                    </div>
+                @endif
             </div>
         </div>
     </template>

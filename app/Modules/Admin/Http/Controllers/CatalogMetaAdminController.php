@@ -18,13 +18,25 @@ class CatalogMetaAdminController extends Controller
 {
     public function marketplaceCategories(): View
     {
+        $categories = Category::query()
+            ->with('parent')
+            ->withCount('listings')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->paginate(20);
+
+        return view('dashboard.admin.marketplace-categories.index', compact('categories'));
+    }
+
+    public function createMarketplaceCategory(): View
+    {
         $parents = Category::query()
             ->whereNull('parent_id')
-            ->with('children')
             ->orderBy('sort_order')
+            ->orderBy('name')
             ->get();
 
-        return view('dashboard.admin.marketplace-categories', compact('parents'));
+        return view('dashboard.admin.marketplace-categories.create', compact('parents'));
     }
 
     public function storeMarketplaceCategory(Request $request): RedirectResponse
@@ -32,7 +44,7 @@ class CatalogMetaAdminController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'parent_id' => ['nullable', 'exists:categories,id'],
-            'sort_order' => ['nullable', 'integer'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
 
         Category::create([
@@ -44,14 +56,69 @@ class CatalogMetaAdminController extends Controller
             'sort_order' => $data['sort_order'] ?? 0,
         ]);
 
-        return back()->with('status', 'Category created.');
+        return redirect()
+            ->route('admin.marketplace-categories')
+            ->with('status', 'Category created.');
+    }
+
+    public function editMarketplaceCategory(Category $category): View
+    {
+        $parents = Category::query()
+            ->whereNull('parent_id')
+            ->where('id', '!=', $category->id)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+
+        return view('dashboard.admin.marketplace-categories.edit', compact('category', 'parents'));
+    }
+
+    public function updateMarketplaceCategory(Request $request, Category $category): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'parent_id' => [
+                'nullable',
+                'exists:categories,id',
+                Rule::notIn([$category->id]),
+            ],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+        ]);
+
+        if (! empty($data['parent_id'])) {
+            $parent = Category::find($data['parent_id']);
+            if ($parent && $parent->parent_id) {
+                return back()->withInput()->with('error', 'Only top-level categories can be parents.');
+            }
+        }
+
+        $category->update([
+            'name' => $data['name'],
+            'parent_id' => $data['parent_id'] ?? null,
+            'sort_order' => $data['sort_order'] ?? 0,
+        ]);
+
+        return redirect()
+            ->route('admin.marketplace-categories')
+            ->with('status', 'Category updated.');
     }
 
     public function platformCategories(): View
     {
-        $categories = PlatformCategory::orderBy('product_type')->orderBy('sort_order')->get();
+        $categories = PlatformCategory::query()
+            ->withCount('products')
+            ->orderBy('product_type')
+            ->orderBy('sort_order')
+            ->paginate(20);
 
-        return view('dashboard.admin.platform-categories', compact('categories'));
+        return view('dashboard.admin.platform-categories.index', compact('categories'));
+    }
+
+    public function createPlatformCategory(): View
+    {
+        return view('dashboard.admin.platform-categories.create', [
+            'types' => PlatformProductType::cases(),
+        ]);
     }
 
     public function storePlatformCategory(Request $request): RedirectResponse
@@ -59,7 +126,7 @@ class CatalogMetaAdminController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'product_type' => ['required', Rule::enum(PlatformProductType::class)],
-            'sort_order' => ['nullable', 'integer'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
             'short_description' => ['nullable', 'string', 'max:500'],
             'hero_title' => ['nullable', 'string', 'max:255'],
             'hero_subtitle' => ['nullable', 'string', 'max:500'],
@@ -80,12 +147,25 @@ class CatalogMetaAdminController extends Controller
             'card_image' => $data['card_image'] ?? null,
         ]);
 
-        return back()->with('status', 'Platform category created.');
+        return redirect()
+            ->route('admin.platform-categories')
+            ->with('status', 'Platform category created.');
+    }
+
+    public function editPlatformCategory(PlatformCategory $platformCategory): View
+    {
+        return view('dashboard.admin.platform-categories.edit', [
+            'category' => $platformCategory,
+            'types' => PlatformProductType::cases(),
+        ]);
     }
 
     public function updatePlatformCategory(Request $request, PlatformCategory $platformCategory): RedirectResponse
     {
         $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'product_type' => ['required', Rule::enum(PlatformProductType::class)],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
             'short_description' => ['nullable', 'string', 'max:500'],
             'hero_title' => ['nullable', 'string', 'max:255'],
             'hero_subtitle' => ['nullable', 'string', 'max:500'],
@@ -93,9 +173,20 @@ class CatalogMetaAdminController extends Controller
             'card_image' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $platformCategory->update($data);
+        $platformCategory->update([
+            'name' => $data['name'],
+            'product_type' => $data['product_type'],
+            'sort_order' => $data['sort_order'] ?? 0,
+            'short_description' => $data['short_description'] ?? null,
+            'hero_title' => $data['hero_title'] ?? null,
+            'hero_subtitle' => $data['hero_subtitle'] ?? null,
+            'banner_image' => $data['banner_image'] ?? null,
+            'card_image' => $data['card_image'] ?? null,
+        ]);
 
-        return back()->with('status', 'Category content updated.');
+        return redirect()
+            ->route('admin.platform-categories')
+            ->with('status', 'Platform category updated.');
     }
 
     public function togglePlatformCategory(PlatformCategory $platformCategory): RedirectResponse
@@ -166,15 +257,86 @@ class CatalogMetaAdminController extends Controller
 
     public function exchangeRates(): View
     {
-        return view('dashboard.admin.exchange-rates', [
-            'rates' => ExchangeRate::orderBy('sort_order')->get(),
+        return view('dashboard.admin.exchange-rates.index', [
+            'rates' => ExchangeRate::orderBy('sort_order')->paginate(20),
         ]);
+    }
+
+    public function createExchangeRate(): View
+    {
+        return view('dashboard.admin.exchange-rates.create');
     }
 
     public function storeExchangeRate(Request $request): RedirectResponse
     {
-        $data = $request->validate([
-            'asset' => ['required', 'string', 'max:20'],
+        $data = $this->validatedExchangeRate($request);
+
+        ExchangeRate::create([
+            'asset' => strtoupper($data['asset']),
+            'buy_rate_ngn' => $data['buy_rate_ngn'],
+            'sell_rate_ngn' => $data['sell_rate_ngn'],
+            'minimum_amount' => $data['minimum_amount'] ?? null,
+            'maximum_amount' => $data['maximum_amount'] ?? null,
+            'processing_time' => $data['processing_time'] ?? null,
+            'is_featured' => $request->boolean('is_featured'),
+            'is_active' => $request->boolean('is_active', true),
+            'sort_order' => $data['sort_order'] ?? 0,
+        ]);
+
+        return redirect()
+            ->route('admin.exchange-rates')
+            ->with('status', 'Exchange rate created.');
+    }
+
+    public function editExchangeRate(ExchangeRate $exchangeRate): View
+    {
+        return view('dashboard.admin.exchange-rates.edit', [
+            'rate' => $exchangeRate,
+        ]);
+    }
+
+    public function updateExchangeRate(Request $request, ExchangeRate $exchangeRate): RedirectResponse
+    {
+        $data = $this->validatedExchangeRate($request, $exchangeRate);
+
+        $exchangeRate->update([
+            'asset' => strtoupper($data['asset']),
+            'buy_rate_ngn' => $data['buy_rate_ngn'],
+            'sell_rate_ngn' => $data['sell_rate_ngn'],
+            'minimum_amount' => $data['minimum_amount'] ?? null,
+            'maximum_amount' => $data['maximum_amount'] ?? null,
+            'processing_time' => $data['processing_time'] ?? null,
+            'is_featured' => $request->boolean('is_featured'),
+            'is_active' => $request->boolean('is_active', true),
+            'sort_order' => $data['sort_order'] ?? 0,
+        ]);
+
+        return redirect()
+            ->route('admin.exchange-rates')
+            ->with('status', 'Exchange rate updated.');
+    }
+
+    public function destroyExchangeRate(ExchangeRate $exchangeRate): RedirectResponse
+    {
+        $exchangeRate->delete();
+
+        return redirect()
+            ->route('admin.exchange-rates')
+            ->with('status', 'Rate deleted.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function validatedExchangeRate(Request $request, ?ExchangeRate $exchangeRate = null): array
+    {
+        return $request->validate([
+            'asset' => [
+                'required',
+                'string',
+                'max:20',
+                Rule::unique('exchange_rates', 'asset')->ignore($exchangeRate?->id),
+            ],
             'buy_rate_ngn' => ['required', 'numeric', 'min:0'],
             'sell_rate_ngn' => ['required', 'numeric', 'min:0'],
             'minimum_amount' => ['nullable', 'numeric', 'min:0'],
@@ -182,30 +344,7 @@ class CatalogMetaAdminController extends Controller
             'processing_time' => ['nullable', 'string', 'max:100'],
             'is_featured' => ['sometimes', 'boolean'],
             'is_active' => ['sometimes', 'boolean'],
-            'sort_order' => ['nullable', 'integer'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
-
-        ExchangeRate::updateOrCreate(
-            ['asset' => strtoupper($data['asset'])],
-            [
-                'buy_rate_ngn' => $data['buy_rate_ngn'],
-                'sell_rate_ngn' => $data['sell_rate_ngn'],
-                'minimum_amount' => $data['minimum_amount'] ?? null,
-                'maximum_amount' => $data['maximum_amount'] ?? null,
-                'processing_time' => $data['processing_time'] ?? null,
-                'is_featured' => $request->boolean('is_featured'),
-                'is_active' => $request->boolean('is_active', true),
-                'sort_order' => $data['sort_order'] ?? 0,
-            ]
-        );
-
-        return back()->with('status', 'Exchange rate saved.');
-    }
-
-    public function destroyExchangeRate(ExchangeRate $exchangeRate): RedirectResponse
-    {
-        $exchangeRate->delete();
-
-        return back()->with('status', 'Rate deleted.');
     }
 }

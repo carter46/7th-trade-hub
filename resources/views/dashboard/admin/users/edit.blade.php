@@ -6,7 +6,7 @@
 <x-layout.page
     title="Edit User"
     subtitle="{{ $user->email }}"
-    width="content-md"
+    width="form"
     :breadcrumb="[
         ['Admin', route('admin')],
         ['Users', route('admin.users')],
@@ -14,10 +14,6 @@
         ['Edit', null],
     ]"
 >
-    @if (session('error'))
-        <x-dashboard.alert variant="error">{{ session('error') }}</x-dashboard.alert>
-    @endif
-
     <x-dashboard.card>
         <form method="POST" action="{{ route('admin.users.update', $user) }}" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf

@@ -6,17 +6,13 @@
 <x-layout.page
     title="Edit Administrator"
     subtitle="Update staff profile and administrator privileges."
-    width="content-md"
+    width="form"
     :breadcrumb="[
         ['Admin', route('admin')],
         ['Administrators', route('admin.administrators')],
         ['Edit', null],
     ]"
 >
-    @if (session('error'))
-        <x-dashboard.alert variant="error">{{ session('error') }}</x-dashboard.alert>
-    @endif
-
     <x-dashboard.card>
         <form method="POST" action="{{ route('admin.administrators.update', $administrator) }}" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf

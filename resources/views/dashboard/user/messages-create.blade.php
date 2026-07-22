@@ -6,7 +6,7 @@
 <x-layout.page
     title="New Message"
     subtitle="Send a private message to another user."
-    width="content-md"
+    width="form"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
         ['Messages', route('dashboard.messages')],

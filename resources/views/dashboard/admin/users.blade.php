@@ -16,13 +16,6 @@
         ['Users', null],
     ]"
 >
-    @if (session('status'))
-        <x-dashboard.alert variant="success">{{ session('status') }}</x-dashboard.alert>
-    @endif
-    @if (session('error'))
-        <x-dashboard.alert variant="error">{{ session('error') }}</x-dashboard.alert>
-    @endif
-
     <x-dashboard.tabs
         :active="$status"
         :tabs="[
@@ -63,30 +56,30 @@
                     @endif
                 </x-dashboard.td>
                 <x-dashboard.td>
-                    <x-dashboard.row-actions>
-                        @if (! $u->anonymized_at)
-                            <a href="{{ route('admin.users.edit', $u) }}" role="menuitem" class="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-muted/60">Edit</a>
-                        @endif
+                    @if ($u->anonymized_at)
+                        <span class="text-xs text-text-muted">—</span>
+                    @else
+                        <x-dashboard.row-actions>
+                            <x-dashboard.menu-item :href="route('admin.users.edit', $u)">Edit</x-dashboard.menu-item>
 
-                        @if ($u->is_suspended)
-                            @if (! $u->anonymized_at)
+                            @if ($u->is_suspended)
                                 <form method="POST" action="{{ route('admin.users.restore', $u) }}">
                                     @csrf
-                                    <button type="submit" role="menuitem" class="w-full rounded-lg px-3 py-2 text-left text-sm text-success hover:bg-muted/60">Restore</button>
+                                    <x-dashboard.menu-item type="submit" variant="success">Restore</x-dashboard.menu-item>
                                 </form>
                                 <form method="POST" action="{{ route('admin.users.destroy', $u) }}" onsubmit="return confirm('Permanently delete this user? This anonymizes personal data and cannot be undone.');">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" role="menuitem" class="w-full rounded-lg px-3 py-2 text-left text-sm text-danger hover:bg-muted/60">Permanently Delete</button>
+                                    <x-dashboard.menu-item type="submit" variant="danger">Permanently Delete</x-dashboard.menu-item>
+                                </form>
+                            @else
+                                <form method="POST" action="{{ route('admin.users.suspend', $u) }}">
+                                    @csrf
+                                    <x-dashboard.menu-item type="submit" variant="danger">Suspend</x-dashboard.menu-item>
                                 </form>
                             @endif
-                        @else
-                            <form method="POST" action="{{ route('admin.users.suspend', $u) }}">
-                                @csrf
-                                <button type="submit" role="menuitem" class="w-full rounded-lg px-3 py-2 text-left text-sm text-danger hover:bg-muted/60">Suspend</button>
-                            </form>
-                        @endif
-                    </x-dashboard.row-actions>
+                        </x-dashboard.row-actions>
+                    @endif
                 </x-dashboard.td>
             </tr>
         @endforeach

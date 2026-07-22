@@ -100,11 +100,70 @@ document.addEventListener('alpine:init', () => {
 
     Alpine.data('rowActions', () => ({
         open: false,
+        menuStyle: { top: '0px', left: '0px', minWidth: '11rem' },
+        _onScroll: null,
+        _onResize: null,
+        init() {
+            this._onScroll = () => {
+                if (this.open) this.close();
+            };
+            this._onResize = () => {
+                if (this.open) this.position();
+            };
+            window.addEventListener('scroll', this._onScroll, true);
+            window.addEventListener('resize', this._onResize);
+            this.$watch('open', (value) => {
+                if (value) {
+                    this.$nextTick(() => {
+                        this.position();
+                        requestAnimationFrame(() => this.position());
+                    });
+                }
+            });
+        },
+        destroy() {
+            if (this._onScroll) {
+                window.removeEventListener('scroll', this._onScroll, true);
+            }
+            if (this._onResize) {
+                window.removeEventListener('resize', this._onResize);
+            }
+        },
         toggle() {
             this.open = !this.open;
         },
         close() {
             this.open = false;
+        },
+        position() {
+            const trigger = this.$refs.trigger;
+            const menu = this.$refs.menu;
+            if (!trigger || !menu) return;
+
+            const rect = trigger.getBoundingClientRect();
+            const menuRect = menu.getBoundingClientRect();
+            const gap = 4;
+            const pad = 8;
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+
+            let top = rect.bottom + gap;
+            if (top + menuRect.height > vh - pad && rect.top - gap - menuRect.height >= pad) {
+                top = rect.top - gap - menuRect.height;
+            }
+            top = Math.max(pad, Math.min(top, vh - menuRect.height - pad));
+
+            let left = rect.right - menuRect.width;
+            if (left < pad) left = pad;
+            if (left + menuRect.width > vw - pad) {
+                left = Math.max(pad, vw - menuRect.width - pad);
+            }
+
+            this.menuStyle = {
+                top: `${Math.round(top)}px`,
+                left: `${Math.round(left)}px`,
+                minWidth: `${Math.max(176, Math.round(rect.width))}px`,
+            };
         },
     }));
 

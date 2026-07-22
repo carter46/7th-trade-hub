@@ -3,7 +3,7 @@
 @section('title', 'Dashboard')
 
 @section('content')
-<x-layout.page title="Welcome back, {{ auth()->user()->name ?? 'User' }}" subtitle="Here's what's happening with your account today." width="content">
+<x-layout.page title="Welcome back, {{ auth()->user()->name ?? 'User' }}" subtitle="Here's what's happening with your account today." width="full">
     <x-dashboard.stat-grid>
         <x-dashboard.stats-card
             label="Total Balance"

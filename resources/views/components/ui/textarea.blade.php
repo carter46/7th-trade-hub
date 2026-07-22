@@ -8,6 +8,7 @@
 
 @php
     $id = $attributes->get('id', $name);
+    $attributes = $attributes->except('id');
     $errorMessage = $error ?? ($name ? $errors->first($name) : null);
     $hintId = $id ? $id . '-hint' : null;
     $errorId = $id ? $id . '-error' : null;

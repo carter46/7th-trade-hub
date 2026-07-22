@@ -9,6 +9,7 @@
 
 @php
     $id = $attributes->get('id', $name);
+    $attributes = $attributes->except('id');
     $errorMessage = $error ?? ($name ? $errors->first($name) : null);
     $sizeClass = $size === 'sm' ? 'h-8 px-2 text-xs' : 'h-10 px-3 text-sm';
     $hintId = $id ? $id . '-hint' : null;

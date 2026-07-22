@@ -275,16 +275,24 @@ Route::middleware(['auth', 'verified', 'role:admin', 'throttle:60,1'])->prefix('
         Route::put('/platform-products/{platformProduct}', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'update'])->name('.platform-products.update');
         Route::delete('/platform-products/{platformProduct}', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'destroy'])->name('.platform-products.destroy');
         Route::get('/marketplace-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'marketplaceCategories'])->name('.marketplace-categories');
+        Route::get('/marketplace-categories/create', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'createMarketplaceCategory'])->name('.marketplace-categories.create');
         Route::post('/marketplace-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'storeMarketplaceCategory'])->name('.marketplace-categories.store');
+        Route::get('/marketplace-categories/{category}/edit', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'editMarketplaceCategory'])->name('.marketplace-categories.edit');
+        Route::put('/marketplace-categories/{category}', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'updateMarketplaceCategory'])->name('.marketplace-categories.update');
         Route::post('/marketplace-categories/{category}/toggle', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'toggleMarketplaceCategory'])->name('.marketplace-categories.toggle');
         Route::get('/platform-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'platformCategories'])->name('.platform-categories');
+        Route::get('/platform-categories/create', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'createPlatformCategory'])->name('.platform-categories.create');
         Route::post('/platform-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'storePlatformCategory'])->name('.platform-categories.store');
+        Route::get('/platform-categories/{platformCategory}/edit', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'editPlatformCategory'])->name('.platform-categories.edit');
         Route::put('/platform-categories/{platformCategory}', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'updatePlatformCategory'])->name('.platform-categories.update');
         Route::post('/platform-categories/{platformCategory}/toggle', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'togglePlatformCategory'])->name('.platform-categories.toggle');
         Route::get('/catalog-pages', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'catalogPages'])->name('.catalog-pages');
         Route::post('/catalog-pages', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'upsertCatalogPage'])->name('.catalog-pages.upsert');
         Route::get('/exchange-rates', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'exchangeRates'])->name('.exchange-rates');
+        Route::get('/exchange-rates/create', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'createExchangeRate'])->name('.exchange-rates.create');
         Route::post('/exchange-rates', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'storeExchangeRate'])->name('.exchange-rates.store');
+        Route::get('/exchange-rates/{exchangeRate}/edit', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'editExchangeRate'])->name('.exchange-rates.edit');
+        Route::put('/exchange-rates/{exchangeRate}', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'updateExchangeRate'])->name('.exchange-rates.update');
         Route::delete('/exchange-rates/{exchangeRate}', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'destroyExchangeRate'])->name('.exchange-rates.destroy');
     });
 

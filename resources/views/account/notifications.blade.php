@@ -3,7 +3,7 @@
 @section('title', 'Notification Preferences')
 
 @section('content')
-<x-layout.page title="Notifications" subtitle="Review notification activity and read status." width="content-md">
+<x-layout.page title="Notifications" subtitle="Review notification activity and read status." width="form">
     @include('account.partials.navigation')
 
     <x-dashboard.card>

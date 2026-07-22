@@ -6,7 +6,7 @@
 <x-layout.page
     title="New Support Ticket"
     subtitle="Describe your issue and we’ll follow up in this thread."
-    width="content-md"
+    width="form"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
         ['Support', route('dashboard.support.index')],

@@ -6,7 +6,7 @@
 <x-layout.page
     title="{{ $message->subject }}"
     subtitle="From {{ $message->fromUser?->name ?? $message->fromUser?->email }} to {{ $message->toUser?->name ?? $message->toUser?->email }} — {{ $message->created_at->format('M j, Y H:i') }}"
-    width="content-md"
+    width="content"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
         ['Messages', route('dashboard.messages')],

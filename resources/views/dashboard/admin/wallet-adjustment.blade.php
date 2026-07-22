@@ -6,7 +6,7 @@
 <x-layout.page
     title="Wallet Adjustment"
     subtitle="Credit or debit a user wallet with a recorded reason."
-    width="content-md"
+    width="form"
     :breadcrumb="[
         ['Admin', route('admin')],
         ['Wallet Adjust', null],

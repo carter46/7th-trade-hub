@@ -6,17 +6,13 @@
 <x-layout.page
     title="Platform Settings"
     subtitle="Configure fees, contact details, live chat, and verify email delivery."
-    width="content-md"
+    width="content"
     :breadcrumb="[
         ['Admin', route('admin')],
         ['Settings', null],
     ]"
 >
     <div class="space-y-6">
-        @if (session('status'))
-            <x-dashboard.alert variant="success">{{ session('status') }}</x-dashboard.alert>
-        @endif
-
         <x-dashboard.card variant="solid">
             <h2 class="text-lg font-semibold text-text-primary mb-4">Fees & limits</h2>
             <form method="POST" action="{{ route('admin.settings.update') }}" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true">

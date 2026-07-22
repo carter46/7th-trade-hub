@@ -40,23 +40,25 @@
                 </x-dashboard.td>
                 <x-dashboard.td class="text-text-secondary">{{ $listing->updated_at->format('M j, Y') }}</x-dashboard.td>
                 <x-dashboard.td>
-                    <div class="flex flex-wrap gap-2">
-                        @if (in_array($listing->status, ['draft', 'rejected']))
-                            <x-dashboard.button :href="route('dashboard.listings.edit', $listing)" variant="link" size="xs">Edit</x-dashboard.button>
-                            <form method="POST" action="{{ route('dashboard.listings.submit', $listing) }}" class="inline" x-data="{ submitting: false }" @submit="submitting = true">
+                    @if (in_array($listing->status, ['draft', 'rejected']))
+                        <x-dashboard.row-actions>
+                            <x-dashboard.menu-item :href="route('dashboard.listings.edit', $listing)">Edit</x-dashboard.menu-item>
+                            <form method="POST" action="{{ route('dashboard.listings.submit', $listing) }}">
                                 @csrf
-                                <x-dashboard.button type="submit" variant="link" size="xs" x-bind:disabled="submitting">Submit</x-dashboard.button>
+                                <x-dashboard.menu-item type="submit">Submit</x-dashboard.menu-item>
                             </form>
-                        @elseif ($listing->status === 'published')
-                            <x-dashboard.button :href="route('marketplace.show', $listing->slug)" variant="link" size="xs">View live</x-dashboard.button>
-                            <form method="POST" action="{{ route('dashboard.listings.revision', $listing) }}" class="inline" x-data="{ submitting: false }" @submit="submitting = true">
+                        </x-dashboard.row-actions>
+                    @elseif ($listing->status === 'published')
+                        <x-dashboard.row-actions>
+                            <x-dashboard.menu-item :href="route('marketplace.show', $listing->slug)">View live</x-dashboard.menu-item>
+                            <form method="POST" action="{{ route('dashboard.listings.revision', $listing) }}">
                                 @csrf
-                                <x-dashboard.button type="submit" variant="ghost" size="xs" x-bind:disabled="submitting">New revision</x-dashboard.button>
+                                <x-dashboard.menu-item type="submit">New revision</x-dashboard.menu-item>
                             </form>
-                        @else
-                            <span class="text-text-muted text-xs">Awaiting admin</span>
-                        @endif
-                    </div>
+                        </x-dashboard.row-actions>
+                    @else
+                        <span class="text-text-muted text-xs">Awaiting admin</span>
+                    @endif
                 </x-dashboard.td>
             </tr>
         @endforeach

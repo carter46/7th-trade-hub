@@ -2,7 +2,7 @@
     'title' => null,
     'subtitle' => null,
 ])
-<div {{ $attributes->merge(['class' => 'flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between mb-6']) }}>
+<div {{ $attributes->merge(['class' => 'flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between']) }}>
     <div>
         @if ($title)
             <h1 class="text-2xl font-bold text-text-primary tracking-tight">{{ $title }}</h1>

@@ -16,10 +16,6 @@
         <h1 class="text-3xl font-bold font-display mb-2">Checkout</h1>
         <p class="text-slate-400 mb-8">{{ $product->title }}</p>
 
-        @if(session('error'))
-            <div class="mb-4 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm">{{ session('error') }}</div>
-        @endif
-
         <form
             method="POST"
             action="{{ route('checkout.platform.store', $product->slug) }}"

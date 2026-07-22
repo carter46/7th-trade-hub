@@ -3,7 +3,7 @@
 @section('title', 'Sessions')
 
 @section('content')
-<x-layout.page title="Sessions" subtitle="Review devices signed in to your account." width="content-md">
+<x-layout.page title="Sessions" subtitle="Review devices signed in to your account." width="form">
     @include('account.partials.navigation')
 
     <div class="space-y-3">

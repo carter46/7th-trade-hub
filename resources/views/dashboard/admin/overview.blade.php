@@ -37,8 +37,7 @@
     </x-dashboard.stat-grid>
 
     @if (! empty($quickActions))
-        <div class="space-y-3">
-            <h2 class="text-lg font-semibold text-text-primary">Quick Actions</h2>
+        <x-dashboard.section title="Quick Actions">
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
                 @foreach ($quickActions as $action)
                     <a
@@ -52,15 +51,14 @@
                     </a>
                 @endforeach
             </div>
-        </div>
+        </x-dashboard.section>
     @endif
 
     @if ($canFinance ?? false)
-        <div class="space-y-3">
-            <div class="flex items-center justify-between gap-3">
-                <h2 class="text-lg font-semibold text-text-primary">Recent Crypto Transactions</h2>
+        <x-dashboard.section title="Recent Crypto Transactions">
+            <x-slot:actions>
                 <x-dashboard.button :href="route('admin.transactions')" variant="link" size="sm">View All</x-dashboard.button>
-            </div>
+            </x-slot:actions>
 
             <x-dashboard.table
                 :empty="$txs->isEmpty()"
@@ -97,7 +95,7 @@
                     </tr>
                 @endforeach
             </x-dashboard.table>
-        </div>
+        </x-dashboard.section>
     @endif
 </x-layout.page>
 @endsection

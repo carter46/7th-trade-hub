@@ -9,7 +9,7 @@
     <main id="main-content" class="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-surface">
         <x-dashboard.topbar context="Dashboard" :home-route="route('dashboard')" />
 
-        <div class="p-4 sm:p-8">
+        <div class="p-4 lg:p-8">
             @yield('content')
         </div>
     </main>

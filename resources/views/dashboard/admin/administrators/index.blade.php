@@ -21,13 +21,6 @@
         </x-dashboard.button>
     </x-slot:actions>
 
-    @if (session('status'))
-        <x-dashboard.alert variant="success">{{ session('status') }}</x-dashboard.alert>
-    @endif
-    @if (session('error'))
-        <x-dashboard.alert variant="error">{{ session('error') }}</x-dashboard.alert>
-    @endif
-
     <x-dashboard.table
         :empty="$rows->isEmpty()"
         empty-title="No administrators"
@@ -60,17 +53,17 @@
                 </x-dashboard.td>
                 <x-dashboard.td>
                     <x-dashboard.row-actions>
-                        <a href="{{ route('admin.administrators.edit', $admin) }}" role="menuitem" class="block rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-muted/60">Edit</a>
+                        <x-dashboard.menu-item :href="route('admin.administrators.edit', $admin)">Edit</x-dashboard.menu-item>
                         @if ($admin->id !== auth()->id())
                             @if ($admin->is_suspended)
                                 <form method="POST" action="{{ route('admin.administrators.restore', $admin) }}">
                                     @csrf
-                                    <button type="submit" role="menuitem" class="w-full rounded-lg px-3 py-2 text-left text-sm text-success hover:bg-muted/60">Restore</button>
+                                    <x-dashboard.menu-item type="submit" variant="success">Restore</x-dashboard.menu-item>
                                 </form>
                             @else
                                 <form method="POST" action="{{ route('admin.administrators.suspend', $admin) }}">
                                     @csrf
-                                    <button type="submit" role="menuitem" class="w-full rounded-lg px-3 py-2 text-left text-sm text-danger hover:bg-muted/60">Suspend</button>
+                                    <x-dashboard.menu-item type="submit" variant="danger">Suspend</x-dashboard.menu-item>
                                 </form>
                             @endif
                         @endif

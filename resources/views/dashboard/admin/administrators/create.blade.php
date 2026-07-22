@@ -6,7 +6,7 @@
 <x-layout.page
     title="New Administrator"
     subtitle="Create a staff account with the admin role."
-    width="content-md"
+    width="form"
     :breadcrumb="[
         ['Admin', route('admin')],
         ['Administrators', route('admin.administrators')],
