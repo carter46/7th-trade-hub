@@ -227,7 +227,7 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
     Route::post('/support/{ticket}/reply', [SupportTicketController::class, 'reply'])->name('.support.reply');
 });
 
-Route::middleware(['auth', 'verified', 'role:admin', 'throttle:60,1'])->prefix('admin')->name('admin')->group(function () {
+Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|demo_support|demo_moderator', 'throttle:60,1'])->prefix('admin')->name('admin')->group(function () {
     Route::get('/', [AdminDashboardController::class, 'index'])->name('');
     Route::get('/search', AdminSearchController::class)->name('.search');
     Route::prefix('account')->name('.account')->controller(AccountController::class)->group(function () {

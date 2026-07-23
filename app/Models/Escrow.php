@@ -2,11 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Escrow extends Model
 {
+    /** @use HasFactory<\Database\Factories\EscrowFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'order_id', 'buyer_wallet_id', 'seller_wallet_id', 'amount', 'status',
         'released_at', 'released_by', 'refunded_at', 'refund_amount',

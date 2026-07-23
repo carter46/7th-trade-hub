@@ -15,7 +15,7 @@
 
 - [ ] HTTPS works; cookies secure
 - [ ] OTP + login rate limits verified
-- [ ] Do **not** run `DemoDataSeeder` in production
+- [ ] Do **not** run `demo:fresh`, `demo:seed`, or `DemoPlatformSeeder` in production (`SEED_DEMO_DATA` must stay false). Local/staging: see [DEMO-DATA.md](DEMO-DATA.md).
 
 ## Core flow smoke test
 

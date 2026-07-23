@@ -20,10 +20,14 @@ class DatabaseSeeder extends Seeder
             PlatformWalletSeeder::class,
         ]);
 
-        if (app()->environment('local') || env('SEED_DEMO_DATA', false)) {
+        // Demo data: local auto, or SEED_DEMO_DATA=true on non-production.
+        if (
+            ! app()->environment('production')
+            && (app()->environment('local') || filter_var(env('SEED_DEMO_DATA', false), FILTER_VALIDATE_BOOLEAN))
+        ) {
             $this->call([
                 MarketplaceListingSeeder::class,
-                DemoDataSeeder::class,
+                \Database\Seeders\Demo\DemoPlatformSeeder::class,
             ]);
         }
     }
