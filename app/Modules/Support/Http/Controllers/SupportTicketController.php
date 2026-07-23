@@ -2,6 +2,8 @@
 
 namespace App\Modules\Support\Http\Controllers;
 
+use App\Events\TicketOpened;
+use App\Events\TicketReplied;
 use App\Http\Controllers\Controller;
 use App\Models\SupportTicket;
 use App\Models\SupportTicketReply;
@@ -35,13 +37,15 @@ class SupportTicketController extends Controller
             'body' => ['required', 'string'],
         ]);
 
-        SupportTicket::create([
+        $ticket = SupportTicket::create([
             'user_id' => auth()->id(),
             'category' => $validated['category'],
             'subject' => $validated['subject'],
             'body' => $validated['body'],
             'status' => 'open',
         ]);
+
+        TicketOpened::dispatch($ticket->id, (int) auth()->id());
 
         return redirect()->route('dashboard.support.index')
             ->with('status', __('Support ticket created.'));
@@ -62,12 +66,16 @@ class SupportTicketController extends Controller
 
         $validated = $request->validate(['body' => ['required', 'string']]);
 
+        $isStaff = auth()->user()->hasRole('admin');
+
         SupportTicketReply::create([
             'support_ticket_id' => $ticket->id,
             'user_id' => auth()->id(),
             'body' => $validated['body'],
-            'is_staff' => auth()->user()->hasRole('admin'),
+            'is_staff' => $isStaff,
         ]);
+
+        TicketReplied::dispatch($ticket->id, (int) auth()->id(), $isStaff);
 
         return back()->with('status', __('Reply sent.'));
     }

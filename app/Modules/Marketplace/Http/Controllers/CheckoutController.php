@@ -2,6 +2,9 @@
 
 namespace App\Modules\Marketplace\Http\Controllers;
 
+use App\Events\EscrowDisputed;
+use App\Events\EscrowReleased;
+use App\Events\OrderCompleted;
 use App\Http\Controllers\Controller;
 use App\Models\Listing;
 use App\Models\Message;
@@ -93,6 +96,9 @@ class CheckoutController extends Controller
 
         $order->update(['status' => 'completed']);
 
+        EscrowReleased::dispatch($order->id, $order->listing?->user_id);
+        OrderCompleted::dispatch($order->id, $order->user_id, $order->listing?->user_id);
+
         $order->load('listing.user');
         if ($order->listing?->user) {
             $this->notifications->send(
@@ -100,7 +106,8 @@ class CheckoutController extends Controller
                 'order',
                 __('Order completed'),
                 __('Buyer confirmed delivery for order :ref.', ['ref' => $order->reference]),
-                route('dashboard.orders')
+                route('dashboard.orders'),
+                ['database', 'mail']
             );
         }
 
@@ -159,6 +166,8 @@ class CheckoutController extends Controller
             'admin_notes' => trim(($escrow->admin_notes ? $escrow->admin_notes."\n" : '').'Dispute: '.$data['reason']),
         ]);
 
+        EscrowDisputed::dispatch($order->id, auth()->id());
+
         $order->load('listing.user');
         if ($order->listing?->user) {
             $this->notifications->send(
@@ -166,7 +175,8 @@ class CheckoutController extends Controller
                 'order',
                 __('Order disputed'),
                 __('Buyer opened a dispute on order :ref.', ['ref' => $order->reference]),
-                route('dashboard.orders')
+                route('dashboard.orders'),
+                ['database', 'mail']
             );
         }
 

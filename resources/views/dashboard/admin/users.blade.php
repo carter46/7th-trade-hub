@@ -19,6 +19,16 @@
         <x-dashboard.button :href="route('admin.users.create')" size="sm">Create user</x-dashboard.button>
     </x-slot:actions>
 
+    <x-dashboard.card class="mb-4">
+        <form method="GET" action="{{ route('admin.users') }}" class="flex flex-wrap gap-3 items-end">
+            <input type="hidden" name="status" value="{{ $status }}">
+            <div class="min-w-[16rem] flex-1">
+                <x-dashboard.input name="q" label="Search" :value="$search ?? ''" placeholder="Name, email, username..." />
+            </div>
+            <x-dashboard.button type="submit" variant="secondary">Search</x-dashboard.button>
+        </form>
+    </x-dashboard.card>
+
     <x-dashboard.ajax-tabs
         :active="$status"
         :tabs="[

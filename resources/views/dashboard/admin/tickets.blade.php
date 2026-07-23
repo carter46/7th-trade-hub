@@ -3,51 +3,49 @@
 @section('title', 'Support Tickets')
 
 @section('content')
+@php
+    $status = $status ?? 'open';
+    $search = $search ?? '';
+    $filterQuery = array_filter(['q' => $search ?: null], fn ($v) => filled($v));
+@endphp
 <x-layout.page
     title="Support Tickets"
-    subtitle="Handle support requests and tickets."
+    subtitle="Handle support requests across all statuses."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
         ['Support Tickets', null],
     ]"
 >
-    <x-dashboard.table
-        :empty="$tickets->isEmpty()"
-        empty-title="No support tickets yet"
-        empty-description="User support requests will appear here."
-        empty-icon="support"
-        striped
-    >
-        <x-slot:head>
-            <x-dashboard.th>ID</x-dashboard.th>
-            <x-dashboard.th>User</x-dashboard.th>
-            <x-dashboard.th>Category</x-dashboard.th>
-            <x-dashboard.th>Subject</x-dashboard.th>
-            <x-dashboard.th>Status</x-dashboard.th>
-            <x-dashboard.th>Created</x-dashboard.th>
-        </x-slot:head>
+    <x-slot:actions>
+        <x-dashboard.button :href="route('admin.tickets.create')" size="sm">Open ticket</x-dashboard.button>
+    </x-slot:actions>
 
-        @foreach ($tickets as $ticket)
-            <tr class="hover:bg-muted/50">
-                <x-dashboard.td>
-                    <a href="{{ route('admin.tickets.show', $ticket) }}" class="text-primary hover:underline font-medium">#{{ $ticket->id }}</a>
-                </x-dashboard.td>
-                <x-dashboard.td>{{ $ticket->user?->email ?? '—' }}</x-dashboard.td>
-                <x-dashboard.td class="text-text-muted text-xs">{{ $ticket->category }}</x-dashboard.td>
-                <x-dashboard.td>{{ $ticket->subject }}</x-dashboard.td>
-                <x-dashboard.td>
-                    <x-dashboard.badge :status="$ticket->status === 'open' ? 'pending' : 'completed'">
-                        {{ $ticket->status }}
-                    </x-dashboard.badge>
-                </x-dashboard.td>
-                <x-dashboard.td class="text-text-muted text-xs">{{ $ticket->created_at->format('M j, Y H:i') }}</x-dashboard.td>
-            </tr>
-        @endforeach
-    </x-dashboard.table>
+    <x-dashboard.card class="mb-4">
+        <form method="GET" action="{{ route('admin.tickets') }}" class="flex flex-wrap gap-3 items-end">
+            <div class="min-w-[16rem] flex-1">
+                <x-dashboard.input name="q" label="Search" :value="$search" placeholder="Subject, body, or ticket ID..." />
+            </div>
+            <x-dashboard.button type="submit" variant="secondary">Search</x-dashboard.button>
+        </form>
+    </x-dashboard.card>
 
-    <x-slot:pagination>
-        <x-dashboard.pagination :paginator="$tickets" />
-    </x-slot:pagination>
+    @if ($search === '')
+        <x-dashboard.ajax-tabs
+            :active="$status"
+            :tabs="[
+                ['id' => 'open', 'label' => 'Open', 'href' => route('admin.tickets', ['status' => 'open']), 'count' => $counts['open'] ?? 0],
+                ['id' => 'pending', 'label' => 'Pending', 'href' => route('admin.tickets', ['status' => 'pending']), 'count' => $counts['pending'] ?? 0],
+                ['id' => 'awaiting_user', 'label' => 'Awaiting user', 'href' => route('admin.tickets', ['status' => 'awaiting_user']), 'count' => $counts['awaiting_user'] ?? 0],
+                ['id' => 'resolved', 'label' => 'Resolved', 'href' => route('admin.tickets', ['status' => 'resolved']), 'count' => $counts['resolved'] ?? 0],
+                ['id' => 'closed', 'label' => 'Closed', 'href' => route('admin.tickets', ['status' => 'closed']), 'count' => $counts['closed'] ?? 0],
+            ]"
+            class="mb-4"
+        />
+    @endif
+
+    <div id="dashboard-tab-panel">
+        @include('dashboard.admin.tickets._panel')
+    </div>
 </x-layout.page>
 @endsection

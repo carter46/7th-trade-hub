@@ -17,27 +17,41 @@
         <x-dashboard.button :href="route('admin.tickets')" variant="secondary" size="sm">All tickets</x-dashboard.button>
     </x-slot:actions>
 
-    <x-dashboard.card variant="solid">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-            <x-dashboard.badge :status="$ticket->status === 'open' ? 'pending' : 'completed'">
-                {{ $ticket->status }}
-            </x-dashboard.badge>
-            <form method="POST" action="{{ route('admin.tickets.status', $ticket) }}" class="flex gap-2 items-end" x-data="{ submitting: false }" @submit="submitting = true">
-                @csrf
-                <x-dashboard.select name="status" size="sm">
-                    <option value="open" @selected($ticket->status === 'open')>Open</option>
-                    <option value="closed" @selected($ticket->status === 'closed')>Closed</option>
-                </x-dashboard.select>
-                <x-dashboard.button type="submit" variant="secondary" size="sm" x-bind:disabled="submitting">Update</x-dashboard.button>
-            </form>
+    <x-dashboard.card variant="solid" class="mb-4">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <x-dashboard.badge :status="$ticket->status" />
+                <p class="mt-2 text-xs text-text-muted">Assignee: {{ $ticket->assignee?->name ?? 'Unassigned' }}</p>
+            </div>
+            <div class="flex flex-wrap gap-3">
+                <form method="POST" action="{{ route('admin.tickets.status', $ticket) }}" class="flex gap-2 items-end">
+                    @csrf
+                    <x-dashboard.select name="status" size="sm" label="Status">
+                        @foreach (\App\Modules\Admin\Http\Controllers\SupportTicketAdminController::STATUSES as $s)
+                            <option value="{{ $s }}" @selected($ticket->status === $s)>{{ ucfirst(str_replace('_', ' ', $s)) }}</option>
+                        @endforeach
+                    </x-dashboard.select>
+                    <x-dashboard.button type="submit" variant="secondary" size="sm">Update</x-dashboard.button>
+                </form>
+                <form method="POST" action="{{ route('admin.tickets.assign', $ticket) }}" class="flex gap-2 items-end">
+                    @csrf
+                    <x-dashboard.select name="assigned_to" size="sm" label="Assign to">
+                        <option value="">Unassigned</option>
+                        @foreach ($staff as $member)
+                            <option value="{{ $member->id }}" @selected($ticket->assigned_to == $member->id)>{{ $member->name }}</option>
+                        @endforeach
+                    </x-dashboard.select>
+                    <x-dashboard.button type="submit" variant="secondary" size="sm">Assign</x-dashboard.button>
+                </form>
+            </div>
         </div>
-        <div class="text-text-secondary whitespace-pre-wrap text-sm">{{ $ticket->body }}</div>
+        <div class="mt-4 text-text-secondary whitespace-pre-wrap text-sm">{{ $ticket->body }}</div>
     </x-dashboard.card>
 
     @foreach ($ticket->replies as $reply)
         <x-dashboard.card
             variant="solid"
-            class="{{ $reply->is_staff ? 'border-primary/30 bg-primary/5' : '' }}"
+            class="mb-3 {{ $reply->is_staff ? 'border-primary/30 bg-primary/5' : '' }}"
         >
             <p class="text-xs text-text-muted mb-1">
                 {{ $reply->user->name ?? $reply->user->email }}

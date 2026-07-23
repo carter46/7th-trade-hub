@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             PermissionSeeder::class,
             SystemSettingSeeder::class,
+            AnalyticsProviderSeeder::class,
             CategorySeeder::class,
             PlatformCategorySeeder::class,
             PlatformCatalogSeeder::class,

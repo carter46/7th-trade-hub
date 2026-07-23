@@ -3,6 +3,7 @@
 namespace App\Modules\Catalog\Services;
 
 use App\Enums\PlatformProductStatus;
+use App\Events\OrderCompleted;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PlatformProduct;
@@ -109,6 +110,10 @@ class PlatformCheckoutService
                 ]);
 
                 $this->walletService->debitForPlatformPurchase($wallet, $order, (float) $lineTotal);
+
+                DB::afterCommit(function () use ($order, $buyer) {
+                    OrderCompleted::dispatch($order->id, $buyer->id, null);
+                });
 
                 return $order;
             });

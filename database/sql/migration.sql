@@ -389,15 +389,33 @@ CREATE TABLE IF NOT EXISTS `messages` (
 CREATE TABLE IF NOT EXISTS `audit_logs` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `admin_id` bigint unsigned DEFAULT NULL,
+  `actor_id` bigint unsigned DEFAULT NULL,
+  `actor_type` varchar(30) DEFAULT NULL,
   `action` varchar(255) NOT NULL,
+  `module` varchar(60) DEFAULT NULL,
   `model_type` varchar(255) DEFAULT NULL,
   `model_id` bigint unsigned DEFAULT NULL,
   `old_values` json DEFAULT NULL,
   `new_values` json DEFAULT NULL,
   `ip` varchar(45) DEFAULT NULL,
+  `user_agent` text DEFAULT NULL,
+  `device` varchar(30) DEFAULT NULL,
+  `browser` varchar(60) DEFAULT NULL,
+  `country` varchar(2) DEFAULT NULL,
+  `reason` text DEFAULT NULL,
+  `correlation_id` varchar(64) DEFAULT NULL,
+  `request_id` varchar(64) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `audit_logs_created_at_index` (`created_at`),
+  KEY `audit_logs_action_index` (`action`),
+  KEY `audit_logs_module_index` (`module`),
+  KEY `audit_logs_model_type_model_id_index` (`model_type`,`model_id`),
+  KEY `audit_logs_actor_id_index` (`actor_id`),
+  KEY `audit_logs_correlation_id_index` (`correlation_id`),
+  KEY `audit_logs_module_action_index` (`module`,`action`),
+  CONSTRAINT `audit_logs_admin_id_foreign` FOREIGN KEY (`admin_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `system_settings` (
@@ -810,6 +828,142 @@ CREATE TABLE IF NOT EXISTS `marketplace_products` (
 -- ALTER TABLE `categories` ADD COLUMN `og_title` varchar(255) DEFAULT NULL;
 -- ALTER TABLE `categories` ADD COLUMN `og_description` text;
 -- ALTER TABLE `categories` ADD COLUMN `og_image` varchar(255) DEFAULT NULL;
+
+-- ---------- Analytics platform + monitoring (2026-07-23) ----------
+CREATE TABLE IF NOT EXISTS `analytics_providers` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `provider` varchar(60) NOT NULL,
+  `enabled` tinyint(1) NOT NULL DEFAULT 0,
+  `credentials` text DEFAULT NULL,
+  `status` varchar(40) NOT NULL DEFAULT 'idle',
+  `last_sync_at` timestamp NULL DEFAULT NULL,
+  `last_error` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `analytics_providers_provider_unique` (`provider`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `analytics_ga_snapshots` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `metric` varchar(80) NOT NULL,
+  `dimension` varchar(120) DEFAULT NULL,
+  `period_start` date NOT NULL,
+  `period_end` date NOT NULL,
+  `payload` json DEFAULT NULL,
+  `fetched_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `analytics_ga_snapshots_metric_period_start_period_end_index` (`metric`,`period_start`,`period_end`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `analytics_kpi_snapshots` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `kpi_key` varchar(80) NOT NULL,
+  `period` varchar(20) NOT NULL,
+  `value` decimal(18,4) NOT NULL DEFAULT 0.0000,
+  `meta` json DEFAULT NULL,
+  `captured_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `analytics_kpi_snapshots_kpi_key_period_index` (`kpi_key`,`period`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `monitoring_heartbeats` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `key` varchar(80) NOT NULL,
+  `payload` json DEFAULT NULL,
+  `recorded_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `monitoring_heartbeats_key_unique` (`key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `admin_notifications` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `type` varchar(60) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `body` text DEFAULT NULL,
+  `action_url` varchar(255) DEFAULT NULL,
+  `meta` json DEFAULT NULL,
+  `read_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `admin_notifications_type_created_at_index` (`type`,`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `user_activity` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` bigint unsigned NOT NULL,
+  `action` varchar(40) NOT NULL DEFAULT 'viewed',
+  `subject_type` varchar(255) DEFAULT NULL,
+  `subject_id` bigint unsigned DEFAULT NULL,
+  `context_key` varchar(120) DEFAULT NULL,
+  `meta` json DEFAULT NULL,
+  `occurred_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `user_activity_user_id_action_occurred_at_index` (`user_id`,`action`,`occurred_at`),
+  KEY `user_activity_user_id_subject_type_occurred_at_index` (`user_id`,`subject_type`,`occurred_at`),
+  KEY `user_activity_subject_type_subject_id_index` (`subject_type`,`subject_id`),
+  KEY `user_activity_context_key_index` (`context_key`),
+  KEY `user_activity_occurred_at_index` (`occurred_at`),
+  CONSTRAINT `user_activity_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `product_metric_daily` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `day` date NOT NULL,
+  `metric_key` varchar(80) NOT NULL,
+  `dimension` varchar(120) NOT NULL DEFAULT '',
+  `count` bigint unsigned NOT NULL DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `product_metric_daily_unique` (`day`,`metric_key`,`dimension`),
+  KEY `product_metric_daily_metric_key_day_index` (`metric_key`,`day`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `product_metric_monthly` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `month` char(7) NOT NULL,
+  `metric_key` varchar(80) NOT NULL,
+  `dimension` varchar(120) NOT NULL DEFAULT '',
+  `count` bigint unsigned NOT NULL DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `product_metric_monthly_unique` (`month`,`metric_key`,`dimension`),
+  KEY `product_metric_monthly_metric_key_month_index` (`metric_key`,`month`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `analytics_providers` (`provider`, `enabled`, `status`, `created_at`, `updated_at`)
+SELECT 'google_analytics', 0, 'idle', NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM `analytics_providers` WHERE `provider` = 'google_analytics');
+
+INSERT INTO `analytics_providers` (`provider`, `enabled`, `status`, `created_at`, `updated_at`)
+SELECT 'microsoft_clarity', 0, 'idle', NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM `analytics_providers` WHERE `provider` = 'microsoft_clarity');
+
+-- ALTER TABLE `audit_logs` ADD COLUMN `actor_id` bigint unsigned DEFAULT NULL AFTER `admin_id`;
+-- ALTER TABLE `audit_logs` ADD COLUMN `actor_type` varchar(30) DEFAULT NULL AFTER `actor_id`;
+-- ALTER TABLE `audit_logs` ADD COLUMN `module` varchar(60) DEFAULT NULL AFTER `action`;
+-- ALTER TABLE `audit_logs` ADD COLUMN `user_agent` text DEFAULT NULL AFTER `ip`;
+-- ALTER TABLE `audit_logs` ADD COLUMN `device` varchar(30) DEFAULT NULL AFTER `user_agent`;
+-- ALTER TABLE `audit_logs` ADD COLUMN `browser` varchar(60) DEFAULT NULL AFTER `device`;
+-- ALTER TABLE `audit_logs` ADD COLUMN `country` varchar(2) DEFAULT NULL AFTER `browser`;
+-- ALTER TABLE `audit_logs` ADD COLUMN `reason` text DEFAULT NULL AFTER `country`;
+-- ALTER TABLE `audit_logs` ADD COLUMN `correlation_id` varchar(64) DEFAULT NULL AFTER `reason`;
+-- ALTER TABLE `audit_logs` ADD COLUMN `request_id` varchar(64) DEFAULT NULL AFTER `correlation_id`;
+-- ALTER TABLE `audit_logs` ADD INDEX `audit_logs_created_at_index` (`created_at`);
+-- ALTER TABLE `audit_logs` ADD INDEX `audit_logs_action_index` (`action`);
+-- ALTER TABLE `audit_logs` ADD INDEX `audit_logs_model_type_model_id_index` (`model_type`,`model_id`);
+-- ALTER TABLE `users` ADD FULLTEXT INDEX `users_search_fulltext` (`name`,`email`,`username`);
 
 COMMIT;
 

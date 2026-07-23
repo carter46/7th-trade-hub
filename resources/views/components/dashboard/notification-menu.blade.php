@@ -3,17 +3,27 @@
 ])
 
 @php
-    $unread = auth()->user()?->unreadNotificationsCount() ?? 0;
-    $items = auth()->user()
-        ?->notifications()
-        ->orderByDesc('created_at')
-        ->limit($limit)
-        ->get() ?? collect();
-    $inboxRoute = auth()->user()?->hasRole('admin') && \Illuminate\Support\Facades\Route::has('admin.notifications')
-        ? route('admin.notifications')
-        : (auth()->user()?->hasRole('admin') && \Illuminate\Support\Facades\Route::has('admin.account.notifications')
-            ? route('admin.account.notifications')
-            : route('dashboard.notifications'));
+    $isAdmin = auth()->user()?->hasRole('admin') ?? false;
+    $useAdminNotifications = $isAdmin && \Illuminate\Support\Facades\Route::has('admin.notifications');
+
+    if ($useAdminNotifications) {
+        $unread = \App\Models\AdminNotification::unreadCount();
+        $items = \App\Models\AdminNotification::query()
+            ->orderByDesc('created_at')
+            ->limit($limit)
+            ->get();
+        $inboxRoute = route('admin.notifications');
+        $readRoute = fn ($n) => route('admin.notifications.read', $n);
+    } else {
+        $unread = auth()->user()?->unreadNotificationsCount() ?? 0;
+        $items = auth()->user()
+            ?->notifications()
+            ->orderByDesc('created_at')
+            ->limit($limit)
+            ->get() ?? collect();
+        $inboxRoute = route('dashboard.notifications');
+        $readRoute = null;
+    }
 @endphp
 
 <div
@@ -53,16 +63,32 @@
         </div>
         <div class="max-h-80 overflow-y-auto">
             @forelse ($items as $notification)
-                <a
-                    href="{{ $notification->action_url ?: $inboxRoute }}"
-                    class="block border-b border-border-default px-4 py-3 last:border-b-0 hover:bg-muted/40 {{ $notification->read_at ? '' : 'bg-primary/5' }}"
-                    @click="close()"
-                >
-                    <p class="text-sm font-medium text-text-primary">{{ $notification->title }}</p>
-                    @if ($notification->body)
-                        <p class="mt-0.5 line-clamp-2 text-xs text-text-secondary">{{ $notification->body }}</p>
-                    @endif
-                </a>
+                @if ($useAdminNotifications)
+                    <form method="POST" action="{{ $readRoute($notification) }}" class="block">
+                        @csrf
+                        <button
+                            type="submit"
+                            class="w-full text-left border-b border-border-default px-4 py-3 last:border-b-0 hover:bg-muted/40 {{ $notification->read_at ? '' : 'bg-primary/5' }}"
+                            @click="close()"
+                        >
+                            <p class="text-sm font-medium text-text-primary">{{ $notification->title }}</p>
+                            @if ($notification->body)
+                                <p class="mt-0.5 line-clamp-2 text-xs text-text-secondary">{{ $notification->body }}</p>
+                            @endif
+                        </button>
+                    </form>
+                @else
+                    <a
+                        href="{{ $notification->action_url ?: $inboxRoute }}"
+                        class="block border-b border-border-default px-4 py-3 last:border-b-0 hover:bg-muted/40 {{ $notification->read_at ? '' : 'bg-primary/5' }}"
+                        @click="close()"
+                    >
+                        <p class="text-sm font-medium text-text-primary">{{ $notification->title }}</p>
+                        @if ($notification->body)
+                            <p class="mt-0.5 line-clamp-2 text-xs text-text-secondary">{{ $notification->body }}</p>
+                        @endif
+                    </a>
+                @endif
             @empty
                 <p class="px-4 py-6 text-sm text-text-muted">No notifications yet.</p>
             @endforelse

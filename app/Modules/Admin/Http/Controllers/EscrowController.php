@@ -2,6 +2,8 @@
 
 namespace App\Modules\Admin\Http\Controllers;
 
+use App\Events\EscrowReleased;
+use App\Events\OrderCompleted;
 use App\Http\Controllers\Controller;
 use App\Models\Escrow;
 use App\Models\SystemSetting;
@@ -53,6 +55,12 @@ class EscrowController extends Controller
 
         $escrow->order?->update(['status' => 'completed']);
         $escrow->refresh();
+
+        $order = $escrow->order?->loadMissing('listing');
+        if ($order) {
+            EscrowReleased::dispatch($order->id, $order->listing?->user_id);
+            OrderCompleted::dispatch($order->id, $order->user_id, $order->listing?->user_id);
+        }
 
         $this->financialAudit->logMoneyAction(
             auth()->id(),

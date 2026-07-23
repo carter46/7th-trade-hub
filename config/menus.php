@@ -38,9 +38,20 @@ return [
         ],
         [
             'type' => 'group',
-            'id' => 'marketplace',
-            'label' => 'Marketplace',
+            'id' => 'discover',
+            'label' => 'Discover',
             'icon' => 'storefront',
+            'sort' => 35,
+            'children' => [
+                ['route' => 'dashboard.discover.marketplace', 'match' => ['dashboard.discover.marketplace', 'dashboard.discover.marketplace.*'], 'label' => 'Marketplace', 'icon' => 'storefront', 'keywords' => ['browse', 'buy', 'listings'], 'sort' => 10],
+                ['route' => 'dashboard.discover.services', 'match' => ['dashboard.discover.services', 'dashboard.discover.services.*'], 'label' => 'Services', 'icon' => 'listings', 'keywords' => ['catalog', 'platform', 'buy'], 'sort' => 20],
+            ],
+        ],
+        [
+            'type' => 'group',
+            'id' => 'marketplace',
+            'label' => 'Selling',
+            'icon' => 'inventory',
             'sort' => 40,
             'children' => [
                 ['route' => 'dashboard.listings', 'match' => ['dashboard.listings', 'dashboard.listings.*'], 'label' => 'My Listings', 'icon' => 'listings', 'keywords' => ['sell', 'products'], 'sort' => 10],
@@ -145,6 +156,7 @@ return [
             'sort' => 60,
             'children' => [
                 ['route' => 'admin.analytics', 'match' => ['admin.analytics', 'admin.analytics.*'], 'label' => 'Analytics', 'icon' => 'analytics', 'keywords' => ['reports', 'metrics'], 'permission' => 'analytics.view', 'sort' => 10],
+                ['route' => 'admin.monitoring', 'match' => ['admin.monitoring', 'admin.monitoring.*'], 'label' => 'Monitoring', 'icon' => 'audit', 'keywords' => ['health', 'heartbeat', 'system'], 'permission' => 'system.manage', 'sort' => 12],
                 ['route' => 'admin.media', 'match' => ['admin.media', 'admin.media.*'], 'label' => 'Media Library', 'icon' => 'listings', 'keywords' => ['media', 'images', 'upload'], 'permission' => 'system.manage', 'sort' => 15],
                 ['route' => 'admin.settings', 'match' => ['admin.settings', 'admin.settings.*'], 'label' => 'Settings', 'icon' => 'settings', 'keywords' => ['platform', 'config'], 'permission' => 'system.manage', 'sort' => 20],
             ],

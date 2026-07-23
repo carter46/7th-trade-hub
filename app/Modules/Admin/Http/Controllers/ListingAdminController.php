@@ -2,6 +2,8 @@
 
 namespace App\Modules\Admin\Http\Controllers;
 
+use App\Events\ListingApproved;
+use App\Events\ListingRejected;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Listing;
@@ -25,14 +27,17 @@ class ListingAdminController extends Controller
     public function index(Request $request): View
     {
         $status = $request->get('status', 'active');
-        if (! in_array($status, ['active', 'pending', 'suspended', 'rejected', 'sold', 'archived'], true)) {
+        if (! in_array($status, ['active', 'pending', 'suspended', 'rejected', 'sold', 'archived', 'trash'], true)) {
             $status = 'active';
         }
 
-        $query = Listing::query()
-            ->with(['user', 'marketplaceProduct.category', 'versions']);
+        $query = $status === 'trash'
+            ? Listing::onlyTrashed()->with(['user', 'marketplaceProduct.category', 'versions'])
+            : Listing::query()->with(['user', 'marketplaceProduct.category', 'versions']);
 
-        $this->applyStatusFilter($query, $status);
+        if ($status !== 'trash') {
+            $this->applyStatusFilter($query, $status);
+        }
 
         if ($search = $request->get('q')) {
             $query->where(function ($q) use ($search) {
@@ -79,6 +84,7 @@ class ListingAdminController extends Controller
             'rejected' => Listing::query()->where('status', 'rejected')->count(),
             'sold' => Listing::query()->where('status', 'sold')->count(),
             'archived' => Listing::query()->where('status', 'archived')->count(),
+            'trash' => Listing::onlyTrashed()->count(),
         ];
 
         $categories = Category::query()
@@ -208,13 +214,16 @@ class ListingAdminController extends Controller
 
         $this->audit->log(auth()->id(), 'listing.approved', $listing, null, $listing->toArray(), $request->ip());
 
+        ListingApproved::dispatch($listing->id, auth()->id());
+
         if ($listing->user) {
             $this->notifications->send(
                 $listing->user,
                 'listing',
                 __('Listing published'),
                 __('Your listing ":title" is now live on the marketplace.', ['title' => $listing->title]),
-                route('marketplace.show', $listing->slug)
+                route('marketplace.show', $listing->slug),
+                ['database', 'mail']
             );
         }
 
@@ -251,13 +260,16 @@ class ListingAdminController extends Controller
             $request->ip()
         );
 
+        ListingRejected::dispatch($listing->id, auth()->id(), $request->input('notes'));
+
         if ($listing->user) {
             $this->notifications->send(
                 $listing->user,
                 'listing',
                 __('Listing needs changes'),
                 $request->input('notes') ?: __('Your listing submission was rejected. Edit and resubmit.'),
-                route('dashboard.listings')
+                route('dashboard.listings'),
+                ['database', 'mail']
             );
         }
 
@@ -296,8 +308,20 @@ class ListingAdminController extends Controller
 
     public function restore(Listing $listing, Request $request): RedirectResponse
     {
+        // SoftDeletes trash restore is separate from status unsuspend / unarchive.
         if ($listing->trashed()) {
             $listing->restore();
+
+            $this->audit->log(
+                auth()->id(),
+                'listing.trash_restored',
+                $listing,
+                null,
+                $listing->toArray(),
+                $request->ip()
+            );
+
+            return back()->with('status', __('Listing restored from trash.'));
         }
 
         if ($listing->status === 'suspended') {

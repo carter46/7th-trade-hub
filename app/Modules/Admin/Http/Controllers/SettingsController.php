@@ -3,8 +3,11 @@
 namespace App\Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\AnalyticsProvider;
 use App\Models\SystemSetting;
 use App\Modules\Admin\Services\AuditLogService;
+use App\Services\Analytics\Providers\GoogleAnalyticsProvider;
+use App\Services\Analytics\Providers\MicrosoftClarityProvider;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -13,7 +16,11 @@ use Throwable;
 
 class SettingsController extends Controller
 {
-    public function __construct(private AuditLogService $audit) {}
+    public function __construct(
+        private AuditLogService $audit,
+        private GoogleAnalyticsProvider $googleAnalytics,
+        private MicrosoftClarityProvider $clarity,
+    ) {}
 
     public function index(): View
     {
@@ -32,6 +39,8 @@ class SettingsController extends Controller
             'contactPhone' => SystemSetting::get('contact_phone', ''),
             'contactEmail' => SystemSetting::get('contact_email', ''),
             'contactEmailAlt' => SystemSetting::get('contact_email_alt', ''),
+            'analyticsGoogle' => AnalyticsProvider::forProvider(AnalyticsProvider::PROVIDER_GOOGLE_ANALYTICS),
+            'analyticsClarity' => AnalyticsProvider::forProvider(AnalyticsProvider::PROVIDER_MICROSOFT_CLARITY),
             'mailStatus' => [
                 'mailer' => $defaultMailer,
                 'host' => $mailer['host'] ?? config('mail.mailers.smtp.host'),
@@ -140,5 +149,117 @@ class SettingsController extends Controller
                 'test_email' => 'Mail send failed: '.$e->getMessage(),
             ]);
         }
+    }
+
+    public function updateAnalytics(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'google_enabled' => ['nullable', 'boolean'],
+            'google_measurement_id' => ['nullable', 'string', 'max:32'],
+            'google_property_id' => ['nullable', 'string', 'max:32'],
+            'clarity_enabled' => ['nullable', 'boolean'],
+            'clarity_project_id' => ['nullable', 'string', 'max:64'],
+        ]);
+
+        $google = AnalyticsProvider::forProvider(AnalyticsProvider::PROVIDER_GOOGLE_ANALYTICS);
+        $clarity = AnalyticsProvider::forProvider(AnalyticsProvider::PROVIDER_MICROSOFT_CLARITY);
+
+        $googleEnabled = $request->boolean('google_enabled');
+        $clarityEnabled = $request->boolean('clarity_enabled');
+
+        if ($googleEnabled && blank($validated['google_measurement_id'] ?? null)) {
+            return back()->withInput()->withErrors([
+                'google_measurement_id' => 'Measurement ID is required when Google Analytics is enabled.',
+            ]);
+        }
+
+        if ($clarityEnabled && blank($validated['clarity_project_id'] ?? null)) {
+            return back()->withInput()->withErrors([
+                'clarity_project_id' => 'Project ID is required when Microsoft Clarity is enabled.',
+            ]);
+        }
+
+        $google->fill([
+            'enabled' => $googleEnabled,
+            'status' => $googleEnabled ? 'configured' : 'idle',
+        ]);
+        $google->mergeCredentials([
+            'measurement_id' => trim((string) ($validated['google_measurement_id'] ?? '')),
+            'property_id' => trim((string) ($validated['google_property_id'] ?? '')),
+        ]);
+        $google->save();
+
+        $clarity->fill([
+            'enabled' => $clarityEnabled,
+            'status' => $clarityEnabled ? 'configured' : 'idle',
+        ]);
+        $clarity->mergeCredentials([
+            'project_id' => trim((string) ($validated['clarity_project_id'] ?? '')),
+        ]);
+        $clarity->save();
+
+        $this->audit->log(
+            auth()->id(),
+            'settings.analytics.updated',
+            null,
+            null,
+            [
+                'google_enabled' => $googleEnabled,
+                'clarity_enabled' => $clarityEnabled,
+            ],
+            $request->ip()
+        );
+
+        return back()->with('status', __('Analytics settings saved.'));
+    }
+
+    public function testAnalyticsConnection(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'provider' => ['required', 'in:google_analytics,microsoft_clarity'],
+            'google_measurement_id' => ['nullable', 'string', 'max:32'],
+            'google_property_id' => ['nullable', 'string', 'max:32'],
+            'clarity_project_id' => ['nullable', 'string', 'max:64'],
+        ]);
+
+        if ($validated['provider'] === AnalyticsProvider::PROVIDER_GOOGLE_ANALYTICS) {
+            $measurementId = trim((string) ($validated['google_measurement_id'] ?? ''));
+            if ($measurementId === '') {
+                $measurementId = (string) (AnalyticsProvider::forProvider(AnalyticsProvider::PROVIDER_GOOGLE_ANALYTICS)
+                    ->credential('measurement_id') ?? '');
+            }
+
+            $result = $this->googleAnalytics->connectionTestFromInput([
+                'measurement_id' => $measurementId,
+                'property_id' => trim((string) ($validated['google_property_id'] ?? '')),
+            ]);
+        } else {
+            $projectId = trim((string) ($validated['clarity_project_id'] ?? ''));
+            if ($projectId === '') {
+                $projectId = (string) (AnalyticsProvider::forProvider(AnalyticsProvider::PROVIDER_MICROSOFT_CLARITY)
+                    ->credential('project_id') ?? '');
+            }
+
+            $result = $this->clarity->connectionTestFromInput([
+                'project_id' => $projectId,
+            ]);
+        }
+
+        $this->audit->log(
+            auth()->id(),
+            'settings.analytics.connection_test',
+            null,
+            null,
+            ['provider' => $validated['provider'], 'ok' => $result['ok']],
+            $request->ip()
+        );
+
+        if (! $result['ok']) {
+            return back()->withInput()->withErrors([
+                'analytics_connection' => $result['message'],
+            ]);
+        }
+
+        return back()->with('status', $result['message']);
     }
 }

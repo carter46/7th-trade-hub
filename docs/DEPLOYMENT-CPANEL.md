@@ -78,3 +78,22 @@ See [PRODUCTION-ENV-CHECKLIST.md](PRODUCTION-ENV-CHECKLIST.md) and [LAUNCH-CHECK
 ## Queue worker (optional)
 
 If the app uses queues and your host allows long-running processes (e.g. cron or a worker), configure a cron job to run `php /path/to/artisan queue:work` or use the host’s “worker” feature if available. Many shared hosts do not support this; the app will still run without it if queues are not critical.
+
+## Scheduled tasks (cron)
+
+If cPanel cron or SSH is available, add a single entry so Laravel’s scheduler runs (required for analytics rollups, GA sync, activity pruning, and monitoring heartbeats):
+
+```bash
+* * * * * cd /path/to/laravel-app && php artisan schedule:run >> /dev/null 2>&1
+```
+
+Registered commands (see `routes/console.php`):
+
+| Command | Schedule |
+|---------|----------|
+| `analytics:rollup-kpis` | Hourly |
+| `analytics:prune-activity` | Daily 04:00 |
+| `analytics:sync-ga` | Daily 05:00 |
+| `monitoring:heartbeat` | Every 5 minutes |
+
+After changing `resources/js/app.js`, run **`npm run build`** locally and commit `public/build/` before pulling on the server (command palette entity search depends on the built bundle; an inline fallback exists for admin search until rebuild).

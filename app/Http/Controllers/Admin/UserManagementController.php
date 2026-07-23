@@ -99,11 +99,14 @@ class UserManagementController extends Controller
         $activeCount = (clone $base)->where('is_suspended', false)->count();
         $suspendedCount = (clone $base)->where('is_suspended', true)->count();
 
+        $search = trim($request->string('q')->toString());
+
         $users = User::role('user')
             ->when($status === 'suspended', fn ($q) => $q->where('is_suspended', true))
             ->when($status === 'active', fn ($q) => $q->where('is_suspended', false))
+            ->when($search !== '', fn ($q) => \App\Support\Search::apply($q, $search))
             ->orderByDesc('created_at')
-            ->paginate(15)
+            ->paginate(50)
             ->withQueryString();
 
         $data = [
@@ -111,6 +114,7 @@ class UserManagementController extends Controller
             'status' => $status,
             'activeCount' => $activeCount,
             'suspendedCount' => $suspendedCount,
+            'search' => $search,
         ];
 
         if ($this->wantsTabPartial($request)) {

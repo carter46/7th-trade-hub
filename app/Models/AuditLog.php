@@ -8,8 +8,23 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class AuditLog extends Model
 {
     protected $fillable = [
-        'admin_id', 'action', 'model_type', 'model_id',
-        'old_values', 'new_values', 'ip',
+        'admin_id',
+        'actor_id',
+        'actor_type',
+        'action',
+        'module',
+        'model_type',
+        'model_id',
+        'old_values',
+        'new_values',
+        'ip',
+        'user_agent',
+        'device',
+        'browser',
+        'country',
+        'reason',
+        'correlation_id',
+        'request_id',
     ];
 
     protected function casts(): array

@@ -1,9 +1,12 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminNotificationController;
+use App\Http\Controllers\Admin\AdminSearchController;
 use App\Http\Controllers\Admin\AdministratorController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\MediaLibraryController;
+use App\Http\Controllers\Admin\MonitoringController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Account\AccountController;
 use App\Http\Controllers\DashboardController;
@@ -189,6 +192,9 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
     Route::get('/exchange', [DashboardController::class, 'exchange'])->name('.exchange');
     Route::get('/social', [DashboardController::class, 'social'])->name('.social');
     Route::get('/documents', [DashboardController::class, 'documents'])->name('.documents');
+    Route::get('/discover/marketplace', [\App\Http\Controllers\Dashboard\DiscoverMarketplaceController::class, 'index'])->name('.discover.marketplace');
+    Route::get('/discover/marketplace/{slug}', [\App\Http\Controllers\Dashboard\DiscoverMarketplaceController::class, 'show'])->name('.discover.marketplace.show');
+    Route::get('/discover/services', [\App\Http\Controllers\Dashboard\DiscoverServicesController::class, 'index'])->name('.discover.services');
     Route::get('/listings', [DashboardController::class, 'listings'])->name('.listings');
     Route::get('/listings/create', [ListingController::class, 'create'])->name('.listings.create');
     Route::post('/listings', [ListingController::class, 'store'])->name('.listings.store');
@@ -223,6 +229,7 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
 
 Route::middleware(['auth', 'verified', 'role:admin', 'throttle:60,1'])->prefix('admin')->name('admin')->group(function () {
     Route::get('/', [AdminDashboardController::class, 'index'])->name('');
+    Route::get('/search', AdminSearchController::class)->name('.search');
     Route::prefix('account')->name('.account')->controller(AccountController::class)->group(function () {
         Route::get('/profile', 'profile')->name('.profile');
         Route::patch('/profile', 'updateProfile')->name('.profile.update');
@@ -268,14 +275,16 @@ Route::middleware(['auth', 'verified', 'role:admin', 'throttle:60,1'])->prefix('
         Route::post('/administrators/{administrator}/restore', [AdministratorController::class, 'restore'])->name('.administrators.restore');
     });
 
-    Route::get('/notifications', [UserNotificationController::class, 'index'])->name('.notifications');
-    Route::post('/notifications/{notification}/read', [UserNotificationController::class, 'markRead'])->name('.notifications.read');
-    Route::post('/notifications/read-all', [UserNotificationController::class, 'markAllRead'])->name('.notifications.read-all');
+    Route::get('/notifications', [UserNotificationController::class, 'index'])->name('.inbox');
+    Route::post('/notifications/{notification}/read', [UserNotificationController::class, 'markRead'])->name('.inbox.read');
+    Route::post('/notifications/read-all', [UserNotificationController::class, 'markAllRead'])->name('.inbox.read-all');
 
     Route::middleware('permission:compliance.manage')->group(function () {
         Route::get('/kyc', [AdminKycController::class, 'index'])->name('.kyc');
         Route::post('/kyc/{submission}/approve', [AdminKycController::class, 'approve'])->name('.kyc.approve');
         Route::post('/kyc/{submission}/reject', [AdminKycController::class, 'reject'])->name('.kyc.reject');
+        Route::post('/kyc/{submission}/return-pending', [AdminKycController::class, 'returnToPending'])->name('.kyc.return-pending');
+        Route::post('/kyc/{submission}/override', [AdminKycController::class, 'override'])->name('.kyc.override');
     });
 
     Route::middleware('permission:finance.manage')->group(function () {
@@ -301,14 +310,14 @@ Route::middleware(['auth', 'verified', 'role:admin', 'throttle:60,1'])->prefix('
     Route::middleware('permission:catalog.manage')->group(function () {
         Route::get('/listings', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'index'])->name('.listings');
         Route::get('/listings/pending', fn () => redirect()->route('admin.listings', ['status' => 'pending'], 301))->name('.listings.pending');
-        Route::get('/listings/{listing}', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'show'])->name('.listings.show');
-        Route::post('/listings/{listing}/approve', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'approve'])->name('.listings.approve');
-        Route::post('/listings/{listing}/reject', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'reject'])->name('.listings.reject');
-        Route::post('/listings/{listing}/suspend', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'suspend'])->name('.listings.suspend');
-        Route::post('/listings/{listing}/restore', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'restore'])->name('.listings.restore');
-        Route::post('/listings/{listing}/feature', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'toggleFeature'])->name('.listings.feature');
-        Route::post('/listings/{listing}/duplicate', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'duplicate'])->name('.listings.duplicate');
-        Route::delete('/listings/{listing}', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'destroy'])->name('.listings.destroy');
+        Route::get('/listings/{listing}', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'show'])->withTrashed()->name('.listings.show');
+        Route::post('/listings/{listing}/approve', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'approve'])->withTrashed()->name('.listings.approve');
+        Route::post('/listings/{listing}/reject', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'reject'])->withTrashed()->name('.listings.reject');
+        Route::post('/listings/{listing}/suspend', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'suspend'])->withTrashed()->name('.listings.suspend');
+        Route::post('/listings/{listing}/restore', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'restore'])->withTrashed()->name('.listings.restore');
+        Route::post('/listings/{listing}/feature', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'toggleFeature'])->withTrashed()->name('.listings.feature');
+        Route::post('/listings/{listing}/duplicate', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'duplicate'])->withTrashed()->name('.listings.duplicate');
+        Route::delete('/listings/{listing}', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'destroy'])->withTrashed()->name('.listings.destroy');
 
         Route::get('/marketplace-categories', [\App\Modules\Admin\Http\Controllers\MarketplaceCategoryAdminController::class, 'index'])->name('.marketplace-categories');
         Route::get('/marketplace-categories/create', [\App\Modules\Admin\Http\Controllers\MarketplaceCategoryAdminController::class, 'create'])->name('.marketplace-categories.create');
@@ -363,9 +372,12 @@ Route::middleware(['auth', 'verified', 'role:admin', 'throttle:60,1'])->prefix('
 
     Route::middleware('permission:support.manage')->group(function () {
         Route::get('/tickets', [SupportTicketAdminController::class, 'index'])->name('.tickets');
+        Route::get('/tickets/create', [SupportTicketAdminController::class, 'create'])->name('.tickets.create');
+        Route::post('/tickets', [SupportTicketAdminController::class, 'store'])->name('.tickets.store');
         Route::get('/tickets/{ticket}', [SupportTicketAdminController::class, 'show'])->name('.tickets.show');
         Route::post('/tickets/{ticket}/reply', [SupportTicketAdminController::class, 'reply'])->name('.tickets.reply');
         Route::post('/tickets/{ticket}/status', [SupportTicketAdminController::class, 'updateStatus'])->name('.tickets.status');
+        Route::post('/tickets/{ticket}/assign', [SupportTicketAdminController::class, 'assign'])->name('.tickets.assign');
     });
 
     Route::middleware('permission:system.manage|catalog.manage')->group(function () {
@@ -375,6 +387,7 @@ Route::middleware(['auth', 'verified', 'role:admin', 'throttle:60,1'])->prefix('
     });
 
     Route::middleware('permission:system.manage')->group(function () {
+        Route::get('/monitoring', [MonitoringController::class, 'index'])->name('.monitoring');
         Route::get('/media', [MediaLibraryController::class, 'index'])->name('.media');
         Route::patch('/media/{mediaAsset}', [MediaLibraryController::class, 'update'])->name('.media.update');
         Route::delete('/media/bulk', [MediaLibraryController::class, 'bulkDestroy'])->name('.media.bulk-destroy');
@@ -383,10 +396,18 @@ Route::middleware(['auth', 'verified', 'role:admin', 'throttle:60,1'])->prefix('
         Route::get('/settings', [AdminSettingsController::class, 'index'])->name('.settings');
         Route::post('/settings', [AdminSettingsController::class, 'update'])->name('.settings.update');
         Route::post('/settings/test-mail', [AdminSettingsController::class, 'testMail'])->name('.settings.test-mail');
+        Route::post('/settings/analytics', [AdminSettingsController::class, 'updateAnalytics'])->name('.settings.analytics');
+        Route::post('/settings/analytics/test', [AdminSettingsController::class, 'testAnalyticsConnection'])->name('.settings.analytics.test');
         Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('.audit-logs');
     });
 
-    Route::middleware('permission:analytics.view')->group(function () {
+    Route::middleware('permission:analytics.view|system.manage|finance.manage|support.manage|compliance.manage|catalog.manage')->group(function () {
+        Route::get('/notifications', [AdminNotificationController::class, 'index'])->name('.notifications');
+        Route::post('/notifications/read-all', [AdminNotificationController::class, 'markAllRead'])->name('.notifications.read-all');
+        Route::post('/notifications/{notification}/read', [AdminNotificationController::class, 'markRead'])->name('.notifications.read');
+    });
+
+    Route::middleware('permission:analytics.view|finance.manage|catalog.manage|support.manage|compliance.manage|users.manage')->group(function () {
         Route::get('/analytics', [AdminDashboardController::class, 'analytics'])->name('.analytics');
     });
 

@@ -2,6 +2,7 @@
 
 namespace App\Modules\Marketplace\Services;
 
+use App\Events\EscrowOpened;
 use App\Models\Escrow;
 use App\Models\Listing;
 use App\Models\Order;
@@ -113,6 +114,10 @@ class CheckoutService
                     'is_active' => false,
                     'status' => 'sold',
                 ]);
+
+                DB::afterCommit(function () use ($order, $buyer, $listing) {
+                    EscrowOpened::dispatch($order->id, $buyer->id, $listing->user_id);
+                });
 
                 return $order;
             });

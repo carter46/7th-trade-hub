@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Events\UserRegistered;
 use App\Http\Controllers\Auth\OtpVerificationController;
 use App\Http\Controllers\Controller;
 use App\Models\User;
@@ -49,6 +50,7 @@ class RegisteredUserController extends Controller
         $user->assignRole('user');
 
         event(new Registered($user));
+        UserRegistered::dispatch($user->id);
 
         Auth::login($user);
 

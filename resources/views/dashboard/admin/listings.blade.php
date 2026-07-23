@@ -120,6 +120,7 @@
             ['id' => 'rejected', 'label' => 'Rejected', 'href' => route('admin.listings', array_merge($filterQuery, ['status' => 'rejected'])), 'count' => $counts['rejected']],
             ['id' => 'sold', 'label' => 'Sold', 'href' => route('admin.listings', array_merge($filterQuery, ['status' => 'sold'])), 'count' => $counts['sold']],
             ['id' => 'archived', 'label' => 'Archived', 'href' => route('admin.listings', array_merge($filterQuery, ['status' => 'archived'])), 'count' => $counts['archived']],
+            ['id' => 'trash', 'label' => 'Trash', 'href' => route('admin.listings', array_merge($filterQuery, ['status' => 'trash'])), 'count' => $counts['trash']],
         ]"
         class="mb-4"
     />

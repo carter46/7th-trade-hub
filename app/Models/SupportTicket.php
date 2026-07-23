@@ -28,6 +28,11 @@ class SupportTicket extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function assignee(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
+    }
+
     public function replies(): HasMany
     {
         return $this->hasMany(SupportTicketReply::class);

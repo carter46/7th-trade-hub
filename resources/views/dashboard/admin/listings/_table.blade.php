@@ -46,7 +46,12 @@
                     ];
                     $statusInfo = $statusMap[$listing->status] ?? ['label' => ucfirst(str_replace('_', ' ', $listing->status)), 'status' => 'neutral'];
                 @endphp
-                <x-dashboard.badge :status="$statusInfo['status']">{{ $statusInfo['label'] }}</x-dashboard.badge>
+                @if($listing->trashed())
+                    <x-dashboard.badge status="danger">Trash</x-dashboard.badge>
+                    <span class="ml-1 text-xs text-text-muted">{{ $statusInfo['label'] }}</span>
+                @else
+                    <x-dashboard.badge :status="$statusInfo['status']">{{ $statusInfo['label'] }}</x-dashboard.badge>
+                @endif
                 @if($listing->featured)
                     <span class="ml-1 text-xs text-accent">Featured</span>
                 @endif
@@ -54,53 +59,67 @@
             <x-dashboard.td>
                 <x-dashboard.row-actions>
                     <x-dashboard.menu-item :href="route('admin.listings.show', $listing)">View</x-dashboard.menu-item>
-                    @if($listing->status === 'published' && $listing->is_active)
-                        <x-dashboard.menu-item :href="route('marketplace.show', $listing->slug)" target="_blank">Preview Public Page</x-dashboard.menu-item>
-                    @endif
-                    @if($listing->status === 'pending_review' || $listing->versions->contains(fn ($v) => $v->status === 'pending_review'))
-                        <x-dashboard.menu-item :href="route('admin.listings.show', ['listing' => $listing, 'tab' => 'moderation'])">Review</x-dashboard.menu-item>
-                    @endif
-                    @if($listing->user)
-                        <x-dashboard.menu-item :href="route('admin.users.show', $listing->user)">View Seller</x-dashboard.menu-item>
-                    @endif
-                    @if(in_array($listing->status, ['published'], true) && $listing->is_active)
-                        <form method="POST" action="{{ route('admin.listings.suspend', $listing) }}">
-                            @csrf
-                            <x-dashboard.menu-item type="submit" variant="danger">Suspend</x-dashboard.menu-item>
-                        </form>
-                    @endif
-                    @if(in_array($listing->status, ['suspended', 'rejected', 'archived'], true))
+                    @if($listing->trashed())
                         <form method="POST" action="{{ route('admin.listings.restore', $listing) }}">
                             @csrf
-                            <x-dashboard.menu-item type="submit" variant="success">
-                                {{ $listing->status === 'rejected' ? 'Return to Draft' : 'Restore' }}
-                            </x-dashboard.menu-item>
+                            <x-dashboard.menu-item type="submit" variant="success">Restore from Trash</x-dashboard.menu-item>
                         </form>
-                    @endif
-                    <form method="POST" action="{{ route('admin.listings.feature', $listing) }}">
-                        @csrf
-                        <x-dashboard.menu-item type="submit">{{ $listing->featured ? 'Unfeature' : 'Feature' }}</x-dashboard.menu-item>
-                    </form>
-                    <form method="POST" action="{{ route('admin.listings.duplicate', $listing) }}">
-                        @csrf
-                        <x-dashboard.menu-item type="submit">Duplicate</x-dashboard.menu-item>
-                    </form>
-                    @if(in_array($listing->status, ['suspended', 'rejected'], true))
                         <x-dashboard.menu-item type="button" variant="danger" @click="$dispatch('open-modal', 'delete-listing-{{ $listing->id }}')">
                             Permanently Delete
                         </x-dashboard.menu-item>
+                    @else
+                        @if($listing->status === 'published' && $listing->is_active)
+                            <x-dashboard.menu-item :href="route('marketplace.show', $listing->slug)" target="_blank">Preview Public Page</x-dashboard.menu-item>
+                        @endif
+                        @if($listing->status === 'pending_review' || $listing->versions->contains(fn ($v) => $v->status === 'pending_review'))
+                            <x-dashboard.menu-item :href="route('admin.listings.show', ['listing' => $listing, 'tab' => 'moderation'])">Review</x-dashboard.menu-item>
+                        @endif
+                        @if($listing->user)
+                            <x-dashboard.menu-item :href="route('admin.users.show', $listing->user)">View Seller</x-dashboard.menu-item>
+                        @endif
+                        @if(in_array($listing->status, ['published'], true) && $listing->is_active)
+                            <form method="POST" action="{{ route('admin.listings.suspend', $listing) }}">
+                                @csrf
+                                <x-dashboard.menu-item type="submit" variant="danger">Suspend</x-dashboard.menu-item>
+                            </form>
+                        @endif
+                        @if(in_array($listing->status, ['suspended', 'rejected', 'archived'], true))
+                            <form method="POST" action="{{ route('admin.listings.restore', $listing) }}">
+                                @csrf
+                                <x-dashboard.menu-item type="submit" variant="success">
+                                    {{ $listing->status === 'rejected' ? 'Return to Draft' : 'Restore' }}
+                                </x-dashboard.menu-item>
+                            </form>
+                        @endif
+                        <form method="POST" action="{{ route('admin.listings.feature', $listing) }}">
+                            @csrf
+                            <x-dashboard.menu-item type="submit">{{ $listing->featured ? 'Unfeature' : 'Feature' }}</x-dashboard.menu-item>
+                        </form>
+                        <form method="POST" action="{{ route('admin.listings.duplicate', $listing) }}">
+                            @csrf
+                            <x-dashboard.menu-item type="submit">Duplicate</x-dashboard.menu-item>
+                        </form>
+                        @if(in_array($listing->status, ['suspended', 'rejected', 'archived'], true))
+                            <x-dashboard.menu-item type="button" variant="danger" @click="$dispatch('open-modal', 'delete-listing-{{ $listing->id }}')">
+                                Move to Trash
+                            </x-dashboard.menu-item>
+                        @endif
                     @endif
                 </x-dashboard.row-actions>
-                @if(in_array($listing->status, ['suspended', 'rejected'], true))
+                @if($listing->trashed() || in_array($listing->status, ['suspended', 'rejected', 'archived'], true))
                     <x-dashboard.modal
                         name="delete-listing-{{ $listing->id }}"
-                        title="Permanently delete this listing?"
+                        title="{{ $listing->trashed() ? 'Permanently delete this listing?' : 'Move listing to trash?' }}"
                         variant="danger"
-                        confirm-label="Permanently Delete"
+                        confirm-label="{{ $listing->trashed() ? 'Permanently Delete' : 'Move to Trash' }}"
                         :form-action="route('admin.listings.destroy', $listing)"
                         method="DELETE"
                     >
-                        This cannot be undone. Only suspended or rejected listings can be permanently deleted.
+                        @if($listing->trashed())
+                            This cannot be undone.
+                        @else
+                            The listing will be soft-deleted and can be restored from Trash.
+                        @endif
                     </x-dashboard.modal>
                 @endif
             </x-dashboard.td>

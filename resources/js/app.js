@@ -2,8 +2,10 @@ import './bootstrap';
 import './dashboard-theme';
 
 import Alpine from 'alpinejs';
+import Chart from 'chart.js/auto';
 
 window.Alpine = Alpine;
+window.Chart = Chart;
 
 document.addEventListener('alpine:init', () => {
     Alpine.data('toastStore', (initial = []) => ({
@@ -180,12 +182,9 @@ document.addEventListener('alpine:init', () => {
 
             if (activeId) {
                 this.openGroupId = activeId;
-            } else if (saved && typeof saved.openGroupId === 'string' && saved.openGroupId) {
-                this.openGroupId = saved.openGroupId;
-            } else if (saved && typeof saved === 'object' && !Array.isArray(saved)) {
-                // Migrate legacy multi-open maps to a single accordion id.
-                const legacyOpen = Object.keys(saved).find((key) => saved[key]);
-                this.openGroupId = legacyOpen || null;
+            } else {
+                // Overview and other top-level pages: stay collapsed; do not restore stale localStorage.
+                this.openGroupId = null;
             }
 
             this.persist();
@@ -274,6 +273,9 @@ document.addEventListener('alpine:init', () => {
         query: '',
         activeResult: 0,
         destinations: Array.isArray(options.destinations) ? options.destinations : [],
+        searchUrl: options.searchUrl || null,
+        searchResults: [],
+        searchLoading: false,
         init() {
             window.addEventListener('keydown', (event) => {
                 if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
@@ -282,6 +284,7 @@ document.addEventListener('alpine:init', () => {
                     if (this.open) {
                         this.query = '';
                         this.activeResult = 0;
+                        this.searchResults = [];
                     }
                 }
             });
@@ -290,19 +293,51 @@ document.addEventListener('alpine:init', () => {
                     this.$nextTick(() => this.$refs.paletteInput?.focus());
                 }
             });
+            this.$watch('query', () => {
+                this.activeResult = 0;
+                this.fetchSearch();
+            });
+        },
+        async fetchSearch() {
+            const term = this.query.trim();
+            if (!this.searchUrl || term.length < 2) {
+                this.searchResults = [];
+                return;
+            }
+            this.searchLoading = true;
+            try {
+                const res = await fetch(`${this.searchUrl}?q=${encodeURIComponent(term)}`, {
+                    headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                });
+                const data = await res.json();
+                this.searchResults = (data.groups || []).flatMap((group) =>
+                    (group.items || []).map((item) => ({
+                        id: item.id,
+                        label: item.label,
+                        subtitle: item.subtitle || '',
+                        url: item.url,
+                        group: group.label || item.group || 'Search',
+                    })),
+                );
+            } catch (_) {
+                this.searchResults = [];
+            } finally {
+                this.searchLoading = false;
+            }
         },
         filtered() {
             const term = this.query.trim().toLowerCase();
-            if (!term) return this.destinations.slice(0, 12);
-
-            return this.destinations.filter((item) => {
-                const haystack = [item.label, item.group, ...(item.keywords || [])]
-                    .filter(Boolean)
-                    .join(' ')
-                    .toLowerCase();
-
-                return haystack.includes(term);
-            }).slice(0, 12);
+            const nav = term
+                ? this.destinations.filter((item) => {
+                    const haystack = [item.label, item.group, ...(item.keywords || [])]
+                        .filter(Boolean)
+                        .join(' ')
+                        .toLowerCase();
+                    return haystack.includes(term);
+                })
+                : this.destinations.slice(0, 12);
+            const entities = term.length >= 2 ? this.searchResults : [];
+            return [...entities, ...nav].slice(0, 12);
         },
         close() {
             this.open = false;

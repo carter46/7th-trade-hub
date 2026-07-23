@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\KycSubmission;
 use App\Models\Listing;
 use App\Models\Order;
 use App\Models\SupportTicket;
@@ -20,6 +21,7 @@ class DemoDataSeeder extends Seeder
         $this->seedTransactions($demoUsers);
         $this->seedOrders($demoUsers);
         $this->seedSupportTickets($demoUsers);
+        $this->seedKycSubmissions($demoUsers);
     }
 
     private function seedDemoUsers(): array
@@ -146,11 +148,45 @@ class DemoDataSeeder extends Seeder
 
     private function seedSupportTickets(array $users): void
     {
-        $subjects = ['Account verification', 'Payment issue', 'API access', 'Refund request'];
+        $subjects = [
+            ['subject' => 'Account verification', 'status' => 'open', 'category' => 'kyc'],
+            ['subject' => 'Payment issue', 'status' => 'pending', 'category' => 'payment'],
+            ['subject' => 'API access', 'status' => 'awaiting_user', 'category' => 'technical'],
+            ['subject' => 'Refund request', 'status' => 'resolved', 'category' => 'order'],
+            ['subject' => 'Withdrawal delay', 'status' => 'closed', 'category' => 'withdrawal'],
+        ];
         foreach ($users as $i => $user) {
+            $row = $subjects[$i % count($subjects)];
             SupportTicket::firstOrCreate(
-                ['user_id' => $user->id, 'subject' => $subjects[$i % count($subjects)]],
-                ['status' => ['open', 'in_progress', 'closed'][$i % 3]]
+                ['user_id' => $user->id, 'subject' => $row['subject']],
+                [
+                    'status' => $row['status'],
+                    'category' => $row['category'],
+                    'body' => 'Demo support ticket body for '.$row['subject'],
+                    'priority' => ['normal', 'high', 'urgent'][$i % 3],
+                ]
+            );
+        }
+    }
+
+    private function seedKycSubmissions(array $users): void
+    {
+        $cases = [
+            ['status' => 'pending', 'level' => 2],
+            ['status' => 'approved', 'level' => 1],
+            ['status' => 'rejected', 'level' => 2],
+            ['status' => 'pending', 'level' => 3],
+        ];
+        foreach ($users as $i => $user) {
+            $case = $cases[$i % count($cases)];
+            KycSubmission::firstOrCreate(
+                ['user_id' => $user->id, 'level_requested' => $case['level']],
+                [
+                    'status' => $case['status'],
+                    'level_granted' => $case['status'] === 'approved' ? $case['level'] : null,
+                    'documents' => ['id' => 'demo-document.pdf'],
+                    'reviewed_at' => in_array($case['status'], ['approved', 'rejected'], true) ? now()->subDays($i + 1) : null,
+                ]
             );
         }
     }

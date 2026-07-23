@@ -26,6 +26,7 @@ class ServiceController extends Controller
     public function __construct(
         private CatalogBrowseService $browse,
         private CatalogContentResolver $content,
+        private \App\Services\Analytics\UserActivityRecorder $activity,
     ) {}
 
     public function index(Request $request): View
@@ -345,6 +346,10 @@ class ServiceController extends Controller
         $request = request();
         if ($groupSlug && ! $request->routeIs('services.nested.show')) {
             return redirect()->to($this->browse->productUrl($product), 301);
+        }
+
+        if ($request->user()) {
+            $this->activity->record($request->user()->id, 'viewed', $product, 'service.viewed');
         }
 
         return view('pages.services-show', [

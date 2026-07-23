@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Listing;
 use App\Models\MarketplaceProduct;
 use App\Models\Watchlist;
+use App\Modules\Marketplace\Services\MarketplaceBrowseService;
 use App\Modules\Marketplace\Services\MarketplaceContentResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -17,27 +18,17 @@ class MarketplaceController extends Controller
 {
     public function __construct(
         private MarketplaceContentResolver $content,
+        private MarketplaceBrowseService $browse,
     ) {}
 
     public function index(Request $request): View|JsonResponse
     {
-        $listings = $this->filteredListings($request)->paginate(12)->withQueryString();
+        $listings = $this->browse->paginate($request, 12);
 
-        $parents = Category::query()
-            ->marketplace()
-            ->active()
-            ->roots()
-            ->with(['products' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')])
-            ->orderBy('sort_order')
-            ->get();
+        $parents = $this->browse->categoryTree();
 
         $selectedCategoryId = $request->integer('category') ?: null;
-        $products = $selectedCategoryId
-            ? MarketplaceProduct::where('category_id', $selectedCategoryId)
-                ->where('is_active', true)
-                ->orderBy('sort_order')
-                ->get()
-            : collect();
+        $products = $this->browse->productsForCategory($selectedCategoryId);
 
         $filters = [
             'q' => $request->get('q'),
@@ -174,7 +165,7 @@ class MarketplaceController extends Controller
             ],
         ));
 
-        $listings = $this->filteredListings($request)
+        $listings = $this->browse->filteredListings($request)
             ->where(function ($q) use ($category) {
                 $q->whereHas('marketplaceProduct', fn ($mp) => $mp->where('category_id', $category->id))
                     ->orWhere('category_id', $category->id);
@@ -209,7 +200,7 @@ class MarketplaceController extends Controller
         $content = $this->content->forProduct($productModel);
         $categoryContent = $this->content->forCategory($category);
 
-        $listings = $this->filteredListings($request)
+        $listings = $this->browse->filteredListings($request)
             ->where('marketplace_product_id', $productModel->id)
             ->paginate(12)
             ->withQueryString();
@@ -269,42 +260,5 @@ class MarketplaceController extends Controller
             ->roots()
             ->where('slug', $slug)
             ->first();
-    }
-
-    private function filteredListings(Request $request)
-    {
-        $query = Listing::published()
-            ->with(['user', 'marketplaceProduct.category'])
-            ->withAvg('reviews', 'rating')
-            ->withCount('reviews');
-
-        if ($search = $request->get('q')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%");
-            });
-        }
-
-        if ($productId = $request->integer('product') ?: null) {
-            $query->where('marketplace_product_id', $productId);
-        } elseif ($categoryId = $request->integer('category') ?: null) {
-            $query->where(function ($q) use ($categoryId) {
-                $q->whereHas('marketplaceProduct', fn ($mp) => $mp->where('category_id', $categoryId))
-                    ->orWhere('category_id', $categoryId);
-            });
-        }
-
-        if ($request->boolean('featured')) {
-            $query->where('featured', true);
-        }
-
-        $sort = $request->get('sort', 'newest');
-        match ($sort) {
-            'price_asc' => $query->orderBy('price'),
-            'price_desc' => $query->orderByDesc('price'),
-            default => $query->orderByDesc('created_at'),
-        };
-
-        return $query;
     }
 }

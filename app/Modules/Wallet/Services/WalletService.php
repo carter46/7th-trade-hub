@@ -4,6 +4,7 @@ namespace App\Modules\Wallet\Services;
 
 use App\Enums\TransactionType;
 use App\Enums\WalletType;
+use App\Events\WalletFunded;
 use App\Models\Escrow;
 use App\Models\Order;
 use App\Models\Transaction;
@@ -59,6 +60,15 @@ class WalletService
                 'approved_device' => $approvedDevice,
                 'approved_reason' => $approvedReason,
             ], fn ($v) => $v !== null));
+
+            DB::afterCommit(function () use ($funding, $transaction) {
+                WalletFunded::dispatch(
+                    (int) $funding->user_id,
+                    (int) $transaction->id,
+                    (float) $funding->amount,
+                    (string) $funding->currency
+                );
+            });
 
             return $transaction;
         });

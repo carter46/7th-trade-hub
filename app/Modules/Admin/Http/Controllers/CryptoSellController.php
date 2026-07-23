@@ -2,8 +2,10 @@
 
 namespace App\Modules\Admin\Http\Controllers;
 
+use App\Events\CryptoSold;
 use App\Http\Controllers\Controller;
 use App\Models\CryptoSellRequest;
+use App\Models\Transaction;
 use App\Models\WalletFunding;
 use App\Modules\Admin\Services\AuditLogService;
 use App\Modules\Admin\Services\FinancialAuditLog;
@@ -108,6 +110,19 @@ class CryptoSellController extends Controller
 
         $cryptoSellRequest->refresh();
         $walletAfter = $cryptoSellRequest->wallet;
+
+        $fundingId = $cryptoSellRequest->wallet_funding_id;
+        if ($fundingId) {
+            $txn = Transaction::query()->where('wallet_funding_id', $fundingId)->latest('id')->first();
+            if ($txn) {
+                CryptoSold::dispatch(
+                    (int) $cryptoSellRequest->user_id,
+                    (int) $txn->id,
+                    (float) $cryptoSellRequest->expected_ngn,
+                    'NGN'
+                );
+            }
+        }
 
         $this->financialAudit->logMoneyAction(
             auth()->id(),

@@ -6,7 +6,7 @@
                 You have {{ $unreadCount }} unread {{ \Illuminate\Support\Str::plural('notification', $unreadCount) }}.
             </p>
         </div>
-        <x-dashboard.button :href="route($prefix === 'admin' ? 'admin.notifications' : 'dashboard.notifications')" variant="secondary">
+        <x-dashboard.button :href="route($prefix === 'admin' ? 'admin.inbox' : 'dashboard.notifications')" variant="secondary">
             View notifications
         </x-dashboard.button>
     </div>
