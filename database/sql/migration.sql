@@ -753,4 +753,63 @@ CREATE TABLE IF NOT EXISTS `catalog_page_contents` (
 -- ALTER TABLE `users` ADD COLUMN `anonymized_at` timestamp NULL DEFAULT NULL AFTER `suspended_by`;
 -- ALTER TABLE `users` ADD CONSTRAINT `users_suspended_by_foreign` FOREIGN KEY (`suspended_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
+-- ---------- Marketplace products + listing taxonomy (2026-07-23) ----------
+-- Prefer: php artisan migrate --force
+-- Or apply manually on Hostinger/phpMyAdmin (ignore duplicate errors):
+
+CREATE TABLE IF NOT EXISTS `marketplace_products` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `category_id` bigint unsigned NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `slug` varchar(255) NOT NULL,
+  `sort_order` int unsigned NOT NULL DEFAULT 0,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `short_description` varchar(500) DEFAULT NULL,
+  `hero_title` varchar(255) DEFAULT NULL,
+  `hero_subtitle` varchar(500) DEFAULT NULL,
+  `benefits` json DEFAULT NULL,
+  `faq` json DEFAULT NULL,
+  `banner_image` varchar(255) DEFAULT NULL,
+  `card_image` varchar(255) DEFAULT NULL,
+  `banner_media_id` bigint unsigned DEFAULT NULL,
+  `card_media_id` bigint unsigned DEFAULT NULL,
+  `icon` varchar(80) DEFAULT NULL,
+  `seo_title` varchar(255) DEFAULT NULL,
+  `seo_description` text,
+  `og_title` varchar(255) DEFAULT NULL,
+  `og_description` text,
+  `og_image` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `marketplace_products_slug_unique` (`slug`),
+  KEY `marketplace_products_category_id_is_active_index` (`category_id`,`is_active`),
+  KEY `marketplace_products_banner_media_id_index` (`banner_media_id`),
+  KEY `marketplace_products_card_media_id_index` (`card_media_id`),
+  CONSTRAINT `marketplace_products_category_id_foreign` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ALTER TABLE `listings` ADD COLUMN `marketplace_product_id` bigint unsigned DEFAULT NULL AFTER `category_id`;
+-- ALTER TABLE `listings` ADD COLUMN `deleted_at` timestamp NULL DEFAULT NULL;
+-- ALTER TABLE `listings` ADD KEY `listings_marketplace_product_id_foreign` (`marketplace_product_id`);
+-- ALTER TABLE `listings` ADD CONSTRAINT `listings_marketplace_product_id_foreign` FOREIGN KEY (`marketplace_product_id`) REFERENCES `marketplace_products` (`id`) ON DELETE SET NULL;
+-- ALTER TABLE `listings` ADD KEY `listings_browse_product_index` (`status`,`is_active`,`marketplace_product_id`);
+-- ALTER TABLE `listings` ADD KEY `listings_browse_created_index` (`status`,`is_active`,`created_at`);
+-- ALTER TABLE `categories` ADD COLUMN `short_description` varchar(500) DEFAULT NULL;
+-- ALTER TABLE `categories` ADD COLUMN `hero_title` varchar(255) DEFAULT NULL;
+-- ALTER TABLE `categories` ADD COLUMN `hero_subtitle` varchar(500) DEFAULT NULL;
+-- ALTER TABLE `categories` ADD COLUMN `benefits` json DEFAULT NULL;
+-- ALTER TABLE `categories` ADD COLUMN `faq` json DEFAULT NULL;
+-- ALTER TABLE `categories` ADD COLUMN `banner_image` varchar(255) DEFAULT NULL;
+-- ALTER TABLE `categories` ADD COLUMN `card_image` varchar(255) DEFAULT NULL;
+-- ALTER TABLE `categories` ADD COLUMN `banner_media_id` bigint unsigned DEFAULT NULL;
+-- ALTER TABLE `categories` ADD COLUMN `card_media_id` bigint unsigned DEFAULT NULL;
+-- ALTER TABLE `categories` ADD COLUMN `icon` varchar(80) DEFAULT NULL;
+-- ALTER TABLE `categories` ADD COLUMN `seo_title` varchar(255) DEFAULT NULL;
+-- ALTER TABLE `categories` ADD COLUMN `seo_description` text;
+-- ALTER TABLE `categories` ADD COLUMN `og_title` varchar(255) DEFAULT NULL;
+-- ALTER TABLE `categories` ADD COLUMN `og_description` text;
+-- ALTER TABLE `categories` ADD COLUMN `og_image` varchar(255) DEFAULT NULL;
+
 COMMIT;
+

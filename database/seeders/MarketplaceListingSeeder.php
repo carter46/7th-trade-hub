@@ -32,29 +32,29 @@ class MarketplaceListingSeeder extends Seeder
             ['name' => 'NextGen Media', 'username' => 'nextgenmedia', 'email' => 'nextgenmedia@7thtrade.local'],
         ];
 
-        $leafSlugs = [
+        $productSlugs = [
             'facebook', 'instagram', 'tiktok', 'twitter', 'linkedin', 'discord',
             'marketplace-vpn', 'marketplace-proxy', 'rdp', 'marketplace-vps', 'marketplace-smtp',
             'websites', 'domains', 'source-code', 'graphics',
         ];
 
-        $leaves = Category::query()->whereIn('slug', $leafSlugs)->get()->keyBy('slug');
-        if ($leaves->count() < count($leafSlugs)) {
-            $missing = array_diff($leafSlugs, $leaves->keys()->all());
+        $products = \App\Models\MarketplaceProduct::query()->whereIn('slug', $productSlugs)->get()->keyBy('slug');
+        if ($products->count() < count($productSlugs)) {
+            $missing = array_diff($productSlugs, $products->keys()->all());
             throw new RuntimeException(
-                'MarketplaceListingSeeder requires CategorySeeder leaf categories. Missing: '.implode(', ', $missing)
+                'MarketplaceListingSeeder requires MarketplaceProduct rows. Missing: '.implode(', ', $missing)
             );
         }
 
-        $leafList = $leaves->values()->all();
+        $productList = $products->values()->all();
         $walletService = app(WalletProvisioningService::class);
 
         $listingTitles = [
-            'Aged {cat} with verified history',
-            'Premium {cat} package with docs',
-            'Ready to use {cat} for agencies',
-            'Starter {cat} bundle with escrow',
-            'High trust {cat} listing',
+            'Aged {product} with verified history',
+            'Premium {product} package with docs',
+            'Ready to use {product} for agencies',
+            'Starter {product} bundle with escrow',
+            'High trust {product} listing',
         ];
 
         foreach ($vendors as $vendorIndex => $vendorData) {
@@ -76,19 +76,20 @@ class MarketplaceListingSeeder extends Seeder
             $walletService->createWallet($user);
 
             for ($i = 0; $i < 5; $i++) {
-                $category = $leafList[($vendorIndex * 5 + $i) % count($leafList)];
-                $title = str_replace('{cat}', $category->name, $listingTitles[$i]);
-                $slug = Str::slug($vendorData['username'].'-'.$category->slug.'-'.$i);
+                $product = $productList[($vendorIndex * 5 + $i) % count($productList)];
+                $title = str_replace('{product}', $product->name, $listingTitles[$i]);
+                $slug = Str::slug($vendorData['username'].'-'.$product->slug.'-'.$i);
 
                 Listing::updateOrCreate(
                     ['slug' => $slug],
                     [
                         'user_id' => $user->id,
-                        'category_id' => $category->id,
+                        'marketplace_product_id' => $product->id,
+                        'category_id' => $product->category_id,
                         'title' => $title,
-                        'description' => "Sold by {$vendorData['name']}. {$category->name} listing with escrow protection on 7th Trade Hub. Delivery details shared after payment clears.",
+                        'description' => "Sold by {$vendorData['name']}. {$product->name} listing with escrow protection on 7th Trade Hub. Delivery details shared after payment clears.",
                         'price' => 8500 + ($vendorIndex * 1200) + ($i * 750),
-                        'category' => $category->slug,
+                        'category' => $product->slug,
                         'is_active' => true,
                         'status' => 'published',
                         'featured' => $i === 0,

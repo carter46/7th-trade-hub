@@ -8,17 +8,14 @@
         ['label' => 'Home', 'href' => route('home')],
         ['label' => 'Services', 'href' => route('services')],
     ];
-    if (!empty($preferGroupSlug) && $groupContent) {
-        if (!empty($activeCategory)) {
-            $crumbs[] = ['label' => $groupContent['label'], 'href' => route('services.segment', $preferGroupSlug)];
-            $crumbs[] = ['label' => $activeCategory->name];
-        } else {
-            $crumbs[] = ['label' => $groupContent['label']];
-        }
-    } elseif ($groupSlug && $groupContent) {
-        $crumbs[] = ['label' => $groupContent['label'], 'href' => route('services.segment', $groupSlug)];
-        if (!empty($activeCategory)) {
-            $crumbs[] = ['label' => $content['label'] ?? config('catalog.types.'.$typeKey.'.label', $typeKey), 'href' => route('services.segment', $typeKey)];
+    $parentSlug = $preferGroupSlug ?: $groupSlug;
+    if ($parentSlug && $groupContent) {
+        $crumbs[] = ['label' => $groupContent['label'], 'href' => route('services.segment', $parentSlug)];
+        if (! empty($activeCategory)) {
+            $crumbs[] = [
+                'label' => $content['label'] ?? config('catalog.types.'.$typeKey.'.label', $typeKey),
+                'href' => route('services.type', ['category' => $parentSlug, 'service' => $typeKey]),
+            ];
             $crumbs[] = ['label' => $activeCategory->name];
         } else {
             $crumbs[] = ['label' => $content['label'] ?? config('catalog.types.'.$typeKey.'.label', $typeKey)];

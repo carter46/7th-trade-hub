@@ -115,6 +115,9 @@ class CatalogHierarchyTest extends TestCase
         $this->seedVpnProduct(featured: true);
 
         $this->get(route('services.segment', 'vpn'))
+            ->assertRedirect('/services/network-services/vpn');
+
+        $this->get(route('services.type', ['category' => 'network-services', 'service' => 'vpn']))
             ->assertOk()
             ->assertSee('Featured')
             ->assertSee('Residential VPN Demo');

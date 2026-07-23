@@ -18,12 +18,16 @@ class ListingReviewFlowTest extends TestCase
         app(WalletProvisioningService::class)->createWallet($seller);
         $seller->refresh();
 
+        $product = \App\Models\MarketplaceProduct::query()->where('is_active', true)->first();
+        $this->assertNotNull($product);
+
         $this->actingAs($seller)
             ->post(route('dashboard.listings.store'), [
                 'title' => 'My Service',
                 'description' => 'A great service',
                 'price' => 2500,
-                'category_id' => \App\Models\Category::query()->whereDoesntHave('children')->value('id'),
+                'category_id' => $product->category_id,
+                'marketplace_product_id' => $product->id,
             ])
             ->assertRedirect(route('dashboard.listings'));
 

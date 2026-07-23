@@ -67,9 +67,14 @@
                 <x-dashboard.td class="text-text-secondary text-sm">{{ $order->created_at->format('M j, Y H:i') }}</x-dashboard.td>
                 <x-dashboard.td>
                     @if ($order->status === 'processing' && $order->escrow?->status === 'locked')
-                        <x-dashboard.button type="button" size="xs" variant="success" @click="$dispatch('open-modal', 'confirm-delivery-{{ $order->id }}')">
-                            Confirm delivery
-                        </x-dashboard.button>
+                        <div class="flex flex-wrap gap-2">
+                            <x-dashboard.button type="button" size="xs" variant="success" @click="$dispatch('open-modal', 'confirm-delivery-{{ $order->id }}')">
+                                Confirm delivery
+                            </x-dashboard.button>
+                            <x-dashboard.button type="button" size="xs" variant="danger" @click="$dispatch('open-modal', 'dispute-order-{{ $order->id }}')">
+                                Open dispute
+                            </x-dashboard.button>
+                        </div>
                         <x-dashboard.modal
                             name="confirm-delivery-{{ $order->id }}"
                             title="Confirm delivery?"
@@ -78,6 +83,19 @@
                         >
                             Confirm delivery and release escrow to the seller?
                         </x-dashboard.modal>
+                        <x-dashboard.modal
+                            name="dispute-order-{{ $order->id }}"
+                            title="Open a dispute?"
+                            variant="danger"
+                            confirm-label="Open dispute"
+                            :form-action="route('dashboard.orders.dispute', $order)"
+                        >
+                            <p class="mb-3 text-sm text-text-secondary">Describe the issue. Escrow stays locked until an admin decides.</p>
+                            <label class="block text-sm font-medium mb-1">Reason</label>
+                            <textarea name="reason" required maxlength="1000" rows="3" class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2 text-sm"></textarea>
+                        </x-dashboard.modal>
+                    @elseif ($order->status === 'processing' && $order->escrow?->status === 'disputed')
+                        <span class="text-xs text-warning">Dispute under review</span>
                     @elseif ($order->status === 'completed' && ! $order->review && $order->source === 'marketplace')
                         <form method="POST" action="{{ route('dashboard.orders.review', $order) }}" class="flex flex-col gap-2 max-w-[10rem]" x-data="{ submitting: false }" @submit="submitting = true">
                             @csrf

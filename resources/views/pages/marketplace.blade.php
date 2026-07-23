@@ -6,10 +6,10 @@
     $tree = $parents->map(fn ($p) => [
         'id' => $p->id,
         'name' => $p->name,
-        'children' => $p->children->map(fn ($c) => ['id' => $c->id, 'name' => $c->name])->values(),
+        'products' => $p->products->map(fn ($prod) => ['id' => $prod->id, 'name' => $prod->name])->values(),
     ])->values();
-    $filtersExpanded = filled($filters['parent'] ?? null)
-        || filled($filters['category'] ?? null)
+    $filtersExpanded = filled($filters['category'] ?? null)
+        || filled($filters['product'] ?? null)
         || (( $filters['sort'] ?? 'newest') !== 'newest')
         || ! empty($filters['featured']);
 @endphp
@@ -32,8 +32,8 @@
     class="max-w-marketing mx-auto px-5 sm:px-6 pb-12 sm:pb-16"
     x-data="marketplaceBrowse({
         parents: @js($tree),
-        parentId: {{ (int) ($filters['parent'] ?? 0) }},
         categoryId: {{ (int) ($filters['category'] ?? 0) }},
+        productId: {{ (int) ($filters['product'] ?? 0) }},
         q: @js($filters['q'] ?? ''),
         sort: @js($filters['sort'] ?? 'newest'),
         featured: {{ !empty($filters['featured']) ? 'true' : 'false' }},
@@ -54,20 +54,20 @@
                 </div>
                 <div class="flex flex-wrap gap-3 items-end">
                     <div class="min-w-[160px] flex-1">
-                        <label class="block text-sm font-medium text-text-secondary mb-1">Parent category</label>
-                        <select name="parent" x-model.number="parentId" class="w-full rounded-xl border-border-default bg-elevated">
-                            <option value="0">All groups</option>
+                        <label class="block text-sm font-medium text-text-secondary mb-1">Category</label>
+                        <select name="category" x-model.number="categoryId" class="w-full rounded-xl border-border-default bg-elevated">
+                            <option value="0">All categories</option>
                             <template x-for="parent in parents" :key="parent.id">
                                 <option :value="parent.id" x-text="parent.name"></option>
                             </template>
                         </select>
                     </div>
                     <div class="min-w-[160px] flex-1">
-                        <label class="block text-sm font-medium text-text-secondary mb-1">Subcategory</label>
-                        <select name="category" x-model.number="categoryId" class="w-full rounded-xl border-border-default bg-elevated">
-                            <option value="0">All subcategories</option>
-                            <template x-for="child in children" :key="child.id">
-                                <option :value="child.id" x-text="child.name"></option>
+                        <label class="block text-sm font-medium text-text-secondary mb-1">Product</label>
+                        <select name="product" x-model.number="productId" class="w-full rounded-xl border-border-default bg-elevated">
+                            <option value="0">All products</option>
+                            <template x-for="prod in products" :key="prod.id">
+                                <option :value="prod.id" x-text="prod.name"></option>
                             </template>
                         </select>
                     </div>
@@ -123,7 +123,7 @@
                                         <a :href="item.url" class="flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-slate-50 text-left">
                                             <span class="min-w-0">
                                                 <span class="block text-sm font-medium text-slate-900 truncate" x-text="item.title"></span>
-                                                <span class="block text-xs text-slate-500" x-text="item.category || ''"></span>
+                                                <span class="block text-xs text-slate-500" x-text="item.product || ''"></span>
                                             </span>
                                             <span class="shrink-0 text-xs font-semibold text-primary" x-text="'₦' + Number(item.price).toLocaleString()"></span>
                                         </a>
@@ -179,4 +179,105 @@
         </div>
     </div>
 </section>
+
+@push('scripts')
+<script>
+function marketplaceBrowse(config) {
+    return {
+        parents: config.parents,
+        categoryId: config.categoryId,
+        productId: config.productId,
+        q: config.q,
+        sort: config.sort,
+        featured: config.featured,
+        filtersOpen: config.filtersOpen,
+        indexUrl: config.indexUrl,
+        suggestUrl: config.suggestUrl,
+        loading: false,
+        showSuggest: false,
+        suggestions: [],
+        keywords: [],
+        suggestTimeout: null,
+        hideTimeout: null,
+        
+        get products() {
+            const parent = this.parents.find(p => p.id === this.categoryId);
+            return parent ? parent.products : [];
+        },
+        
+        init() {
+            this.$watch('categoryId', (newVal, oldVal) => {
+                if (newVal !== oldVal) {
+                    this.productId = 0;
+                }
+            });
+        },
+        
+        async applyFilters(event) {
+            event.preventDefault();
+            this.loading = true;
+            
+            const form = this.$refs.filterForm;
+            const formData = new FormData(form);
+            const params = new URLSearchParams(formData);
+            
+            const url = `${this.indexUrl}?${params.toString()}&ajax=1`;
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                document.getElementById('marketplace-results').innerHTML = data.html;
+                window.history.pushState({}, '', data.url);
+            } catch (error) {
+                console.error('Filter error:', error);
+            } finally {
+                this.loading = false;
+            }
+        },
+        
+        onSearchInput() {
+            clearTimeout(this.suggestTimeout);
+            
+            if ((this.q || '').trim().length < 2) {
+                this.showSuggest = false;
+                this.suggestions = [];
+                this.keywords = [];
+                return;
+            }
+            
+            this.suggestTimeout = setTimeout(() => this.fetchSuggestions(), 300);
+        },
+        
+        async fetchSuggestions() {
+            const url = `${this.suggestUrl}?q=${encodeURIComponent(this.q)}`;
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                this.suggestions = data.suggestions || [];
+                this.keywords = data.keywords || [];
+                this.showSuggest = true;
+            } catch (error) {
+                console.error('Suggest error:', error);
+            }
+        },
+        
+        pickKeyword(word) {
+            this.q = word;
+            this.showSuggest = false;
+            this.$refs.filterForm.submit();
+        },
+        
+        hideSuggestSoon() {
+            clearTimeout(this.hideTimeout);
+            this.hideTimeout = setTimeout(() => {
+                this.showSuggest = false;
+            }, 200);
+        }
+    };
+}
+</script>
+@endpush
 @endsection

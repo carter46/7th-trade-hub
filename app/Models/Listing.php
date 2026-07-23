@@ -2,16 +2,23 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Listing extends Model
 {
+    /** @use HasFactory<\Database\Factories\ListingFactory> */
+    use HasFactory;
+    use SoftDeletes;
+
     protected $fillable = [
         'user_id',
         'category_id',
+        'marketplace_product_id',
         'title',
         'slug',
         'description',
@@ -42,6 +49,11 @@ class Listing extends Model
         return $this->belongsTo(Category::class, 'category_id');
     }
 
+    public function marketplaceProduct(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceProduct::class);
+    }
+
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
@@ -70,5 +82,21 @@ class Listing extends Model
     public function scopePublished($query)
     {
         return $query->where('status', 'published')->where('is_active', true);
+    }
+
+    public function isPendingReview(): bool
+    {
+        return $this->status === 'pending_review'
+            || $this->versions()->where('status', 'pending_review')->exists();
+    }
+
+    public function canBeSuspended(): bool
+    {
+        return $this->status === 'published' && $this->is_active;
+    }
+
+    public function hasPendingVersion(): bool
+    {
+        return $this->versions()->where('status', 'pending_review')->exists();
     }
 }

@@ -21,18 +21,7 @@
         </div>
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             @foreach($typeCards as $card)
-                <a href="{{ $card['href'] }}" class="group block rounded-2xl border border-white/10 bg-slate-900/40 p-5 hover:border-primary/40 transition-colors">
-                    <h3 class="font-display font-semibold text-lg text-white group-hover:text-accent">{{ $card['label'] }}</h3>
-                    @if(! empty($card['short_description']))
-                        <p class="mt-2 text-sm text-slate-400 line-clamp-2">{{ $card['short_description'] }}</p>
-                    @endif
-                    <p class="mt-4 text-xs text-slate-500">
-                        {{ $card['count'] }} {{ \Illuminate\Support\Str::plural('product', $card['count']) }}
-                        @if($card['from_price'])
-                            · from ₦{{ number_format($card['from_price'], 0) }}
-                        @endif
-                    </p>
-                </a>
+                @include('partials.catalog.explore-card', ['card' => $card])
             @endforeach
         </div>
     @else

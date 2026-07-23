@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Enums\PlatformProductType;
+use App\Models\Category;
 use App\Models\Listing;
+use App\Models\MarketplaceProduct;
 use App\Models\PlatformProduct;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Route;
@@ -69,6 +71,45 @@ class SitemapController extends Controller
                 'changefreq' => 'weekly',
             ];
         }
+
+        Category::query()
+            ->marketplace()
+            ->active()
+            ->roots()
+            ->select(['slug', 'updated_at'])
+            ->orderBy('sort_order')
+            ->chunk(100, function ($categories) use (&$urls) {
+                foreach ($categories as $category) {
+                    $urls[] = [
+                        'loc' => route('marketplace.show', $category->slug),
+                        'lastmod' => $category->updated_at,
+                        'priority' => '0.75',
+                        'changefreq' => 'weekly',
+                    ];
+                }
+            });
+
+        MarketplaceProduct::query()
+            ->active()
+            ->with('category:id,slug')
+            ->select(['id', 'slug', 'category_id', 'updated_at'])
+            ->orderBy('sort_order')
+            ->chunk(100, function ($products) use (&$urls) {
+                foreach ($products as $product) {
+                    if (! $product->category) {
+                        continue;
+                    }
+                    $urls[] = [
+                        'loc' => route('marketplace.product', [
+                            'category' => $product->category->slug,
+                            'product' => $product->slug,
+                        ]),
+                        'lastmod' => $product->updated_at,
+                        'priority' => '0.7',
+                        'changefreq' => 'weekly',
+                    ];
+                }
+            });
 
         Listing::published()
             ->select(['slug', 'updated_at'])

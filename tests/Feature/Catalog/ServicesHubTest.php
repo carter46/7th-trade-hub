@@ -84,6 +84,9 @@ class ServicesHubTest extends TestCase
         $this->seedVpnProduct(featured: true);
 
         $this->get(route('services.segment', 'vpn'))
+            ->assertRedirect('/services/network-services/vpn');
+
+        $this->get('/services/network-services/vpn')
             ->assertOk()
             ->assertSee('Featured')
             ->assertSee('Residential VPN Demo');
@@ -93,12 +96,19 @@ class ServicesHubTest extends TestCase
     {
         $this->seedVpnProduct('legacy-vpn-slug');
 
-        $this->get(route('services.show', ['type' => 'vpn', 'productSlug' => 'legacy-vpn-slug']))
+        $this->get(route('services.nested.show', [
+            'category' => 'network-services',
+            'service' => 'vpn',
+            'productSlug' => 'legacy-vpn-slug',
+        ]))
             ->assertOk()
             ->assertSee('Residential VPN Demo');
 
+        $this->get(route('services.show', ['type' => 'vpn', 'productSlug' => 'legacy-vpn-slug']))
+            ->assertRedirect('/services/network-services/vpn/legacy-vpn-slug');
+
         $this->get('/services/legacy-vpn-slug')
-            ->assertRedirect('/services/vpn/legacy-vpn-slug');
+            ->assertRedirect('/services/network-services/vpn/legacy-vpn-slug');
     }
 
     public function test_services_search_finds_products(): void
@@ -140,6 +150,6 @@ class ServicesHubTest extends TestCase
         $this->seedVpnProduct('canonical-vpn-slug');
 
         $this->get('/services/email/canonical-vpn-slug')
-            ->assertRedirect('/services/vpn/canonical-vpn-slug');
+            ->assertRedirect('/services/network-services/vpn/canonical-vpn-slug');
     }
 }

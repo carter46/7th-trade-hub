@@ -4,6 +4,7 @@ namespace Tests\Feature\Marketplace;
 
 use App\Models\Listing;
 use App\Models\ListingVersion;
+use App\Models\MarketplaceProduct;
 use App\Models\User;
 use App\Modules\Wallet\Services\WalletProvisioningService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -19,14 +20,16 @@ class ListingVersionEditTest extends TestCase
         $seller->assignRole('user');
         app(WalletProvisioningService::class)->createWallet($seller);
 
-        $leafCategoryId = \App\Models\Category::query()->whereDoesntHave('children')->value('id');
+        $product = MarketplaceProduct::query()->where('is_active', true)->firstOrFail();
 
         $listing = Listing::create([
             'user_id' => $seller->id,
-            'category_id' => $leafCategoryId,
+            'category_id' => $product->category_id,
+            'marketplace_product_id' => $product->id,
             'title' => 'Original',
             'slug' => 'original-'.uniqid(),
             'price' => 1000,
+            'category' => $product->slug,
             'status' => 'rejected',
             'is_active' => false,
         ]);
@@ -44,7 +47,8 @@ class ListingVersionEditTest extends TestCase
                 'title' => 'Improved Title',
                 'description' => 'Better description',
                 'price' => 1200,
-                'category_id' => $leafCategoryId,
+                'category_id' => $product->category_id,
+                'marketplace_product_id' => $product->id,
             ])
             ->assertRedirect(route('dashboard.listings'));
 

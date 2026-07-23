@@ -27,7 +27,7 @@
         striped
     >
         <x-slot:head>
-            <x-dashboard.th class="w-14"> </x-dashboard.th>
+            <x-dashboard.th class="w-24"> </x-dashboard.th>
             <x-dashboard.th>Name</x-dashboard.th>
             <x-dashboard.th>Mode</x-dashboard.th>
             <x-dashboard.th>Sort</x-dashboard.th>
@@ -43,10 +43,10 @@
                         <img
                             src="{{ $thumb }}"
                             alt=""
-                            class="h-10 w-10 rounded-lg object-cover bg-muted"
+                            class="h-12 w-20 rounded-lg object-cover bg-muted"
                         >
                     @else
-                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-text-muted" aria-hidden="true">
+                        <span class="inline-flex h-12 w-20 items-center justify-center rounded-lg bg-muted text-text-muted" aria-hidden="true">
                             <x-dashboard.icon name="grid" class="h-4 w-4" />
                         </span>
                     @endif

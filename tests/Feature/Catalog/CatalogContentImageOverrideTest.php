@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Catalog;
 
-use App\Models\CatalogPageContent;
 use App\Models\MediaAsset;
 use App\Models\ServiceCategory;
 use App\Models\User;
@@ -16,7 +15,7 @@ class CatalogContentImageOverrideTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_service_category_media_wins_over_stale_catalog_page_path(): void
+    public function test_service_category_media_library_image_is_used(): void
     {
         Storage::fake('public');
 
@@ -38,16 +37,10 @@ class CatalogContentImageOverrideTest extends TestCase
             'is_active' => true,
             'mode' => 'catalog',
             'banner_media_id' => $asset->id,
+            'card_media_id' => $asset->id,
             'banner_image' => 'storage/media/fake/new.webp',
+            'card_image' => 'storage/media/fake/new.webp',
         ]);
-
-        CatalogPageContent::query()->updateOrCreate(
-            ['scope' => 'group', 'key' => 'network-services'],
-            [
-                'banner_image' => 'assets/images/Network Services_1.jpg',
-                'card_image' => 'assets/images/Network Services_1.jpg',
-            ]
-        );
 
         $resolved = app(CatalogContentResolver::class)->forServiceCategory(
             $category->fresh(['bannerMedia.variants', 'cardMedia.variants'])
@@ -55,6 +48,5 @@ class CatalogContentImageOverrideTest extends TestCase
 
         $this->assertNotNull($resolved['banner_image']);
         $this->assertStringContainsString('storage', $resolved['banner_image']);
-        $this->assertStringNotContainsString('Network Services_1.jpg', $resolved['banner_image']);
     }
 }

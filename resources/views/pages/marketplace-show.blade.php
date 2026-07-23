@@ -8,7 +8,9 @@
         ['label' => $listing->title],
     ],
     'title' => $listing->title,
-    'subtitle' => $listing->listingCategory?->name,
+    'subtitle' => $listing->marketplaceProduct?->name
+        ?? $listing->marketplaceProduct?->category?->name
+        ?? $listing->listingCategory?->name,
     'image' => 'assets/images/market_place.jpg',
 ])
 

@@ -63,6 +63,24 @@
                                 @csrf
                                 <x-dashboard.menu-item type="submit">New revision</x-dashboard.menu-item>
                             </form>
+                            <form method="POST" action="{{ route('dashboard.listings.archive', $listing) }}">
+                                @csrf
+                                <x-dashboard.menu-item type="submit" variant="danger">Archive</x-dashboard.menu-item>
+                            </form>
+                        </x-dashboard.row-actions>
+                    @elseif ($listing->status === 'archived')
+                        <x-dashboard.row-actions>
+                            <form method="POST" action="{{ route('dashboard.listings.restore-archive', $listing) }}">
+                                @csrf
+                                <x-dashboard.menu-item type="submit" variant="success">Restore to draft</x-dashboard.menu-item>
+                            </form>
+                        </x-dashboard.row-actions>
+                    @elseif ($listing->status === 'suspended')
+                        <x-dashboard.row-actions>
+                            <form method="POST" action="{{ route('dashboard.listings.archive', $listing) }}">
+                                @csrf
+                                <x-dashboard.menu-item type="submit" variant="danger">Archive</x-dashboard.menu-item>
+                            </form>
                         </x-dashboard.row-actions>
                     @else
                         <span class="text-text-muted text-xs">Awaiting admin</span>

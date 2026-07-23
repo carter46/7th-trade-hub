@@ -3,6 +3,8 @@
 namespace App\Services\Media;
 
 use App\Models\CatalogPageContent;
+use App\Models\Category;
+use App\Models\MarketplaceProduct;
 use App\Models\MediaAsset;
 use App\Models\MediaUsage;
 use App\Models\PlatformProduct;
@@ -134,6 +136,24 @@ class MediaUsageService
             return;
         }
 
+        if ($type === Category::class || $type === (new Category)->getMorphClass()) {
+            $model = Category::query()->find($id);
+            if ($model) {
+                $this->rewriteBannerCard($model, $field, $new);
+            }
+
+            return;
+        }
+
+        if ($type === MarketplaceProduct::class || $type === (new MarketplaceProduct)->getMorphClass()) {
+            $model = MarketplaceProduct::query()->find($id);
+            if ($model) {
+                $this->rewriteBannerCard($model, $field, $new);
+            }
+
+            return;
+        }
+
         if ($type === CatalogPageContent::class || $type === (new CatalogPageContent)->getMorphClass()) {
             $model = CatalogPageContent::query()->find($id);
             if ($model) {
@@ -165,7 +185,7 @@ class MediaUsageService
     }
 
     /**
-     * @param  ServiceCategory|ProductType|CatalogPageContent  $model
+     * @param  ServiceCategory|ProductType|CatalogPageContent|Category|MarketplaceProduct  $model
      */
     protected function rewriteBannerCard(Model $model, string $field, MediaAsset $new, string $bannerVariant = 'medium'): void
     {

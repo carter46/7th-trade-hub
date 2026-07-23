@@ -58,7 +58,7 @@ php artisan media:purge-soft-deleted --days=30 --force
 ## Smoke check
 
 1. Admin → **Media Library** → upload an image.
-2. Catalog Pages → pick banner/card → save → public category page shows the banner (not the default hero).
+2. Service Categories / Services → set Image → save → public page shows that image as card and header.
 3. Product form → pick hero → public product page shows the image.
 4. Media Library → Replace on an in-use asset → public page updates.
 5. Users tabs switch without browser console errors / growing scroll lag.

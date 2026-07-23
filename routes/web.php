@@ -97,18 +97,37 @@ Route::get('/marketplace/suggestions', [MarketplaceController::class, 'suggestio
     ->middleware('throttle:60,1')
     ->name('marketplace.suggestions');
 Route::redirect('/marketplace/web-services', '/services')->name('marketplace.web-services');
-Route::get('/marketplace/{slug}', [MarketplaceController::class, 'show'])->name('marketplace.show');
 Route::get('/marketplace/{slug}/checkout', [MarketplaceController::class, 'checkout'])
     ->middleware('auth')
+    ->where('slug', '[A-Za-z0-9\-_]+')
     ->name('marketplace.checkout');
+Route::get('/marketplace/{category}/{product}', [MarketplaceController::class, 'pair'])
+    ->where('category', '[a-z0-9\-_]+')
+    ->where('product', '[a-z0-9\-_]+')
+    ->name('marketplace.product');
+Route::get('/marketplace/{segment}', [MarketplaceController::class, 'segment'])
+    ->where('segment', '[A-Za-z0-9\-_]+')
+    ->name('marketplace.show');
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 
 Route::get('/services', [\App\Modules\Catalog\Http\Controllers\ServiceController::class, 'index'])->name('services');
-Route::get('/services/{type}/{productSlug}', [\App\Modules\Catalog\Http\Controllers\ServiceController::class, 'show'])
-    ->where('type', '[a-z0-9_]+')
+// Nested product: /services/{category}/{service}/{product}
+Route::get('/services/{category}/{service}/{productSlug}', [\App\Modules\Catalog\Http\Controllers\ServiceController::class, 'nestedShow'])
+    ->where('category', '[a-z0-9\-_]+')
+    ->where('service', '[a-z0-9\-_]+')
+    ->where('productSlug', '[A-Za-z0-9\-_]+')
+    ->name('services.nested.show');
+// Two segments: category+service listing OR legacy type+product (same URI; pair() disambiguates).
+// Register type name first so inbound binds {category}/{service}; show name kept for product URL generation.
+Route::get('/services/{category}/{service}', [\App\Modules\Catalog\Http\Controllers\ServiceController::class, 'pair'])
+    ->where('category', '[a-z0-9\-_]+')
+    ->where('service', '[A-Za-z0-9\-_]+')
+    ->name('services.type');
+Route::get('/services/{type}/{productSlug}', [\App\Modules\Catalog\Http\Controllers\ServiceController::class, 'pair'])
+    ->where('type', '[a-z0-9\-_]+')
     ->where('productSlug', '[A-Za-z0-9\-_]+')
     ->name('services.show');
-// One segment: group slug, type key, or legacy product slug (301)
+// One segment: group slug, type key (301 → nested), or legacy product slug (301)
 Route::get('/services/{segment}', [\App\Modules\Catalog\Http\Controllers\ServiceController::class, 'segment'])
     ->name('services.segment');
 Route::get('/exchange', \App\Modules\Catalog\Http\Controllers\ExchangePageController::class)->name('exchange');
@@ -177,8 +196,13 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
     Route::put('/listings/{listing}', [ListingController::class, 'update'])->name('.listings.update');
     Route::post('/listings/{listing}/revision', [ListingController::class, 'storeRevision'])->name('.listings.revision');
     Route::post('/listings/{listing}/submit', [ListingController::class, 'submitForReview'])->name('.listings.submit');
+    Route::post('/listings/{listing}/archive', [ListingController::class, 'archive'])->name('.listings.archive');
+    Route::post('/listings/{listing}/restore-archive', [ListingController::class, 'restoreArchive'])->name('.listings.restore-archive');
     Route::get('/orders', [DashboardController::class, 'orders'])->name('.orders');
+    Route::get('/sales', [DashboardController::class, 'sales'])->name('.sales');
     Route::post('/orders/{order}/confirm', [CheckoutController::class, 'confirmDelivery'])->name('.orders.confirm');
+    Route::post('/orders/{order}/mark-delivered', [CheckoutController::class, 'markDelivered'])->name('.orders.mark-delivered');
+    Route::post('/orders/{order}/dispute', [CheckoutController::class, 'openDispute'])->name('.orders.dispute');
     Route::post('/orders/{order}/review', [ReviewController::class, 'store'])->name('.orders.review');
     Route::get('/messages', [MessageController::class, 'index'])->name('.messages');
     Route::get('/messages/create', [MessageController::class, 'create'])->name('.messages.create');
@@ -275,10 +299,33 @@ Route::middleware(['auth', 'verified', 'role:admin', 'throttle:60,1'])->prefix('
     });
 
     Route::middleware('permission:catalog.manage')->group(function () {
-        Route::get('/listings/pending', [ListingAdminController::class, 'pending'])->name('.listings.pending');
-        Route::post('/listings/{listing}/approve', [ListingAdminController::class, 'approve'])->name('.listings.approve');
-        Route::post('/listings/{listing}/reject', [ListingAdminController::class, 'reject'])->name('.listings.reject');
-        Route::get('/listings', [AdminDashboardController::class, 'listings'])->name('.listings');
+        Route::get('/listings', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'index'])->name('.listings');
+        Route::get('/listings/pending', fn () => redirect()->route('admin.listings', ['status' => 'pending'], 301))->name('.listings.pending');
+        Route::get('/listings/{listing}', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'show'])->name('.listings.show');
+        Route::post('/listings/{listing}/approve', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'approve'])->name('.listings.approve');
+        Route::post('/listings/{listing}/reject', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'reject'])->name('.listings.reject');
+        Route::post('/listings/{listing}/suspend', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'suspend'])->name('.listings.suspend');
+        Route::post('/listings/{listing}/restore', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'restore'])->name('.listings.restore');
+        Route::post('/listings/{listing}/feature', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'toggleFeature'])->name('.listings.feature');
+        Route::post('/listings/{listing}/duplicate', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'duplicate'])->name('.listings.duplicate');
+        Route::delete('/listings/{listing}', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'destroy'])->name('.listings.destroy');
+
+        Route::get('/marketplace-categories', [\App\Modules\Admin\Http\Controllers\MarketplaceCategoryAdminController::class, 'index'])->name('.marketplace-categories');
+        Route::get('/marketplace-categories/create', [\App\Modules\Admin\Http\Controllers\MarketplaceCategoryAdminController::class, 'create'])->name('.marketplace-categories.create');
+        Route::post('/marketplace-categories', [\App\Modules\Admin\Http\Controllers\MarketplaceCategoryAdminController::class, 'store'])->name('.marketplace-categories.store');
+        Route::get('/marketplace-categories/{category}/edit', [\App\Modules\Admin\Http\Controllers\MarketplaceCategoryAdminController::class, 'edit'])->name('.marketplace-categories.edit');
+        Route::put('/marketplace-categories/{category}', [\App\Modules\Admin\Http\Controllers\MarketplaceCategoryAdminController::class, 'update'])->name('.marketplace-categories.update');
+        Route::post('/marketplace-categories/{category}/toggle', [\App\Modules\Admin\Http\Controllers\MarketplaceCategoryAdminController::class, 'toggle'])->name('.marketplace-categories.toggle');
+        Route::delete('/marketplace-categories/{category}', [\App\Modules\Admin\Http\Controllers\MarketplaceCategoryAdminController::class, 'destroy'])->name('.marketplace-categories.destroy');
+
+        Route::get('/marketplace-products', [\App\Modules\Admin\Http\Controllers\MarketplaceProductAdminController::class, 'index'])->name('.marketplace-products');
+        Route::get('/marketplace-products/create', [\App\Modules\Admin\Http\Controllers\MarketplaceProductAdminController::class, 'create'])->name('.marketplace-products.create');
+        Route::post('/marketplace-products', [\App\Modules\Admin\Http\Controllers\MarketplaceProductAdminController::class, 'store'])->name('.marketplace-products.store');
+        Route::get('/marketplace-products/{marketplaceProduct}/edit', [\App\Modules\Admin\Http\Controllers\MarketplaceProductAdminController::class, 'edit'])->name('.marketplace-products.edit');
+        Route::put('/marketplace-products/{marketplaceProduct}', [\App\Modules\Admin\Http\Controllers\MarketplaceProductAdminController::class, 'update'])->name('.marketplace-products.update');
+        Route::post('/marketplace-products/{marketplaceProduct}/toggle', [\App\Modules\Admin\Http\Controllers\MarketplaceProductAdminController::class, 'toggle'])->name('.marketplace-products.toggle');
+        Route::delete('/marketplace-products/{marketplaceProduct}', [\App\Modules\Admin\Http\Controllers\MarketplaceProductAdminController::class, 'destroy'])->name('.marketplace-products.destroy');
+
         Route::get('/platform-products', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'index'])->name('.platform-products');
         Route::get('/platform-products/create', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'create'])->name('.platform-products.create');
         Route::post('/platform-products', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'store'])->name('.platform-products.store');
@@ -299,12 +346,6 @@ Route::middleware(['auth', 'verified', 'role:admin', 'throttle:60,1'])->prefix('
         Route::put('/services/{service}', [\App\Modules\Admin\Http\Controllers\ServiceAdminController::class, 'update'])->name('.services.update');
         Route::post('/services/{service}/toggle', [\App\Modules\Admin\Http\Controllers\ServiceAdminController::class, 'toggle'])->name('.services.toggle');
         Route::delete('/services/{service}', [\App\Modules\Admin\Http\Controllers\ServiceAdminController::class, 'destroy'])->name('.services.destroy');
-        Route::get('/marketplace-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'marketplaceCategories'])->name('.marketplace-categories');
-        Route::get('/marketplace-categories/create', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'createMarketplaceCategory'])->name('.marketplace-categories.create');
-        Route::post('/marketplace-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'storeMarketplaceCategory'])->name('.marketplace-categories.store');
-        Route::get('/marketplace-categories/{category}/edit', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'editMarketplaceCategory'])->name('.marketplace-categories.edit');
-        Route::put('/marketplace-categories/{category}', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'updateMarketplaceCategory'])->name('.marketplace-categories.update');
-        Route::post('/marketplace-categories/{category}/toggle', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'toggleMarketplaceCategory'])->name('.marketplace-categories.toggle');
         // Legacy platform-categories → service-categories
         Route::get('/platform-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'platformCategories'])->name('.platform-categories');
         Route::get('/platform-categories/create', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'createPlatformCategory'])->name('.platform-categories.create');
@@ -312,8 +353,6 @@ Route::middleware(['auth', 'verified', 'role:admin', 'throttle:60,1'])->prefix('
         Route::get('/platform-categories/{platformCategory}/edit', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'editPlatformCategory'])->name('.platform-categories.edit');
         Route::put('/platform-categories/{platformCategory}', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'updatePlatformCategory'])->name('.platform-categories.update');
         Route::post('/platform-categories/{platformCategory}/toggle', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'togglePlatformCategory'])->name('.platform-categories.toggle');
-        Route::get('/catalog-pages', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'catalogPages'])->name('.catalog-pages');
-        Route::post('/catalog-pages', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'upsertCatalogPage'])->name('.catalog-pages.upsert');
         Route::get('/exchange-rates', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'exchangeRates'])->name('.exchange-rates');
         Route::get('/exchange-rates/create', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'createExchangeRate'])->name('.exchange-rates.create');
         Route::post('/exchange-rates', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'storeExchangeRate'])->name('.exchange-rates.store');

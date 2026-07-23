@@ -4,13 +4,28 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title>@yield('title', '7th Trade Hub')</title>
-        <meta name="description" content="@yield('meta_description', '7th Trade Hub — NGN wallet marketplace. Deposit, buy with escrow, sell digital products and services.')">
+        @php
+            $defaultDescription = '7th Trade Hub — NGN wallet marketplace. Deposit, buy with escrow, sell digital products and services.';
+            $defaultOgDescription = 'NGN wallet marketplace with escrow-protected purchases.';
+            $resolvedTitle = trim($__env->yieldContent('title') ?: '7th Trade Hub');
+            $resolvedOgTitle = $__env->hasSection('og_title')
+                ? trim($__env->yieldContent('og_title'))
+                : $resolvedTitle;
+            $resolvedDescription = trim($__env->yieldContent('meta_description') ?: $defaultDescription);
+            $resolvedOgDescription = $__env->hasSection('og_description')
+                ? trim($__env->yieldContent('og_description'))
+                : ($__env->yieldContent('meta_description') ?: $defaultOgDescription);
+        @endphp
+        <title>{{ $resolvedTitle }}</title>
+        <meta name="description" content="{{ $resolvedDescription }}">
         <link rel="canonical" href="{{ url()->current() }}">
-        <meta property="og:title" content="@yield('title', '7th Trade Hub')">
-        <meta property="og:description" content="@yield('meta_description', 'NGN wallet marketplace with escrow-protected purchases.')">
+        <meta property="og:title" content="{{ $resolvedOgTitle }}">
+        <meta property="og:description" content="{{ $resolvedOgDescription }}">
         <meta property="og:url" content="{{ url()->current() }}">
         <meta property="og:type" content="website">
+        @if(trim($__env->yieldContent('og_image')) !== '')
+            <meta property="og:image" content="@yield('og_image')">
+        @endif
         <meta name="twitter:card" content="summary">
         @PwaHead
 

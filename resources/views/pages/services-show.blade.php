@@ -12,10 +12,15 @@
         $crumbs[] = ['label' => $groupContent['label'], 'href' => route('services.segment', $groupSlug)];
     }
     if (! empty($typeKey) && ! empty($typeContent)) {
-        $typeLabel = $typeContent['label'] ?? $product->product_type->label();
+        $typeLabel = $typeContent['label'] ?? $product->product_type?->label() ?? $typeKey;
         $lastGroup = $groupContent['label'] ?? null;
         if ($typeLabel !== $lastGroup) {
-            $crumbs[] = ['label' => $typeLabel, 'href' => route('services.segment', $typeKey)];
+            $crumbs[] = [
+                'label' => $typeLabel,
+                'href' => $groupSlug
+                    ? route('services.type', ['category' => $groupSlug, 'service' => $typeKey])
+                    : route('services.segment', $typeKey),
+            ];
         }
     }
     $crumbs[] = ['label' => $product->title];

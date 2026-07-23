@@ -20,11 +20,14 @@ class EscrowController extends Controller
         private FinancialAuditLog $financialAudit,
     ) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
-        $escrows = Escrow::with(['order.user', 'order.listing'])
+        $escrows = Escrow::query()
+            ->with(['order.user', 'order.listing.user'])
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))
             ->orderByDesc('created_at')
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
         return view('dashboard.admin.escrows', compact('escrows'));
     }

@@ -107,15 +107,6 @@ class DashboardController extends Controller
         ]);
     }
 
-    public function listings(): View
-    {
-        $listings = Listing::orderByDesc('updated_at')->paginate(20);
-
-        return view('dashboard.admin.listings', [
-            'listings' => $listings,
-        ]);
-    }
-
     public function analytics(): View
     {
         $userCount = User::count();

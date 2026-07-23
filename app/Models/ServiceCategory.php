@@ -47,15 +47,16 @@ class ServiceCategory extends Model
         return $this->belongsTo(MediaAsset::class, 'card_media_id');
     }
 
-    /** Thumbnail for admin list tables (card preferred, then banner). */
+    /** Landscape thumb for admin lists — card image is source of truth. */
     public function listThumbnailUrl(): ?string
     {
         $media = $this->cardMedia ?? $this->bannerMedia;
         if ($media) {
-            return $media->thumbnailUrl() ?? $media->url('small') ?? $media->url('medium');
+            // Prefer uncropped variants so the full image shows in a wide cell.
+            return $media->url('medium') ?? $media->url('small') ?? $media->thumbnailUrl();
         }
 
-        return media_url(null, $this->card_image ?: $this->banner_image, 'thumbnail');
+        return media_url(null, $this->card_image ?: $this->banner_image, 'medium');
     }
 
     /** Services (product_types) under this category. */

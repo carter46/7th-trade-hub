@@ -5,6 +5,7 @@
     $desc = $card['short_description'] ?? '';
     $image = $card['card_image'] ?? null;
     $icon = $card['icon'] ?? 'grid';
+    $meta = $card['meta'] ?? null;
     $initials = strtoupper(mb_substr(preg_replace('/[^A-Za-z0-9]/', '', $label) ?: 'S', 0, 2));
     $ctaLabel = $card['cta'] ?? 'Explore';
 @endphp
@@ -26,10 +27,12 @@
     <div class="flex flex-1 flex-col gap-2 p-4 sm:p-5 text-left">
         <h3 class="font-bold text-sm sm:text-base text-slate-900 leading-snug line-clamp-2">{{ $label }}</h3>
         @if($desc)
-            <p class="text-xs sm:text-sm text-slate-500 line-clamp-2 flex-1">{{ $desc }}</p>
-        @else
-            <div class="flex-1"></div>
+            <p class="text-xs sm:text-sm text-slate-500 line-clamp-2">{{ $desc }}</p>
         @endif
+        @if($meta)
+            <p class="text-xs text-slate-400">{{ $meta }}</p>
+        @endif
+        <div class="flex-1"></div>
         <span class="mt-1 inline-flex w-fit items-center justify-center rounded-lg bg-primary px-3 py-1.5 text-xs sm:text-sm font-semibold text-white group-hover:bg-accent transition-colors">
             {{ $ctaLabel }}
         </span>

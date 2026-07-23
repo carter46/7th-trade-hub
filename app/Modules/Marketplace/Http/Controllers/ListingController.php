@@ -9,6 +9,7 @@ use App\Models\ListingVersion;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ListingController extends Controller
@@ -16,9 +17,10 @@ class ListingController extends Controller
     public function create(): View
     {
         $parents = Category::query()
+            ->marketplace()
             ->where('is_active', true)
             ->whereNull('parent_id')
-            ->with(['children' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')])
+            ->with(['products' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')])
             ->orderBy('sort_order')
             ->get();
 
@@ -33,22 +35,37 @@ class ListingController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'price' => ['required', 'numeric', 'min:1'],
-            'category_id' => ['required', 'exists:categories,id'],
+            'category_id' => [
+                'required',
+                'integer',
+                Rule::exists('categories', 'id')->where(fn ($q) => $q->where('type', 'marketplace')->whereNull('parent_id')->where('is_active', true)),
+            ],
+            'marketplace_product_id' => ['required', 'exists:marketplace_products,id'],
         ]);
 
-        $category = Category::with('children')->findOrFail($validated['category_id']);
-        if ($category->children->isNotEmpty()) {
-            return back()->withInput()->withErrors(['category_id' => 'Select a subcategory (leaf), not a parent group.']);
+        $product = \App\Models\MarketplaceProduct::with('category')->findOrFail($validated['marketplace_product_id']);
+
+        if (! $product->is_active) {
+            return back()->withInput()->withErrors(['marketplace_product_id' => 'Selected product is not active.']);
+        }
+
+        if ($product->category_id !== (int) $validated['category_id']) {
+            return back()->withInput()->withErrors(['marketplace_product_id' => 'Selected product does not belong to the chosen category.']);
+        }
+
+        if (! $product->category?->is_active) {
+            return back()->withInput()->withErrors(['category_id' => 'Selected category is not active.']);
         }
 
         $listing = Listing::create([
             'user_id' => auth()->id(),
-            'category_id' => $validated['category_id'],
+            'marketplace_product_id' => $product->id,
+            'category_id' => $product->category_id,
             'title' => $validated['title'],
             'slug' => Str::slug($validated['title']).'-'.Str::random(6),
             'description' => $validated['description'],
             'price' => $validated['price'],
-            'category' => $category->slug,
+            'category' => $product->slug,
             'status' => 'draft',
             'is_active' => false,
         ]);
@@ -76,23 +93,22 @@ class ListingController extends Controller
         }
 
         $parents = Category::query()
+            ->marketplace()
             ->where('is_active', true)
             ->whereNull('parent_id')
-            ->with(['children' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')])
+            ->with(['products' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')])
             ->orderBy('sort_order')
             ->get();
 
-        $selectedCategory = $listing->category_id
-            ? Category::with('parent')->find($listing->category_id)
-            : null;
-        $parentId = $selectedCategory?->parent_id ?? $selectedCategory?->id ?? 0;
+        $selectedCategoryId = $listing->marketplaceProduct?->category_id ?? 0;
+        $selectedProductId = $listing->marketplace_product_id ?? 0;
 
         return view('dashboard.user.listings-edit', [
             'listing' => $listing,
             'version' => $version,
             'parents' => $parents,
-            'selectedParentId' => (int) $parentId,
-            'selectedCategoryId' => (int) ($listing->category_id ?? 0),
+            'selectedCategoryId' => (int) $selectedCategoryId,
+            'selectedProductId' => (int) $selectedProductId,
         ]);
     }
 
@@ -109,12 +125,26 @@ class ListingController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'price' => ['required', 'numeric', 'min:1'],
-            'category_id' => ['required', 'exists:categories,id'],
+            'category_id' => [
+                'required',
+                'integer',
+                Rule::exists('categories', 'id')->where(fn ($q) => $q->where('type', 'marketplace')->whereNull('parent_id')->where('is_active', true)),
+            ],
+            'marketplace_product_id' => ['required', 'exists:marketplace_products,id'],
         ]);
 
-        $category = Category::with('children')->findOrFail($validated['category_id']);
-        if ($category->children->isNotEmpty()) {
-            return back()->withInput()->withErrors(['category_id' => 'Select a subcategory (leaf), not a parent group.']);
+        $product = \App\Models\MarketplaceProduct::with('category')->findOrFail($validated['marketplace_product_id']);
+
+        if (! $product->is_active) {
+            return back()->withInput()->withErrors(['marketplace_product_id' => 'Selected product is not active.']);
+        }
+
+        if ($product->category_id !== (int) $validated['category_id']) {
+            return back()->withInput()->withErrors(['marketplace_product_id' => 'Selected product does not belong to the chosen category.']);
+        }
+
+        if (! $product->category?->is_active) {
+            return back()->withInput()->withErrors(['category_id' => 'Selected category is not active.']);
         }
 
         $version->update([
@@ -125,16 +155,18 @@ class ListingController extends Controller
 
         if ($listing->status !== 'published') {
             $listing->update([
-                'category_id' => $validated['category_id'],
-                'category' => $category->slug,
+                'marketplace_product_id' => $product->id,
+                'category_id' => $product->category_id,
+                'category' => $product->slug,
                 'title' => $validated['title'],
                 'description' => $validated['description'],
                 'price' => $validated['price'],
             ]);
         } else {
             $listing->update([
-                'category_id' => $validated['category_id'],
-                'category' => $category->slug,
+                'marketplace_product_id' => $product->id,
+                'category_id' => $product->category_id,
+                'category' => $product->slug,
             ]);
         }
 
@@ -193,6 +225,38 @@ class ListingController extends Controller
         }
 
         return back()->with('status', __('Listing submitted for admin review.'));
+    }
+
+    public function archive(Listing $listing): RedirectResponse
+    {
+        $this->authorize('update', $listing);
+
+        if (! in_array($listing->status, ['published', 'suspended'], true)) {
+            return back()->with('error', __('Only published or suspended listings can be archived.'));
+        }
+
+        $listing->update([
+            'status' => 'archived',
+            'is_active' => false,
+        ]);
+
+        return back()->with('status', __('Listing archived.'));
+    }
+
+    public function restoreArchive(Listing $listing): RedirectResponse
+    {
+        $this->authorize('update', $listing);
+
+        if ($listing->status !== 'archived') {
+            return back()->with('error', __('Only archived listings can be restored from archive.'));
+        }
+
+        $listing->update([
+            'status' => 'draft',
+            'is_active' => false,
+        ]);
+
+        return back()->with('status', __('Listing restored to draft. Edit and submit for review.'));
     }
 
     private function editableVersion(Listing $listing): ?ListingVersion

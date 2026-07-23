@@ -106,4 +106,70 @@ class CheckoutController extends Controller
 
         return back()->with('status', __('Delivery confirmed. Escrow released to seller.'));
     }
+
+    public function markDelivered(Order $order, \Illuminate\Http\Request $request): RedirectResponse
+    {
+        $order->load('listing');
+        $this->authorize('markDelivered', $order);
+
+        $escrow = $order->escrow;
+        if (! $escrow || $escrow->status !== 'locked') {
+            return back()->with('error', __('No active escrow for this order.'));
+        }
+
+        $data = $request->validate([
+            'delivery_note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $escrow->update([
+            'reason' => 'seller_marked_delivered',
+            'admin_notes' => $data['delivery_note'] ?? $escrow->admin_notes,
+        ]);
+
+        $order->load('user');
+        if ($order->user) {
+            $this->notifications->send(
+                $order->user,
+                'order',
+                __('Seller marked as delivered'),
+                __('The seller marked order :ref as delivered. Confirm when you have received it.', ['ref' => $order->reference]),
+                route('dashboard.orders')
+            );
+        }
+
+        return back()->with('status', __('Marked as delivered. Waiting for buyer confirmation.'));
+    }
+
+    public function openDispute(Order $order, \Illuminate\Http\Request $request): RedirectResponse
+    {
+        $this->authorize('dispute', $order);
+
+        $escrow = $order->escrow;
+        if (! $escrow || $escrow->status !== 'locked') {
+            return back()->with('error', __('No locked escrow to dispute.'));
+        }
+
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $escrow->update([
+            'status' => 'disputed',
+            'reason' => $data['reason'],
+            'admin_notes' => trim(($escrow->admin_notes ? $escrow->admin_notes."\n" : '').'Dispute: '.$data['reason']),
+        ]);
+
+        $order->load('listing.user');
+        if ($order->listing?->user) {
+            $this->notifications->send(
+                $order->listing->user,
+                'order',
+                __('Order disputed'),
+                __('Buyer opened a dispute on order :ref.', ['ref' => $order->reference]),
+                route('dashboard.orders')
+            );
+        }
+
+        return back()->with('status', __('Dispute opened. An admin will review the escrow.'));
+    }
 }

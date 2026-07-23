@@ -1,12 +1,13 @@
 @php
-    $href = match ($product->product_type->defaultRoute()) {
+    $browse = app(\App\Modules\Catalog\Services\CatalogBrowseService::class);
+    $href = match ($product->product_type?->defaultRoute()) {
         'templates' => route('templates.show', $product->slug),
         'website-listings' => route('website-listings.show', $product->slug),
-        default => route('services.show', [
-            'type' => $product->product_type->value,
-            'productSlug' => $product->slug,
-        ]),
+        default => $browse->productUrl($product),
     };
+    $typeLabel = $product->productType?->name
+        ?? $product->product_type?->label()
+        ?? 'Service';
     $initials = strtoupper(mb_substr(preg_replace('/[^A-Za-z0-9]/', '', $product->title) ?: 'P', 0, 2));
 @endphp
 <a href="{{ $href }}" class="group flex flex-col h-full overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm hover:shadow-md transition-shadow">
@@ -21,7 +22,7 @@
             </div>
         @endif
         <span class="absolute top-2 left-2 rounded bg-slate-950/75 border border-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
-            {{ $product->product_type->label() }}
+            {{ $typeLabel }}
         </span>
     </div>
     <div class="flex flex-1 flex-col gap-2 p-4 sm:p-5 text-left">

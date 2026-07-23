@@ -106,6 +106,48 @@ class CatalogBrowseService
         return null;
     }
 
+    public function typeBelongsToGroup(string $type, string $group): bool
+    {
+        return $this->groupForType($type) === $group;
+    }
+
+    /** Canonical public URL for a service (product type) listing. */
+    public function serviceListingUrl(string $serviceSlug, ?string $categorySlug = null): string
+    {
+        $categorySlug ??= $this->groupForType($serviceSlug);
+        if ($categorySlug) {
+            return route('services.type', [
+                'category' => $categorySlug,
+                'service' => $serviceSlug,
+            ]);
+        }
+
+        return route('services.segment', $serviceSlug);
+    }
+
+    /** Canonical public URL for a product detail page. */
+    public function productUrl(PlatformProduct $product): string
+    {
+        $typeSlug = $product->typeSlug() ?? 'vpn';
+        $categorySlug = $product->relationLoaded('productType')
+            ? $product->productType?->serviceCategory?->slug
+            : null;
+        $categorySlug ??= $this->groupForType($typeSlug);
+
+        if ($categorySlug) {
+            return route('services.nested.show', [
+                'category' => $categorySlug,
+                'service' => $typeSlug,
+                'productSlug' => $product->slug,
+            ]);
+        }
+
+        return route('services.show', [
+            'type' => $typeSlug,
+            'productSlug' => $product->slug,
+        ]);
+    }
+
     public function findServiceCategory(string $slug): ?ServiceCategory
     {
         return ServiceCategory::query()->where('slug', $slug)->first();
@@ -249,7 +291,9 @@ class CatalogBrowseService
                 'slug' => $type,
                 'count' => $stats['count'],
                 'from_price' => $stats['from_price'],
-                'href' => route('services.segment', $type),
+                'href' => $this->serviceListingUrl($type),
+                'cta' => 'View products',
+                'meta' => $this->cardMeta($stats['count'], $stats['from_price']),
             ]);
         })->values();
     }
@@ -265,7 +309,7 @@ class CatalogBrowseService
             ? $category->services->where('is_active', true)->sortBy('sort_order')->values()
             : $category->services()->active()->orderBy('sort_order')->get();
 
-        return $services->map(function (ProductType $service) use ($content) {
+        return $services->map(function (ProductType $service) use ($content, $category) {
             $resolved = $content->forService($service);
             $stats = $this->statsForTypes([$service->slug]);
 
@@ -273,8 +317,20 @@ class CatalogBrowseService
                 'slug' => $service->slug,
                 'count' => $stats['count'],
                 'from_price' => $stats['from_price'],
-                'href' => route('services.segment', $service->slug),
+                'href' => $this->serviceListingUrl($service->slug, $category->slug),
+                'cta' => 'View products',
+                'meta' => $this->cardMeta($stats['count'], $stats['from_price']),
             ]);
         })->values();
+    }
+
+    private function cardMeta(int $count, mixed $fromPrice): string
+    {
+        $meta = $count.' '.\Illuminate\Support\Str::plural('product', $count);
+        if ($fromPrice) {
+            $meta .= ' · from ₦'.number_format((float) $fromPrice, 0);
+        }
+
+        return $meta;
     }
 }

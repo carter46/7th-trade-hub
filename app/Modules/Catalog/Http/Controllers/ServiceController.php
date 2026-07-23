@@ -38,7 +38,7 @@ class ServiceController extends Controller
             $searchResults = PlatformProduct::query()
                 ->published()
                 ->ofTypeMany($types)
-                ->with(['productType', 'activeVariants'])
+                ->with(['productType.serviceCategory', 'activeVariants'])
                 ->where(function ($inner) use ($q) {
                     $inner->where('title', 'like', "%{$q}%")
                         ->orWhere('short_description', 'like', "%{$q}%")
@@ -147,7 +147,7 @@ class ServiceController extends Controller
         $products = PlatformProduct::query()
             ->published()
             ->ofTypeMany($activeTypes)
-            ->with(['productType', 'activeVariants'])
+            ->with(['productType.serviceCategory', 'activeVariants'])
             ->when($categoryId, fn ($builder) => $builder->where('platform_category_id', $categoryId))
             ->when($q !== '', function ($builder) use ($q) {
                 $builder->where(function ($inner) use ($q) {
@@ -185,13 +185,23 @@ class ServiceController extends Controller
         $groupContent = $groupSlug ? $this->content->forGroup($groupSlug) : null;
 
         if ($preferGroupSlug && $groupContent) {
-            $resolved = array_merge($resolved, [
-                'label' => $groupContent['label'] ?? $resolved['label'],
-                'hero_title' => $groupContent['hero_title'] ?? $resolved['hero_title'] ?? null,
-                'hero_subtitle' => $groupContent['hero_subtitle'] ?? $resolved['hero_subtitle'] ?? null,
-                'short_description' => $groupContent['short_description'] ?? $resolved['short_description'] ?? null,
-                'banner_image' => $groupContent['banner_image'] ?? $resolved['banner_image'] ?? null,
-            ]);
+            // Only inherit group hero when this is a single-service category (no service card layer).
+            $groupTypeCount = count($groupContent['types'] ?? []);
+            if ($this->browse->usesDbHierarchy()) {
+                $cat = $this->browse->findServiceCategory($preferGroupSlug);
+                $groupTypeCount = $cat
+                    ? $cat->services()->active()->count()
+                    : $groupTypeCount;
+            }
+            if ($groupTypeCount === 1) {
+                $resolved = array_merge($resolved, [
+                    'label' => $groupContent['label'] ?? $resolved['label'],
+                    'hero_title' => $groupContent['hero_title'] ?? $resolved['hero_title'] ?? null,
+                    'hero_subtitle' => $groupContent['hero_subtitle'] ?? $resolved['hero_subtitle'] ?? null,
+                    'short_description' => $groupContent['short_description'] ?? $resolved['short_description'] ?? null,
+                    'banner_image' => $groupContent['banner_image'] ?? $resolved['banner_image'] ?? null,
+                ]);
+            }
         }
 
         $categoryId = $request->integer('category') ?: null;
@@ -221,7 +231,7 @@ class ServiceController extends Controller
         $products = PlatformProduct::query()
             ->published()
             ->ofType($type)
-            ->with(['productType', 'activeVariants'])
+            ->with(['productType.serviceCategory', 'activeVariants'])
             ->when($categoryId && Schema::hasColumn('platform_products', 'platform_category_id'), fn ($builder) => $builder->where('platform_category_id', $categoryId))
             ->when($q !== '', function ($builder) use ($q) {
                 $builder->where(function ($inner) use ($q) {
@@ -239,15 +249,16 @@ class ServiceController extends Controller
         $featuredQuery = PlatformProduct::published()
             ->featured()
             ->ofType($type)
-            ->with('activeVariants')
+            ->with(['productType.serviceCategory', 'activeVariants'])
             ->when($categoryId && Schema::hasColumn('platform_products', 'platform_category_id'), fn ($builder) => $builder->where('platform_category_id', $categoryId))
             ->orderBy('sort_order')
             ->limit(6);
 
         $featured = $featuredQuery->get();
 
-        $filterAction = $preferGroupSlug
-            ? route('services.segment', $preferGroupSlug)
+        $canonicalGroup = $groupSlug;
+        $filterAction = $canonicalGroup
+            ? route('services.type', ['category' => $canonicalGroup, 'service' => $type])
             : route('services.segment', $type);
 
         return view('pages.services-type', [
@@ -255,7 +266,7 @@ class ServiceController extends Controller
             'content' => $resolved,
             'groupSlug' => $groupSlug,
             'groupContent' => $groupContent,
-            'preferGroupSlug' => $preferGroupSlug,
+            'preferGroupSlug' => $preferGroupSlug ?: $canonicalGroup,
             'filterAction' => $filterAction,
             'categories' => $categories,
             'activeCategory' => $activeCategory,
@@ -266,6 +277,38 @@ class ServiceController extends Controller
                 'category' => $categoryId,
             ],
         ]);
+    }
+
+    /**
+     * Two-segment URL: /services/{category}/{service} OR legacy /services/{type}/{productSlug}.
+     */
+    public function pair(Request $request, string $category, string $service): View|RedirectResponse
+    {
+        // Nested service listing under its category.
+        if ($this->browse->isGroup($category) && $this->browse->isType($service)
+            && $this->browse->typeBelongsToGroup($service, $category)) {
+            return $this->type($request, $service, $category);
+        }
+
+        // Legacy (and still valid) product detail: first segment is the service/type slug.
+        if ($this->browse->isType($category)) {
+            return $this->show($category, $service);
+        }
+
+        abort(404);
+    }
+
+    /**
+     * Nested product: /services/{category}/{service}/{productSlug}.
+     */
+    public function nestedShow(string $category, string $service, string $productSlug): View|RedirectResponse
+    {
+        if (! $this->browse->isGroup($category) || ! $this->browse->isType($service)
+            || ! $this->browse->typeBelongsToGroup($service, $category)) {
+            abort(404);
+        }
+
+        return $this->show($service, $productSlug);
     }
 
     public function show(string $type, string $productSlug): View|RedirectResponse
@@ -297,6 +340,12 @@ class ServiceController extends Controller
 
         $groupSlug = $product->productType?->serviceCategory?->slug
             ?? $this->browse->groupForType($typeSlug);
+
+        // Prefer nested canonical product URL when category is known.
+        $request = request();
+        if ($groupSlug && ! $request->routeIs('services.nested.show')) {
+            return redirect()->to($this->browse->productUrl($product), 301);
+        }
 
         return view('pages.services-show', [
             'product' => $product,
@@ -334,12 +383,21 @@ class ServiceController extends Controller
         }
 
         if ($this->browse->isType($segment)) {
+            $categorySlug = $this->browse->groupForType($segment);
+            if ($categorySlug) {
+                return redirect()->route('services.type', [
+                    'category' => $categorySlug,
+                    'service' => $segment,
+                ], 301);
+            }
+
             return $this->type(request(), $segment);
         }
 
         $product = PlatformProduct::query()
             ->published()
             ->where('slug', $segment)
+            ->with(['productType.serviceCategory'])
             ->first();
 
         if ($product) {
@@ -366,10 +424,7 @@ class ServiceController extends Controller
             return redirect()->route('website-listings.show', $product->slug, 301);
         }
 
-        return redirect()->route('services.show', [
-            'type' => $typeSlug,
-            'productSlug' => $product->slug,
-        ], 301);
+        return redirect()->to($this->browse->productUrl($product), 301);
     }
 
     private function isFavorited(PlatformProduct $product): bool

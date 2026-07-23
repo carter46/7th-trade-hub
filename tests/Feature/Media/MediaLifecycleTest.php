@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Media;
 
-use App\Models\CatalogPageContent;
 use App\Models\MediaAsset;
 use App\Models\MediaUsage;
 use App\Models\PlatformProduct;
@@ -41,34 +40,27 @@ class MediaLifecycleTest extends TestCase
         return MediaAsset::query()->latest('id')->firstOrFail();
     }
 
-    public function test_catalog_meta_writes_legacy_public_path_not_absolute_url(): void
+    public function test_service_category_save_writes_legacy_public_path_not_absolute_url(): void
     {
         Storage::fake('public');
         $admin = $this->admin();
         $asset = $this->makeAsset($admin, 'banner.png');
 
-        $category = ServiceCategory::query()->create([
-            'name' => 'Digital',
-            'slug' => 'digital-services',
-            'sort_order' => 0,
-            'is_active' => true,
-            'mode' => 'catalog',
-        ]);
-
         $this->actingAs($admin)
-            ->post(route('admin.catalog-pages.upsert'), [
-                'scope' => 'group',
-                'key' => $category->slug,
-                'banner_media_id' => $asset->id,
+            ->post(route('admin.service-categories.store'), [
+                'name' => 'Digital Path Check',
+                'mode' => 'catalog',
                 'card_media_id' => $asset->id,
+                'is_active' => 1,
             ])
             ->assertRedirect();
 
-        $page = CatalogPageContent::query()->where('scope', 'group')->where('key', $category->slug)->first();
-        $this->assertNotNull($page);
-        $this->assertNotNull($page->banner_image);
-        $this->assertStringNotContainsString('http', $page->banner_image);
-        $this->assertStringStartsWith('storage/', $page->banner_image);
+        $category = ServiceCategory::query()->where('name', 'Digital Path Check')->first();
+        $this->assertNotNull($category);
+        $this->assertNotNull($category->card_image);
+        $this->assertSame($category->card_image, $category->banner_image);
+        $this->assertStringNotContainsString('http', $category->card_image);
+        $this->assertStringStartsWith('storage/', $category->card_image);
     }
 
     public function test_replace_updates_usages_and_product_hero(): void
@@ -161,9 +153,9 @@ class MediaLifecycleTest extends TestCase
             ->post(route('admin.service-categories.store'), [
                 'name' => 'Blocked',
                 'mode' => 'catalog',
-                'banner_media_id' => $asset->id,
+                'card_media_id' => $asset->id,
             ])
-            ->assertSessionHasErrors('banner_media_id');
+            ->assertSessionHasErrors('card_media_id');
     }
 
     public function test_guest_cannot_upload_media(): void

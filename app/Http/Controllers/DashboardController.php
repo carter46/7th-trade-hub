@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Listing;
 use App\Models\Message;
+use App\Models\Order;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -85,6 +86,19 @@ class DashboardController extends Controller
             ->paginate(15);
 
         return view('dashboard.user.orders', [
+            'orders' => $orders,
+        ]);
+    }
+
+    public function sales(): View
+    {
+        $orders = Order::query()
+            ->whereHas('listing', fn ($q) => $q->where('user_id', auth()->id()))
+            ->with(['listing', 'escrow', 'user'])
+            ->orderByDesc('created_at')
+            ->paginate(15);
+
+        return view('dashboard.user.sales', [
             'orders' => $orders,
         ]);
     }

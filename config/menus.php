@@ -44,6 +44,7 @@ return [
             'sort' => 40,
             'children' => [
                 ['route' => 'dashboard.listings', 'match' => ['dashboard.listings', 'dashboard.listings.*'], 'label' => 'My Listings', 'icon' => 'listings', 'keywords' => ['sell', 'products'], 'sort' => 10],
+                ['route' => 'dashboard.sales', 'match' => ['dashboard.sales'], 'label' => 'Sales', 'icon' => 'orders', 'keywords' => ['sold', 'delivery'], 'sort' => 15],
                 ['route' => 'dashboard.watchlist', 'match' => ['dashboard.watchlist', 'dashboard.watchlist.*'], 'label' => 'Watchlist', 'icon' => 'watchlist', 'keywords' => ['saved', 'favorites'], 'sort' => 20],
                 ['route' => 'dashboard.orders', 'match' => ['dashboard.orders', 'dashboard.orders.*'], 'label' => 'Orders', 'icon' => 'orders', 'keywords' => ['purchases', 'buy'], 'sort' => 30],
             ],
@@ -97,7 +98,6 @@ return [
                 ['route' => 'admin.service-categories', 'match' => ['admin.service-categories', 'admin.service-categories.*'], 'label' => 'Service Categories', 'icon' => 'grid', 'keywords' => ['catalog', 'categories'], 'permission' => 'catalog.manage', 'sort' => 10],
                 ['route' => 'admin.services', 'match' => ['admin.services', 'admin.services.*'], 'label' => 'Services', 'icon' => 'listings', 'keywords' => ['catalog', 'services', 'types'], 'permission' => 'catalog.manage', 'sort' => 20],
                 ['route' => 'admin.platform-products', 'match' => ['admin.platform-products', 'admin.platform-products.*'], 'label' => 'Products', 'icon' => 'storefront', 'keywords' => ['prod', 'catalog', 'products'], 'permission' => 'catalog.manage', 'sort' => 30],
-                ['route' => 'admin.catalog-pages', 'match' => ['admin.catalog-pages', 'admin.catalog-pages.*'], 'label' => 'Catalog Pages', 'icon' => 'listings', 'keywords' => ['content', 'pages'], 'permission' => 'catalog.manage', 'sort' => 40],
             ],
         ],
         [
@@ -107,9 +107,9 @@ return [
             'icon' => 'inventory',
             'sort' => 30,
             'children' => [
-                ['route' => 'admin.marketplace-categories', 'match' => ['admin.marketplace-categories', 'admin.marketplace-categories.*'], 'label' => 'Categories', 'icon' => 'grid', 'keywords' => ['categories', 'market'], 'permission' => 'catalog.manage', 'sort' => 10],
-                ['route' => 'admin.listings', 'match' => ['admin.listings'], 'label' => 'Listings', 'icon' => 'listings', 'keywords' => ['marketplace', 'all'], 'permission' => 'catalog.manage', 'sort' => 20],
-                ['route' => 'admin.listings.pending', 'match' => ['admin.listings.pending', 'admin.listings.approve', 'admin.listings.reject'], 'label' => 'Listings Review', 'icon' => 'inventory', 'keywords' => ['marketplace', 'approve', 'pending'], 'permission' => 'catalog.manage', 'sort' => 30],
+                ['route' => 'admin.marketplace-categories', 'match' => ['admin.marketplace-categories', 'admin.marketplace-categories.*'], 'label' => 'Marketplace Categories', 'icon' => 'grid', 'keywords' => ['categories', 'market'], 'permission' => 'catalog.manage', 'sort' => 10],
+                ['route' => 'admin.marketplace-products', 'match' => ['admin.marketplace-products', 'admin.marketplace-products.*'], 'label' => 'Marketplace Products', 'icon' => 'storefront', 'keywords' => ['products', 'market', 'types'], 'permission' => 'catalog.manage', 'sort' => 20],
+                ['route' => 'admin.listings', 'match' => ['admin.listings', 'admin.listings.*'], 'label' => 'Marketplace Listings', 'icon' => 'listings', 'keywords' => ['marketplace', 'listings', 'review', 'pending'], 'permission' => 'catalog.manage', 'sort' => 30],
                 ['route' => 'admin.escrows', 'match' => ['admin.escrows', 'admin.escrows.*'], 'label' => 'Escrows', 'icon' => 'lock', 'keywords' => ['release', 'refund'], 'permission' => 'finance.manage', 'sort' => 40],
             ],
         ],

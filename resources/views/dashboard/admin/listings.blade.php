@@ -1,51 +1,131 @@
 @extends('layouts.dashboard-admin')
 
-@section('title', 'Site Listings')
+@section('title', 'Marketplace Listings')
 
 @section('content')
+@php
+    $filterQuery = array_filter([
+        'q' => $filters['q'] ?? null,
+        'category' => $filters['category'] ?? null,
+        'product' => $filters['product'] ?? null,
+        'seller' => $filters['seller'] ?? null,
+        'date_from' => $filters['date_from'] ?? null,
+        'date_to' => $filters['date_to'] ?? null,
+    ], fn ($v) => $v !== null && $v !== '');
+@endphp
 <x-layout.page
-    title="Site Listings"
-    subtitle="Manage website listings."
+    title="Marketplace Listings"
+    subtitle="Manage seller listings and submissions."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
-        ['Site Listings', null],
+        ['Listings', null],
     ]"
 >
-    <x-dashboard.table
-        :empty="$listings->isEmpty()"
-        empty-title="No listings yet"
-        empty-description="Published marketplace listings will appear here."
-        empty-icon="listings"
-        striped
-    >
-        <x-slot:head>
-            <x-dashboard.th>Title</x-dashboard.th>
-            <x-dashboard.th>Slug</x-dashboard.th>
-            <x-dashboard.th>Price</x-dashboard.th>
-            <x-dashboard.th>Category</x-dashboard.th>
-            <x-dashboard.th>Active</x-dashboard.th>
-            <x-dashboard.th>Updated</x-dashboard.th>
-        </x-slot:head>
+    <x-slot:actions>
+        <x-dashboard.button
+            tag="a"
+            href="{{ route('admin.listings', array_merge($filterQuery, ['status' => 'pending'])) }}"
+            variant="primary"
+        >
+            Review Pending
+        </x-dashboard.button>
+    </x-slot:actions>
 
-        @foreach ($listings as $listing)
-            <tr class="hover:bg-muted/50">
-                <x-dashboard.td class="font-medium">{{ $listing->title }}</x-dashboard.td>
-                <x-dashboard.td class="font-mono text-xs">{{ $listing->slug }}</x-dashboard.td>
-                <x-dashboard.td>₦{{ number_format($listing->price, 2) }}</x-dashboard.td>
-                <x-dashboard.td>{{ $listing->category ?? '—' }}</x-dashboard.td>
-                <x-dashboard.td>
-                    <x-dashboard.badge :status="$listing->is_active ? 'active' : 'default'">
-                        {{ $listing->is_active ? 'Yes' : 'No' }}
-                    </x-dashboard.badge>
-                </x-dashboard.td>
-                <x-dashboard.td class="text-text-muted text-xs">{{ $listing->updated_at->format('M j, Y') }}</x-dashboard.td>
-            </tr>
-        @endforeach
-    </x-dashboard.table>
+    <x-dashboard.card class="mb-6">
+        <form method="GET" action="{{ route('admin.listings') }}" class="space-y-4">
+            <input type="hidden" name="status" value="{{ $status }}">
 
-    <x-slot:pagination>
-        <x-dashboard.pagination :paginator="$listings" />
-    </x-slot:pagination>
+            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                <x-dashboard.input
+                    label="Search"
+                    name="q"
+                    :value="$filters['q']"
+                    placeholder="Title or description..."
+                />
+
+                <div>
+                    <label class="block text-sm font-medium text-text-secondary mb-1">Category</label>
+                    <select name="category" class="w-full rounded-xl border-border-default bg-elevated">
+                        <option value="">All categories</option>
+                        @foreach ($categories as $cat)
+                            <option value="{{ $cat->id }}" @selected($filters['category'] == $cat->id)>
+                                {{ $cat->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-text-secondary mb-1">Product</label>
+                    <select name="product" class="w-full rounded-xl border-border-default bg-elevated">
+                        <option value="">All products</option>
+                        @foreach ($products as $prod)
+                            <option value="{{ $prod->id }}" @selected($filters['product'] == $prod->id)>
+                                {{ $prod->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-text-secondary mb-1">Seller</label>
+                    <select name="seller" class="w-full rounded-xl border-border-default bg-elevated">
+                        <option value="">All sellers</option>
+                        @foreach ($sellers as $seller)
+                            <option value="{{ $seller->id }}" @selected($filters['seller'] == $seller->id)>
+                                {{ $seller->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <x-dashboard.input
+                    label="Date From"
+                    type="date"
+                    name="date_from"
+                    :value="$filters['date_from']"
+                />
+                <x-dashboard.input
+                    label="Date To"
+                    type="date"
+                    name="date_to"
+                    :value="$filters['date_to']"
+                />
+            </div>
+
+            <div class="flex gap-2">
+                <x-dashboard.button type="submit" icon="search">
+                    Filter
+                </x-dashboard.button>
+                @if(array_filter($filters))
+                    <x-dashboard.button
+                        tag="a"
+                        href="{{ route('admin.listings', ['status' => $status]) }}"
+                        variant="secondary"
+                    >
+                        Clear
+                    </x-dashboard.button>
+                @endif
+            </div>
+        </form>
+    </x-dashboard.card>
+
+    <x-dashboard.ajax-tabs
+        :active="$status"
+        :tabs="[
+            ['id' => 'active', 'label' => 'Active', 'href' => route('admin.listings', array_merge($filterQuery, ['status' => 'active'])), 'count' => $counts['active']],
+            ['id' => 'pending', 'label' => 'Pending', 'href' => route('admin.listings', array_merge($filterQuery, ['status' => 'pending'])), 'count' => $counts['pending']],
+            ['id' => 'suspended', 'label' => 'Suspended', 'href' => route('admin.listings', array_merge($filterQuery, ['status' => 'suspended'])), 'count' => $counts['suspended']],
+            ['id' => 'rejected', 'label' => 'Rejected', 'href' => route('admin.listings', array_merge($filterQuery, ['status' => 'rejected'])), 'count' => $counts['rejected']],
+            ['id' => 'sold', 'label' => 'Sold', 'href' => route('admin.listings', array_merge($filterQuery, ['status' => 'sold'])), 'count' => $counts['sold']],
+            ['id' => 'archived', 'label' => 'Archived', 'href' => route('admin.listings', array_merge($filterQuery, ['status' => 'archived'])), 'count' => $counts['archived']],
+        ]"
+        class="mb-4"
+    />
+
+    <div id="dashboard-tab-panel">
+        @include('dashboard.admin.listings._panel')
+    </div>
 </x-layout.page>
 @endsection

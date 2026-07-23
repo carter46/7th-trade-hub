@@ -25,7 +25,9 @@
             <a href="{{ $href }}" class="hover:text-primary transition-colors">{{ $listing->title }}</a>
         </h2>
         <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] sm:text-xs text-slate-500">
-            @if($listing->listingCategory)
+            @if($listing->marketplaceProduct)
+                <span class="rounded-md bg-slate-100 px-2 py-0.5 text-slate-600">{{ $listing->marketplaceProduct->name }}</span>
+            @elseif($listing->relationLoaded('listingCategory') && $listing->listingCategory)
                 <span class="rounded-md bg-slate-100 px-2 py-0.5 text-slate-600">{{ $listing->listingCategory->name }}</span>
             @endif
             <span>by {{ $vendor }}</span>
