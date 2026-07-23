@@ -101,7 +101,7 @@ class DemoAuditSeeder extends Seeder
                 'correlation_id' => 'demo-corr-'.$i,
                 'request_id' => 'demo-req-'.$i,
             ]);
-            $timeline->stamp($log, $at);
+            $ctx->stamp($log, $at);
         }
 
         // Ensure a settings value exists for the settings audit story

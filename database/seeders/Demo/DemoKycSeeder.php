@@ -40,7 +40,7 @@ class DemoKycSeeder extends Seeder
                         'level_granted' => null,
                     ]
                 );
-                $timeline->stamp($first, $submitted, [
+                $ctx->stamp($first, $submitted, [
                     'reviewed_at' => $reviewed,
                 ]);
                 $count++;
@@ -57,7 +57,7 @@ class DemoKycSeeder extends Seeder
                         'level_granted' => null,
                     ]
                 );
-                $timeline->stamp($appeal, $appealAt);
+                $ctx->stamp($appeal, $appealAt);
                 $count++;
 
                 continue;
@@ -92,7 +92,7 @@ class DemoKycSeeder extends Seeder
                 ]
             );
 
-            $timeline->stamp($submission, $submitted, [
+            $ctx->stamp($submission, $submitted, [
                 'reviewed_at' => $submission->reviewed_at,
             ]);
 

@@ -2,38 +2,51 @@
 
 namespace App\Console\Commands;
 
+use App\Support\Demo\DemoGate;
 use Illuminate\Console\Command;
+use RuntimeException;
 
 class DemoFreshCommand extends Command
 {
     protected $signature = 'demo:fresh {--force : Skip confirmation}';
 
-    protected $description = 'migrate:fresh + core seeders + DemoPlatformSeeder with checklist (blocked in production)';
+    protected $description = 'WIPE database (migrate:fresh) + full seed including demo. Prefer demo:seed on pre-launch production.';
 
     public function handle(): int
     {
-        if (app()->environment('production')) {
-            $this->error('Refused: demo:fresh cannot run when APP_ENV=production.');
+        try {
+            DemoGate::assertCanDestructive();
+        } catch (RuntimeException $e) {
+            $this->error($e->getMessage());
 
             return self::FAILURE;
         }
 
-        if (! app()->environment('local', 'testing') && ! filter_var(env('SEED_DEMO_DATA', false), FILTER_VALIDATE_BOOLEAN)) {
-            $this->error('Refused: set SEED_DEMO_DATA=true for non-local environments.');
+        $this->error('WARNING: This WIPE the entire database (migrate:fresh), then reseed.');
+        $this->line('Database: '.(string) config('database.connections.'.config('database.default').'.database'));
+        $this->line('APP_ENV: '.app()->environment());
 
-            return self::FAILURE;
+        if (! $this->option('force')) {
+            if (! $this->confirm('Wipe and rebuild from scratch?', false)) {
+                $this->warn('Cancelled.');
+
+                return self::SUCCESS;
+            }
+            if (strtoupper((string) $this->ask('Type YES to confirm destructive wipe')) !== 'YES') {
+                $this->warn('Cancelled.');
+
+                return self::SUCCESS;
+            }
         }
 
-        if (! $this->option('force') && ! $this->confirm('This will WIPE the database (migrate:fresh) and reseed demo data. Continue?', false)) {
-            $this->warn('Cancelled.');
-
-            return self::SUCCESS;
-        }
-
-        // Ensure demo gate is open for DatabaseSeeder
+        // Ensure DatabaseSeeder demo gate is open
+        putenv('ALLOW_DEMO_DATA=true');
+        $_ENV['ALLOW_DEMO_DATA'] = 'true';
+        $_SERVER['ALLOW_DEMO_DATA'] = 'true';
         putenv('SEED_DEMO_DATA=true');
         $_ENV['SEED_DEMO_DATA'] = 'true';
         $_SERVER['SEED_DEMO_DATA'] = 'true';
+        config(['demo.allow_demo_data' => true]);
 
         $this->info('Running migrate:fresh --seed ...');
         $this->call('migrate:fresh', [
@@ -43,12 +56,7 @@ class DemoFreshCommand extends Command
 
         $this->newLine();
         $this->info('Demo fresh complete.');
-        $this->line('  ✓ Users / admins');
-        $this->line('  ✓ Wallets / transactions');
-        $this->line('  ✓ Listings / orders / escrows');
-        $this->line('  ✓ Tickets / KYC');
-        $this->line('  ✓ Audit / notifications / analytics');
-        $this->info('Platform ready for demo.');
+        $this->line('  Launch cleanup later: php artisan demo:clear --force');
 
         return self::SUCCESS;
     }

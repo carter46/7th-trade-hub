@@ -61,6 +61,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function register(): void
     {
+        $this->app->singleton(\App\Support\Demo\DemoBatchTracker::class);
         $this->app->bind(WalletProviderInterface::class, ManualProvider::class);
         $this->app->singleton(WalletService::class);
         $this->app->singleton(CryptoPriceService::class);

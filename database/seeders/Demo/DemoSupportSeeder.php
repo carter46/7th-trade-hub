@@ -35,7 +35,7 @@ class DemoSupportSeeder extends Seeder
                 'priority' => $priorities[$i % count($priorities)],
                 'assigned_to' => $support->id,
             ]);
-            $timeline->stamp($ticket, $opened);
+            $ctx->stamp($ticket, $opened);
 
             $replyAt = $opened->copy()->addHours(3);
             foreach ($script['replies'] as $rIdx => $reply) {
@@ -52,12 +52,12 @@ class DemoSupportSeeder extends Seeder
                     'body' => $reply['body'],
                     'is_staff' => $reply['role'] === 'admin',
                 ]);
-                $timeline->stamp($row, $replyAt->copy()->addHours($rIdx * 5));
+                $ctx->stamp($row, $replyAt->copy()->addHours($rIdx * 5));
             }
 
             if (in_array($status, ['resolved', 'closed'], true)) {
                 $resolvedAt = $opened->copy()->addDays(3);
-                $timeline->stamp($ticket, $opened, [
+                $ctx->stamp($ticket, $opened, [
                     'updated_at' => $resolvedAt,
                 ]);
             }

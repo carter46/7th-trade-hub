@@ -15,7 +15,7 @@
 
 - [ ] HTTPS works; cookies secure
 - [ ] OTP + login rate limits verified
-- [ ] Do **not** run `demo:fresh`, `demo:seed`, or `DemoPlatformSeeder` in production (`SEED_DEMO_DATA` must stay false). Local/staging: see [DEMO-DATA.md](DEMO-DATA.md).
+- [ ] Do **not** leave `ALLOW_DEMO_DATA=true` on live after launch. Pre-launch: see [DEMO-DATA.md](DEMO-DATA.md). Launch: `demo:clear --force` then set `ALLOW_DEMO_DATA=false`.
 
 ## Core flow smoke test
 

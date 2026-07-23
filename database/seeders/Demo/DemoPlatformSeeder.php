@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Models\UserActivity;
 use App\Models\Wallet;
 use App\Modules\Wallet\Services\WalletService;
+use App\Support\Demo\DemoGate;
 use Database\Seeders\Demo\Support\DemoContext;
 use Database\Seeders\Demo\Support\DemoTimeline;
 use Illuminate\Database\Seeder;
@@ -23,19 +24,14 @@ class DemoPlatformSeeder extends Seeder
 {
     public function run(): void
     {
-        if (app()->environment('production')) {
-            throw new RuntimeException('DemoPlatformSeeder refused: cannot run when APP_ENV=production.');
-        }
-
-        if (! app()->environment('local', 'testing') && ! filter_var(env('SEED_DEMO_DATA', false), FILTER_VALIDATE_BOOLEAN)) {
-            throw new RuntimeException('DemoPlatformSeeder refused: set SEED_DEMO_DATA=true for non-local environments.');
-        }
+        DemoGate::assertCanSeed();
 
         // Ensure platform wallet exists for fee / purchase credits.
         app(WalletService::class)->getPlatformWallet();
 
-        $ctx = new DemoContext;
         $timeline = DemoTimeline::fromNow();
+        $ctx = new DemoContext(app(\App\Support\Demo\DemoBatchTracker::class), $timeline);
+        $ctx->startBatch('Demo platform '.$timeline->monthsAgo(0)->toDateString(), 'DemoPlatformSeeder');
 
         $this->runChild(DemoAdminsSeeder::class, $ctx, $timeline);
         $this->runChild(DemoUsersSeeder::class, $ctx, $timeline);
@@ -55,7 +51,9 @@ class DemoPlatformSeeder extends Seeder
         foreach ($ctx->checklist as $line) {
             $this->command?->info($line);
         }
-        $this->command?->info('✓ Platform ready for demo');
+        $batchId = $ctx->tracker->batch()?->id;
+        $this->command?->info('✓ Platform ready for demo'.($batchId ? " (batch #{$batchId})" : ''));
+        $this->command?->info('  Launch cleanup: php artisan demo:clear --force');
     }
 
     private function runChild(string $class, DemoContext $ctx, DemoTimeline $timeline): void
@@ -74,7 +72,6 @@ class DemoPlatformSeeder extends Seeder
                 ->where('status', 'completed')
                 ->sum('amount'), 2);
 
-            // Disputed escrows still hold locked funds (CheckoutController::openDispute).
             $locked = round((float) Escrow::query()
                 ->where('buyer_wallet_id', $wallet->id)
                 ->whereIn('status', ['locked', 'disputed'])
@@ -136,7 +133,6 @@ class DemoPlatformSeeder extends Seeder
             throw new RuntimeException('Consistency: Alice wallet balance does not match ledger.');
         }
 
-        // All user wallets: no negative ledger, balance matches, locked matches open escrows.
         foreach (Wallet::query()->where('type', 'user')->cursor() as $w) {
             $sum = round((float) Transaction::query()
                 ->where('wallet_id', $w->id)
@@ -209,7 +205,6 @@ class DemoPlatformSeeder extends Seeder
             throw new RuntimeException('Consistency: expected multi-day KPI snapshots for charts.');
         }
 
-        // Alice completed trade + review linkage
         if (! Order::query()->where('user_id', $alice->id)->where('status', 'completed')->exists()) {
             throw new RuntimeException('Consistency: Alice should have a completed marketplace order.');
         }

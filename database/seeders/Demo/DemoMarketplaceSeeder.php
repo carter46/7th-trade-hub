@@ -73,7 +73,7 @@ class DemoMarketplaceSeeder extends Seeder
                 'status' => $status,
                 'featured' => $i % 11 === 0 && $status === 'published',
             ]);
-            $timeline->stamp($listing, $at);
+            $ctx->stamp($listing, $at);
 
             $versionStatus = match ($status) {
                 'pending_review' => 'pending_review',
@@ -93,7 +93,7 @@ class DemoMarketplaceSeeder extends Seeder
                 'reviewed_by' => in_array($versionStatus, ['approved', 'rejected'], true) ? $moderator->id : null,
                 'reviewed_at' => in_array($versionStatus, ['approved', 'rejected'], true) ? $at->copy()->addDay() : null,
             ]);
-            $timeline->stamp($version, $at, [
+            $ctx->stamp($version, $at, [
                 'submitted_at' => $version->submitted_at,
                 'reviewed_at' => $version->reviewed_at,
             ]);
@@ -113,13 +113,15 @@ class DemoMarketplaceSeeder extends Seeder
                 'user_id' => $alice->id,
                 'listing_id' => $listing->id,
             ]);
+            $ctx->track(Watchlist::query()->where('user_id', $alice->id)->where('listing_id', $listing->id)->first());
             Favorite::query()->firstOrCreate([
                 'user_id' => $alice->id,
                 'favoritable_type' => Listing::class,
                 'favoritable_id' => $listing->id,
             ]);
+            $ctx->track(Favorite::query()->where('user_id', $alice->id)->where('favoritable_type', Listing::class)->where('favoritable_id', $listing->id)->first());
             if ($idx < 3) {
-                Message::query()->create([
+                $msg = Message::query()->create([
                     'from_user_id' => $alice->id,
                     'to_user_id' => $listing->user_id,
                     'order_id' => null,
@@ -127,6 +129,7 @@ class DemoMarketplaceSeeder extends Seeder
                     'body' => 'Is this still available for escrow purchase this week?',
                     'folder' => 'inbox',
                 ]);
+                $ctx->track($msg);
             }
         }
 
@@ -137,6 +140,7 @@ class DemoMarketplaceSeeder extends Seeder
                 'favoritable_type' => PlatformProduct::class,
                 'favoritable_id' => $platformProduct->id,
             ]);
+            $ctx->track(Favorite::query()->where('user_id', $alice->id)->where('favoritable_type', PlatformProduct::class)->where('favoritable_id', $platformProduct->id)->first());
         }
 
         $ctx->listingCount = $created;

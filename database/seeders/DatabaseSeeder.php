@@ -20,11 +20,8 @@ class DatabaseSeeder extends Seeder
             PlatformWalletSeeder::class,
         ]);
 
-        // Demo data: local auto, or SEED_DEMO_DATA=true on non-production.
-        if (
-            ! app()->environment('production')
-            && (app()->environment('local') || filter_var(env('SEED_DEMO_DATA', false), FILTER_VALIDATE_BOOLEAN))
-        ) {
+        // Demo data when ALLOW_DEMO_DATA / SEED_DEMO_DATA is true (works with APP_ENV=production for pre-launch).
+        if (\App\Support\Demo\DemoGate::allowDemoData()) {
             $this->call([
                 MarketplaceListingSeeder::class,
                 \Database\Seeders\Demo\DemoPlatformSeeder::class,

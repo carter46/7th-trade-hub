@@ -25,6 +25,8 @@ class DemoPlatformSeederTest extends TestCase
 
     public function test_demo_platform_seeder_builds_consistent_graph(): void
     {
+        config(['demo.allow_demo_data' => true]);
+
         $this->seed([
             SystemSettingSeeder::class,
             MarketplaceListingSeeder::class,
@@ -79,22 +81,47 @@ class DemoPlatformSeederTest extends TestCase
         $this->assertGreaterThan(1, $registrationDays->count(), 'Registrations should span multiple days');
     }
 
-    public function test_demo_platform_seeder_refuses_production(): void
+    public function test_demo_platform_seeder_refuses_without_allow_flag(): void
     {
-        $this->app['env'] = 'production';
+        config(['demo.allow_demo_data' => false]);
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('cannot run when APP_ENV=production');
+        $this->expectExceptionMessage('ALLOW_DEMO_DATA');
 
         app(DemoPlatformSeeder::class)->run();
     }
 
-    public function test_demo_fresh_command_refuses_production(): void
+    public function test_demo_fresh_command_refuses_destructive_in_production_without_flag(): void
     {
         $this->app['env'] = 'production';
+        config([
+            'demo.allow_demo_data' => true,
+            'demo.allow_destructive_seeders' => false,
+        ]);
 
         $this->artisan('demo:fresh', ['--force' => true])
-            ->expectsOutputToContain('Refused')
+            ->expectsOutputToContain('Destructive demo:fresh refused')
             ->assertFailed();
+    }
+
+    public function test_demo_clear_removes_tagged_batch(): void
+    {
+        config(['demo.allow_demo_data' => true]);
+
+        $this->seed([
+            SystemSettingSeeder::class,
+            MarketplaceListingSeeder::class,
+            DemoPlatformSeeder::class,
+        ]);
+
+        $this->assertDatabaseHas('users', ['email' => 'alice@example.com']);
+        $this->assertGreaterThan(0, \App\Models\DemoBatch::query()->active()->count());
+
+        $this->artisan('demo:clear', ['--force' => true])->assertSuccessful();
+
+        $this->assertDatabaseMissing('users', ['email' => 'alice@example.com']);
+        $this->assertSame(0, \App\Models\DemoBatch::query()->active()->count());
+        $this->assertSame(0, \App\Models\KycSubmission::query()->count());
+        $this->assertSame(0, \App\Models\SupportTicket::query()->count());
     }
 }

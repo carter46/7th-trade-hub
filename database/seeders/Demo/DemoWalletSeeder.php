@@ -44,7 +44,7 @@ class DemoWalletSeeder extends Seeder
                 'approved_ip' => '203.0.113.'.(($user->id % 200) + 1),
                 'metadata' => ['demo' => true, 'persona' => $key, 'base' => true],
             ]);
-            $timeline->stamp($baseFunding, $baseAt, ['approved_at' => $baseAt->copy()->addHours(2)]);
+            $ctx->stamp($baseFunding, $baseAt, ['approved_at' => $baseAt->copy()->addHours(2)]);
             $baseTxn = Transaction::query()->create([
                 'user_id' => $user->id,
                 'wallet_id' => $wallet->id,
@@ -57,7 +57,7 @@ class DemoWalletSeeder extends Seeder
                 'currency' => 'NGN',
                 'status' => 'completed',
             ]);
-            $timeline->stamp($baseTxn, $baseAt->copy()->addHours(2));
+            $ctx->stamp($baseTxn, $baseAt->copy()->addHours(2));
             $txCount++;
 
             // Smaller follow-up fundings for timeline charts
@@ -80,7 +80,7 @@ class DemoWalletSeeder extends Seeder
                     'approved_ip' => '203.0.113.'.(($user->id % 200) + 1),
                     'metadata' => ['demo' => true, 'persona' => $key],
                 ]);
-                $timeline->stamp($funding, $at, ['approved_at' => $at->copy()->addHours(2)]);
+                $ctx->stamp($funding, $at, ['approved_at' => $at->copy()->addHours(2)]);
 
                 $txn = Transaction::query()->create([
                     'user_id' => $user->id,
@@ -94,7 +94,7 @@ class DemoWalletSeeder extends Seeder
                     'currency' => 'NGN',
                     'status' => 'completed',
                 ]);
-                $timeline->stamp($txn, $at->copy()->addHours(2));
+                $ctx->stamp($txn, $at->copy()->addHours(2));
                 $txCount++;
             }
 
@@ -110,7 +110,7 @@ class DemoWalletSeeder extends Seeder
                     'reference' => $ctx->ref('DEP'),
                     'metadata' => ['demo' => true, 'pending' => true],
                 ]);
-                $timeline->stamp($pending, $at);
+                $ctx->stamp($pending, $at);
             }
 
             if (in_array($key, ['sarah', 'michael', 'filler3'], true)) {
@@ -128,7 +128,7 @@ class DemoWalletSeeder extends Seeder
                     'approved_by' => $finance->id,
                     'approved_at' => $at->copy()->addDay(),
                 ]);
-                $timeline->stamp($wd, $at, ['approved_at' => $at->copy()->addDay()]);
+                $ctx->stamp($wd, $at, ['approved_at' => $at->copy()->addDay()]);
 
                 $txn = Transaction::query()->create([
                     'user_id' => $user->id,
@@ -142,7 +142,7 @@ class DemoWalletSeeder extends Seeder
                     'currency' => 'NGN',
                     'status' => 'completed',
                 ]);
-                $timeline->stamp($txn, $at->copy()->addDay());
+                $ctx->stamp($txn, $at->copy()->addDay());
                 $txCount++;
             }
 
@@ -159,13 +159,13 @@ class DemoWalletSeeder extends Seeder
                     'account_name' => $user->name,
                     'account_number' => '0123456789',
                 ]);
-                $timeline->stamp($pendingWd, $at);
+                $ctx->stamp($pendingWd, $at);
             }
 
             // Alice: pending crypto quote (admin can approve live).
             if ($key === 'alice') {
                 $at = $timeline->daysAgo(1, 16);
-                CryptoSellRequest::query()->create([
+                $crypto = CryptoSellRequest::query()->create([
                     'user_id' => $user->id,
                     'wallet_id' => $wallet->id,
                     'coin' => 'USDT',
@@ -177,6 +177,7 @@ class DemoWalletSeeder extends Seeder
                     'expires_at' => now()->addHours(6),
                     'quoted_at' => $at,
                 ]);
+                $ctx->track($crypto);
             }
         }
 
@@ -197,7 +198,7 @@ class DemoWalletSeeder extends Seeder
             'reversed_at' => $revAt->copy()->addDays(1),
             'metadata' => ['demo' => true, 'reason' => 'Duplicate credit'],
         ]);
-        $timeline->stamp($reversed, $revAt, [
+        $ctx->stamp($reversed, $revAt, [
             'approved_at' => $revAt,
             'reversed_at' => $revAt->copy()->addDays(1),
         ]);
@@ -214,7 +215,7 @@ class DemoWalletSeeder extends Seeder
             'currency' => 'NGN',
             'status' => 'completed',
         ]);
-        $timeline->stamp($orig, $revAt);
+        $ctx->stamp($orig, $revAt);
         $txCount++;
 
         $reversal = Transaction::query()->create([
@@ -230,7 +231,7 @@ class DemoWalletSeeder extends Seeder
             'currency' => 'NGN',
             'status' => 'completed',
         ]);
-        $timeline->stamp($reversal, $revAt->copy()->addDays(1));
+        $ctx->stamp($reversal, $revAt->copy()->addDays(1));
         $reversed->forceFill(['reversal_transaction_id' => $reversal->id])->save();
         $txCount++;
 
@@ -251,7 +252,7 @@ class DemoWalletSeeder extends Seeder
                 'currency' => 'NGN',
                 'status' => 'completed',
             ]);
-            $timeline->stamp($adj, $at);
+            $ctx->stamp($adj, $at);
             $txCount++;
         }
 

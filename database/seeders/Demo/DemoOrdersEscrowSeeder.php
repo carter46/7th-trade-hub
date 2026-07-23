@@ -78,9 +78,9 @@ class DemoOrdersEscrowSeeder extends Seeder
                 'total_amount' => $amount,
                 'status' => $orderStatus,
             ]);
-            $timeline->stamp($order, $at);
+            $ctx->stamp($order, $at);
 
-            OrderItem::query()->create([
+            $item = OrderItem::query()->create([
                 'order_id' => $order->id,
                 'item_type' => 'listing',
                 'item_id' => $listing->id,
@@ -88,6 +88,7 @@ class DemoOrdersEscrowSeeder extends Seeder
                 'unit_price' => $amount,
                 'line_total' => $amount,
             ]);
+            $ctx->track($item);
 
             $escrowStatus = match ($arc) {
                 'successful', 'expired' => 'released',
@@ -123,7 +124,7 @@ class DemoOrdersEscrowSeeder extends Seeder
                 'refunded_at' => $arc === 'refunded' ? $at->copy()->addDays(6) : null,
                 'refund_amount' => $arc === 'refunded' ? $amount : null,
             ]);
-            $timeline->stamp($escrow, $at, [
+            $ctx->stamp($escrow, $at, [
                 'released_at' => $escrow->released_at,
                 'refunded_at' => $escrow->refunded_at,
             ]);
@@ -141,7 +142,7 @@ class DemoOrdersEscrowSeeder extends Seeder
                 'currency' => 'NGN',
                 'status' => 'completed',
             ]);
-            $timeline->stamp($lock, $at);
+            $ctx->stamp($lock, $at);
             $txExtra++;
 
             if ($arc === 'successful' || $arc === 'expired') {
@@ -163,7 +164,7 @@ class DemoOrdersEscrowSeeder extends Seeder
                     'currency' => 'NGN',
                     'status' => 'completed',
                 ]);
-                $timeline->stamp($rel, $releaseAt);
+                $ctx->stamp($rel, $releaseAt);
                 $txExtra++;
 
                 if ($fee > 0) {
@@ -180,12 +181,12 @@ class DemoOrdersEscrowSeeder extends Seeder
                         'currency' => 'NGN',
                         'status' => 'completed',
                     ]);
-                    $timeline->stamp($feeTxn, $releaseAt);
+                    $ctx->stamp($feeTxn, $releaseAt);
                     $txExtra++;
                 }
 
                 if ($arc === 'successful' && ($i === 0 || $i % 2 === 0)) {
-                    Review::query()->firstOrCreate(
+                    $review = Review::query()->firstOrCreate(
                         ['order_id' => $order->id],
                         [
                             'user_id' => $buyer->id,
@@ -194,9 +195,10 @@ class DemoOrdersEscrowSeeder extends Seeder
                             'comment' => 'Smooth escrow delivery. Would buy again.',
                         ]
                     );
+                    $ctx->track($review);
                 }
 
-                Message::query()->create([
+                $deliveryMsg = Message::query()->create([
                     'from_user_id' => $listing->user_id,
                     'to_user_id' => $buyer->id,
                     'order_id' => $order->id,
@@ -204,6 +206,7 @@ class DemoOrdersEscrowSeeder extends Seeder
                     'body' => 'Access credentials delivered. Please confirm when received.',
                     'folder' => 'inbox',
                 ]);
+                $ctx->track($deliveryMsg);
             }
 
             if ($arc === 'refunded') {
@@ -221,12 +224,12 @@ class DemoOrdersEscrowSeeder extends Seeder
                     'currency' => 'NGN',
                     'status' => 'completed',
                 ]);
-                $timeline->stamp($refund, $refundAt);
+                $ctx->stamp($refund, $refundAt);
                 $txExtra++;
             }
 
             if (in_array($arc, ['waiting', 'disputed'], true)) {
-                Message::query()->create([
+                $waitMsg = Message::query()->create([
                     'from_user_id' => $buyer->id,
                     'to_user_id' => $listing->user_id,
                     'order_id' => $order->id,
@@ -236,6 +239,7 @@ class DemoOrdersEscrowSeeder extends Seeder
                         : 'Payment is in escrow. Please deliver access when ready.',
                     'folder' => 'inbox',
                 ]);
+                $ctx->track($waitMsg);
             }
 
             $orderCount++;
@@ -262,9 +266,9 @@ class DemoOrdersEscrowSeeder extends Seeder
                     'total_amount' => $price,
                     'status' => $status,
                 ]);
-                $timeline->stamp($order, $at);
+                $ctx->stamp($order, $at);
 
-                OrderItem::query()->create([
+                $platItem = OrderItem::query()->create([
                     'order_id' => $order->id,
                     'item_type' => 'platform_product',
                     'item_id' => $product->id,
@@ -274,6 +278,7 @@ class DemoOrdersEscrowSeeder extends Seeder
                     'platform_product_variant_id' => $variant?->id,
                     'options' => ['product_title' => $product->title],
                 ]);
+                $ctx->track($platItem);
 
                 if (in_array($status, ['paid', 'completed'], true)) {
                     $wallet = Wallet::query()->where('user_id', $buyer->id)->firstOrFail();
@@ -289,7 +294,7 @@ class DemoOrdersEscrowSeeder extends Seeder
                         'currency' => 'NGN',
                         'status' => 'completed',
                     ]);
-                    $timeline->stamp($txn, $at);
+                    $ctx->stamp($txn, $at);
                     $txExtra++;
 
                     $platTxn = Transaction::query()->create([
@@ -304,7 +309,7 @@ class DemoOrdersEscrowSeeder extends Seeder
                         'currency' => 'NGN',
                         'status' => 'completed',
                     ]);
-                    $timeline->stamp($platTxn, $at);
+                    $ctx->stamp($platTxn, $at);
                     $txExtra++;
                 }
 

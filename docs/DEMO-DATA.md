@@ -1,103 +1,106 @@
 # Demo Data
 
-Realistic, timeline-driven demo data for local/staging demos. **Never run in production.**
+Realistic, timeline-driven demo data for pre-launch / staging demos.
 
-## Safety
+## Safety model (environment ≠ demo permission)
 
-| Guard | Rule |
-|-------|------|
-| `APP_ENV=production` | `demo:seed`, `demo:fresh`, and `DemoPlatformSeeder` refuse to run |
-| `SEED_DEMO_DATA` | Required `true` outside `local` / `testing` (see `.env.example`) |
-| Hostinger / live | Keep `SEED_DEMO_DATA=false`; do not run `demo:fresh` |
+| Flag | Purpose |
+|------|---------|
+| `APP_ENV` | Laravel behaviour (cache, debug, etc.) — may stay `production` pre-launch |
+| `ALLOW_DEMO_DATA` | Whether fake rows may be inserted / cleared |
+| `ALLOW_DESTRUCTIVE_SEEDERS` | Required for `demo:fresh` (full DB wipe) when `APP_ENV=production` |
+| `SEED_DEMO_DATA` | Alias for `ALLOW_DEMO_DATA` (backwards compatible) |
+
+Local (`APP_ENV=local`) defaults `ALLOW_DEMO_DATA` on unless you set it false.
+
+**Live launch:** set `ALLOW_DEMO_DATA=false` permanently after `demo:clear`.
 
 ## Commands
 
 ```bash
-# Wipe DB, run core seeders + DemoPlatformSeeder, print checklist (preferred)
-php artisan demo:fresh --force
+# Insert demo into current DB (no wipe) — works with APP_ENV=production if ALLOW_DEMO_DATA=true
+php artisan demo:seed --force
 
-# Seed into an empty DB (refuses if alice@example.com already exists)
+# Remove ONLY tagged demo rows (keeps real admins, roles, catalog, settings)
+php artisan demo:clear --force
+php artisan analytics:rollup-kpis
+
+# Full wipe + reseed (local/staging, or production + ALLOW_DESTRUCTIVE_SEEDERS=true)
+php artisan demo:fresh --force
+```
+
+Without `--force`, commands ask for confirmation and require typing `YES`.
+
+## Pre-launch production (your Hostinger case)
+
+```env
+APP_ENV=production
+ALLOW_DEMO_DATA=true
+ALLOW_DESTRUCTIVE_SEEDERS=false
+```
+
+```bash
+php artisan config:clear
+php artisan migrate --force
 php artisan demo:seed --force
 ```
 
-`demo:seed` also runs `MarketplaceListingSeeder` so listing volume stays near ~100. Prefer `demo:fresh` for demos — re-running `demo:seed` is not idempotent.
+Overview should then show KYC, tickets, escrows, charts.
 
-Without `--force`, both commands ask for confirmation.
+### Launch day cleanup
 
-## Volume caps (relationships over bulk)
+```bash
+php artisan demo:clear --force
+php artisan analytics:rollup-kpis
+# then set ALLOW_DEMO_DATA=false and never re-enable on live
+```
+
+## How tagging works
+
+Each `demo:seed` / `DemoPlatformSeeder` run creates a `demo_batches` row and tracks created model IDs in `demo_batch_records`.  
+`demo:clear` deletes those records in FK-safe order (activity/KPIs for demo users included).
+
+## Volume caps
 
 | Entity | Target |
 |--------|--------|
 | Members + ACL admins | ~20–30 |
-| Listings | ~100 (status mix) |
+| Listings | ~100 |
 | Orders | ~100 |
 | Escrows | ~50 (successful / waiting / disputed / refunded / expired) |
-| Support tickets | ~40 (scripted threads) |
-| KYC submissions | ~20 |
-| Transactions | ~300 (valid `TransactionType` only, NGN) |
+| Support tickets | ~40 |
+| KYC | ~20 |
+| Transactions | ~300 |
 
-Primary personas span up to **~8 months** of dated events. Charts should show gradual growth and weekend dips — not a single seed-day spike.
-
-## Member personas
-
-Password for all: `password`
+## Member personas (password `password`)
 
 | Email | Arc |
 |-------|-----|
-| `alice@example.com` | Buyer: register → KYC → fund → purchase → release → review → support |
-| `michael@example.com` | Seller-heavy, pending KYC, escrow history |
-| `sarah.design@example.com` | Seller with approved KYC and payouts |
+| `alice@example.com` | Buyer journey |
+| `michael@example.com` | Seller-heavy |
+| `sarah.design@example.com` | Seller + payouts |
 | `john@example.com` | Rejected KYC + appeal |
-| `emily@example.com` | Brand-new empty dashboards |
-| `memberN@example.com` | Fillers (staggered registration / KYC mix) |
+| `emily@example.com` | Empty new user |
+| `memberN@example.com` | Fillers |
 
-## Admin personas (ACL)
+## Admin personas (password `password`)
 
-Password for all: `password`
-
-| Email | Role | Focus |
-|-------|------|--------|
-| `super.admin@example.com` | `admin` | Full permissions + `admins.manage` |
-| `finance.admin@example.com` | `demo_finance` | `finance.manage`, `analytics.view` |
-| `compliance.admin@example.com` | `demo_compliance` | `compliance.manage`, `users.manage` |
-| `support.admin@example.com` | `demo_support` | `support.manage` |
-| `moderator@example.com` | `demo_moderator` | `catalog.manage` |
-
-Limited admins use dedicated Spatie roles (not the full `admin` role) so section ACL is testable. Admin routes accept `admin|demo_finance|demo_compliance|demo_support|demo_moderator`.
-
-## Escrow arcs
-
-| Arc | Outcome |
-|-----|---------|
-| Successful | Locked → delivered → confirmed → released (fee → platform wallet) |
-| Waiting | Locked, awaiting seller delivery |
-| Disputed (open) | Escrow `disputed` for admin queue |
-| Dispute → refund | Lock → admin refund → `refunded` (order cancelled) |
-| Expired / auto-release | Released with auto-release notes |
+| Email | Role |
+|-------|------|
+| `super.admin@example.com` | `admin` |
+| `finance.admin@example.com` | `demo_finance` |
+| `compliance.admin@example.com` | `demo_compliance` |
+| `support.admin@example.com` | `demo_support` |
+| `moderator@example.com` | `demo_moderator` |
 
 ## Architecture
 
 ```
-database/seeders/Demo/
-  DemoPlatformSeeder.php      # orchestrator, guard, assertConsistency, checklist
-  DemoUsersSeeder.php
-  DemoAdminsSeeder.php
-  DemoWalletSeeder.php
-  DemoKycSeeder.php
-  DemoMarketplaceSeeder.php
-  DemoOrdersEscrowSeeder.php
-  DemoSupportSeeder.php
-  DemoNotificationsSeeder.php
-  DemoAuditSeeder.php
-  DemoAnalyticsSeeder.php
-  Support/                    # catalogs, timeline, conversation scripts
+database/seeders/Demo/DemoPlatformSeeder.php   # orchestrator
+  DemoUsers / Admins / Kyc / Wallet / Marketplace /
+  OrdersEscrow / Support / Notifications / Audit / Analytics
+app/Support/Demo/DemoGate.php                  # ALLOW_DEMO_DATA checks
+app/Support/Demo/DemoBatchTracker.php          # tagging + clear
 ```
 
-Deprecated: `Database\Seeders\DemoDataSeeder` → thin wrapper around `DemoPlatformSeeder`.
-
-## Out of scope (v1)
-
-- Real GA Data API traffic
-- Fake encrypted session / login-history UI
-- Real uploaded binaries (JSON doc paths + catalog media)
-- 10k+ synthetic users
+Deprecated: `DemoDataSeeder` → wrapper around `DemoPlatformSeeder`.

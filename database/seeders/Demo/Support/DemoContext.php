@@ -2,8 +2,11 @@
 
 namespace Database\Seeders\Demo\Support;
 
+use App\Models\DemoBatch;
 use App\Models\User;
+use App\Support\Demo\DemoBatchTracker;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
@@ -30,13 +33,49 @@ class DemoContext
 
     public int $transactionCount = 0;
 
+    public DemoBatchTracker $tracker;
+
+    public DemoTimeline $timeline;
+
+    public function __construct(?DemoBatchTracker $tracker = null, ?DemoTimeline $timeline = null)
+    {
+        $this->tracker = $tracker ?? app(DemoBatchTracker::class);
+        $this->timeline = $timeline ?? DemoTimeline::fromNow();
+    }
+
+    public function startBatch(string $name, string $source = 'demo:seed'): DemoBatch
+    {
+        if ($this->tracker->batch()) {
+            return $this->tracker->batch();
+        }
+
+        return $this->tracker->start($name, $source);
+    }
+
+    public function track(?Model $model): ?Model
+    {
+        if ($model) {
+            $this->tracker->track($model);
+        }
+
+        return $model;
+    }
+
+    public function stamp(Model $model, Carbon $at, array $extra = []): void
+    {
+        $this->timeline->stamp($model, $at, $extra);
+        $this->track($model);
+    }
+
     public function registerMember(string $key, User $user): void
     {
+        $this->track($user);
         $this->members[$key] = $user;
     }
 
     public function registerAdmin(string $key, User $user): void
     {
+        $this->track($user);
         $this->admins[$key] = $user;
     }
 

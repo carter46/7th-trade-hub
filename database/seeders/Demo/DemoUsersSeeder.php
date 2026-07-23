@@ -49,7 +49,7 @@ class DemoUsersSeeder extends Seeder
                 $user->assignRole('user');
             }
 
-            $timeline->stamp($user, $createdAt, [
+            $ctx->stamp($user, $createdAt, [
                 'email_verified_at' => $user->email_verified_at,
                 'profile_completed_at' => $user->profile_completed_at,
                 'terms_accepted_at' => $createdAt,
@@ -65,6 +65,10 @@ class DemoUsersSeeder extends Seeder
                     'status' => 'active',
                 ]
             );
+            $wallet = Wallet::query()->where('user_id', $user->id)->first();
+            if ($wallet) {
+                $ctx->track($wallet);
+            }
 
             $ctx->registerMember($row['key'], $user->fresh());
         }

@@ -49,7 +49,7 @@ class DemoAdminsSeeder extends Seeder
                 $user->givePermissionTo('admins.manage');
             }
 
-            $timeline->stamp($user, $createdAt, [
+            $ctx->stamp($user, $createdAt, [
                 'email_verified_at' => $createdAt,
                 'profile_completed_at' => $createdAt,
                 'terms_accepted_at' => $createdAt,

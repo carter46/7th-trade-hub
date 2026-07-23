@@ -36,7 +36,7 @@ class DemoNotificationsSeeder extends Seeder
                     'action_url' => '/dashboard',
                     'read_at' => $i % 2 === 0 ? $at->copy()->addHour() : null,
                 ]);
-                $timeline->stamp($n, $at, ['read_at' => $n->read_at]);
+                $ctx->stamp($n, $at, ['read_at' => $n->read_at]);
             }
         }
 
@@ -57,7 +57,7 @@ class DemoNotificationsSeeder extends Seeder
                 'meta' => ['demo' => true],
                 'read_at' => $i === 0 ? null : $at->copy()->addHours(2),
             ]);
-            $timeline->stamp($n, $at, ['read_at' => $n->read_at]);
+            $ctx->stamp($n, $at, ['read_at' => $n->read_at]);
         }
 
         $ctx->note('✓ User and admin notifications created');

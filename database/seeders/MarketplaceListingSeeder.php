@@ -6,6 +6,8 @@ use App\Models\Category;
 use App\Models\Listing;
 use App\Models\User;
 use App\Modules\Wallet\Services\WalletProvisioningService;
+use App\Support\Demo\DemoBatchTracker;
+use App\Support\Demo\DemoGate;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -19,6 +21,11 @@ class MarketplaceListingSeeder extends Seeder
      */
     public function run(): void
     {
+        $tracker = DemoGate::allowDemoData() ? app(DemoBatchTracker::class) : null;
+        if ($tracker && ! $tracker->batch()) {
+            $tracker->start('Marketplace vendors '.now()->toDateTimeString(), 'MarketplaceListingSeeder');
+        }
+
         $vendors = [
             ['name' => 'DigitalVault', 'username' => 'digitalvault', 'email' => 'digitalvault@7thtrade.local'],
             ['name' => 'Prime Networks', 'username' => 'primenetworks', 'email' => 'primenetworks@7thtrade.local'],
@@ -73,14 +80,20 @@ class MarketplaceListingSeeder extends Seeder
                 $user->assignRole('user');
             }
 
+            $tracker?->track($user);
+
             $walletService->createWallet($user);
+            $wallet = $user->wallet()->first();
+            if ($wallet) {
+                $tracker?->track($wallet);
+            }
 
             for ($i = 0; $i < 5; $i++) {
                 $product = $productList[($vendorIndex * 5 + $i) % count($productList)];
                 $title = str_replace('{product}', $product->name, $listingTitles[$i]);
                 $slug = Str::slug($vendorData['username'].'-'.$product->slug.'-'.$i);
 
-                Listing::updateOrCreate(
+                $listing = Listing::updateOrCreate(
                     ['slug' => $slug],
                     [
                         'user_id' => $user->id,
@@ -95,6 +108,7 @@ class MarketplaceListingSeeder extends Seeder
                         'featured' => $i === 0,
                     ]
                 );
+                $tracker?->track($listing);
             }
         }
     }

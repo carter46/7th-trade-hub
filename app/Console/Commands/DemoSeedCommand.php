@@ -3,43 +3,54 @@
 namespace App\Console\Commands;
 
 use App\Models\User;
+use App\Support\Demo\DemoBatchTracker;
+use App\Support\Demo\DemoGate;
 use Database\Seeders\Demo\DemoPlatformSeeder;
 use Database\Seeders\MarketplaceListingSeeder;
 use Illuminate\Console\Command;
+use RuntimeException;
 
 class DemoSeedCommand extends Command
 {
     protected $signature = 'demo:seed {--force : Skip confirmation}';
 
-    protected $description = 'Seed realistic demo platform data (never runs when APP_ENV=production)';
+    protected $description = 'Seed realistic demo data into the current DB (no wipe). Requires ALLOW_DEMO_DATA=true.';
 
-    public function handle(): int
+    public function handle(DemoBatchTracker $tracker): int
     {
-        if (app()->environment('production')) {
-            $this->error('Refused: demo:seed cannot run when APP_ENV=production.');
-
-            return self::FAILURE;
-        }
-
-        if (! app()->environment('local', 'testing') && ! filter_var(env('SEED_DEMO_DATA', false), FILTER_VALIDATE_BOOLEAN)) {
-            $this->error('Refused: set SEED_DEMO_DATA=true for non-local environments.');
+        try {
+            DemoGate::assertCanSeed();
+        } catch (RuntimeException $e) {
+            $this->error($e->getMessage());
 
             return self::FAILURE;
         }
 
         if (User::query()->where('email', 'alice@example.com')->exists()) {
-            $this->error('Demo personas already exist. Use `php artisan demo:fresh --force` to wipe and rebuild.');
+            $this->error('Demo personas already exist. Run `php artisan demo:clear --force` first, or `demo:fresh` to wipe.');
 
             return self::FAILURE;
         }
 
-        if (! $this->option('force') && ! $this->confirm('Seed demo platform data into the current database?', true)) {
-            $this->warn('Cancelled.');
+        $this->warn('This will insert demo users, KYC, tickets, escrows, transactions, and analytics.');
+        $this->line('Database: '.(string) config('database.connections.'.config('database.default').'.database'));
+        $this->line('APP_ENV: '.app()->environment());
 
-            return self::SUCCESS;
+        if (! $this->option('force')) {
+            if (! $this->confirm('Continue?', false)) {
+                $this->warn('Cancelled.');
+
+                return self::SUCCESS;
+            }
+            if (strtoupper((string) $this->ask('Type YES to confirm')) !== 'YES') {
+                $this->warn('Cancelled.');
+
+                return self::SUCCESS;
+            }
         }
 
-        // Listings volume target (~100) needs vendor samples + DemoMarketplaceSeeder.
+        $batch = $tracker->start('Demo seed '.now()->toDateTimeString(), 'demo:seed');
+
         $this->call('db:seed', [
             '--class' => MarketplaceListingSeeder::class,
             '--force' => true,
@@ -49,6 +60,9 @@ class DemoSeedCommand extends Command
             '--class' => DemoPlatformSeeder::class,
             '--force' => true,
         ]);
+
+        $this->info("Demo seed complete (batch #{$batch->id}).");
+        $this->line('Launch cleanup: php artisan demo:clear --force && php artisan analytics:rollup-kpis');
 
         return self::SUCCESS;
     }
