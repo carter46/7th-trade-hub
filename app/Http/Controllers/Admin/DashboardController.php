@@ -132,12 +132,12 @@ class DashboardController extends Controller
     {
         $input = [
             'range' => $request->string('range')->toString()
-                ?: (string) session('admin.overview.range', '7d'),
+                ?: (string) session('admin.overview.range', '24h'),
             'from' => $request->string('from')->toString() ?: null,
             'to' => $request->string('to')->toString() ?: null,
         ];
 
-        $range = ReportingRange::fromInput($input, '7d');
+        $range = ReportingRange::fromInput($input, '24h');
 
         if ($persist && ($request->filled('range') || $request->boolean('persist_range') || ! session()->has('admin.overview.range'))) {
             session(['admin.overview.range' => $range->key]);
@@ -160,10 +160,23 @@ class DashboardController extends Controller
 
         $overview = ($canFinance || $canSupport || $canCompliance || $canAnalytics || $canCatalog)
             ? $this->reporting->overview($range)
-            : ['pulse' => [], 'growth' => [], 'range' => $range->toArray()];
+            : ['pulse' => [], 'growth' => [], 'distributions' => [], 'range' => $range->toArray()];
 
         $pulse = $overview['pulse'] ?? [];
+        $growth = $overview['growth'] ?? [];
         $pendingListings = (int) ($pulse['pending_listings'] ?? 0);
+
+        // Align prior series length to current for Chart.js compare line.
+        if (isset($growth['revenue']['values'], $growth['revenue_prior']['values'])) {
+            $len = count($growth['revenue']['values']);
+            $prior = array_values($growth['revenue_prior']['values']);
+            if (count($prior) > $len) {
+                $prior = array_slice($prior, -$len);
+            } elseif (count($prior) < $len) {
+                $prior = array_pad($prior, $len, 0);
+            }
+            $growth['revenue_prior']['values'] = $prior;
+        }
 
         return [
             'greeting' => $this->greeting(),
@@ -176,14 +189,22 @@ class DashboardController extends Controller
             'canSystem' => $canSystem,
             'rangeKey' => $range->key,
             'rangeMeta' => $range->toArray(),
-            'pulseItems' => $this->buildPulseItems($pulse, $canFinance, $canAnalytics, $canCompliance, $canSupport, $canCatalog),
-            'growth' => $overview['growth'] ?? [],
-            'distribution' => $this->buildDistribution($overview['growth'] ?? []),
+            'pulseItems' => $this->buildPulseItems(
+                $pulse,
+                $growth,
+                $canFinance,
+                $canAnalytics,
+                $canCompliance,
+                $canSupport,
+                $canCatalog,
+                $range->key,
+            ),
+            'growth' => $growth,
+            'distributions' => $overview['distributions'] ?? [],
+            'distribution' => $this->buildDistribution($growth),
             'recentTransactions' => $canFinance ? $this->reporting->recentTransactions(8) : [],
-            'recentAudit' => $canSystem ? $this->reporting->recentAudit(8) : [],
-            'healthMetrics' => $canSystem ? [
-                ['label' => 'Monitoring', 'value' => 'Open console', 'ok' => true],
-            ] : [],
+            'recentAudit' => $canSystem ? $this->reporting->recentAudit(10) : [],
+            'health' => $canSystem ? app(\App\Services\Reporting\SystemHealthService::class)->snapshot() : ['rings' => [], 'metrics' => []],
             'quickActions' => $this->quickActions($pendingListings),
             'pendingListings' => $pendingListings,
         ];
@@ -191,17 +212,27 @@ class DashboardController extends Controller
 
     /**
      * @param  array<string, mixed>  $pulse
+     * @param  array<string, mixed>  $growth
      * @return list<array<string, mixed>>
      */
     private function buildPulseItems(
         array $pulse,
+        array $growth,
         bool $canFinance,
         bool $canAnalytics,
         bool $canCompliance,
         bool $canSupport,
         bool $canCatalog,
+        string $rangeKey,
     ): array {
         $items = [];
+        $rangeLabel = match ($rangeKey) {
+            '24h' => 'Last 24 hours',
+            '7d' => 'Last 7 days',
+            '30d' => 'Last 30 days',
+            '90d' => 'Last 90 days',
+            default => 'Selected range',
+        };
 
         if ($canFinance) {
             $rev = $pulse['revenue'] ?? [];
@@ -211,9 +242,11 @@ class DashboardController extends Controller
                 'accent' => 'emerald',
                 'delta' => $rev['delta'] ?? null,
                 'delta_label' => $rev['delta_label'] ?? 'vs prior period',
-                'hint' => 'in selected range',
+                'description' => $rev['description'] ?? $rangeLabel,
+                'sparkline' => $rev['sparkline'] ?? ($growth['revenue']['values'] ?? []),
+                'badge' => ['label' => 'Live', 'class' => 'bg-emerald-50 text-emerald-700'],
                 'href' => $canAnalytics
-                    ? route('admin.analytics', ['section' => 'revenue', 'range' => request('range', session('admin.overview.range', '7d'))])
+                    ? route('admin.analytics', ['section' => 'revenue', 'range' => $rangeKey])
                     : route('admin.transactions'),
             ];
         }
@@ -225,15 +258,30 @@ class DashboardController extends Controller
                     'label' => 'Visitors',
                     'value' => number_format((float) $visitors['value']),
                     'accent' => 'blue',
-                    'hint' => 'today',
-                    'href' => route('admin.analytics', ['section' => 'traffic', 'range' => 'today']),
+                    'description' => $visitors['description'] ?? 'Sessions today',
+                    'badge' => ['label' => 'GA', 'class' => 'bg-blue-50 text-blue-700'],
+                    'href' => route('admin.analytics', ['section' => 'traffic', 'range' => '24h']),
+                ];
+            } elseif ((auth()->user()?->can('users.manage') ?? false) && ! empty($pulse['users'])) {
+                $users = $pulse['users'];
+                $items[] = [
+                    'label' => 'New Users',
+                    'value' => $users['formatted'] ?? '0',
+                    'accent' => 'blue',
+                    'delta' => $users['delta'] ?? null,
+                    'delta_label' => $users['delta_label'] ?? 'vs prior period',
+                    'description' => $users['description'] ?? $rangeLabel,
+                    'sparkline' => $users['sparkline'] ?? ($growth['users']['values'] ?? []),
+                    'href' => route('admin.users'),
                 ];
             } else {
                 $items[] = [
                     'label' => 'Visitors',
                     'value' => '—',
                     'accent' => 'blue',
-                    'hint' => $visitors['hint'] ?? 'Connect GA in Settings',
+                    'hint' => $visitors['hint'] ?? 'Google Analytics disabled',
+                    'description' => 'Connect GA for live traffic',
+                    'badge' => ['label' => 'Offline', 'class' => 'bg-slate-100 text-slate-500'],
                     'href' => route('admin.settings'),
                 ];
             }
@@ -242,55 +290,71 @@ class DashboardController extends Controller
         if ($canFinance) {
             $fundings = $pulse['fundings'] ?? [];
             $items[] = [
-                'label' => 'Fundings',
+                'label' => 'Wallets Funded',
                 'value' => $fundings['formatted'] ?? '0',
                 'accent' => 'indigo',
                 'delta' => $fundings['delta'] ?? null,
                 'delta_label' => $fundings['delta_label'] ?? 'vs prior period',
-                'hint' => 'in selected range',
+                'description' => isset($fundings['sum'])
+                    ? '₦'.number_format((float) $fundings['sum'], 0).' volume'
+                    : ($fundings['description'] ?? $rangeLabel),
+                'sparkline' => $fundings['sparkline'] ?? ($growth['fundings']['values'] ?? []),
                 'href' => route('admin.fundings'),
             ];
         }
 
         if ($canCompliance) {
+            $kyc = (int) ($pulse['pending_kyc'] ?? 0);
             $items[] = [
                 'label' => 'Pending KYC',
-                'value' => number_format((int) ($pulse['pending_kyc'] ?? 0)),
+                'value' => number_format($kyc),
                 'accent' => 'amber',
-                'hint' => 'queue',
+                'description' => 'Identity verification queue',
+                'badge' => $kyc > 0
+                    ? ['label' => 'Action', 'class' => 'bg-amber-50 text-amber-700']
+                    : ['label' => 'Clear', 'class' => 'bg-emerald-50 text-emerald-700'],
+                'hint' => 'Open queue',
                 'href' => route('admin.kyc', ['status' => 'pending']),
             ];
         }
 
         if ($canFinance) {
+            $esc = (int) ($pulse['pending_escrows'] ?? 0);
             $items[] = [
-                'label' => 'Pending escrows',
-                'value' => number_format((int) ($pulse['pending_escrows'] ?? 0)),
+                'label' => 'Pending Escrows',
+                'value' => number_format($esc),
                 'accent' => 'indigo',
-                'hint' => '₦'.number_format((float) ($pulse['escrow_locked_ngn'] ?? 0), 0).' locked',
+                'description' => '₦'.number_format((float) ($pulse['escrow_locked_ngn'] ?? 0), 0).' locked',
+                'badge' => $esc > 0
+                    ? ['label' => 'Active', 'class' => 'bg-indigo-50 text-indigo-700']
+                    : null,
                 'href' => route('admin.escrows'),
             ];
         }
 
         if ($canSupport) {
+            $sup = (int) ($pulse['support_waiting'] ?? 0);
             $items[] = [
-                'label' => 'Support waiting',
-                'value' => number_format((int) ($pulse['support_waiting'] ?? 0)),
+                'label' => 'Support Waiting',
+                'value' => number_format($sup),
                 'accent' => 'orange',
-                'hint' => 'open queue',
+                'description' => 'Open / awaiting tickets',
+                'badge' => $sup > 5
+                    ? ['label' => 'Busy', 'class' => 'bg-red-50 text-red-600']
+                    : ['label' => 'Queue', 'class' => 'bg-orange-50 text-orange-700'],
                 'href' => route('admin.tickets'),
             ];
-        } elseif ($canCatalog) {
+        } elseif ($canCatalog && count($items) < 6) {
             $items[] = [
-                'label' => 'Pending listings',
+                'label' => 'Pending Listings',
                 'value' => number_format((int) ($pulse['pending_listings'] ?? 0)),
                 'accent' => 'amber',
-                'hint' => 'review queue',
+                'description' => 'Review queue',
                 'href' => route('admin.listings', ['status' => 'pending']),
             ];
         }
 
-        return $items;
+        return array_slice($items, 0, 6);
     }
 
     /**

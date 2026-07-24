@@ -32,20 +32,21 @@ class OverviewReportingTest extends TestCase
             'status' => 'completed',
         ]);
 
-        $range = ReportingRange::preset('7d');
+        $range = ReportingRange::preset('24h');
         $overview = app(ReportingService::class)->overview($range);
         $section = app(ReportingService::class)->revenueSection($range);
 
         $this->assertEqualsWithDelta($section['total_ngn'], $overview['pulse']['revenue']['value'], 0.01);
 
         $this->actingAs($admin)
-            ->get(route('admin', ['range' => '7d']))
+            ->get(route('admin', ['range' => '24h']))
             ->assertOk()
             ->assertSee('Business Pulse', false)
-            ->assertSee('Platform revenue', false);
+            ->assertSee('Revenue & Transactional Volume', false)
+            ->assertSee('24 Hours', false);
 
         $this->actingAs($admin)
-            ->get(route('admin.overview.panel', ['range' => '7d']))
+            ->get(route('admin.overview.panel', ['range' => '24h']))
             ->assertOk()
             ->assertSee('command-pulse', false);
     }

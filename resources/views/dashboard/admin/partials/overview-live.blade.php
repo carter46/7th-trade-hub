@@ -1,31 +1,85 @@
-{{-- AJAX-refreshed pulse + growth panels --}}
-<div id="command-pulse">
-    <x-dashboard.command.section-label title="Business Pulse" accent="emerald" />
+{{-- AJAX-refreshed pulse + growth + ops distributions --}}
+<section id="command-pulse" class="space-y-4">
+    <x-dashboard.command.section-label
+        title="Business Pulse"
+        accent="emerald"
+        action="Metrics Detail"
+        :action-href="($canAnalytics ?? false) ? route('admin.analytics', ['section' => 'revenue', 'range' => $rangeKey ?? '24h']) : null"
+    />
     @if (! empty($pulseItems))
         <x-dashboard.command.pulse-grid :items="$pulseItems" />
     @else
-        <p class="text-sm text-text-muted">No pulse metrics available for your permissions.</p>
+        <p class="text-sm text-slate-400">No pulse metrics available for your permissions.</p>
     @endif
-</div>
+</section>
 
-<div id="command-growth" class="mt-8">
+<section id="command-growth" class="space-y-4">
     <x-dashboard.command.section-label title="Growth & Performance" accent="blue" />
-    <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <div class="xl:col-span-2">
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <div class="lg:col-span-8">
             <x-dashboard.command.hero-chart
-                title="Platform revenue"
-                :subtitle="'Selected range · '.($rangeMeta['days'] ?? '').' days'"
+                title="Revenue & Transactional Volume"
+                subtitle="Live data feed with emerald performance gradient"
                 :labels="$growth['revenue']['labels'] ?? []"
                 :values="$growth['revenue']['values'] ?? []"
+                :compare-values="$growth['revenue_prior']['values'] ?? null"
+                :height="'20rem'"
                 id="overview-revenue-chart"
             />
         </div>
+        <div class="lg:col-span-4">
+            <x-dashboard.command.distribution-card
+                title="Order Status"
+                :center-value="number_format(collect($distributions['orders'] ?? [])->sum('value'))"
+                center-label="Orders"
+                :slices="$distributions['orders'] ?? []"
+                id="overview-orders-donut"
+            />
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <x-dashboard.command.mini-chart
+            title="Wallet Fundings"
+            subtitle="Approved fundings in range"
+            theme="bar"
+            color="#6366f1"
+            :labels="$growth['fundings']['labels'] ?? []"
+            :values="$growth['fundings']['values'] ?? []"
+            id="overview-fundings-bar"
+        />
+        <x-dashboard.command.mini-chart
+            title="New Users"
+            subtitle="Registrations over time"
+            theme="line"
+            color="#3b82f6"
+            :labels="$growth['users']['labels'] ?? []"
+            :values="$growth['users']['values'] ?? []"
+            id="overview-users-line"
+        />
         <x-dashboard.command.distribution-card
-            title="Activity mix"
-            :center-value="number_format(array_sum(array_map('floatval', $growth['users']['values'] ?? [])))"
-            center-label="New users"
-            :slices="$distribution ?? []"
-            id="overview-distribution-chart"
+            title="Support Tickets"
+            :center-value="number_format(collect($distributions['support'] ?? [])->sum('value'))"
+            center-label="Tickets"
+            :slices="$distributions['support'] ?? []"
+            id="overview-support-donut"
         />
     </div>
-</div>
+
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <x-dashboard.command.distribution-card
+            title="KYC Status"
+            :center-value="number_format(collect($distributions['kyc'] ?? [])->sum('value'))"
+            center-label="Submissions"
+            :slices="$distributions['kyc'] ?? []"
+            id="overview-kyc-donut"
+        />
+        <x-dashboard.command.distribution-card
+            title="Escrow Status"
+            :center-value="number_format(collect($distributions['escrows'] ?? [])->sum('value'))"
+            center-label="Escrows"
+            :slices="$distributions['escrows'] ?? []"
+            id="overview-escrow-donut"
+        />
+    </div>
+</section>

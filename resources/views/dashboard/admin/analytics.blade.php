@@ -70,9 +70,12 @@ document.addEventListener('DOMContentLoaded', () => {
         wrap?.querySelector('[data-custom-range]')?.classList.toggle('hidden', range !== 'custom');
         wrap?.querySelectorAll('[data-range-value]').forEach((btn) => {
             const active = btn.dataset.rangeValue === range;
+            btn.classList.toggle('bg-white', active);
             btn.classList.toggle('bg-elevated', active);
             btn.classList.toggle('shadow-sm', active);
+            btn.classList.toggle('text-slate-800', active);
             btn.classList.toggle('text-text-primary', active);
+            btn.classList.toggle('text-slate-500', !active);
             btn.classList.toggle('text-text-muted', !active);
         });
         const select = wrap?.querySelector('[data-range-select]');

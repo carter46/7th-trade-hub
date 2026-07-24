@@ -28,10 +28,18 @@ class ReportingService
         $fundings = $this->ops->fundingsCount($range);
         $priorFundings = $this->ops->fundingsCount($range->priorPeriod());
         $fundingDelta = $this->percentDelta((float) $fundings, (float) $priorFundings);
+        $newUsers = $this->ops->newUsers($range);
+        $priorUsers = $this->ops->newUsers($range->priorPeriod());
 
-        $revenueSeries = $this->revenue->dailySeries($range);
+        $revenueSeries = $this->revenue->chartSeries($range);
         $usersSeries = $this->ops->usersDailySeries($range);
         $fundingsSeries = $this->ops->fundingsDailySeries($range);
+        $priorRevenueSeries = $this->revenue->chartSeries($range->priorPeriod());
+
+        $kycSlices = $this->ops->kycStatusSlices();
+        $supportSlices = $this->ops->supportStatusSlices();
+        $escrowSlices = $this->ops->escrowStatusSlices();
+        $orderSlices = $this->ops->orderStatusSlices($range);
 
         return [
             'range' => $range->toArray(),
@@ -41,13 +49,28 @@ class ReportingService
                     'formatted' => '₦'.number_format($revenue, 2),
                     'delta' => $revenueDelta,
                     'delta_label' => 'vs prior period',
+                    'sparkline' => $revenueSeries['values'],
+                    'description' => 'Platform fees + catalog sales',
                 ],
-                'visitors' => $this->visitorsPulse(),
+                'visitors' => array_merge($this->visitorsPulse(), [
+                    'description' => 'Sessions from Google Analytics',
+                ]),
                 'fundings' => [
                     'value' => $fundings,
                     'formatted' => (string) $fundings,
                     'delta' => $fundingDelta,
                     'delta_label' => 'vs prior period',
+                    'sparkline' => $fundingsSeries['values'],
+                    'description' => 'Approved wallet fundings',
+                    'sum' => $this->ops->fundingsSum($range),
+                ],
+                'users' => [
+                    'value' => $newUsers,
+                    'formatted' => (string) $newUsers,
+                    'delta' => $this->percentDelta((float) $newUsers, (float) $priorUsers),
+                    'delta_label' => 'vs prior period',
+                    'sparkline' => $usersSeries['values'],
+                    'description' => 'New registrations',
                 ],
                 'pending_kyc' => $this->ops->pendingKyc(),
                 'pending_escrows' => $this->ops->pendingEscrows(),
@@ -57,8 +80,15 @@ class ReportingService
             ],
             'growth' => [
                 'revenue' => $revenueSeries,
+                'revenue_prior' => $priorRevenueSeries,
                 'users' => $usersSeries,
                 'fundings' => $fundingsSeries,
+            ],
+            'distributions' => [
+                'kyc' => $kycSlices,
+                'support' => $supportSlices,
+                'escrows' => $escrowSlices,
+                'orders' => $orderSlices,
             ],
             'gmv' => $this->ops->gmv($range),
         ];
@@ -133,11 +163,14 @@ class ReportingService
             ->map(fn (Transaction $tx) => [
                 'id' => $tx->id,
                 'reference' => $tx->reference,
+                'type' => $tx->type,
                 'user_name' => $tx->user?->name ?? '—',
                 'user_initials' => $this->initials($tx->user?->name),
+                'avatar_tone' => $this->avatarTone($tx->user?->name),
                 'amount' => (float) $tx->amount,
                 'status' => $tx->status,
                 'created_at' => $tx->created_at?->diffForHumans(),
+                'href' => route('admin.transactions'),
             ])
             ->all();
     }
@@ -156,6 +189,12 @@ class ReportingService
                 'action' => $log->action,
                 'actor' => $log->admin?->email ?? $log->admin?->name ?? 'system',
                 'when' => $log->created_at?->diffForHumans(),
+                'day' => $log->created_at?->toDateString(),
+                'day_label' => $log->created_at?->isToday()
+                    ? 'Today'
+                    : ($log->created_at?->isYesterday() ? 'Yesterday' : $log->created_at?->format('M j, Y')),
+                'icon' => $this->auditIcon((string) $log->action),
+                'tone' => $this->auditTone((string) $log->action),
                 'severity' => str_contains((string) $log->action, 'suspend')
                     || str_contains((string) $log->action, 'anonym'),
             ])
@@ -206,5 +245,35 @@ class ReportingService
         }
 
         return $letters ?: '?';
+    }
+
+    private function avatarTone(?string $name): string
+    {
+        $tones = ['emerald', 'blue', 'indigo', 'amber', 'orange'];
+        $idx = abs(crc32((string) $name)) % count($tones);
+
+        return $tones[$idx];
+    }
+
+    private function auditIcon(string $action): string
+    {
+        return match (true) {
+            str_contains($action, 'suspend'), str_contains($action, 'anonym') => 'audit',
+            str_contains($action, 'impersonation.started') => 'person',
+            str_contains($action, 'impersonation.stopped') => 'history',
+            str_contains($action, 'settings') => 'settings',
+            default => 'history',
+        };
+    }
+
+    private function auditTone(string $action): string
+    {
+        return match (true) {
+            str_contains($action, 'suspend') => 'red',
+            str_contains($action, 'anonym') => 'slate',
+            str_contains($action, 'impersonation') => 'brand',
+            str_contains($action, 'settings') => 'blue',
+            default => 'slate',
+        };
     }
 }

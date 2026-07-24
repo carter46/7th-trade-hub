@@ -24,9 +24,9 @@
 <div {{ $attributes->class(['flex items-center justify-between mb-4']) }}>
     <div class="flex items-center gap-2">
         <div class="h-4 w-1 rounded-full {{ $bar }}"></div>
-        <h2 class="text-xs font-black uppercase tracking-widest text-text-muted">{{ $title }}</h2>
+        <h2 class="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-text-muted">{{ $title }}</h2>
     </div>
     @if ($action && $actionHref)
-        <a href="{{ $actionHref }}" class="text-[10px] font-bold uppercase tracking-wider text-brand hover:underline">{{ $action }}</a>
+        <a href="{{ $actionHref }}" class="text-[10px] font-bold uppercase tracking-wider text-primary hover:underline dark:text-brand">{{ $action }}</a>
     @endif
 </div>

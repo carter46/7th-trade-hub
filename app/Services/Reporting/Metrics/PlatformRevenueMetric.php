@@ -39,6 +39,40 @@ class PlatformRevenueMetric
     }
 
     /**
+     * Chart series: hourly buckets for 24h / today, otherwise daily.
+     *
+     * @return array{labels: list<string>, values: list<float>}
+     */
+    public function chartSeries(ReportingRange $range): array
+    {
+        if (in_array($range->key, ['24h', 'today'], true) || $range->days() <= 1) {
+            return $this->hourlySeries($range);
+        }
+
+        return $this->dailySeries($range);
+    }
+
+    /**
+     * @return array{labels: list<string>, values: list<float>}
+     */
+    public function hourlySeries(ReportingRange $range): array
+    {
+        $labels = [];
+        $values = [];
+        $cursor = $range->from->copy()->startOfHour();
+        $end = $range->to->copy()->startOfHour();
+
+        while ($cursor->lte($end)) {
+            $labels[] = $cursor->format('H:i');
+            $hourRange = new ReportingRange('hour', $cursor->copy(), $cursor->copy()->endOfHour());
+            $values[] = $this->sum($hourRange);
+            $cursor->addHour();
+        }
+
+        return ['labels' => $labels, 'values' => $values];
+    }
+
+    /**
      * Daily series for charts (inclusive calendar days in range).
      *
      * @return array{labels: list<string>, values: list<float>}
@@ -51,7 +85,6 @@ class PlatformRevenueMetric
         $end = $range->to->copy()->startOfDay();
 
         while ($cursor->lte($end)) {
-            $dayKey = $cursor->toDateString();
             $labels[] = $cursor->format('M j');
             $dayRange = new ReportingRange('day', $cursor->copy()->startOfDay(), $cursor->copy()->endOfDay());
             $values[] = $this->sum($dayRange);

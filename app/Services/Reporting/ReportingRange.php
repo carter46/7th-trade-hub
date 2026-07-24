@@ -27,9 +27,13 @@ class ReportingRange
     /**
      * @param  array{range?: string, from?: string|null, to?: string|null}  $input
      */
-    public static function fromInput(array $input, string $default = '7d'): self
+    public static function fromInput(array $input, string $default = '24h'): self
     {
         $key = (string) ($input['range'] ?? $default);
+        // Migrate legacy overview default away from 7d.
+        if ($key === 'today') {
+            $key = '24h';
+        }
         if (! in_array($key, self::PRESETS, true)) {
             $key = $default;
         }
@@ -91,19 +95,29 @@ class ReportingRange
     }
 
     /**
+     * Single segmented control options (Overview / Analytics).
+     *
      * @return list<array{value: string, label: string}>
      */
     public static function presetOptions(): array
     {
         return [
-            ['value' => 'today', 'label' => 'Today'],
-            ['value' => '24h', 'label' => '24h'],
-            ['value' => '7d', 'label' => '7d'],
-            ['value' => '30d', 'label' => '30d'],
-            ['value' => '90d', 'label' => '90d'],
-            ['value' => 'this_month', 'label' => 'This month'],
-            ['value' => 'last_month', 'label' => 'Last month'],
+            ['value' => '24h', 'label' => '24 Hours'],
+            ['value' => '7d', 'label' => '7 Days'],
+            ['value' => '30d', 'label' => '30 Days'],
+            ['value' => '90d', 'label' => '90 Days'],
             ['value' => 'custom', 'label' => 'Custom'],
         ];
+    }
+
+    /**
+     * @return list<array{value: string, label: string}>
+     */
+    public static function allPresetOptions(): array
+    {
+        return array_merge(self::presetOptions(), [
+            ['value' => 'this_month', 'label' => 'This month'],
+            ['value' => 'last_month', 'label' => 'Last month'],
+        ]);
     }
 }

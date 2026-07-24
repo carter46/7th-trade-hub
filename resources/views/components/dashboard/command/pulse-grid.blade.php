@@ -9,6 +9,9 @@
             :delta="$item['delta'] ?? null"
             :delta-label="$item['delta_label'] ?? null"
             :hint="$item['hint'] ?? null"
+            :description="$item['description'] ?? null"
+            :badge="$item['badge'] ?? null"
+            :sparkline="$item['sparkline'] ?? null"
             :href="$item['href'] ?? null"
         />
     @endforeach
