@@ -3,77 +3,50 @@
 namespace App\Console\Commands;
 
 use App\Models\AnalyticsKpiSnapshot;
-use App\Models\Escrow;
-use App\Models\KycSubmission;
-use App\Models\Listing;
 use App\Models\Order;
-use App\Models\SupportTicket;
 use App\Models\Transaction;
 use App\Models\User;
-use App\Models\WalletFunding;
+use App\Services\Reporting\ReportingRange;
+use App\Services\Reporting\ReportingService;
 use Illuminate\Console\Command;
 
 class AnalyticsRollupKpis extends Command
 {
     protected $signature = 'analytics:rollup-kpis';
 
-    protected $description = 'Upsert analytics_kpi_snapshots for common KPIs and prune old rows';
+    protected $description = 'Upsert analytics_kpi_snapshots from ReportingService (same definitions as Overview)';
 
-    public function handle(): int
+    public function handle(ReportingService $reporting): int
     {
         $now = now();
+        $ops = app(\App\Services\Reporting\Metrics\OpsMetrics::class);
+        $revenue = app(\App\Services\Reporting\Metrics\PlatformRevenueMetric::class);
+
         $periods = [
-            'current' => null,
-            'today' => today(),
-            '7d' => now()->subDays(6),
-            '30d' => now()->subDays(29),
+            'current' => ReportingRange::preset('90d'),
+            'today' => ReportingRange::preset('today'),
+            '7d' => ReportingRange::preset('7d'),
+            '30d' => ReportingRange::preset('30d'),
         ];
 
-        $pendingListings = Listing::query()->where(function ($q) {
-            $q->where('status', 'pending_review')
-                ->orWhere(function ($inner) {
-                    $inner->where('status', 'published')
-                        ->whereHas('versions', fn ($v) => $v->where('status', 'pending_review'));
-                });
-        })->whereNotIn('status', ['archived', 'sold'])->count();
-
-        foreach ($periods as $period => $since) {
+        foreach ($periods as $period => $range) {
             $this->upsertSnapshot('users.total', $period, User::count(), $now);
-            $this->upsertSnapshot('listings.active', $period, Listing::where('is_active', true)->count(), $now);
-            $this->upsertSnapshot('listings.pending_review', $period, $pendingListings, $now);
-            $this->upsertSnapshot('kyc.pending', $period, KycSubmission::where('status', 'pending')->count(), $now);
-            $this->upsertSnapshot('escrows.pending', $period, Escrow::where('status', 'locked')->count(), $now);
-            $this->upsertSnapshot('support.waiting', $period, SupportTicket::whereIn('status', ['open', 'pending', 'awaiting_user'])->count(), $now);
-            $this->upsertSnapshot('tickets.open', $period, SupportTicket::whereIn('status', ['open', 'pending', 'awaiting_user'])->count(), $now);
-            $this->upsertSnapshot('tickets.total', $period, SupportTicket::count(), $now);
-
-            $salesQuery = Transaction::query()
-                ->where('status', 'completed')
-                ->where('currency', 'NGN')
-                ->where('amount', '>', 0);
-            if ($since) {
-                $salesQuery->where('created_at', '>=', $since->copy()->startOfDay());
-            }
-            $this->upsertSnapshot('sales.total_ngn', $period, (float) $salesQuery->sum('amount'), $now);
-
-            $txQuery = Transaction::query();
-            if ($since) {
-                $txQuery->where('created_at', '>=', $since->copy()->startOfDay());
-            }
-            $this->upsertSnapshot('transactions.total', $period, $txQuery->count(), $now);
+            $this->upsertSnapshot('listings.active', $period, \App\Models\Listing::where('is_active', true)->count(), $now);
+            $this->upsertSnapshot('listings.pending_review', $period, $ops->pendingListings(), $now);
+            $this->upsertSnapshot('kyc.pending', $period, $ops->pendingKyc(), $now);
+            $this->upsertSnapshot('escrows.pending', $period, $ops->pendingEscrows(), $now);
+            $this->upsertSnapshot('support.waiting', $period, $ops->supportWaiting(), $now);
+            $this->upsertSnapshot('tickets.open', $period, $ops->supportWaiting(), $now);
+            $this->upsertSnapshot('tickets.total', $period, \App\Models\SupportTicket::count(), $now);
+            $this->upsertSnapshot('sales.total_ngn', $period, $revenue->sum($range), $now);
+            $this->upsertSnapshot('transactions.total', $period, Transaction::query()
+                ->whereBetween('created_at', [$range->from, $range->to])
+                ->count(), $now);
         }
 
-        $this->upsertSnapshot('revenue.today', 'today', (float) Transaction::query()
-            ->where('status', 'completed')
-            ->where('currency', 'NGN')
-            ->where('amount', '>', 0)
-            ->whereDate('created_at', today())
-            ->sum('amount'), $now);
-
-        $this->upsertSnapshot('fundings.today', 'today', WalletFunding::query()
-            ->where('status', 'approved')
-            ->whereDate('approved_at', today())
-            ->count(), $now);
+        $today = ReportingRange::preset('today');
+        $this->upsertSnapshot('revenue.today', 'today', $revenue->sum($today), $now);
+        $this->upsertSnapshot('fundings.today', 'today', $ops->fundingsCount($today), $now);
 
         $ordersByStatus = Order::query()
             ->selectRaw('status, count(*) as count')
@@ -84,30 +57,21 @@ class AnalyticsRollupKpis extends Command
 
         $this->upsertSnapshot('orders.by_status', 'current', array_sum($ordersByStatus), $now, $ordersByStatus);
 
-        for ($i = 6; $i >= 0; $i--) {
+        for ($i = 29; $i >= 0; $i--) {
             $day = now()->subDays($i);
             $dateKey = $day->toDateString();
+            $dayRange = new ReportingRange('day', $day->copy()->startOfDay(), $day->copy()->endOfDay());
 
-            $this->upsertSnapshot('revenue.daily', 'daily', (float) Transaction::query()
-                ->where('status', 'completed')
-                ->where('currency', 'NGN')
-                ->where('amount', '>', 0)
-                ->whereDate('created_at', $dateKey)
-                ->sum('amount'), $day->copy()->endOfDay(), ['day' => $dateKey]);
-
+            $this->upsertSnapshot('revenue.daily', 'daily', $revenue->sum($dayRange), $day->copy()->endOfDay(), ['day' => $dateKey]);
             $this->upsertSnapshot('users.daily', 'daily', User::whereDate('created_at', $dateKey)->count(), $day->copy()->endOfDay(), ['day' => $dateKey]);
-
-            $this->upsertSnapshot('fundings.daily', 'daily', WalletFunding::query()
-                ->where('status', 'approved')
-                ->whereDate('approved_at', $dateKey)
-                ->count(), $day->copy()->endOfDay(), ['day' => $dateKey]);
+            $this->upsertSnapshot('fundings.daily', 'daily', $ops->fundingsCount($dayRange), $day->copy()->endOfDay(), ['day' => $dateKey]);
         }
 
         $pruned = AnalyticsKpiSnapshot::query()
             ->where('captured_at', '<', now()->subDays(90))
             ->delete();
 
-        $this->info('KPI snapshots rolled up.'.($pruned ? " Pruned {$pruned} old rows." : ''));
+        $this->info('KPI snapshots rolled up via ReportingService.'.($pruned ? " Pruned {$pruned} old rows." : ''));
 
         return self::SUCCESS;
     }

@@ -317,6 +317,42 @@ class DemoOrdersEscrowSeeder extends Seeder
             }
         }
 
+        // In-window platform revenue so Overview 7d/30d/today are non-zero after demo:seed.
+        for ($d = 0; $d < 14; $d++) {
+            $at = $timeline->daysAgo($d, 14 + ($d % 5));
+            $fee = 1500 + ($d * 275);
+            $feeTxn = Transaction::query()->create([
+                'user_id' => $platformWallet->user_id,
+                'wallet_id' => $platformWallet->id,
+                'reference' => $ctx->ref('TXN'),
+                'type' => TransactionType::PlatformFee->value,
+                'label' => 'Platform fee',
+                'description' => 'Demo in-window marketplace fee',
+                'amount' => $fee,
+                'currency' => 'NGN',
+                'status' => 'completed',
+            ]);
+            $ctx->stamp($feeTxn, $at);
+            $txExtra++;
+
+            if ($d % 3 === 0) {
+                $sale = 8000 + ($d * 500);
+                $saleTxn = Transaction::query()->create([
+                    'user_id' => $platformWallet->user_id,
+                    'wallet_id' => $platformWallet->id,
+                    'reference' => $ctx->ref('TXN'),
+                    'type' => TransactionType::Purchase->value,
+                    'label' => 'Platform product sale',
+                    'description' => 'Demo in-window catalog sale',
+                    'amount' => $sale,
+                    'currency' => 'NGN',
+                    'status' => 'completed',
+                ]);
+                $ctx->stamp($saleTxn, $at->copy()->addHour());
+                $txExtra++;
+            }
+        }
+
         $ctx->orderCount = $orderCount;
         $ctx->escrowCount = $escrowCount;
         $ctx->transactionCount += $txExtra;

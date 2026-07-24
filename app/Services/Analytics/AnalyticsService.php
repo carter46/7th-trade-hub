@@ -4,7 +4,6 @@ namespace App\Services\Analytics;
 
 use App\Contracts\Analytics\AnalyticsServiceInterface;
 use App\Models\User;
-use Carbon\Carbon;
 
 class AnalyticsService implements AnalyticsServiceInterface
 {
@@ -26,6 +25,7 @@ class AnalyticsService implements AnalyticsServiceInterface
     public function __construct(
         private InternalBusinessProvider $business,
         private ProductAnalyticsProvider $products,
+        private \App\Services\Reporting\ReportingService $reporting,
     ) {}
 
     public function getOverview(?User $user): array
@@ -136,28 +136,15 @@ class AnalyticsService implements AnalyticsServiceInterface
      */
     public function parseRange(array $filters): array
     {
-        $range = (string) ($filters['range'] ?? '30d');
-
-        if ($range === 'custom') {
-            $from = Carbon::parse($filters['from'] ?? now()->subDays(29))->startOfDay();
-            $to = Carbon::parse($filters['to'] ?? now())->endOfDay();
-        } else {
-            [$from, $to] = match ($range) {
-                'today' => [now()->startOfDay(), now()->endOfDay()],
-                '7d' => [now()->subDays(6)->startOfDay(), now()->endOfDay()],
-                '30d' => [now()->subDays(29)->startOfDay(), now()->endOfDay()],
-                '90d' => [now()->subDays(89)->startOfDay(), now()->endOfDay()],
-                default => [now()->subDays(29)->startOfDay(), now()->endOfDay()],
-            };
-        }
-
-        $days = max(1, $from->copy()->startOfDay()->diffInDays($to->copy()->startOfDay()) + 1);
+        $resolved = \App\Services\Reporting\ReportingRange::fromInput($filters, '30d');
 
         return [
-            'range' => $range,
-            'from' => $from->toDateString(),
-            'to' => $to->toDateString(),
-            'days' => $days,
+            'range' => $resolved->key === 'prior' ? 'custom' : $resolved->key,
+            'from' => $resolved->from->toDateString(),
+            'to' => $resolved->to->toDateString(),
+            'days' => $resolved->days(),
+            '_from' => $resolved->from,
+            '_to' => $resolved->to,
         ];
     }
 
@@ -170,6 +157,13 @@ class AnalyticsService implements AnalyticsServiceInterface
             return [];
         }
 
-        return $this->business->chartStrip($days);
+        $range = \App\Services\Reporting\ReportingRange::fromInput(['range' => $days <= 1 ? 'today' : $days.'d'], '7d');
+
+        return $this->reporting->chartStrip($range);
+    }
+
+    public function reporting(): \App\Services\Reporting\ReportingService
+    {
+        return $this->reporting;
     }
 }

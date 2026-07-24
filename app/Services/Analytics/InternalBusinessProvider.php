@@ -206,8 +206,12 @@ class InternalBusinessProvider
      */
     public function sectionReport(string $section, array $range): array
     {
-        $from = Carbon::parse($range['from'])->startOfDay();
-        $to = Carbon::parse($range['to'])->endOfDay();
+        $from = isset($range['_from'])
+            ? $range['_from']->copy()
+            : Carbon::parse($range['from'])->startOfDay();
+        $to = isset($range['_to'])
+            ? $range['_to']->copy()
+            : Carbon::parse($range['to'])->endOfDay();
 
         return match ($section) {
             'traffic' => $this->trafficReport($from, $to),
@@ -255,25 +259,9 @@ class InternalBusinessProvider
      */
     private function revenueReport(Carbon $from, Carbon $to): array
     {
-        $completed = Transaction::query()
-            ->where('status', 'completed')
-            ->where('currency', 'NGN')
-            ->where('amount', '>', 0)
-            ->whereBetween('created_at', [$from, $to]);
+        $range = new \App\Services\Reporting\ReportingRange('custom', $from, $to);
 
-        return [
-            'total_ngn' => (float) (clone $completed)->sum('amount'),
-            'count' => (clone $completed)->count(),
-            'by_type' => Transaction::query()
-                ->selectRaw('type, count(*) as count, sum(amount) as total')
-                ->where('status', 'completed')
-                ->where('currency', 'NGN')
-                ->whereBetween('created_at', [$from, $to])
-                ->groupBy('type')
-                ->get()
-                ->map(fn ($row) => ['type' => $row->type, 'count' => (int) $row->count, 'total' => (float) $row->total])
-                ->all(),
-        ];
+        return app(\App\Services\Reporting\ReportingService::class)->revenueSection($range);
     }
 
     /**

@@ -229,6 +229,7 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
 
 Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|demo_support|demo_moderator', 'throttle:60,1'])->prefix('admin')->name('admin')->group(function () {
     Route::get('/', [AdminDashboardController::class, 'index'])->name('');
+    Route::get('/overview/panel', [AdminDashboardController::class, 'overviewPanel'])->name('.overview.panel');
     Route::get('/search', AdminSearchController::class)->name('.search');
     Route::prefix('account')->name('.account')->controller(AccountController::class)->group(function () {
         Route::get('/profile', 'profile')->name('.profile');

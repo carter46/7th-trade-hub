@@ -1,11 +1,18 @@
 import './bootstrap';
 import './dashboard-theme';
+import { mountCommandCharts, bindCommandRange } from './command-charts';
 
 import Alpine from 'alpinejs';
 import Chart from 'chart.js/auto';
 
 window.Alpine = Alpine;
 window.Chart = Chart;
+window.mountCommandCharts = mountCommandCharts;
+window.bindCommandRange = bindCommandRange;
+
+document.addEventListener('DOMContentLoaded', () => {
+    mountCommandCharts(document);
+});
 
 document.addEventListener('alpine:init', () => {
     Alpine.data('toastStore', (initial = []) => ({
