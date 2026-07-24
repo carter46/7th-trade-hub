@@ -50,19 +50,39 @@
         $deltaClass = 'text-red-600';
     }
     $spark = is_array($sparkline) ? array_values($sparkline) : [];
+    $sparkColor = $sparkColors[$accent] ?? '#10b981';
+    $sparkLabels = array_map('strval', array_keys($spark));
+    $sparkDatasets = [[
+        'data' => $spark,
+        'borderColor' => $sparkColor,
+        'backgroundColor' => 'transparent',
+        'fill' => false,
+        'tension' => 0.4,
+        'pointRadius' => 0,
+        'borderWidth' => 2,
+    ]];
     $sparkId = 'spark-'.uniqid();
     $tag = $href ? 'a' : 'div';
+    $badgeClass = is_array($badge) ? ($badge['class'] ?? 'bg-slate-100 text-slate-600') : 'bg-slate-100 text-slate-600';
+    $badgeLabel = is_array($badge) ? ($badge['label'] ?? '') : (string) $badge;
 @endphp
 
-<{{ $tag }} @if($href) href="{{ $href }}" @endif {{ $attributes->class([
-    'group relative flex min-h-[9.5rem] flex-col overflow-hidden rounded-xl border border-slate-200 border-t-2 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-border-default dark:bg-elevated',
-    $top,
-]) }}>
+@if ($href)
+    <a href="{{ $href }}" {{ $attributes->class([
+        'group relative flex min-h-[9.5rem] flex-col overflow-hidden rounded-xl border border-slate-200 border-t-2 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-border-default dark:bg-elevated',
+        $top,
+    ]) }}>
+@else
+    <div {{ $attributes->class([
+        'group relative flex min-h-[9.5rem] flex-col overflow-hidden rounded-xl border border-slate-200 border-t-2 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-border-default dark:bg-elevated',
+        $top,
+    ]) }}>
+@endif
     <div class="pointer-events-none absolute inset-0 bg-gradient-to-br {{ $glow[$accent] ?? $glow['emerald'] }} via-transparent to-transparent opacity-80"></div>
     <div class="relative flex items-start justify-between gap-2">
         <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-text-muted">{{ $label }}</span>
         @if ($badge)
-            <span class="rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wide {{ $badge['class'] ?? 'bg-slate-100 text-slate-600' }}">{{ $badge['label'] ?? $badge }}</span>
+            <span class="rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wide {{ $badgeClass }}">{{ $badgeLabel }}</span>
         @endif
     </div>
     <div class="relative mt-2 flex items-end justify-between gap-3">
@@ -74,10 +94,14 @@
         </div>
         @if (count($spark) > 1)
             <div class="h-10 w-20 shrink-0">
-                <canvas id="{{ $sparkId }}" class="command-chart h-full w-full" data-chart-theme="sparkline"
-                    data-spark-color="{{ $sparkColors[$accent] ?? '#10b981' }}"
-                    data-labels='@json(array_keys($spark))'
-                    data-datasets='@json([["data" => $spark, "borderColor" => $sparkColors[$accent] ?? "#10b981", "backgroundColor" => "transparent", "fill" => false, "tension" => 0.4, "pointRadius" => 0, "borderWidth" => 2]])'></canvas>
+                <canvas
+                    id="{{ $sparkId }}"
+                    class="command-chart h-full w-full"
+                    data-chart-theme="sparkline"
+                    data-spark-color="{{ $sparkColor }}"
+                    data-labels='@json($sparkLabels)'
+                    data-datasets='@json($sparkDatasets)'
+                ></canvas>
             </div>
         @endif
     </div>
@@ -93,4 +117,8 @@
             <span></span>
         @endif
     </div>
-</{{ $tag }}>
+@if ($href)
+    </a>
+@else
+    </div>
+@endif
