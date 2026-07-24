@@ -38,34 +38,34 @@
 
     <section class="space-y-4">
         <x-dashboard.command.section-label title="Operations & Health" accent="orange" />
-        <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
-            <div class="space-y-6 lg:col-span-8">
-                @if ($canFinance ?? false)
-                    <x-dashboard.command.tx-table
-                        :rows="$recentTransactions ?? []"
-                        :view-all-url="route('admin.transactions')"
-                    />
-                @endif
+
+        @if ($canFinance ?? false)
+            <x-dashboard.command.tx-table
+                :rows="$recentTransactions ?? []"
+                :view-all-url="route('admin.transactions')"
+            />
+        @endif
+
+        @if ($canSystem ?? false)
+            <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+                <x-dashboard.command.health-panel
+                    :rings="$health['rings'] ?? []"
+                    :metrics="$health['metrics'] ?? []"
+                    :checked-at="$health['checked_at'] ?? null"
+                    :view-more-url="route('admin.monitoring')"
+                    :limit="5"
+                />
+                <x-dashboard.command.audit-timeline
+                    :entries="$recentAudit ?? []"
+                    :console-url="route('admin.audit-logs')"
+                />
             </div>
-            <div class="flex flex-col gap-6 lg:col-span-4">
-                @if ($canSystem ?? false)
-                    <x-dashboard.command.health-panel
-                        :rings="$health['rings'] ?? []"
-                        :metrics="$health['metrics'] ?? []"
-                        :checked-at="$health['checked_at'] ?? null"
-                    />
-                    <x-dashboard.command.audit-timeline
-                        :entries="$recentAudit ?? []"
-                        :console-url="route('admin.audit-logs')"
-                    />
-                @elseif ($canAnalytics ?? false)
-                    <a href="{{ route('admin.analytics') }}" class="block rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-border-default dark:bg-elevated">
-                        <p class="text-sm font-bold text-slate-900 dark:text-text-primary">Analytics drill-down</p>
-                        <p class="mt-1 text-xs text-slate-500">Traffic, revenue, marketplace, and ops reports with shared ranges.</p>
-                    </a>
-                @endif
-            </div>
-        </div>
+        @elseif ($canAnalytics ?? false)
+            <a href="{{ route('admin.analytics') }}" class="block rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-border-default dark:bg-elevated">
+                <p class="text-sm font-bold text-slate-900 dark:text-text-primary">Analytics drill-down</p>
+                <p class="mt-1 text-xs text-slate-500">Traffic, revenue, marketplace, and ops reports with shared ranges.</p>
+            </a>
+        @endif
     </section>
 </div>
 

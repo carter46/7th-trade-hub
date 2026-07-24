@@ -238,7 +238,8 @@ class DashboardController extends Controller
             $rev = $pulse['revenue'] ?? [];
             $items[] = [
                 'label' => 'Revenue',
-                'value' => $rev['formatted'] ?? '₦0.00',
+                'value' => $rev['formatted']
+                    ?? ('₦'.number_format((float) ($rev['value'] ?? 0), 2, '.', ',')),
                 'accent' => 'emerald',
                 'delta' => $rev['delta'] ?? null,
                 'delta_label' => $rev['delta_label'] ?? 'vs prior period',

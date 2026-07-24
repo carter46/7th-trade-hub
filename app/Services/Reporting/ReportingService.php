@@ -46,7 +46,7 @@ class ReportingService
             'pulse' => [
                 'revenue' => [
                     'value' => $revenue,
-                    'formatted' => '₦'.number_format($revenue, 2),
+                    'formatted' => '₦'.number_format((float) $revenue, 2, '.', ','),
                     'delta' => $revenueDelta,
                     'delta_label' => 'vs prior period',
                     'sparkline' => $revenueSeries['values'],

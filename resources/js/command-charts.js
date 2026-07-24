@@ -121,10 +121,14 @@ export function bindCommandRange(root, { endpoint, onHtml } = {}) {
     if (!wrap || !endpoint) return;
 
     const select = wrap.querySelector('[data-range-select]');
-    const custom = wrap.querySelector('[data-custom-range]');
+    const fromInput = wrap.querySelector('[data-range-from]');
+    const toInput = wrap.querySelector('[data-range-to]');
+    const modal = wrap.querySelector('[data-range-modal]');
+    const modalFrom = wrap.querySelector('[data-range-modal-from]');
+    const modalTo = wrap.querySelector('[data-range-modal-to]');
+    const modalError = wrap.querySelector('[data-range-modal-error]');
 
     const setActive = (range) => {
-        custom?.classList.toggle('hidden', range !== 'custom');
         wrap.querySelectorAll('[data-range-value]').forEach((btn) => {
             const active = btn.dataset.rangeValue === range;
             btn.classList.toggle('bg-white', active);
@@ -135,16 +139,44 @@ export function bindCommandRange(root, { endpoint, onHtml } = {}) {
             btn.classList.toggle('text-slate-500', !active);
             btn.classList.toggle('text-text-muted', !active);
         });
+        const customBtn = wrap.querySelector('[data-range-custom-open]');
+        if (customBtn) {
+            const active = range === 'custom';
+            customBtn.classList.toggle('bg-white', active);
+            customBtn.classList.toggle('bg-elevated', active);
+            customBtn.classList.toggle('shadow-sm', active);
+            customBtn.classList.toggle('text-slate-800', active);
+            customBtn.classList.toggle('text-text-primary', active);
+            customBtn.classList.toggle('text-slate-500', !active);
+            customBtn.classList.toggle('text-text-muted', !active);
+        }
         if (select) select.value = range;
+    };
+
+    const openModal = () => {
+        if (!modal) return;
+        if (modalFrom && fromInput) modalFrom.value = fromInput.value || '';
+        if (modalTo && toInput) modalTo.value = toInput.value || '';
+        modalError?.classList.add('hidden');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.documentElement.style.overflow = 'hidden';
+    };
+
+    const closeModal = () => {
+        if (!modal) return;
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.documentElement.style.overflow = '';
     };
 
     const apply = async (range) => {
         const params = new URLSearchParams({ range, persist_range: '1' });
         if (range === 'custom') {
-            params.set('from', wrap.querySelector('[data-range-from]')?.value || '');
-            params.set('to', wrap.querySelector('[data-range-to]')?.value || '');
+            params.set('from', fromInput?.value || '');
+            params.set('to', toInput?.value || '');
             if (!params.get('from') || !params.get('to')) {
-                setActive(range);
+                openModal();
                 return;
             }
         }
@@ -181,10 +213,21 @@ export function bindCommandRange(root, { endpoint, onHtml } = {}) {
     wrap.querySelectorAll('[data-range-value]').forEach((btn) => {
         btn.addEventListener('click', () => apply(btn.dataset.rangeValue));
     });
-    wrap.querySelector('[data-range-from]')?.addEventListener('change', () => {
-        if ((select?.value || 'custom') === 'custom') apply('custom');
-    });
-    wrap.querySelector('[data-range-to]')?.addEventListener('change', () => {
-        if ((select?.value || 'custom') === 'custom') apply('custom');
+
+    wrap.querySelector('[data-range-custom-open]')?.addEventListener('click', () => openModal());
+    wrap.querySelector('[data-range-modal-cancel]')?.addEventListener('click', () => closeModal());
+    wrap.querySelector('[data-range-modal-backdrop]')?.addEventListener('click', () => closeModal());
+    wrap.querySelector('[data-range-modal-done]')?.addEventListener('click', () => {
+        const from = modalFrom?.value || '';
+        const to = modalTo?.value || '';
+        if (!from || !to) {
+            modalError?.classList.remove('hidden');
+            return;
+        }
+        if (fromInput) fromInput.value = from;
+        if (toInput) toInput.value = to;
+        closeModal();
+        apply('custom');
     });
 }
+

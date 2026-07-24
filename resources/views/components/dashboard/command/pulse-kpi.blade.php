@@ -85,15 +85,15 @@
             <span class="rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wide {{ $badgeClass }}">{{ $badgeLabel }}</span>
         @endif
     </div>
-    <div class="relative mt-2 flex items-end justify-between gap-3">
+    <div class="relative mt-3 flex flex-col gap-3">
         <div class="min-w-0">
-            <span class="block truncate text-2xl font-bold tracking-tight text-slate-900 dark:text-text-primary">{{ $value }}</span>
+            <span class="block text-2xl font-bold tracking-tight text-slate-900 tabular-nums dark:text-text-primary">{{ $value }}</span>
             @if ($description)
                 <p class="mt-1 text-[10px] font-medium text-slate-400 dark:text-text-muted">{{ $description }}</p>
             @endif
         </div>
         @if (count($spark) > 1)
-            <div class="h-10 w-20 shrink-0">
+            <div class="h-9 w-full max-w-[9rem]">
                 <canvas
                     id="{{ $sparkId }}"
                     class="command-chart h-full w-full"

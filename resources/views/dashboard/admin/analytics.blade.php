@@ -66,8 +66,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const wrap = root.querySelector('[data-command-range]');
 
     const currentRange = () => wrap?.querySelector('[data-range-select]')?.value || '30d';
+
     const setPillActive = (range) => {
-        wrap?.querySelector('[data-custom-range]')?.classList.toggle('hidden', range !== 'custom');
         wrap?.querySelectorAll('[data-range-value]').forEach((btn) => {
             const active = btn.dataset.rangeValue === range;
             btn.classList.toggle('bg-white', active);
@@ -78,8 +78,42 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.classList.toggle('text-slate-500', !active);
             btn.classList.toggle('text-text-muted', !active);
         });
+        const customBtn = wrap?.querySelector('[data-range-custom-open]');
+        if (customBtn) {
+            const active = range === 'custom';
+            customBtn.classList.toggle('bg-white', active);
+            customBtn.classList.toggle('bg-elevated', active);
+            customBtn.classList.toggle('shadow-sm', active);
+            customBtn.classList.toggle('text-slate-800', active);
+            customBtn.classList.toggle('text-text-primary', active);
+            customBtn.classList.toggle('text-slate-500', !active);
+            customBtn.classList.toggle('text-text-muted', !active);
+        }
         const select = wrap?.querySelector('[data-range-select]');
         if (select) select.value = range;
+    };
+
+    const openModal = () => {
+        const modal = wrap?.querySelector('[data-range-modal]');
+        if (!modal) return;
+        const fromHidden = wrap.querySelector('[data-range-from]');
+        const toHidden = wrap.querySelector('[data-range-to]');
+        const modalFrom = wrap.querySelector('[data-range-modal-from]');
+        const modalTo = wrap.querySelector('[data-range-modal-to]');
+        if (modalFrom) modalFrom.value = fromHidden?.value || '';
+        if (modalTo) modalTo.value = toHidden?.value || '';
+        wrap.querySelector('[data-range-modal-error]')?.classList.add('hidden');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.documentElement.style.overflow = 'hidden';
+    };
+
+    const closeModal = () => {
+        const modal = wrap?.querySelector('[data-range-modal]');
+        if (!modal) return;
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.documentElement.style.overflow = '';
     };
 
     const load = async ({ section, range, from, to, push = true } = {}) => {
@@ -95,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
             params.set('from', from || wrap?.querySelector('[data-range-from]')?.value || '');
             params.set('to', to || wrap?.querySelector('[data-range-to]')?.value || '');
             if (!params.get('from') || !params.get('to')) {
-                setPillActive(nextRange);
+                openModal();
                 return;
             }
         }
@@ -145,14 +179,22 @@ document.addEventListener('DOMContentLoaded', () => {
     wrap?.querySelectorAll('[data-range-value]').forEach((btn) => {
         btn.addEventListener('click', () => load({ range: btn.dataset.rangeValue, push: true }));
     });
-    wrap?.querySelector('[data-range-select]')?.addEventListener('change', (e) => {
-        load({ range: e.target.value, push: true });
-    });
-    wrap?.querySelector('[data-range-from]')?.addEventListener('change', () => {
-        if (currentRange() === 'custom') load({ range: 'custom', push: true });
-    });
-    wrap?.querySelector('[data-range-to]')?.addEventListener('change', () => {
-        if (currentRange() === 'custom') load({ range: 'custom', push: true });
+    wrap?.querySelector('[data-range-custom-open]')?.addEventListener('click', () => openModal());
+    wrap?.querySelector('[data-range-modal-cancel]')?.addEventListener('click', () => closeModal());
+    wrap?.querySelector('[data-range-modal-backdrop]')?.addEventListener('click', () => closeModal());
+    wrap?.querySelector('[data-range-modal-done]')?.addEventListener('click', () => {
+        const from = wrap.querySelector('[data-range-modal-from]')?.value || '';
+        const to = wrap.querySelector('[data-range-modal-to]')?.value || '';
+        if (!from || !to) {
+            wrap.querySelector('[data-range-modal-error]')?.classList.remove('hidden');
+            return;
+        }
+        const fromHidden = wrap.querySelector('[data-range-from]');
+        const toHidden = wrap.querySelector('[data-range-to]');
+        if (fromHidden) fromHidden.value = from;
+        if (toHidden) toHidden.value = to;
+        closeModal();
+        load({ range: 'custom', from, to, push: true });
     });
 
     window.addEventListener('popstate', () => window.location.reload());

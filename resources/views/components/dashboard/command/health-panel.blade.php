@@ -3,7 +3,14 @@
     'metrics' => [],
     'title' => 'System Health',
     'checkedAt' => null,
+    'viewMoreUrl' => null,
+    'limit' => 5,
 ])
+
+@php
+    $viewMoreUrl = $viewMoreUrl ?: route('admin.monitoring');
+    $visible = array_slice(array_values($metrics), 0, (int) $limit);
+@endphp
 
 <div {{ $attributes->class(['rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-xl']) }}>
     <div class="mb-6 flex items-center justify-between">
@@ -34,8 +41,8 @@
         </div>
     @endif
 
-    <div class="max-h-72 space-y-3 overflow-y-auto pr-1">
-        @forelse ($metrics as $metric)
+    <div class="space-y-3">
+        @forelse ($visible as $metric)
             <div class="flex items-center justify-between gap-3">
                 <div class="flex min-w-0 items-center gap-3">
                     <div class="h-1.5 w-1.5 shrink-0 rounded-full {{ !empty($metric['alert']) ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' : (!empty($metric['na']) ? 'bg-white/30' : (($metric['ok'] ?? true) ? 'bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.45)]' : 'bg-amber-400')) }}"></div>
@@ -53,5 +60,5 @@
         @endforelse
     </div>
 
-    <a href="{{ route('admin.monitoring') }}" class="mt-6 block w-full rounded-lg border border-white/10 py-2 text-center text-[10px] font-black uppercase tracking-widest text-white/50 hover:text-emerald-400">System console</a>
+    <a href="{{ $viewMoreUrl }}" class="mt-6 block w-full rounded-lg border border-white/10 py-2.5 text-center text-[10px] font-black uppercase tracking-widest text-white/60 transition-colors hover:border-emerald-500/40 hover:text-emerald-400">View more</a>
 </div>
