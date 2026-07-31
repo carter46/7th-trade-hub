@@ -1,6 +1,6 @@
 @extends('layouts.marketing')
 
-@section('title', 'Website Listings | 7th Trade Hub')
+@section('title', 'Website Listings')
 
 @section('content')
 <section class="py-14 sm:py-20">

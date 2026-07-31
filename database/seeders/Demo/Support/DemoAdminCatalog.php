@@ -16,7 +16,7 @@ class DemoAdminCatalog
                 'email' => 'super.admin@example.com',
                 'username' => 'superadmin',
                 'permissions' => [
-                    'admins.manage', 'users.manage', 'finance.manage', 'support.manage',
+                    'admins.manage', 'users.manage', 'finance.manage', 'fees.manage', 'support.manage',
                     'catalog.manage', 'compliance.manage', 'system.manage', 'analytics.view',
                 ],
             ],
@@ -25,7 +25,7 @@ class DemoAdminCatalog
                 'name' => 'Finance Admin',
                 'email' => 'finance.admin@example.com',
                 'username' => 'financeadmin',
-                'permissions' => ['finance.manage', 'analytics.view'],
+                'permissions' => ['finance.manage', 'fees.manage', 'analytics.view'],
             ],
             [
                 'key' => 'compliance',

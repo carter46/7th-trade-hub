@@ -214,4 +214,26 @@ class User extends Authenticatable
             ? route('admin', absolute: false)
             : route('dashboard', absolute: false);
     }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        $url = url(route('password.reset', [
+            'token' => $token,
+            'email' => $this->email,
+        ], false));
+
+        $html = view('emails.password-reset', [
+            'url' => $url,
+            'count' => config('auth.passwords.users.expire', 60),
+            'user' => $this,
+        ])->render();
+
+        app(\App\Services\Communications\Email\EmailService::class)->sendMailableHtml(
+            to: $this->email,
+            subject: 'Reset your password - '.config('app.name'),
+            html: $html,
+            profile: \App\Services\Communications\Email\EmailProfile::Security,
+            templateKey: 'password_reset',
+        );
+    }
 }

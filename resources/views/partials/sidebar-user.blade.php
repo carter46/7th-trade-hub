@@ -16,7 +16,7 @@
     <div class="hidden shrink-0 items-center gap-3 px-5 pb-3 pt-5 lg:flex">
         <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
             <x-dashboard.asset key="logo" class="h-8 w-auto" alt="{{ config('app.name') }}" />
-            <span class="text-xl font-bold tracking-tight text-text-primary">Trade Hub</span>
+            <span class="text-xl font-bold tracking-tight text-text-primary">{{ $siteBranding['site_short_name'] ?? $siteName ?? config('app.name') }}</span>
         </a>
     </div>
 

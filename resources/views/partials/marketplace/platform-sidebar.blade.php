@@ -15,7 +15,7 @@
     <div class="rounded-xl border border-white/10 bg-slate-900/60 overflow-hidden">
         <div class="px-4 py-3 border-b border-white/10">
             <h2 class="text-sm font-bold font-display text-white uppercase tracking-wide">Explore the platform</h2>
-            <p class="text-xs text-slate-400 mt-0.5">Platform services sold by 7th Trade Hub</p>
+            <p class="text-xs text-slate-400 mt-0.5">Platform services sold by {{ $siteName ?? config('app.name') }}</p>
         </div>
         <ul class="divide-y divide-white/5">
             @foreach($sidebarLinks as $link)

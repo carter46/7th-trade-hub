@@ -1,6 +1,6 @@
 @extends('layouts.marketing')
 
-@section('title', 'About Us | 7th Trade Hub')
+@section('title', 'About Us')
 
 @section('content')
     <!-- From prototype-archive/about_us.html (main content only) -->
@@ -13,7 +13,7 @@
             <span class="text-accent font-bold tracking-[0.2em] uppercase text-xs mb-6 block">Pioneering the Digital Frontier</span>
             <h2 class="text-5xl md:text-7xl font-display font-extrabold mb-8 leading-[1.1] text-text-primary">Empowering the Future of Global Commerce</h2>
             <p class="text-lg md:text-xl text-text-secondary max-w-2xl mx-auto leading-relaxed">
-                At 7th Trade Hub, we bridge the gap between traditional finance and the digital revolution through transparency, security, and innovation.
+                At {{ $siteName ?? config('app.name') }}, we bridge the gap between traditional finance and the digital revolution through transparency, security, and innovation.
             </p>
         </div>
     </section>

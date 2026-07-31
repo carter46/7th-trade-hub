@@ -1,0 +1,211 @@
+<?php
+
+namespace App\Services\Communications\Email;
+
+use App\Jobs\RetryFailedEmailJob;
+use App\Models\AdminNotification;
+use App\Models\EmailIdentity;
+use App\Models\IntegrationProvider;
+use App\Services\Communications\Email\Providers\BrevoApiProvider;
+use App\Services\Communications\Email\Providers\LaravelMailProvider;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\View;
+use Throwable;
+
+class EmailService
+{
+    public function __construct(
+        private BrevoApiProvider $brevo,
+        private LaravelMailProvider $laravelMail,
+    ) {}
+
+    /**
+     * @param  int  $deferredStage  0 = initial send, 1 = after 5m retry, 2 = after 30m retry
+     */
+    public function send(OutgoingEmail $email, int $deferredStage = 0): SendResult
+    {
+        $this->hydrateTemplate($email);
+        [$fromName, $fromEmail, $replyTo] = $this->resolveIdentity($email);
+
+        $brevoResult = $this->attemptBrevo($email, $fromName, $fromEmail, $replyTo);
+        if ($brevoResult->success) {
+            return $brevoResult;
+        }
+
+        // Immediate second Brevo attempt (locked policy).
+        $brevoRetry = $this->attemptBrevo($email, $fromName, $fromEmail, $replyTo);
+        if ($brevoRetry->success) {
+            return $brevoRetry;
+        }
+
+        $laravelResult = $this->attemptLaravel($email, $fromName, $fromEmail, $replyTo);
+        if ($laravelResult->success) {
+            return $laravelResult;
+        }
+
+        return $this->handleTotalFailure($email, $laravelResult, $deferredStage);
+    }
+
+    public function sendRaw(
+        string $to,
+        string $subject,
+        string $body,
+        EmailProfile $profile = EmailProfile::NoReply,
+        bool $html = false,
+    ): SendResult {
+        return $this->send(new OutgoingEmail(
+            to: [['email' => $to]],
+            subject: $subject,
+            htmlContent: $html ? $body : null,
+            textContent: $html ? strip_tags($body) : $body,
+            profile: $profile,
+            tags: ['transactional'],
+        ));
+    }
+
+    public function sendMailableHtml(
+        string $to,
+        string $subject,
+        string $html,
+        ?string $text = null,
+        EmailProfile $profile = EmailProfile::NoReply,
+        ?string $templateKey = null,
+    ): SendResult {
+        return $this->send(new OutgoingEmail(
+            to: [['email' => $to]],
+            subject: $subject,
+            htmlContent: $html,
+            textContent: $text,
+            templateKey: $templateKey,
+            profile: $profile,
+            tags: $templateKey ? [$templateKey] : ['transactional'],
+        ));
+    }
+
+    private function attemptBrevo(OutgoingEmail $email, string $fromName, string $fromEmail, ?string $replyTo): SendResult
+    {
+        if (! $this->brevo->isAvailable()) {
+            return SendResult::fail(IntegrationProvider::BREVO, 'Brevo is disabled or missing API key.');
+        }
+
+        $result = $this->brevo->send($email, $fromName, $fromEmail, $replyTo);
+        $row = IntegrationProvider::forProvider(IntegrationProvider::BREVO);
+        if ($result->success) {
+            $row->recordSuccess($result->latencyMs);
+            $this->bumpDailyUsage($row);
+        } else {
+            $row->recordFailure((string) $result->error);
+        }
+
+        return $result;
+    }
+
+    private function attemptLaravel(OutgoingEmail $email, string $fromName, string $fromEmail, ?string $replyTo): SendResult
+    {
+        if (! $this->laravelMail->isAvailable()) {
+            return SendResult::fail(IntegrationProvider::LARAVEL_MAIL, 'Laravel mail fallback is unavailable.');
+        }
+
+        $result = $this->laravelMail->send($email, $fromName, $fromEmail, $replyTo);
+        $row = IntegrationProvider::forProvider(IntegrationProvider::LARAVEL_MAIL);
+        if ($result->success) {
+            $row->recordSuccess($result->latencyMs);
+            $this->bumpDailyUsage($row);
+        } else {
+            $row->recordFailure((string) $result->error);
+        }
+
+        return $result;
+    }
+
+    private function handleTotalFailure(OutgoingEmail $email, SendResult $last, int $deferredStage): SendResult
+    {
+        $queue = (string) config('queue.default', 'sync');
+
+        if ($queue !== 'sync' && $deferredStage < 1) {
+            Log::warning('email.retry_scheduled', ['stage' => 1, 'minutes' => 5]);
+            RetryFailedEmailJob::dispatch($email, 1)->delay(now()->addMinutes(5));
+
+            return SendResult::fail($last->provider, 'Deferred retry in 5 minutes: '.$last->error);
+        }
+
+        if ($queue !== 'sync' && $deferredStage === 1) {
+            Log::warning('email.retry_scheduled', ['stage' => 2, 'minutes' => 30]);
+            RetryFailedEmailJob::dispatch($email, 2)->delay(now()->addMinutes(30));
+
+            return SendResult::fail($last->provider, 'Deferred retry in 30 minutes: '.$last->error);
+        }
+
+        if ($queue === 'sync') {
+            Log::warning('email.retry_deferred_skipped_sync', [
+                'error' => $last->error,
+            ]);
+        }
+
+        $this->notifyAdminsOfFailure($email, (string) $last->error);
+
+        return $last;
+    }
+
+    private function notifyAdminsOfFailure(OutgoingEmail $email, string $error): void
+    {
+        try {
+            AdminNotification::query()->create([
+                'type' => 'email.delivery_failed',
+                'title' => 'Email delivery failed',
+                'body' => mb_substr('Subject: '.$email->subject.' — '.$error, 0, 2000),
+                'action_url' => route('admin.settings'),
+                'meta' => [
+                    'template' => $email->templateKey,
+                    'to' => $email->to,
+                ],
+            ]);
+        } catch (Throwable $e) {
+            Log::error('email.admin_notify_failed', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * @return array{0: string, 1: string, 2: ?string}
+     */
+    private function resolveIdentity(OutgoingEmail $email): array
+    {
+        $identity = EmailIdentity::forProfile($email->profile->value)
+            ?? EmailIdentity::defaultIdentity();
+
+        $fromName = $identity?->from_name ?: (string) config('mail.from.name', config('app.name'));
+        $fromEmail = $identity?->from_email ?: (string) config('mail.from.address', 'noreply@example.com');
+        $replyTo = $email->replyTo ?: ($identity?->reply_to_email);
+
+        return [$fromName, $fromEmail, $replyTo];
+    }
+
+    private function hydrateTemplate(OutgoingEmail $email): void
+    {
+        if (! $email->templateKey || ($email->htmlContent || $email->textContent)) {
+            return;
+        }
+
+        $view = config('communications.templates.'.$email->templateKey);
+        if (! is_string($view) || ! View::exists($view)) {
+            return;
+        }
+
+        $email->htmlContent = View::make($view, $email->params)->render();
+        $email->textContent = trim(strip_tags($email->htmlContent));
+    }
+
+    private function bumpDailyUsage(IntegrationProvider $row): void
+    {
+        $meta = $row->meta ?? [];
+        $day = now()->toDateString();
+        $usage = $meta['daily_usage'] ?? [];
+        $usage[$day] = (int) ($usage[$day] ?? 0) + 1;
+        // Keep last 14 days only.
+        $usage = array_slice($usage, -14, null, true);
+        $meta['daily_usage'] = $usage;
+        $meta['last_email_sent_at'] = now()->toIso8601String();
+        $row->meta = $meta;
+        $row->save();
+    }
+}

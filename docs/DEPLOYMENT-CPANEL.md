@@ -50,6 +50,7 @@ See [PRODUCTION-ENV-CHECKLIST.md](PRODUCTION-ENV-CHECKLIST.md) and [LAUNCH-CHECK
 - **`public/build/`** is **committed** to the repo (it is **not** in `.gitignore`). The server serves these files as-is.
 - **`.env`** is **not** committed. Configure environment variables on the server manually (copy from `.env.example` and set values in cPanel or via file manager).
 - **Database schema** is in **`database/sql/migration.sql`**. When the schema changes, update this file and commit it. Import or re-import it in phpMyAdmin as needed.
+- **Legacy `analytics_providers`:** Superseded by `integration_providers`. The SQL still creates the old table for one-time cutover copy only; the app does not write to it. After all environments have migrated, you may `DROP TABLE IF EXISTS analytics_providers;`. Re-run `PermissionSeeder` (or grant `fees.manage`) on existing DBs after fees moved out of Settings.
 
 ## One-time server setup
 
@@ -64,6 +65,7 @@ See [PRODUCTION-ENV-CHECKLIST.md](PRODUCTION-ENV-CHECKLIST.md) and [LAUNCH-CHECK
    - `MAIL_*` for SMTP if you need email (OTP, etc.)
    - `SESSION_SECURE_COOKIE=true`, `SESSION_ENCRYPT=true` when using HTTPS
    - `QUEUE_CONNECTION=sync` on shared hosting unless a queue worker is configured
+   - With `sync`, email delivery still tries Brevo → Brevo retry → Laravel Mail, then notifies admins immediately. Delayed 5/30 minute retries require `database`/`redis` queue + a worker.
 5. **Permissions:** Ensure `storage/` and `bootstrap/cache/` are writable by the web server (e.g. 755 or 775 and correct owner). Use cPanel File Manager or FTP.
 6. **PWA (optional):** Add `public/icons/icon-192x192.png` and `public/icons/icon-512x512.png` so the PWA install icon is correct (see `public/icons/README.md`).
 

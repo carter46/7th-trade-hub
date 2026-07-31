@@ -830,6 +830,10 @@ CREATE TABLE IF NOT EXISTS `marketplace_products` (
 -- ALTER TABLE `categories` ADD COLUMN `og_image` varchar(255) DEFAULT NULL;
 
 -- ---------- Analytics platform + monitoring (2026-07-23) ----------
+-- LEGACY: `analytics_providers` is superseded by `integration_providers`.
+-- Kept CREATE-only for one-time cutover copy below; app code no longer writes here.
+-- After all environments have migrated, drop with:
+--   DROP TABLE IF EXISTS `analytics_providers`;
 CREATE TABLE IF NOT EXISTS `analytics_providers` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `provider` varchar(60) NOT NULL,
@@ -942,13 +946,79 @@ CREATE TABLE IF NOT EXISTS `product_metric_monthly` (
   KEY `product_metric_monthly_metric_key_month_index` (`metric_key`,`month`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `analytics_providers` (`provider`, `enabled`, `status`, `created_at`, `updated_at`)
-SELECT 'google_analytics', 0, 'idle', NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM `analytics_providers` WHERE `provider` = 'google_analytics');
+-- Do not seed new rows into analytics_providers; seed integration_providers directly.
+CREATE TABLE IF NOT EXISTS `integration_providers` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `provider` varchar(60) NOT NULL,
+  `enabled` tinyint(1) NOT NULL DEFAULT 0,
+  `credentials` text DEFAULT NULL,
+  `status` varchar(40) NOT NULL DEFAULT 'idle',
+  `last_sync_at` timestamp NULL DEFAULT NULL,
+  `last_tested_at` timestamp NULL DEFAULT NULL,
+  `last_success_at` timestamp NULL DEFAULT NULL,
+  `last_error_at` timestamp NULL DEFAULT NULL,
+  `last_error` text DEFAULT NULL,
+  `success_count` int unsigned NOT NULL DEFAULT 0,
+  `failure_count` int unsigned NOT NULL DEFAULT 0,
+  `avg_latency_ms` int unsigned DEFAULT NULL,
+  `meta` json DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `integration_providers_provider_unique` (`provider`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `analytics_providers` (`provider`, `enabled`, `status`, `created_at`, `updated_at`)
-SELECT 'microsoft_clarity', 0, 'idle', NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM `analytics_providers` WHERE `provider` = 'microsoft_clarity');
+-- One-time cutover copy from legacy analytics_providers (if any rows exist).
+INSERT INTO `integration_providers` (`provider`, `enabled`, `status`, `created_at`, `updated_at`)
+SELECT `provider`, `enabled`, `status`, NOW(), NOW()
+FROM `analytics_providers` ap
+WHERE NOT EXISTS (SELECT 1 FROM `integration_providers` ip WHERE ip.provider = ap.provider);
+
+INSERT INTO `integration_providers` (`provider`, `enabled`, `status`, `created_at`, `updated_at`)
+SELECT 'brevo', 0, 'idle', NOW(), NOW() WHERE NOT EXISTS (SELECT 1 FROM `integration_providers` WHERE `provider` = 'brevo');
+INSERT INTO `integration_providers` (`provider`, `enabled`, `status`, `created_at`, `updated_at`)
+SELECT 'laravel_mail', 1, 'connected', NOW(), NOW() WHERE NOT EXISTS (SELECT 1 FROM `integration_providers` WHERE `provider` = 'laravel_mail');
+INSERT INTO `integration_providers` (`provider`, `enabled`, `status`, `created_at`, `updated_at`)
+SELECT 'smartsupp', 0, 'idle', NOW(), NOW() WHERE NOT EXISTS (SELECT 1 FROM `integration_providers` WHERE `provider` = 'smartsupp');
+INSERT INTO `integration_providers` (`provider`, `enabled`, `status`, `created_at`, `updated_at`)
+SELECT 'jivo', 0, 'idle', NOW(), NOW() WHERE NOT EXISTS (SELECT 1 FROM `integration_providers` WHERE `provider` = 'jivo');
+INSERT INTO `integration_providers` (`provider`, `enabled`, `status`, `created_at`, `updated_at`)
+SELECT 'chatway', 0, 'idle', NOW(), NOW() WHERE NOT EXISTS (SELECT 1 FROM `integration_providers` WHERE `provider` = 'chatway');
+INSERT INTO `integration_providers` (`provider`, `enabled`, `status`, `created_at`, `updated_at`)
+SELECT 'google_analytics', 0, 'idle', NOW(), NOW() WHERE NOT EXISTS (SELECT 1 FROM `integration_providers` WHERE `provider` = 'google_analytics');
+INSERT INTO `integration_providers` (`provider`, `enabled`, `status`, `created_at`, `updated_at`)
+SELECT 'microsoft_clarity', 0, 'idle', NOW(), NOW() WHERE NOT EXISTS (SELECT 1 FROM `integration_providers` WHERE `provider` = 'microsoft_clarity');
+
+CREATE TABLE IF NOT EXISTS `email_identities` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `profile` varchar(40) NOT NULL,
+  `from_name` varchar(255) NOT NULL,
+  `from_email` varchar(255) NOT NULL,
+  `reply_to_email` varchar(255) DEFAULT NULL,
+  `is_default` tinyint(1) NOT NULL DEFAULT 0,
+  `enabled` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `email_identities_profile_unique` (`profile`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `social_links` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `platform` varchar(60) NOT NULL,
+  `url` varchar(255) NOT NULL,
+  `icon` varchar(60) DEFAULT NULL,
+  `enabled` tinyint(1) NOT NULL DEFAULT 1,
+  `sort_order` int unsigned NOT NULL DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `social_links_enabled_sort_order_index` (`enabled`,`sort_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `permissions` (`name`, `guard_name`, `created_at`, `updated_at`)
+SELECT 'fees.manage', 'web', NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `name` = 'fees.manage' AND `guard_name` = 'web');
 
 -- ALTER TABLE `audit_logs` ADD COLUMN `actor_id` bigint unsigned DEFAULT NULL AFTER `admin_id`;
 -- ALTER TABLE `audit_logs` ADD COLUMN `actor_type` varchar(30) DEFAULT NULL AFTER `actor_id`;

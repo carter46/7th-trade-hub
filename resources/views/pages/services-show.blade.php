@@ -1,6 +1,6 @@
 @extends('layouts.marketing')
 
-@section('title', $product->title.' | 7th Trade Hub')
+@section('title', $product->title)
 
 @section('content')
 @php

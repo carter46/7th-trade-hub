@@ -4,13 +4,21 @@ namespace App\Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\AnalyticsProvider;
-use App\Models\SystemSetting;
+use App\Models\EmailIdentity;
+use App\Models\IntegrationProvider;
+use App\Models\MediaUsage;
+use App\Models\SocialLink;
 use App\Modules\Admin\Services\AuditLogService;
 use App\Services\Analytics\Providers\GoogleAnalyticsProvider;
 use App\Services\Analytics\Providers\MicrosoftClarityProvider;
+use App\Services\Branding\SiteBrandingRepository;
+use App\Services\Communications\Contact\PlatformContactRepository;
+use App\Services\Communications\Email\EmailProfile;
+use App\Services\Communications\Email\EmailService;
+use App\Services\Communications\LiveChat\LiveChatManager;
+use App\Services\Communications\Social\SocialLinkRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 use Throwable;
 
@@ -20,91 +28,273 @@ class SettingsController extends Controller
         private AuditLogService $audit,
         private GoogleAnalyticsProvider $googleAnalytics,
         private MicrosoftClarityProvider $clarity,
+        private SiteBrandingRepository $branding,
+        private PlatformContactRepository $contact,
+        private LiveChatManager $liveChat,
+        private SocialLinkRepository $socialLinks,
+        private EmailService $emails,
     ) {}
 
     public function index(): View
     {
-        $mailConfig = config('mail');
-        $defaultMailer = $mailConfig['default'] ?? 'smtp';
-        $mailer = $mailConfig['mailers'][$defaultMailer] ?? [];
+        $brevo = IntegrationProvider::forProvider(IntegrationProvider::BREVO);
+        $laravelMail = IntegrationProvider::forProvider(IntegrationProvider::LARAVEL_MAIL);
+        $chat = $this->liveChat->resolved();
+        $branding = $this->branding->all();
+        $contact = $this->contact->all();
 
         return view('dashboard.admin.settings', [
-            'platformFeePercent' => SystemSetting::get('platform_fee_percent', '2.5'),
-            'withdrawalMinAmount' => SystemSetting::get('withdrawal_min_amount', '100'),
-            'withdrawalMaxAmount' => SystemSetting::get('withdrawal_max_amount', '1000000'),
-            'depositMinAmount' => SystemSetting::get('deposit_min_amount', '100'),
-            'liveChatProvider' => SystemSetting::get('live_chat_provider', 'none'),
-            'smartsuppKey' => SystemSetting::get('smartsupp_key', ''),
-            'jivoWidgetId' => SystemSetting::get('jivo_widget_id', ''),
-            'contactPhone' => SystemSetting::get('contact_phone', ''),
-            'contactEmail' => SystemSetting::get('contact_email', ''),
-            'contactEmailAlt' => SystemSetting::get('contact_email_alt', ''),
+            'branding' => $branding,
+            'contact' => $contact,
+            'liveChat' => $chat,
+            'socialLinks' => SocialLink::query()->orderBy('sort_order')->orderBy('id')->get(),
+            'emailIdentities' => EmailIdentity::query()->orderBy('id')->get(),
+            'brevo' => $brevo,
+            'laravelMail' => $laravelMail,
             'analyticsGoogle' => AnalyticsProvider::forProvider(AnalyticsProvider::PROVIDER_GOOGLE_ANALYTICS),
             'analyticsClarity' => AnalyticsProvider::forProvider(AnalyticsProvider::PROVIDER_MICROSOFT_CLARITY),
-            'mailStatus' => [
-                'mailer' => $defaultMailer,
-                'host' => $mailer['host'] ?? config('mail.mailers.smtp.host'),
-                'port' => $mailer['port'] ?? config('mail.mailers.smtp.port'),
-                'encryption' => $mailer['encryption'] ?? config('mail.mailers.smtp.encryption'),
-                'from_address' => config('mail.from.address'),
-                'from_name' => config('mail.from.name'),
-                'username_set' => filled($mailer['username'] ?? config('mail.mailers.smtp.username')),
-                'password_set' => filled($mailer['password'] ?? config('mail.mailers.smtp.password')),
-            ],
+            'siteName' => $branding['site_name'],
         ]);
     }
 
-    public function update(Request $request): RedirectResponse
+    public function updateBranding(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'platform_fee_percent' => ['required', 'numeric', 'min:0', 'max:50'],
-            'withdrawal_min_amount' => ['required', 'numeric', 'min:1'],
-            'withdrawal_max_amount' => ['required', 'numeric', 'min:1', 'gte:withdrawal_min_amount'],
-            'deposit_min_amount' => ['required', 'numeric', 'min:1'],
-            'live_chat_provider' => ['required', 'in:none,smartsupp,jivo'],
-            'smartsupp_key' => ['nullable', 'string', 'max:255'],
-            'jivo_widget_id' => ['nullable', 'string', 'max:255'],
-            'contact_phone' => ['nullable', 'string', 'max:50'],
-            'contact_email' => ['nullable', 'email', 'max:255'],
-            'contact_email_alt' => ['nullable', 'email', 'max:255'],
+            'site_name' => ['required', 'string', 'max:120'],
+            'site_short_name' => ['nullable', 'string', 'max:60'],
+            'heading' => ['nullable', 'string', 'max:200'],
+            'tagline' => ['nullable', 'string', 'max:255'],
+            'meta_description' => ['nullable', 'string', 'max:500'],
+            'favicon_media_id' => ['nullable', 'integer'],
+            'logo_light_media_id' => ['nullable', 'integer'],
+            'logo_dark_media_id' => ['nullable', 'integer'],
         ]);
 
-        if ($validated['live_chat_provider'] === 'smartsupp' && blank($validated['smartsupp_key'] ?? null)) {
-            return back()->withInput()->withErrors([
-                'smartsupp_key' => 'Smartsupp key is required when Smartsupp is selected.',
-            ]);
-        }
-        if ($validated['live_chat_provider'] === 'jivo' && blank($validated['jivo_widget_id'] ?? null)) {
-            return back()->withInput()->withErrors([
-                'jivo_widget_id' => 'Jivo widget ID is required when Jivo is selected.',
-            ]);
+        $this->branding->save($validated);
+        $this->syncBrandingMediaUsages($validated);
+        config(['app.name' => $validated['site_name']]);
+        $short = $validated['site_short_name'] ?: $validated['site_name'];
+        $description = $validated['meta_description'] ?: config('pwa.manifest.description');
+        config([
+            'pwa.manifest.name' => $validated['site_name'],
+            'pwa.manifest.short_name' => $short,
+            'pwa.manifest.description' => $description,
+        ]);
+        try {
+            app(\EragLaravelPwa\Services\PWAService::class)->createOrUpdate(config('pwa.manifest'));
+        } catch (Throwable) {
+            // Manifest write is best-effort (permissions / package availability).
         }
 
-        $keys = [
-            'platform_fee_percent',
-            'withdrawal_min_amount',
-            'withdrawal_max_amount',
-            'deposit_min_amount',
-            'live_chat_provider',
-            'smartsupp_key',
-            'jivo_widget_id',
-            'contact_phone',
-            'contact_email',
-            'contact_email_alt',
+        $this->audit->log(auth()->id(), 'settings.branding.updated', null, null, [
+            'site_name' => $validated['site_name'],
+        ], $request->ip());
+
+        return back()->with('status', __('Site information saved.'));
+    }
+
+    public function updateContact(Request $request): RedirectResponse
+    {
+        $request->merge([
+            'maps_url' => $request->input('maps_url') ?: null,
+            'maps_embed_url' => $request->input('maps_embed_url') ?: null,
+        ]);
+
+        $validated = $request->validate([
+            'phone_support' => ['nullable', 'string', 'max:50'],
+            'phone_general' => ['nullable', 'string', 'max:50'],
+            'phone_whatsapp' => ['nullable', 'string', 'max:50'],
+            'address_street' => ['nullable', 'string', 'max:255'],
+            'address_city' => ['nullable', 'string', 'max:120'],
+            'address_state' => ['nullable', 'string', 'max:120'],
+            'address_country' => ['nullable', 'string', 'max:120'],
+            'address_postal' => ['nullable', 'string', 'max:40'],
+            'latitude' => ['nullable', 'string', 'max:40'],
+            'longitude' => ['nullable', 'string', 'max:40'],
+            'maps_url' => ['nullable', 'url', 'max:500'],
+            'maps_embed_url' => ['nullable', 'string', 'max:1000'],
+            'support_hours' => ['nullable', 'string', 'max:255'],
+            'timezone' => ['nullable', 'string', 'max:80'],
+            'business_hours' => ['nullable', 'string', 'max:255'],
+            'registration_number' => ['nullable', 'string', 'max:120'],
+            'vat_number' => ['nullable', 'string', 'max:120'],
+            'company_number' => ['nullable', 'string', 'max:120'],
+            'live_chat_provider' => ['required', 'in:none,smartsupp,jivo,chatway'],
+            'smartsupp_key' => ['nullable', 'string', 'max:255'],
+            'jivo_widget_id' => ['nullable', 'string', 'max:255'],
+            'chatway_widget_id' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        if ($validated['live_chat_provider'] === 'smartsupp') {
+            $existing = (string) (IntegrationProvider::forProvider(IntegrationProvider::SMARTSUPP)->credential('key') ?? '');
+            if (blank($validated['smartsupp_key'] ?? null) && $existing === '') {
+                return back()->withInput()->withErrors(['smartsupp_key' => 'Smartsupp key is required when Smartsupp is selected.']);
+            }
+        }
+        if ($validated['live_chat_provider'] === 'jivo') {
+            $existing = (string) (IntegrationProvider::forProvider(IntegrationProvider::JIVO)->credential('widget_id') ?? '');
+            if (blank($validated['jivo_widget_id'] ?? null) && $existing === '') {
+                return back()->withInput()->withErrors(['jivo_widget_id' => 'Jivo widget ID is required when Jivo is selected.']);
+            }
+        }
+        if ($validated['live_chat_provider'] === 'chatway') {
+            $existing = (string) (IntegrationProvider::forProvider(IntegrationProvider::CHATWAY)->credential('widget_id') ?? '');
+            if (blank($validated['chatway_widget_id'] ?? null) && $existing === '') {
+                return back()->withInput()->withErrors(['chatway_widget_id' => 'Chatway widget ID is required when Chatway is selected.']);
+            }
+        }
+
+        $this->contact->save($validated);
+        $this->liveChat->save(
+            $validated['live_chat_provider'],
+            $validated['smartsupp_key'] ?? null,
+            $validated['jivo_widget_id'] ?? null,
+            $validated['chatway_widget_id'] ?? null,
+        );
+
+        $this->audit->log(auth()->id(), 'settings.contact.updated', null, null, [
+            'live_chat_provider' => $validated['live_chat_provider'],
+        ], $request->ip());
+
+        return back()->with('status', __('Contact & live chat settings saved.'));
+    }
+
+    public function updateSocial(Request $request): RedirectResponse
+    {
+        $links = $request->input('links', []);
+        if (is_array($links)) {
+            foreach ($links as $i => $row) {
+                if (isset($row['url']) && $row['url'] === '') {
+                    $links[$i]['url'] = null;
+                }
+            }
+            $request->merge(['links' => $links]);
+        }
+
+        $validated = $request->validate([
+            'links' => ['nullable', 'array'],
+            'links.*.id' => ['nullable', 'integer'],
+            'links.*.platform' => ['nullable', 'string', 'max:60'],
+            'links.*.url' => ['nullable', 'url', 'max:500'],
+            'links.*.icon' => ['nullable', 'string', 'max:60'],
+            'links.*.enabled' => ['nullable', 'boolean'],
+            'links.*.sort_order' => ['nullable', 'integer', 'min:0'],
+            'links.*.delete' => ['nullable', 'boolean'],
+        ]);
+
+        // Normalize empty URL rows before create/update.
+        $normalized = [];
+        foreach ($validated['links'] ?? [] as $row) {
+            if (! empty($row['delete']) && ! empty($row['id'])) {
+                $normalized[] = $row;
+                continue;
+            }
+            if (blank($row['url'] ?? null) || blank($row['platform'] ?? null)) {
+                continue;
+            }
+            $normalized[] = $row;
+        }
+        $validated['links'] = $normalized;
+
+            foreach ($validated['links'] ?? [] as $row) {
+            if (blank($row['platform'] ?? null) || blank($row['url'] ?? null)) {
+                continue;
+            }
+            if (! empty($row['delete']) && ! empty($row['id'])) {
+                SocialLink::query()->whereKey($row['id'])->delete();
+                continue;
+            }
+            if (! empty($row['id'])) {
+                SocialLink::query()->whereKey($row['id'])->update([
+                    'platform' => $row['platform'],
+                    'url' => $row['url'],
+                    'icon' => $row['icon'] ?? $row['platform'],
+                    'enabled' => (bool) ($row['enabled'] ?? true),
+                    'sort_order' => (int) ($row['sort_order'] ?? 0),
+                ]);
+            } else {
+                SocialLink::query()->create([
+                    'platform' => $row['platform'],
+                    'url' => $row['url'],
+                    'icon' => $row['icon'] ?? $row['platform'],
+                    'enabled' => (bool) ($row['enabled'] ?? true),
+                    'sort_order' => (int) ($row['sort_order'] ?? 0),
+                ]);
+            }
+        }
+
+        $this->socialLinks->flush();
+        $this->audit->log(auth()->id(), 'settings.social.updated', null, null, null, $request->ip());
+
+        return back()->with('status', __('Social links saved.'));
+    }
+
+    public function updateEmail(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'brevo_enabled' => ['nullable', 'boolean'],
+            'brevo_api_key' => ['nullable', 'string', 'max:255'],
+            'laravel_mail_enabled' => ['nullable', 'boolean'],
+            'fallback_mailer' => ['nullable', 'in:smtp,sendmail'],
+            'smtp_host' => ['nullable', 'string', 'max:255'],
+            'smtp_port' => ['nullable', 'integer', 'min:1', 'max:65535'],
+            'smtp_encryption' => ['nullable', 'string', 'max:20'],
+            'smtp_username' => ['nullable', 'string', 'max:255'],
+            'smtp_password' => ['nullable', 'string', 'max:255'],
+            'sendmail_path' => ['nullable', 'string', 'max:255'],
+            'identities' => ['nullable', 'array'],
+            'identities.*.from_name' => ['required', 'string', 'max:120'],
+            'identities.*.from_email' => ['required', 'email', 'max:255'],
+            'identities.*.reply_to_email' => ['nullable', 'email', 'max:255'],
+            'identities.*.enabled' => ['nullable', 'boolean'],
+        ]);
+
+        $brevo = IntegrationProvider::forProvider(IntegrationProvider::BREVO);
+        $brevo->enabled = $request->boolean('brevo_enabled');
+        if (filled($validated['brevo_api_key'] ?? null)) {
+            $brevo->mergeCredentials(['api_key' => $validated['brevo_api_key']]);
+        }
+        $brevo->status = $brevo->enabled && filled($brevo->credential('api_key')) ? 'connected' : 'idle';
+        $brevo->save();
+
+        $laravel = IntegrationProvider::forProvider(IntegrationProvider::LARAVEL_MAIL);
+        $laravel->enabled = $request->boolean('laravel_mail_enabled');
+        $creds = [
+            'mailer' => $validated['fallback_mailer'] ?? 'smtp',
+            'host' => $validated['smtp_host'] ?? '',
+            'port' => $validated['smtp_port'] ?? 587,
+            'encryption' => $validated['smtp_encryption'] ?? 'tls',
+            'username' => $validated['smtp_username'] ?? '',
+            'sendmail_path' => $validated['sendmail_path'] ?? '',
         ];
+        if (filled($validated['smtp_password'] ?? null)) {
+            $creds['password'] = $validated['smtp_password'];
+        } else {
+            $creds['password'] = $laravel->credential('password', '');
+        }
+        $laravel->mergeCredentials($creds);
+        $laravel->status = $laravel->enabled ? 'connected' : 'idle';
+        $laravel->save();
 
-        $old = [];
-        foreach ($keys as $key) {
-            $old[$key] = SystemSetting::get($key);
+        foreach ($validated['identities'] ?? [] as $profile => $row) {
+            EmailIdentity::query()->updateOrCreate(
+                ['profile' => $profile],
+                [
+                    'from_name' => $row['from_name'],
+                    'from_email' => $row['from_email'],
+                    'reply_to_email' => $row['reply_to_email'] ?? null,
+                    'enabled' => (bool) ($row['enabled'] ?? true),
+                ]
+            );
         }
 
-        foreach ($keys as $key) {
-            SystemSetting::set($key, (string) ($validated[$key] ?? ''));
-        }
+        $this->contact->flush();
+        $this->audit->log(auth()->id(), 'settings.email.updated', null, null, [
+            'brevo_enabled' => $brevo->enabled,
+            'laravel_mail_enabled' => $laravel->enabled,
+        ], $request->ip());
 
-        $this->audit->log(auth()->id(), 'settings.updated', null, $old, $validated, $request->ip());
-
-        return back()->with('status', __('Platform settings saved.'));
+        return back()->with('status', __('Email settings saved.'));
     }
 
     public function testMail(Request $request): RedirectResponse
@@ -115,36 +305,35 @@ class SettingsController extends Controller
         ]);
 
         $to = $validated['test_email'];
-        $subject = $validated['test_subject'] ?: '7th Trade Hub — test email';
+        $siteName = $this->branding->siteName();
+        $subject = $validated['test_subject'] ?: $siteName.' — test email';
 
         try {
-            Mail::raw(
-                "This is a test email from 7th Trade Hub Admin Settings.\n\nIf you received this, your mail configuration is working.\n\nSent at: ".now()->toDateTimeString(),
-                function ($message) use ($to, $subject) {
-                    $message->to($to)->subject($subject);
-                }
+            $result = $this->emails->sendRaw(
+                $to,
+                $subject,
+                "This is a test email from {$siteName} Admin Settings.\n\nIf you received this, your mail configuration is working.\n\nSent at: ".now()->toDateTimeString(),
+                EmailProfile::NoReply,
             );
 
-            $this->audit->log(
-                auth()->id(),
-                'settings.mail_test',
-                null,
-                null,
-                ['recipient' => $to, 'ok' => true],
-                $request->ip()
-            );
+            $this->audit->log(auth()->id(), 'settings.mail_test', null, null, [
+                'recipient' => $to,
+                'ok' => $result->success,
+                'provider' => $result->provider,
+                'error' => $result->error,
+            ], $request->ip());
 
-            return back()->with('status', __('Test email sent to :email.', ['email' => $to]));
+            if (! $result->success) {
+                return back()->withInput()->withErrors([
+                    'test_email' => 'Mail send failed via '.$result->provider.': '.$result->error,
+                ]);
+            }
+
+            return back()->with('status', __('Test email sent to :email via :provider.', [
+                'email' => $to,
+                'provider' => $result->provider,
+            ]));
         } catch (Throwable $e) {
-            $this->audit->log(
-                auth()->id(),
-                'settings.mail_test',
-                null,
-                null,
-                ['recipient' => $to, 'ok' => false, 'error' => $e->getMessage()],
-                $request->ip()
-            );
-
             return back()->withInput()->withErrors([
                 'test_email' => 'Mail send failed: '.$e->getMessage(),
             ]);
@@ -198,17 +387,10 @@ class SettingsController extends Controller
         ]);
         $clarity->save();
 
-        $this->audit->log(
-            auth()->id(),
-            'settings.analytics.updated',
-            null,
-            null,
-            [
-                'google_enabled' => $googleEnabled,
-                'clarity_enabled' => $clarityEnabled,
-            ],
-            $request->ip()
-        );
+        $this->audit->log(auth()->id(), 'settings.analytics.updated', null, null, [
+            'google_enabled' => $googleEnabled,
+            'clarity_enabled' => $clarityEnabled,
+        ], $request->ip());
 
         return back()->with('status', __('Analytics settings saved.'));
     }
@@ -245,14 +427,17 @@ class SettingsController extends Controller
             ]);
         }
 
-        $this->audit->log(
-            auth()->id(),
-            'settings.analytics.connection_test',
-            null,
-            null,
-            ['provider' => $validated['provider'], 'ok' => $result['ok']],
-            $request->ip()
-        );
+        $provider = IntegrationProvider::forProvider($validated['provider']);
+        if ($result['ok']) {
+            $provider->recordSuccess();
+        } else {
+            $provider->recordFailure($result['message']);
+        }
+
+        $this->audit->log(auth()->id(), 'settings.analytics.connection_test', null, null, [
+            'provider' => $validated['provider'],
+            'ok' => $result['ok'],
+        ], $request->ip());
 
         if (! $result['ok']) {
             return back()->withInput()->withErrors([
@@ -261,5 +446,32 @@ class SettingsController extends Controller
         }
 
         return back()->with('status', $result['message']);
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function syncBrandingMediaUsages(array $validated): void
+    {
+        MediaUsage::query()
+            ->where('usable_type', 'site_branding')
+            ->where('usable_id', 1)
+            ->delete();
+
+        foreach ([
+            'favicon' => $validated['favicon_media_id'] ?? null,
+            'logo_light' => $validated['logo_light_media_id'] ?? null,
+            'logo_dark' => $validated['logo_dark_media_id'] ?? null,
+        ] as $field => $mediaId) {
+            if (! $mediaId) {
+                continue;
+            }
+            MediaUsage::query()->create([
+                'media_asset_id' => (int) $mediaId,
+                'usable_type' => 'site_branding',
+                'usable_id' => 1,
+                'field' => $field,
+            ]);
+        }
     }
 }

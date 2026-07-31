@@ -114,6 +114,14 @@ class ThemeManager
     public function asset(string $key, string $theme): ?string
     {
         $theme = $this->isValidResolvedTheme($theme) ? $theme : $this->fallbackTheme();
+
+        if ($key === 'logo') {
+            $uploaded = $this->brandingLogoUrl($theme);
+            if ($uploaded) {
+                return $uploaded;
+            }
+        }
+
         $assets = (array) Arr::get($this->definition($theme), 'assets', []);
         $path = $assets[$key] ?? null;
 
@@ -127,10 +135,42 @@ class ThemeManager
         }
 
         $otherTheme = $theme === self::PREFERENCE_LIGHT ? self::PREFERENCE_DARK : self::PREFERENCE_LIGHT;
+        if ($key === 'logo') {
+            $otherUploaded = $this->brandingLogoUrl($otherTheme);
+            if ($otherUploaded) {
+                return $otherUploaded;
+            }
+        }
         $otherAssets = (array) Arr::get($this->definition($otherTheme), 'assets', []);
         $other = $otherAssets[$key] ?? null;
 
         return is_string($other) && $other !== '' ? $other : null;
+    }
+
+    private function brandingLogoUrl(string $theme): ?string
+    {
+        try {
+            $branding = app(\App\Services\Branding\SiteBrandingRepository::class)->all();
+        } catch (\Throwable) {
+            return null;
+        }
+
+        $mediaId = $theme === self::PREFERENCE_DARK
+            ? ($branding['logo_dark_media_id'] ?? null)
+            : ($branding['logo_light_media_id'] ?? null);
+
+        if (! $mediaId) {
+            // Prefer the other theme upload over static PNG when only one is set.
+            $mediaId = $theme === self::PREFERENCE_DARK
+                ? ($branding['logo_light_media_id'] ?? null)
+                : ($branding['logo_dark_media_id'] ?? null);
+        }
+
+        if (! $mediaId) {
+            return null;
+        }
+
+        return media_url_from_id((int) $mediaId, null, 'original');
     }
 
     /**

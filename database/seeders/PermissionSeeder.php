@@ -20,6 +20,7 @@ class PermissionSeeder extends Seeder
         'admins.manage',
         'users.manage',
         'finance.manage',
+        'fees.manage',
         'support.manage',
         'catalog.manage',
         'compliance.manage',

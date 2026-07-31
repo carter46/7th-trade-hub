@@ -20,6 +20,12 @@ class SystemSettingSeeder extends Seeder
             'contact_phone' => '',
             'contact_email' => '',
             'contact_email_alt' => '',
+            'site_name' => config('app.name', '7th Trade Hub'),
+            'site_short_name' => 'Trade Hub',
+            'site_heading' => 'The Ultimate Digital Service Marketplace',
+            'site_tagline' => 'Connecting markets, empowering traders.',
+            'site_meta_description' => 'NGN wallet marketplace. Deposit, buy with escrow, sell digital products and services.',
+            'contact_timezone' => 'Africa/Lagos',
         ];
 
         foreach ($defaults as $key => $value) {

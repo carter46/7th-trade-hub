@@ -11,13 +11,25 @@
     $dark = $themes->asset($key, 'dark');
     $current = $themes->asset($key, $resolved);
 @endphp
+@php
+    $resolveSrc = static function (?string $path): string {
+        if (! $path) {
+            return '';
+        }
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '/storage/')) {
+            return $path;
+        }
+
+        return asset($path);
+    };
+@endphp
 @if ($current)
 <img
     {{ $attributes->merge(['class' => $class, 'alt' => $alt]) }}
-    src="{{ asset($current) }}"
+    src="{{ $resolveSrc($current) }}"
     data-theme-asset="{{ $key }}"
-    data-src-light="{{ $light ? asset($light) : '' }}"
-    data-src-dark="{{ $dark ? asset($dark) : '' }}"
+    data-src-light="{{ $resolveSrc($light) }}"
+    data-src-dark="{{ $resolveSrc($dark) }}"
     x-data
     x-init="
         const sync = (theme) => {

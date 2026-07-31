@@ -11,6 +11,8 @@ use App\Models\PlatformProduct;
 use App\Models\PlatformProductImage;
 use App\Models\ProductType;
 use App\Models\ServiceCategory;
+use App\Models\SystemSetting;
+use App\Services\Branding\SiteBrandingRepository;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -181,6 +183,22 @@ class MediaUsageService
             if ($field === 'gallery') {
                 $this->rewriteGalleryPaths($model, $old, $new);
             }
+
+            return;
+        }
+
+        if ($type === 'site_branding') {
+            $settingKey = match ($field) {
+                'favicon' => 'favicon_media_id',
+                'logo_light' => 'logo_light_media_id',
+                'logo_dark' => 'logo_dark_media_id',
+                default => null,
+            };
+            if ($settingKey === null) {
+                return;
+            }
+            SystemSetting::set($settingKey, (string) $new->id);
+            app(SiteBrandingRepository::class)->flush();
         }
     }
 

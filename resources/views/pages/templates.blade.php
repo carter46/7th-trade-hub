@@ -1,6 +1,6 @@
 @extends('layouts.marketing')
 
-@section('title', 'Document Templates | 7th Trade Hub')
+@section('title', 'Document Templates')
 
 @section('content')
 <section class="py-14 sm:py-20">

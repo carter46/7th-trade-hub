@@ -21,6 +21,10 @@ abstract class TestCase extends BaseTestCase
             $this->seed(PermissionSeeder::class);
         }
 
+        if (Schema::hasTable('integration_providers')) {
+            $this->seed(\Database\Seeders\CommunicationsSeeder::class);
+        }
+
         if (Schema::hasTable('categories')) {
             $this->seed(\Database\Seeders\CategorySeeder::class);
         }

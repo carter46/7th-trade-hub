@@ -72,6 +72,13 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\Notifications\NotificationDispatcher::class);
         $this->app->singleton(ThemeManager::class);
         $this->app->singleton(\App\Services\Media\MediaPathService::class);
+        $this->app->singleton(\App\Services\Branding\SiteBrandingRepository::class);
+        $this->app->singleton(\App\Services\Communications\Contact\PlatformContactRepository::class);
+        $this->app->singleton(\App\Services\Communications\Social\SocialLinkRepository::class);
+        $this->app->singleton(\App\Services\Communications\LiveChat\LiveChatManager::class);
+        $this->app->singleton(\App\Services\Communications\Email\EmailService::class);
+        $this->app->singleton(\App\Services\Communications\Email\Providers\BrevoApiProvider::class);
+        $this->app->singleton(\App\Services\Communications\Email\Providers\LaravelMailProvider::class);
 
         $this->app->singleton(UserActivityRecorder::class);
         $this->app->singleton(GoogleAnalyticsProvider::class);
@@ -89,6 +96,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->registerAnalyticsListeners();
+        $this->applySiteBrandingConfig();
 
         View::composer(['layouts.dashboard-user', 'layouts.dashboard-admin'], function ($view) {
             /** @var ThemeManager $themes */
@@ -105,11 +113,32 @@ class AppServiceProvider extends ServiceProvider
                     ->value('name');
             }
 
+            $branding = app(\App\Services\Branding\SiteBrandingRepository::class)->all();
+
             $view->with([
                 'dashboardThemePreference' => $preference,
                 'dashboardThemeResolved' => $resolved,
                 'dashboardThemePayload' => $payload,
                 'impersonatorName' => $impersonatorName,
+                'siteName' => $branding['site_name'],
+                'siteBranding' => $branding,
+            ]);
+        });
+
+        View::composer(['layouts.marketing', 'layouts.auth', 'components.layouts.auth', 'auth.login', 'auth.register', 'pages.home'], function ($view) {
+            $branding = app(\App\Services\Branding\SiteBrandingRepository::class)->all();
+            $footer = \App\ViewModels\FooterViewModel::make();
+            $favicon = $branding['favicon_media_id']
+                ? media_url_from_id($branding['favicon_media_id'], null, 'original')
+                : null;
+
+            $view->with([
+                'siteName' => $branding['site_name'],
+                'siteHeading' => $branding['heading'],
+                'siteTagline' => $branding['tagline'],
+                'siteBranding' => $branding,
+                'footer' => $footer,
+                'faviconUrl' => $favicon,
             ]);
         });
 
@@ -127,6 +156,31 @@ class AppServiceProvider extends ServiceProvider
                 'analyticsHeatmapScript' => $clarity->isEnabled() ? $clarity->script() : null,
             ]);
         });
+    }
+
+    private function applySiteBrandingConfig(): void
+    {
+        try {
+            if (! \Illuminate\Support\Facades\Schema::hasTable('system_settings')) {
+                return;
+            }
+            $branding = app(\App\Services\Branding\SiteBrandingRepository::class)->all();
+            $name = $branding['site_name'] ?? '';
+            if ($name !== '') {
+                config(['app.name' => $name]);
+                config([
+                    'pwa.manifest.name' => $name,
+                    'pwa.manifest.short_name' => ($branding['site_short_name'] ?? '') !== ''
+                        ? $branding['site_short_name']
+                        : $name,
+                    'pwa.manifest.description' => ($branding['meta_description'] ?? '') !== ''
+                        ? $branding['meta_description']
+                        : config('pwa.manifest.description'),
+                ]);
+            }
+        } catch (\Throwable) {
+            // Database may be unavailable during early boot / package discovery.
+        }
     }
 
     private function registerAnalyticsListeners(): void

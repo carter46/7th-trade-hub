@@ -1,12 +1,10 @@
-{{-- Live chat widget — Smartsupp or Jivo (only on Contact page). Keys from SystemSetting. --}}
+{{-- Live chat widget — Smartsupp / Jivo / Chatway via LiveChatManager. --}}
 @php
-    $provider = strtolower(trim((string) \App\Models\SystemSetting::get('live_chat_provider', 'none')));
-    $smartsuppKey = trim((string) \App\Models\SystemSetting::get('smartsupp_key', ''));
-    $jivoWidgetId = trim((string) \App\Models\SystemSetting::get('jivo_widget_id', ''));
-
-    if ($provider === '' || ! in_array($provider, ['smartsupp', 'jivo', 'none'], true)) {
-        $provider = $smartsuppKey !== '' ? 'smartsupp' : 'none';
-    }
+    $chat = app(\App\Services\Communications\LiveChat\LiveChatManager::class)->resolved();
+    $provider = $chat['provider'];
+    $smartsuppKey = (string) ($chat['credentials']['key'] ?? '');
+    $jivoWidgetId = $provider === 'jivo' ? (string) ($chat['credentials']['widget_id'] ?? '') : '';
+    $chatwayWidgetId = $provider === 'chatway' ? (string) ($chat['credentials']['widget_id'] ?? '') : '';
 @endphp
 
 @if($provider === 'smartsupp' && $smartsuppKey !== '')
@@ -54,10 +52,14 @@
   if (window.__tthLiveChatLoaded) return;
   window.__tthLiveChatLoaded = true;
   var s = document.createElement('script');
-  s.src = @json('https://code.jivosite.com/widget/'.$jivoId);
+  s.type = 'text/javascript';
   s.async = true;
-  document.getElementsByTagName('head')[0].appendChild(s);
+  s.src = @json('https://code.jivosite.com/script/widget/'.$jivoId);
+  var ss = document.getElementsByTagName('script')[0];
+  ss.parentNode.insertBefore(s, ss);
 })();
 </script>
 @endif
+@elseif($provider === 'chatway' && $chatwayWidgetId !== '')
+<script id="chatway" async="true" src="{{ 'https://cdn.chatway.app/widget.js?id='.$chatwayWidgetId }}"></script>
 @endif

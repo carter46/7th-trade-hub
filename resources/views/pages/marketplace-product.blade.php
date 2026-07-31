@@ -5,7 +5,7 @@
     $metaDescription = $content['seo_description'] ?: ($content['og_description'] ?: ($content['short_description'] ?? $content['hero_subtitle']));
 @endphp
 
-@section('title', $pageTitle.' | 7th Trade Hub')
+@section('title', $pageTitle)
 @section('meta_description', $metaDescription)
 @section('og_image', $content['og_image'] ?? '')
 

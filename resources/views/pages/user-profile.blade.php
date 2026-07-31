@@ -1,6 +1,6 @@
 @extends('layouts.marketing')
 
-@section('title', $username . ' | 7th Trade Hub')
+@section('title', $username)
 
 @section('content')
 <section class="py-8">

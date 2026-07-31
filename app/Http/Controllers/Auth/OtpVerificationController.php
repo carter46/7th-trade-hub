@@ -4,12 +4,13 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Mail\OtpVerificationMail;
+use App\Services\Communications\Email\EmailProfile;
+use App\Services\Communications\Email\EmailService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -129,6 +130,14 @@ class OtpVerificationController extends Controller
             'updated_at' => now(),
         ]);
 
-        Mail::to($user->email)->send(new OtpVerificationMail($code));
+        $mailable = new OtpVerificationMail($code);
+        $html = view('emails.otp-verification', ['code' => $code])->render();
+        app(EmailService::class)->sendMailableHtml(
+            to: $user->email,
+            subject: $mailable->envelope()->subject ?? 'Verify your email',
+            html: $html,
+            profile: EmailProfile::NoReply,
+            templateKey: 'verification',
+        );
     }
 }

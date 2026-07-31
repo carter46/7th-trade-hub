@@ -56,8 +56,8 @@ class HelpCenterTest extends TestCase
             ->assertOk()
             ->assertSee('Contact & Support')
             ->assertSee('Direct contact methods')
-            ->assertSee('Go to Help Center')
-            ->assertSee('Live chat is not enabled yet', false);
+            ->assertSee('Support tickets')
+            ->assertDontSee('Live chat is not enabled yet');
     }
 
     public function test_help_article_contains_section_anchors(): void

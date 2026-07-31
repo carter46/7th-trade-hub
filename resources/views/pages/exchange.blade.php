@@ -1,6 +1,6 @@
 @extends('layouts.marketing')
 
-@section('title', 'Crypto Exchange | 7th Trade Hub')
+@section('title', 'Crypto Exchange')
 
 @section('content')
 @php

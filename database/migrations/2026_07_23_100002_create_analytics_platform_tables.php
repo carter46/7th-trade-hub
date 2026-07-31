@@ -76,23 +76,8 @@ return new class extends Migration
             });
         }
 
-        if (Schema::hasTable('analytics_providers')) {
-            $now = now();
-            foreach ([
-                ['provider' => 'google_analytics', 'enabled' => false, 'status' => 'idle'],
-                ['provider' => 'microsoft_clarity', 'enabled' => false, 'status' => 'idle'],
-            ] as $row) {
-                if (! DB::table('analytics_providers')->where('provider', $row['provider'])->exists()) {
-                    DB::table('analytics_providers')->insert([
-                        'provider' => $row['provider'],
-                        'enabled' => $row['enabled'],
-                        'status' => $row['status'],
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ]);
-                }
-            }
-        }
+        // Providers are seeded into integration_providers (see communications migration).
+        // Do not write new rows to legacy analytics_providers.
     }
 
     public function down(): void

@@ -5,9 +5,12 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
         @php
-            $defaultDescription = '7th Trade Hub — NGN wallet marketplace. Deposit, buy with escrow, sell digital products and services.';
+            $siteName = $siteName ?? config('app.name', '7th Trade Hub');
+            $defaultDescription = ($siteBranding['meta_description'] ?? null)
+                ?: ($siteName.' — NGN wallet marketplace. Deposit, buy with escrow, sell digital products and services.');
             $defaultOgDescription = 'NGN wallet marketplace with escrow-protected purchases.';
-            $resolvedTitle = trim($__env->yieldContent('title') ?: '7th Trade Hub');
+            $pageTitle = trim($__env->yieldContent('title') ?: '');
+            $resolvedTitle = $pageTitle !== '' ? ($pageTitle.' | '.$siteName) : $siteName;
             $resolvedOgTitle = $__env->hasSection('og_title')
                 ? trim($__env->yieldContent('og_title'))
                 : $resolvedTitle;
@@ -15,9 +18,13 @@
             $resolvedOgDescription = $__env->hasSection('og_description')
                 ? trim($__env->yieldContent('og_description'))
                 : ($__env->yieldContent('meta_description') ?: $defaultOgDescription);
+            $logoUrl = $footer->logoDarkUrl ?? asset('assets/images/white_originla_logo.png');
         @endphp
         <title>{{ $resolvedTitle }}</title>
         <meta name="description" content="{{ $resolvedDescription }}">
+        @if(!empty($faviconUrl))
+            <link rel="icon" href="{{ $faviconUrl }}">
+        @endif
         <link rel="canonical" href="{{ url()->current() }}">
         <meta property="og:title" content="{{ $resolvedOgTitle }}">
         <meta property="og:description" content="{{ $resolvedOgDescription }}">
@@ -40,8 +47,8 @@
         <header class="fixed top-0 w-full z-50 glassmorphism border-b border-white/10">
             <nav class="max-w-marketing mx-auto px-5 sm:px-6 h-20 flex items-center justify-between gap-3">
                 <a class="flex items-center gap-2 min-w-0" href="{{ route('home') }}">
-                    <div class="w-10 h-10 shrink-0 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center font-bold text-xl shadow-lg">7</div>
-                    <span class="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400 font-display truncate">7th Trade Hub</span>
+                    <img src="{{ $logoUrl }}" alt="{{ $siteName }}" class="h-10 w-auto max-w-[160px] object-contain">
+                    <span class="sr-only">{{ $siteName }}</span>
                 </a>
 
                 <div class="hidden lg:flex items-center space-x-8 text-sm font-medium text-slate-300">
@@ -110,8 +117,7 @@
             >
                 <div class="flex items-center justify-between px-5 py-4 border-b border-white/10">
                     <a class="flex items-center gap-2" href="{{ route('home') }}" @click="close()">
-                        <div class="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center font-bold shadow-lg">7</div>
-                        <span class="text-base font-bold font-display">7th Trade Hub</span>
+                        <img src="{{ $logoUrl }}" alt="{{ $siteName }}" class="h-8 w-auto max-w-[140px] object-contain">
                     </a>
                     <button
                         type="button"
@@ -148,12 +154,12 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
                     <div>
                         <div class="flex items-center gap-2 mb-6">
-                            <div class="w-8 h-8 bg-primary rounded flex items-center justify-center font-bold">7</div>
-                            <span class="text-xl font-bold font-display">7th Trade Hub</span>
+                            <img src="{{ $logoUrl }}" alt="{{ $siteName }}" class="h-8 w-auto max-w-[160px] object-contain">
                         </div>
                         <p class="text-slate-500 text-sm leading-relaxed">
-                            Leading the digital marketplace revolution with secure, transparent, and efficient trade solutions for global users.
+                            {{ $footer->tagline ?? 'Leading the digital marketplace revolution with secure, transparent, and efficient trade solutions for global users.' }}
                         </p>
+                        <x-ui.social-links :links="$footer->socialLinks" class="flex flex-wrap items-center gap-3 mt-5" />
                     </div>
                     <div>
                         <h4 class="text-white font-bold mb-6 font-display">Platform</h4>
@@ -183,6 +189,21 @@
                                 <li><a class="hover:text-accent transition-colors" href="{{ route('register') }}">Register</a></li>
                             @endauth
                         </ul>
+                        @php
+                            $fc = $footer->contact ?? [];
+                            $footerPhone = $fc['phone_support'] ?? $fc['phone_general'] ?? '';
+                            $footerEmail = $fc['email_support'] ?? $fc['email_info'] ?? '';
+                        @endphp
+                        @if($footerPhone !== '' || $footerEmail !== '')
+                            <ul class="mt-6 space-y-2 text-slate-500 text-sm">
+                                @if($footerPhone !== '')
+                                    <li><a class="hover:text-accent transition-colors" href="tel:{{ preg_replace('/\s+/', '', $footerPhone) }}">{{ $footerPhone }}</a></li>
+                                @endif
+                                @if($footerEmail !== '')
+                                    <li><a class="hover:text-accent transition-colors break-all" href="mailto:{{ $footerEmail }}">{{ $footerEmail }}</a></li>
+                                @endif
+                            </ul>
+                        @endif
                     </div>
                     <div>
                         <h4 class="text-white font-bold mb-6 font-display">Legal</h4>
@@ -195,7 +216,7 @@
                 </div>
 
                 <div class="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-slate-600 text-xs font-bold uppercase tracking-wider">
-                    <p>© {{ now()->year }} 7th Trade Hub. All rights reserved.</p>
+                    <p>© {{ now()->year }} {{ $siteName }}. All rights reserved.</p>
                     <div class="flex flex-wrap justify-center gap-6">
                         <a class="hover:text-white transition-colors" href="{{ route('legal', ['doc' => 'terms']) }}">Terms</a>
                         <a class="hover:text-white transition-colors" href="{{ route('legal', ['doc' => 'privacy']) }}">Privacy</a>
@@ -207,6 +228,8 @@
         </footer>
 
         <x-ui.toast />
+
+        @include('partials.marketing.live-chat-widget')
 
         @RegisterServiceWorkerScript
     </body>

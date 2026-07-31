@@ -1,6 +1,6 @@
 @extends('layouts.marketing')
 
-@section('title', '7th Trade Hub | The Ultimate Digital Service Marketplace')
+@section('title', $siteHeading ?? 'The Ultimate Digital Service Marketplace')
 
 @section('content')
     @php
@@ -31,9 +31,10 @@
             ],
         ];
 
+        $brandName = $siteName ?? config('app.name', '7th Trade Hub');
         $faqs = [
             [
-                'q' => 'What can I do on 7th Trade Hub?',
+                'q' => 'What can I do on '.$brandName.'?',
                 'a' => 'You can fund your NGN wallet, buy or sell digital services, swap crypto to cash, grow social accounts, download templates, and buy or sell websites — all in one place.',
             ],
             [
@@ -142,7 +143,7 @@
         <div class="relative z-10 w-full max-w-marketing mx-auto px-5 sm:px-6">
             <div class="mx-auto max-w-3xl text-center">
                 <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold mb-5 sm:mb-7 tracking-tight text-white leading-[1.15] font-display">
-                    The Ultimate <span class="text-transparent bg-clip-text bg-gradient-to-r from-accent to-primary">Digital Service</span> Marketplace
+                    {{ $siteHeading ?? 'The Ultimate Digital Service Marketplace' }}
                 </h1>
                 <p class="mx-auto max-w-xl text-slate-400 text-sm sm:text-base lg:text-lg mb-8 sm:mb-10 leading-relaxed">
                     Buy and sell digital services, swap crypto to cash, grow social accounts, and get ready-made templates — all in one hub.
@@ -274,7 +275,7 @@
                 <div class="absolute -bottom-24 -right-24 w-64 h-64 bg-accent/20 blur-3xl rounded-full"></div>
                 <div class="relative z-10">
                     <h2 class="text-3xl lg:text-5xl font-bold mb-6 sm:mb-8 font-display">Ready to elevate your trade?</h2>
-                    <p class="text-slate-400 mb-8 sm:mb-10 max-w-xl mx-auto text-lg">Join thousands of entrepreneurs and traders leveraging the 7th Trade Hub ecosystem for their digital growth.</p>
+                    <p class="text-slate-400 mb-8 sm:mb-10 max-w-xl mx-auto text-lg">Join thousands of entrepreneurs and traders leveraging the {{ $brandName }} ecosystem for their digital growth.</p>
                     <a class="px-10 py-5 bg-white text-dark font-bold rounded-2xl hover:bg-slate-200 transition-all shadow-xl font-display inline-block" href="{{ route('register') }}">
                         Create Your Free Account
                     </a>

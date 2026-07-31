@@ -1,12 +1,15 @@
 @extends('layouts.marketing')
 
-@section('title', ($document['label'] ?? 'Legal').' | 7th Trade Hub')
+@section('title', ($document['label'] ?? 'Legal'))
 
 @section('content')
 @php
     $documents = config('legal.documents', []);
     $updatedAt = config('legal.updated_at');
-    $legalEmail = config('legal.contact.email');
+    $contact = app(\App\Services\Communications\Contact\PlatformContactRepository::class)->all();
+    $legalEmail = config('legal.contact.email')
+        ?: ($contact['email_support'] ?? null)
+        ?: ($contact['email_info'] ?? null);
     $activeKey = $activeDoc ?? 'terms';
     if (! isset($documents[$activeKey])) {
         $activeKey = array_key_first($documents) ?: 'terms';
@@ -25,7 +28,7 @@
         ['label' => $document['label'] ?? 'Documents'],
     ],
     'title' => $document['label'] ?? 'Legal',
-    'subtitle' => $document['intro'] ?? 'Terms of Service and Privacy Policy for 7th Trade Hub.',
+    'subtitle' => $document['intro'] ?? ('Terms of Service and Privacy Policy for '.($siteName ?? config('app.name')).'.'),
     'image' => 'assets/images/employee-working-with-document copy.jpg',
 ])
 

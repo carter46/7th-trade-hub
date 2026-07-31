@@ -2,10 +2,14 @@
     <main class="w-full max-w-auth mx-auto" data-purpose="auth-wrapper">
         <div class="text-center mb-8" data-purpose="branding">
             <a href="{{ route('home') }}" class="inline-flex flex-col items-center gap-3 group">
-                <div class="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center font-bold text-xl text-white shadow-lg">7</div>
-                <h1 class="text-3xl font-bold text-white tracking-tight group-hover:text-accent transition-colors">7th Trade Hub</h1>
+                @if(!empty($footer?->logoDarkUrl))
+                    <img src="{{ $footer->logoDarkUrl }}" alt="{{ $siteName ?? config('app.name') }}" class="h-12 w-auto max-w-[160px] object-contain">
+                @else
+                    <div class="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center font-bold text-xl text-white shadow-lg">7</div>
+                @endif
+                <h1 class="text-3xl font-bold text-white tracking-tight group-hover:text-accent transition-colors">{{ $siteName ?? config('app.name') }}</h1>
             </a>
-            <p class="text-text-secondary mt-2">Connecting markets, empowering traders.</p>
+            <p class="text-text-secondary mt-2">{{ $siteTagline ?? 'Connecting markets, empowering traders.' }}</p>
         </div>
 
         {{-- Login Section --}}

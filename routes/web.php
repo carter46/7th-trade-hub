@@ -66,18 +66,16 @@ Route::get('/help/{slug}', function (string $slug) {
     ]);
 })->where('slug', '[a-z0-9\-]+')->name('help.article');
 Route::get('/contact', function () {
-    $provider = strtolower(trim((string) \App\Models\SystemSetting::get('live_chat_provider', 'none')));
-    $smartsuppKey = trim((string) \App\Models\SystemSetting::get('smartsupp_key', ''));
-    $jivoId = trim((string) \App\Models\SystemSetting::get('jivo_widget_id', ''));
-    $chatEnabled = ($provider === 'smartsupp' && $smartsuppKey !== '')
-        || ($provider === 'jivo' && $jivoId !== '');
+    $chat = app(\App\Services\Communications\LiveChat\LiveChatManager::class)->resolved();
+    $contact = app(\App\Services\Communications\Contact\PlatformContactRepository::class)->all();
+    $socials = app(\App\Services\Communications\Social\SocialLinkRepository::class)->enabled();
 
     return view('pages.contact', [
-        'contactPhone' => \App\Models\SystemSetting::get('contact_phone', ''),
-        'contactEmail' => \App\Models\SystemSetting::get('contact_email', ''),
-        'contactEmailAlt' => \App\Models\SystemSetting::get('contact_email_alt', ''),
-        'liveChatProvider' => $provider,
-        'chatEnabled' => $chatEnabled,
+        'contact' => $contact,
+        'socialLinks' => $socials,
+        'liveChat' => $chat,
+        'chatEnabled' => (bool) $chat['enabled'],
+        'formattedAddress' => app(\App\Services\Communications\Contact\PlatformContactRepository::class)->formattedAddress(),
     ]);
 })->name('contact');
 Route::get('/legal', function (\Illuminate\Http\Request $request) {
@@ -395,11 +393,19 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::delete('/media/{mediaAsset}', [MediaLibraryController::class, 'destroy'])->name('.media.destroy');
         Route::post('/media/{mediaAsset}/replace', [MediaLibraryController::class, 'replace'])->name('.media.replace');
         Route::get('/settings', [AdminSettingsController::class, 'index'])->name('.settings');
-        Route::post('/settings', [AdminSettingsController::class, 'update'])->name('.settings.update');
+        Route::post('/settings/branding', [AdminSettingsController::class, 'updateBranding'])->name('.settings.branding');
+        Route::post('/settings/contact', [AdminSettingsController::class, 'updateContact'])->name('.settings.contact');
+        Route::post('/settings/social', [AdminSettingsController::class, 'updateSocial'])->name('.settings.social');
+        Route::post('/settings/email', [AdminSettingsController::class, 'updateEmail'])->name('.settings.email');
         Route::post('/settings/test-mail', [AdminSettingsController::class, 'testMail'])->name('.settings.test-mail');
         Route::post('/settings/analytics', [AdminSettingsController::class, 'updateAnalytics'])->name('.settings.analytics');
         Route::post('/settings/analytics/test', [AdminSettingsController::class, 'testAnalyticsConnection'])->name('.settings.analytics.test');
         Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('.audit-logs');
+    });
+
+    Route::middleware('permission:fees.manage')->group(function () {
+        Route::get('/fees-limits', [\App\Modules\Admin\Http\Controllers\FeesLimitsController::class, 'index'])->name('.fees-limits');
+        Route::post('/fees-limits', [\App\Modules\Admin\Http\Controllers\FeesLimitsController::class, 'update'])->name('.fees-limits.update');
     });
 
     Route::middleware('permission:analytics.view|system.manage|finance.manage|support.manage|compliance.manage|catalog.manage')->group(function () {

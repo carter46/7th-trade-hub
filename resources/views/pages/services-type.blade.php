@@ -1,6 +1,6 @@
 @extends('layouts.marketing')
 
-@section('title', ($content['label'] ?? 'Services').' | 7th Trade Hub')
+@section('title', ($content['label'] ?? 'Services'))
 
 @section('content')
 @php
