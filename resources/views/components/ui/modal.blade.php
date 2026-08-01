@@ -50,12 +50,16 @@
             });
         },
         closeModal() {
+            if (! this.open) {
+                return;
+            }
             this.open = false;
+            this.$dispatch('close-modal', '{{ $name }}');
             this.$nextTick(() => this.previouslyFocused?.focus?.());
         },
     }"
-    x-on:open-modal.window="if (($event.detail === '{{ $name }}') || ($event.detail && $event.detail.id === '{{ $name }}')) openModal()"
-    x-on:close-modal.window="if (($event.detail === '{{ $name }}') || ($event.detail && $event.detail.id === '{{ $name }}')) closeModal()"
+    x-on:open-modal.window="const d = $event.detail; if (d === '{{ $name }}' || d?.id === '{{ $name }}' || d?.[0] === '{{ $name }}') openModal()"
+    x-on:close-modal.window="const d = $event.detail; if ((d === '{{ $name }}' || d?.id === '{{ $name }}' || d?.[0] === '{{ $name }}') && open) closeModal()"
     {{ $attributes }}
 >
     <template x-teleport="body">

@@ -68,15 +68,24 @@
                     @csrf
                     <x-dashboard.button type="submit" variant="success" size="sm">Restore</x-dashboard.button>
                 </form>
-                <form
-                    method="POST"
-                    action="{{ route('admin.users.destroy', $user) }}"
-                    onsubmit="return confirm('Permanently delete this user? Personal data will be anonymized and cannot be undone.');"
+                <x-dashboard.button
+                    type="button"
+                    variant="danger"
+                    size="sm"
+                    x-on:click="$dispatch('open-modal', 'delete-user-{{ $user->id }}')"
                 >
-                    @csrf
-                    @method('DELETE')
-                    <x-dashboard.button type="submit" variant="danger" size="sm">Permanently Delete</x-dashboard.button>
-                </form>
+                    Permanently Delete
+                </x-dashboard.button>
+                <x-dashboard.modal
+                    name="delete-user-{{ $user->id }}"
+                    title="Permanently delete this user?"
+                    variant="danger"
+                    confirm-label="Permanently Delete"
+                    :form-action="route('admin.users.destroy', $user)"
+                    method="DELETE"
+                >
+                    This anonymizes personal data and cannot be undone.
+                </x-dashboard.modal>
             @else
                 <form method="POST" action="{{ route('admin.users.suspend', $user) }}">
                     @csrf
