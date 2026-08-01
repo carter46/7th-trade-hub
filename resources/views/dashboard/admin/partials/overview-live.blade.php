@@ -13,6 +13,23 @@
     @endif
 </section>
 
+@if (! empty($quickActions))
+    <section id="command-quick-actions" class="space-y-4">
+        <x-dashboard.command.section-label title="Platform Quick Actions" accent="indigo" />
+        <div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+            @foreach ($quickActions as $action)
+                <x-dashboard.command.quick-action
+                    :title="$action['title']"
+                    :subtitle="$action['subtitle'] ?? null"
+                    :icon="$action['icon']"
+                    :href="$action['href']"
+                    :accent="$action['accent'] ?? 'emerald'"
+                />
+            @endforeach
+        </div>
+    </section>
+@endif
+
 <section id="command-growth" class="space-y-4">
     <x-dashboard.command.section-label title="Growth & Performance" accent="blue" />
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-12">

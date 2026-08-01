@@ -6,10 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>{{ $title ?? (config('app.name').' - Authentication') }}</title>
-    @if(!empty($faviconUrl))
-        <link rel="icon" href="{{ $faviconUrl }}">
-    @endif
-    @PwaHead
+    @include('partials.branding.head-icons')
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

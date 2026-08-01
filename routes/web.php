@@ -12,6 +12,7 @@ use App\Http\Controllers\Account\AccountController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Dev\DevUiController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RobotsController;
 use App\Http\Controllers\SitemapController;
 use App\Modules\Admin\Http\Controllers\AuditLogController;
 use App\Modules\Admin\Http\Controllers\CryptoSellController as AdminCryptoSellController;
@@ -115,6 +116,7 @@ Route::get('/marketplace/{category}/{product}', [MarketplaceController::class, '
 Route::get('/marketplace/{segment}', [MarketplaceController::class, 'segment'])
     ->where('segment', '[A-Za-z0-9\-_]+')
     ->name('marketplace.show');
+Route::get('/robots.txt', RobotsController::class)->name('robots');
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 
 Route::get('/services', [\App\Modules\Catalog\Http\Controllers\ServiceController::class, 'index'])->name('services');

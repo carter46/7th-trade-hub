@@ -198,11 +198,9 @@ class AppServiceProvider extends ServiceProvider
             }
 
             // Backfill PWA icons once when branding media exists but generated icons do not.
-            $hasBrandingImage = filled($branding['favicon_media_id'] ?? null)
-                || filled($branding['logo_light_media_id'] ?? null)
-                || filled($branding['logo_dark_media_id'] ?? null);
-            if ($hasBrandingImage && ! is_file(public_path('icons/icon-512x512.png'))) {
-                app(\App\Services\Branding\PwaBrandingSync::class)->sync($branding);
+            $pwa = app(\App\Services\Branding\PwaBrandingSync::class);
+            if (! $pwa->iconsExist()) {
+                $pwa->sync($branding);
             }
         } catch (\Throwable) {
             // Database may be unavailable during early boot / package discovery.

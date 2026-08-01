@@ -19,23 +19,6 @@
         @include('dashboard.admin.partials.overview-live')
     </div>
 
-    @if (! empty($quickActions))
-        <section class="space-y-4">
-            <x-dashboard.command.section-label title="Platform Quick Actions" accent="indigo" />
-            <div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-                @foreach ($quickActions as $action)
-                    <x-dashboard.command.quick-action
-                        :title="$action['title']"
-                        :subtitle="$action['subtitle'] ?? null"
-                        :icon="$action['icon']"
-                        :href="$action['href']"
-                        :accent="$action['accent'] ?? 'emerald'"
-                    />
-                @endforeach
-            </div>
-        </section>
-    @endif
-
     <section class="space-y-4">
         <x-dashboard.command.section-label title="Operations & Health" accent="orange" />
 

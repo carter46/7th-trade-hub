@@ -4,7 +4,7 @@
     <url>
         <loc>{{ $url['loc'] }}</loc>
 @if(!empty($url['lastmod']))
-        <lastmod>{{ $url['lastmod']->toAtomString() }}</lastmod>
+        <lastmod>{{ $url['lastmod'] }}</lastmod>
 @endif
         <changefreq>{{ $url['changefreq'] ?? 'weekly' }}</changefreq>
         <priority>{{ $url['priority'] ?? '0.5' }}</priority>

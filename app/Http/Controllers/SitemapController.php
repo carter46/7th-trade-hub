@@ -2,18 +2,40 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\PlatformProductType;
 use App\Models\Category;
 use App\Models\Listing;
 use App\Models\MarketplaceProduct;
 use App\Models\PlatformProduct;
+use App\Modules\Catalog\Services\CatalogBrowseService;
+use App\Support\HelpContent;
+use Carbon\CarbonInterface;
 use Illuminate\Http\Response;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
+use Throwable;
 
 class SitemapController extends Controller
 {
+    public function __construct(private CatalogBrowseService $browse) {}
+
     public function index(): Response
     {
+        $urls = Cache::remember('sitemap.xml.v2', now()->addHour(), fn () => $this->buildUrls());
+
+        return response()
+            ->view('sitemap', ['urls' => $urls])
+            ->header('Content-Type', 'application/xml; charset=UTF-8');
+    }
+
+    /**
+     * @return list<array{loc: string, lastmod?: string, priority: string, changefreq: string}>
+     */
+    private function buildUrls(): array
+    {
+        $urls = [];
+
         $staticRoutes = [
             'home' => ['priority' => '1.0', 'changefreq' => 'daily'],
             'marketplace' => ['priority' => '0.9', 'changefreq' => 'daily'],
@@ -27,133 +49,166 @@ class SitemapController extends Controller
             'legal' => ['priority' => '0.3', 'changefreq' => 'yearly'],
         ];
 
-        $urls = [];
-
         foreach ($staticRoutes as $name => $meta) {
             if (Route::has($name)) {
-                $urls[] = array_merge($meta, [
-                    'loc' => route($name),
-                ]);
+                $this->push($urls, route($name), $meta);
             }
         }
 
-        $urls[] = [
-            'loc' => route('legal', ['doc' => 'terms']),
-            'priority' => '0.3',
-            'changefreq' => 'yearly',
-        ];
-        $urls[] = [
-            'loc' => route('legal', ['doc' => 'privacy']),
-            'priority' => '0.3',
-            'changefreq' => 'yearly',
-        ];
+        $this->push($urls, route('legal', ['doc' => 'terms']), ['priority' => '0.3', 'changefreq' => 'yearly']);
+        $this->push($urls, route('legal', ['doc' => 'privacy']), ['priority' => '0.3', 'changefreq' => 'yearly']);
 
-        foreach (array_keys(\App\Support\HelpContent::all()) as $helpSlug) {
-            $urls[] = [
-                'loc' => route('help.article', $helpSlug),
-                'priority' => '0.45',
-                'changefreq' => 'monthly',
-            ];
+        try {
+            foreach (array_keys(HelpContent::all()) as $helpSlug) {
+                $this->push($urls, route('help.article', $helpSlug), [
+                    'priority' => '0.45',
+                    'changefreq' => 'monthly',
+                ]);
+            }
+        } catch (Throwable $e) {
+            Log::warning('sitemap.help_failed', ['message' => $e->getMessage()]);
         }
 
         foreach (array_keys(config('catalog.groups', [])) as $groupSlug) {
-            $urls[] = [
-                'loc' => route('services.segment', $groupSlug),
+            $this->push($urls, route('services.segment', $groupSlug), [
                 'priority' => '0.7',
                 'changefreq' => 'weekly',
-            ];
+            ]);
         }
 
         foreach (array_keys(config('catalog.types', [])) as $typeKey) {
-            $urls[] = [
-                'loc' => route('services.segment', $typeKey),
+            $this->push($urls, route('services.segment', $typeKey), [
                 'priority' => '0.65',
                 'changefreq' => 'weekly',
-            ];
+            ]);
         }
 
-        Category::query()
-            ->marketplace()
-            ->active()
-            ->roots()
-            ->select(['slug', 'updated_at'])
-            ->orderBy('sort_order')
-            ->chunk(100, function ($categories) use (&$urls) {
-                foreach ($categories as $category) {
-                    $urls[] = [
-                        'loc' => route('marketplace.show', $category->slug),
-                        'lastmod' => $category->updated_at,
-                        'priority' => '0.75',
-                        'changefreq' => 'weekly',
-                    ];
-                }
-            });
-
-        MarketplaceProduct::query()
-            ->active()
-            ->with('category:id,slug')
-            ->select(['id', 'slug', 'category_id', 'updated_at'])
-            ->orderBy('sort_order')
-            ->chunk(100, function ($products) use (&$urls) {
-                foreach ($products as $product) {
-                    if (! $product->category) {
-                        continue;
+        try {
+            Category::query()
+                ->marketplace()
+                ->active()
+                ->roots()
+                ->select(['slug', 'updated_at'])
+                ->orderBy('sort_order')
+                ->chunk(100, function ($categories) use (&$urls) {
+                    foreach ($categories as $category) {
+                        $this->push($urls, route('marketplace.show', $category->slug), [
+                            'lastmod' => $category->updated_at,
+                            'priority' => '0.75',
+                            'changefreq' => 'weekly',
+                        ]);
                     }
-                    $urls[] = [
-                        'loc' => route('marketplace.product', [
+                });
+        } catch (Throwable $e) {
+            Log::warning('sitemap.categories_failed', ['message' => $e->getMessage()]);
+        }
+
+        try {
+            MarketplaceProduct::query()
+                ->active()
+                ->with('category:id,slug')
+                ->select(['id', 'slug', 'category_id', 'updated_at'])
+                ->orderBy('sort_order')
+                ->chunk(100, function ($products) use (&$urls) {
+                    foreach ($products as $product) {
+                        if (! $product->category) {
+                            continue;
+                        }
+                        $this->push($urls, route('marketplace.product', [
                             'category' => $product->category->slug,
                             'product' => $product->slug,
-                        ]),
-                        'lastmod' => $product->updated_at,
-                        'priority' => '0.7',
-                        'changefreq' => 'weekly',
-                    ];
-                }
-            });
+                        ]), [
+                            'lastmod' => $product->updated_at,
+                            'priority' => '0.7',
+                            'changefreq' => 'weekly',
+                        ]);
+                    }
+                });
+        } catch (Throwable $e) {
+            Log::warning('sitemap.marketplace_products_failed', ['message' => $e->getMessage()]);
+        }
 
-        Listing::published()
-            ->select(['slug', 'updated_at'])
-            ->orderByDesc('updated_at')
-            ->chunk(100, function ($listings) use (&$urls) {
-                foreach ($listings as $listing) {
-                    $urls[] = [
-                        'loc' => route('marketplace.show', $listing->slug),
-                        'lastmod' => $listing->updated_at,
-                        'priority' => '0.8',
-                        'changefreq' => 'weekly',
-                    ];
-                }
-            });
+        try {
+            Listing::published()
+                ->select(['slug', 'updated_at'])
+                ->orderByDesc('updated_at')
+                ->chunk(100, function ($listings) use (&$urls) {
+                    foreach ($listings as $listing) {
+                        $this->push($urls, route('marketplace.show', $listing->slug), [
+                            'lastmod' => $listing->updated_at,
+                            'priority' => '0.8',
+                            'changefreq' => 'weekly',
+                        ]);
+                    }
+                });
+        } catch (Throwable $e) {
+            Log::warning('sitemap.listings_failed', ['message' => $e->getMessage()]);
+        }
 
-        PlatformProduct::published()
-            ->select(['slug', 'product_type', 'updated_at'])
-            ->orderByDesc('updated_at')
-            ->chunk(100, function ($products) use (&$urls) {
-                foreach ($products as $product) {
-                    $urls[] = [
-                        'loc' => $this->productUrl($product),
-                        'lastmod' => $product->updated_at,
-                        'priority' => '0.75',
-                        'changefreq' => 'weekly',
-                    ];
-                }
-            });
+        try {
+            PlatformProduct::published()
+                ->with(['productType.serviceCategory'])
+                ->select(['id', 'slug', 'product_type', 'product_type_id', 'updated_at'])
+                ->orderByDesc('updated_at')
+                ->chunk(100, function ($products) use (&$urls) {
+                    foreach ($products as $product) {
+                        try {
+                            $this->push($urls, $this->browse->productUrl($product), [
+                                'lastmod' => $product->updated_at,
+                                'priority' => '0.75',
+                                'changefreq' => 'weekly',
+                            ]);
+                        } catch (Throwable $e) {
+                            Log::warning('sitemap.platform_product_url_failed', [
+                                'slug' => $product->slug,
+                                'message' => $e->getMessage(),
+                            ]);
+                        }
+                    }
+                });
+        } catch (Throwable $e) {
+            Log::warning('sitemap.platform_products_failed', ['message' => $e->getMessage()]);
+        }
 
-        return response()
-            ->view('sitemap', ['urls' => $urls])
-            ->header('Content-Type', 'application/xml');
+        return $urls;
     }
 
-    private function productUrl(PlatformProduct $product): string
+    /**
+     * @param  list<array{loc: string, lastmod?: string, priority: string, changefreq: string}>  $urls
+     * @param  array{lastmod?: mixed, priority?: string, changefreq?: string}  $meta
+     */
+    private function push(array &$urls, string $loc, array $meta = []): void
     {
-        return match ($product->product_type) {
-            PlatformProductType::DocumentTemplate => route('templates.show', $product->slug),
-            PlatformProductType::WebsitePackage,
-            PlatformProductType::WebsiteTemplate => route('website-listings.show', $product->slug),
-            default => route('services.show', [
-                'type' => $product->product_type->value,
-                'productSlug' => $product->slug,
-            ]),
-        };
+        if ($loc === '' || ! str_starts_with($loc, 'http')) {
+            return;
+        }
+
+        $entry = [
+            'loc' => $loc,
+            'priority' => $meta['priority'] ?? '0.5',
+            'changefreq' => $meta['changefreq'] ?? 'weekly',
+        ];
+
+        if (! empty($meta['lastmod'])) {
+            $lastmod = $this->formatLastmod($meta['lastmod']);
+            if ($lastmod !== null) {
+                $entry['lastmod'] = $lastmod;
+            }
+        }
+
+        $urls[] = $entry;
+    }
+
+    private function formatLastmod(mixed $value): ?string
+    {
+        try {
+            if ($value instanceof CarbonInterface) {
+                return $value->toAtomString();
+            }
+
+            return Carbon::parse($value)->toAtomString();
+        } catch (Throwable) {
+            return null;
+        }
     }
 }

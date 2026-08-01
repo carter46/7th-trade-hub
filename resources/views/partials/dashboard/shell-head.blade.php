@@ -6,10 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>@yield('title', $defaultTitle) | {{ config('app.name') }}</title>
-    @if(!empty($faviconUrl))
-        <link rel="icon" href="{{ $faviconUrl }}">
-    @endif
-    @PwaHead
+    @include('partials.branding.head-icons')
     @include('partials.dashboard.theme-boot')
     @include('partials.dashboard.theme-tokens')
 

@@ -88,19 +88,26 @@ class SettingsController extends Controller
         $this->branding->save($validated);
         $this->syncBrandingMediaUsages($validated);
         config(['app.name' => $validated['site_name']]);
+
+        $synced = false;
         try {
-            app(\App\Services\Branding\PwaBrandingSync::class)->sync(
+            $synced = app(\App\Services\Branding\PwaBrandingSync::class)->sync(
                 array_merge($this->branding->all(), $validated)
             );
         } catch (Throwable) {
-            // Manifest / icon write is best-effort (permissions / GD availability).
+            $synced = false;
         }
 
         $this->audit->log(auth()->id(), 'settings.branding.updated', null, null, [
             'site_name' => $validated['site_name'],
+            'pwa_icons_synced' => $synced,
         ], $request->ip());
 
-        return back()->with('status', __('Site information saved. PWA icons were refreshed from your favicon/logo — reinstall the app if the old icon is cached.'));
+        if (! $synced) {
+            return back()->with('warning', __('Site information saved, but favicon/PWA icons could not be regenerated. Ensure PHP GD is enabled and public/ is writable, then run: php artisan branding:sync-pwa'));
+        }
+
+        return back()->with('status', __('Site information saved. Favicon, Apple touch, and PWA icons were refreshed from your branding — reinstall the app / request indexing if Google still shows the old icon.'));
     }
 
     public function updateContact(Request $request): RedirectResponse
