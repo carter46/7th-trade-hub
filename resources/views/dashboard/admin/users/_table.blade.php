@@ -49,52 +49,52 @@
                 @if ($u->anonymized_at)
                     <span class="text-xs text-text-muted">—</span>
                 @else
-                    <x-dashboard.row-actions>
-                        <x-dashboard.menu-item :href="route('admin.users.show', $u)">View</x-dashboard.menu-item>
-                        <x-dashboard.menu-item :href="route('admin.users.edit', $u)">Edit</x-dashboard.menu-item>
-                        @if (! $u->is_suspended)
-                            <form method="POST" action="{{ route('admin.users.impersonate', $u) }}">
+                    <div class="flex flex-wrap items-center justify-end gap-2">
+                        <x-dashboard.row-actions>
+                            <x-dashboard.menu-item :href="route('admin.users.show', $u)">View</x-dashboard.menu-item>
+                            <x-dashboard.menu-item :href="route('admin.users.edit', $u)">Edit</x-dashboard.menu-item>
+                            @if (! $u->is_suspended)
+                                <form method="POST" action="{{ route('admin.users.impersonate', $u) }}">
+                                    @csrf
+                                    <x-dashboard.menu-item type="submit">Login as user</x-dashboard.menu-item>
+                                </form>
+                            @endif
+                            <form method="POST" action="{{ route('admin.users.password-reset', $u) }}">
                                 @csrf
-                                <x-dashboard.menu-item type="submit">Login as user</x-dashboard.menu-item>
+                                <x-dashboard.menu-item type="submit">Send password reset</x-dashboard.menu-item>
                             </form>
-                        @endif
-                        <form method="POST" action="{{ route('admin.users.password-reset', $u) }}">
-                            @csrf
-                            <x-dashboard.menu-item type="submit">Send password reset</x-dashboard.menu-item>
-                        </form>
 
+                            @if ($u->is_suspended)
+                                <form method="POST" action="{{ route('admin.users.restore', $u) }}">
+                                    @csrf
+                                    <x-dashboard.menu-item type="submit" variant="success">Restore</x-dashboard.menu-item>
+                                </form>
+                            @else
+                                <form method="POST" action="{{ route('admin.users.suspend', $u) }}">
+                                    @csrf
+                                    <x-dashboard.menu-item type="submit" variant="danger">Suspend</x-dashboard.menu-item>
+                                </form>
+                            @endif
+                        </x-dashboard.row-actions>
+
+                        {{-- Outside ⋮ teleport so click/submit cannot be swallowed when the menu closes. --}}
                         @if ($u->is_suspended)
-                            <form method="POST" action="{{ route('admin.users.restore', $u) }}">
-                                @csrf
-                                <x-dashboard.menu-item type="submit" variant="success">Restore</x-dashboard.menu-item>
-                            </form>
-                            <x-dashboard.menu-item
-                                type="button"
-                                variant="danger"
-                                x-on:click.stop="$dispatch('open-modal', 'delete-user-{{ $u->id }}')"
+                            <form
+                                method="POST"
+                                action="{{ route('admin.users.destroy', $u) }}"
+                                onsubmit="return confirm('Permanently delete this user? Personal data will be anonymized and cannot be undone.');"
                             >
-                                Permanently Delete
-                            </x-dashboard.menu-item>
-                        @else
-                            <form method="POST" action="{{ route('admin.users.suspend', $u) }}">
                                 @csrf
-                                <x-dashboard.menu-item type="submit" variant="danger">Suspend</x-dashboard.menu-item>
+                                @method('DELETE')
+                                <button
+                                    type="submit"
+                                    class="inline-flex min-h-9 items-center rounded-lg px-2.5 text-xs font-medium text-danger hover:bg-danger/10 focus-ring"
+                                >
+                                    Delete
+                                </button>
                             </form>
                         @endif
-                    </x-dashboard.row-actions>
-                    {{-- Modal must sit outside row-actions teleport or the confirm dialog never stays open. --}}
-                    @if ($u->is_suspended && ! $u->anonymized_at)
-                        <x-dashboard.modal
-                            name="delete-user-{{ $u->id }}"
-                            title="Permanently delete this user?"
-                            variant="danger"
-                            confirm-label="Permanently Delete"
-                            :form-action="route('admin.users.destroy', $u)"
-                            method="DELETE"
-                        >
-                            This anonymizes personal data and cannot be undone.
-                        </x-dashboard.modal>
-                    @endif
+                    </div>
                 @endif
             </x-dashboard.td>
         </tr>

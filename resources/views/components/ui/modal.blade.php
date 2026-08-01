@@ -54,8 +54,8 @@
             this.$nextTick(() => this.previouslyFocused?.focus?.());
         },
     }"
-    x-on:open-modal.window="if ($event.detail === '{{ $name }}') openModal()"
-    x-on:close-modal.window="if ($event.detail === '{{ $name }}') closeModal()"
+    x-on:open-modal.window="if (($event.detail === '{{ $name }}') || ($event.detail && $event.detail.id === '{{ $name }}')) openModal()"
+    x-on:close-modal.window="if (($event.detail === '{{ $name }}') || ($event.detail && $event.detail.id === '{{ $name }}')) closeModal()"
     {{ $attributes }}
 >
     <template x-teleport="body">

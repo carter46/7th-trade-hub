@@ -437,7 +437,18 @@ class UserManagementController extends Controller
         }
 
         $oldEmail = $user->email;
-        $user->anonymize(auth()->id());
+
+        try {
+            $ok = $user->anonymize(auth()->id());
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->with('error', __('Could not delete user: :message', ['message' => $e->getMessage()]));
+        }
+
+        if (! $ok) {
+            return back()->with('error', __('This account cannot be permanently deleted.'));
+        }
 
         $this->audit->log(auth()->id(), 'user.anonymized', $user, [
             'email' => $oldEmail,
