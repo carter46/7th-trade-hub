@@ -78,7 +78,7 @@ class DemoPlatformSeeder extends Seeder
                 ->sum('amount'), 2);
 
             $wallet->forceFill([
-                'balance' => $sum,
+                'balance' => $sum + $locked,
                 'locked_balance' => $locked,
             ])->save();
         }
@@ -129,8 +129,11 @@ class DemoPlatformSeeder extends Seeder
             ->where('wallet_id', $wallet->id)
             ->where('status', 'completed')
             ->sum('amount'), 2);
-        if (abs((float) $wallet->balance - $ledger) > 0.05) {
-            throw new RuntimeException('Consistency: Alice wallet balance does not match ledger.');
+        if (abs((float) $wallet->balance - ($ledger + round((float) Escrow::query()
+            ->where('buyer_wallet_id', $wallet->id)
+            ->whereIn('status', ['locked', 'disputed'])
+            ->sum('amount'), 2))) > 0.05) {
+            throw new RuntimeException('Consistency: Alice wallet balance does not match ledger + locks.');
         }
 
         foreach (Wallet::query()->where('type', 'user')->cursor() as $w) {
@@ -141,13 +144,13 @@ class DemoPlatformSeeder extends Seeder
             if ($sum < -0.05) {
                 throw new RuntimeException("Consistency: wallet #{$w->id} ledger is negative ({$sum}).");
             }
-            if (abs((float) $w->balance - $sum) > 0.05) {
-                throw new RuntimeException("Consistency: wallet #{$w->id} balance ≠ ledger.");
-            }
             $locked = round((float) Escrow::query()
                 ->where('buyer_wallet_id', $w->id)
                 ->whereIn('status', ['locked', 'disputed'])
                 ->sum('amount'), 2);
+            if (abs((float) $w->balance - ($sum + $locked)) > 0.05) {
+                throw new RuntimeException("Consistency: wallet #{$w->id} balance ≠ ledger + locks.");
+            }
             if (abs((float) $w->locked_balance - $locked) > 0.05) {
                 throw new RuntimeException("Consistency: wallet #{$w->id} locked_balance ≠ open escrows.");
             }

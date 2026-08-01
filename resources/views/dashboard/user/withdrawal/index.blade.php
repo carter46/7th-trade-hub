@@ -13,8 +13,17 @@
     ]"
 >
     <x-slot:actions>
-        <x-dashboard.button :href="route('dashboard.withdrawal.create')" icon="withdraw">New withdrawal</x-dashboard.button>
+        @if (! ($hasOpen ?? false))
+            <x-dashboard.button :href="route('dashboard.withdrawal.create')" icon="withdraw">New withdrawal</x-dashboard.button>
+        @endif
+        <x-dashboard.button :href="route('dashboard.banks.index')" variant="secondary" icon="withdraw">Withdrawal bank</x-dashboard.button>
     </x-slot:actions>
+
+    @if ($hasOpen ?? false)
+        <x-dashboard.alert type="info" class="mb-4">
+            You have a withdrawal in progress. New requests are blocked until it completes.
+        </x-dashboard.alert>
+    @endif
 
     <x-dashboard.table
         :empty="$withdrawals->isEmpty()"
@@ -31,7 +40,9 @@
         </x-slot:head>
         @foreach ($withdrawals as $w)
             <tr class="hover:bg-muted/50">
-                <x-dashboard.td class="font-medium">{{ $w->reference }}</x-dashboard.td>
+                <x-dashboard.td class="font-medium">
+                    <a href="{{ route('dashboard.withdrawal.show', $w) }}" class="underline">{{ $w->reference }}</a>
+                </x-dashboard.td>
                 <x-dashboard.td>₦{{ number_format($w->amount, 2) }}</x-dashboard.td>
                 <x-dashboard.td><x-dashboard.badge :status="$w->status" /></x-dashboard.td>
             </tr>

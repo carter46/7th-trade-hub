@@ -38,4 +38,13 @@ class SystemSetting extends Model
     {
         return static::enabled('kyc_required', true);
     }
+
+    /**
+     * Minimum KYC level for a feature when platform KYC is enabled.
+     * Keys: kyc_required_level_{feature} (deposit, withdrawal, reserved_account, marketplace_sell).
+     */
+    public static function kycRequiredLevel(string $feature, int $default = 1): int
+    {
+        return max(1, (int) static::get('kyc_required_level_'.$feature, $default));
+    }
 }

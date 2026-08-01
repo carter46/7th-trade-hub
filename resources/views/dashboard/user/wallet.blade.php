@@ -31,19 +31,25 @@
             @endif
         </x-dashboard.card>
     @else
-        <x-dashboard.stat-grid :count="3">
+        <x-dashboard.stat-grid :count="4">
             <x-dashboard.stats-card
-                label="Available (NGN)"
+                label="Balance (NGN)"
                 :value="'₦' . number_format($wallet->balance, 2)"
                 icon="wallet"
             />
             <x-dashboard.stats-card
-                label="Locked (Escrow / Withdrawal)"
+                label="Locked (Held)"
                 :value="'₦' . number_format($wallet->locked_balance, 2)"
                 icon="lock"
             />
+            <x-dashboard.stats-card
+                label="Available"
+                :value="'₦' . number_format($wallet->availableBalance(), 2)"
+                icon="wallet"
+            />
             <x-dashboard.card class="flex flex-col justify-center gap-3 min-h-[120px]">
                 <x-dashboard.button :href="route('dashboard.deposit.index')" variant="secondary" size="sm" icon="deposit">Deposit Money</x-dashboard.button>
+                <x-dashboard.button :href="route('dashboard.banks.index')" variant="secondary" size="sm" icon="withdraw">Withdrawal Bank</x-dashboard.button>
                 <x-dashboard.button :href="route('dashboard.crypto-sell.index')" variant="secondary" size="sm" icon="bitcoin">Sell Crypto</x-dashboard.button>
                 <x-dashboard.button :href="route('dashboard.withdrawal.create')" variant="secondary" size="sm" icon="withdraw">Withdraw to Bank</x-dashboard.button>
                 <x-dashboard.button :href="route('dashboard.history')" variant="ghost" size="sm" icon="history">Transaction History</x-dashboard.button>

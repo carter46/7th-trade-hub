@@ -115,6 +115,14 @@ class CheckoutService
                     'status' => 'sold',
                 ]);
 
+                if ($sellerWallet) {
+                    $this->walletService->releaseListingHold(
+                        (int) $sellerWallet->id,
+                        $listing->id,
+                        \App\Enums\WalletHoldStatus::Released
+                    );
+                }
+
                 DB::afterCommit(function () use ($order, $buyer, $listing) {
                     EscrowOpened::dispatch($order->id, $buyer->id, $listing->user_id);
                 });

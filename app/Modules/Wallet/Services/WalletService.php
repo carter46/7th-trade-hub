@@ -3,13 +3,18 @@
 namespace App\Modules\Wallet\Services;
 
 use App\Enums\TransactionType;
+use App\Enums\WalletHoldReason;
+use App\Enums\WalletHoldStatus;
 use App\Enums\WalletType;
 use App\Events\WalletFunded;
+use App\Events\WalletWithdrawalCompleted;
 use App\Models\Escrow;
 use App\Models\Order;
+use App\Models\PaymentTimelineEvent;
 use App\Models\Transaction;
 use App\Models\Wallet;
 use App\Models\WalletFunding;
+use App\Models\WalletHold;
 use App\Models\Withdrawal;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -27,12 +32,17 @@ class WalletService
         return DB::transaction(function () use ($funding, $approvedBy, $approvedIp, $approvedDevice, $approvedReason) {
             $funding = WalletFunding::where('id', $funding->id)->lockForUpdate()->firstOrFail();
 
-            if ($funding->status === 'approved') {
+            if ($funding->status === 'approved' || $funding->internal_status === 'completed') {
                 return $this->findFundingTransaction($funding)
                     ?? throw new InvalidArgumentException('Approved funding has no ledger entry.');
             }
 
-            if ($funding->status !== 'pending') {
+            $pendingStatuses = ['pending', 'processing'];
+            $pendingInternal = ['pending', 'processing', null];
+            $isPending = in_array($funding->status, $pendingStatuses, true)
+                || in_array($funding->internal_status, $pendingInternal, true);
+
+            if (! $isPending || in_array($funding->status, ['rejected', 'reversed'], true)) {
                 throw new InvalidArgumentException('Funding is not pending.');
             }
 
@@ -54,12 +64,16 @@ class WalletService
 
             $funding->update(array_filter([
                 'status' => 'approved',
+                'internal_status' => 'completed',
+                'provider_status' => $funding->provider_status ?? 'SUCCESS',
                 'approved_by' => $approvedBy,
-                'approved_at' => $approvedBy ? now() : null,
+                'approved_at' => $approvedBy ? now() : now(),
                 'approved_ip' => $approvedIp,
                 'approved_device' => $approvedDevice,
                 'approved_reason' => $approvedReason,
             ], fn ($v) => $v !== null));
+
+            PaymentTimelineEvent::record($funding, 'wallet_credited', 'Wallet credited');
 
             DB::afterCommit(function () use ($funding, $transaction) {
                 WalletFunded::dispatch(
@@ -78,14 +92,18 @@ class WalletService
     {
         return DB::transaction(function () use ($wallet, $order, $amount, $escrowId) {
             $wallet = Wallet::where('id', $wallet->id)->lockForUpdate()->firstOrFail();
+            $amountStr = number_format((float) $amount, 2, '.', '');
 
-            if (bccomp((string) $wallet->balance, (string) $amount, 2) < 0) {
+            if (bccomp((string) $wallet->availableBalance(), $amountStr, 2) < 0) {
                 throw new InvalidArgumentException('Insufficient wallet balance.');
             }
 
-            $wallet->balance = bcsub((string) $wallet->balance, (string) $amount, 2);
-            $wallet->locked_balance = bcadd((string) $wallet->locked_balance, (string) $amount, 2);
+            $wallet->locked_balance = bcadd((string) $wallet->locked_balance, $amountStr, 2);
             $wallet->save();
+
+            if ($escrowId) {
+                $this->createHold($wallet, WalletHoldReason::Escrow, $escrowId, (float) $amountStr);
+            }
 
             return $this->createLedgerEntry($wallet, [
                 'user_id' => $wallet->user_id,
@@ -94,7 +112,7 @@ class WalletService
                 'type' => TransactionType::EscrowLock->value,
                 'label' => 'Purchase escrow',
                 'description' => 'Funds locked for order '.$order->reference,
-                'amount' => -$amount,
+                'amount' => -((float) $amountStr),
                 'currency' => 'NGN',
                 'status' => 'completed',
             ]);
@@ -108,7 +126,7 @@ class WalletService
 
             $wallet = Wallet::where('id', $wallet->id)->lockForUpdate()->firstOrFail();
 
-            if (bccomp((string) $wallet->balance, $amountStr, 2) < 0) {
+            if (bccomp((string) $wallet->availableBalance(), $amountStr, 2) < 0) {
                 throw new InvalidArgumentException('Insufficient wallet balance.');
             }
 
@@ -154,16 +172,30 @@ class WalletService
                 return;
             }
 
-            if ($escrow->status !== 'locked') {
+            if (! in_array($escrow->status, ['locked', 'disputed'], true)) {
                 throw new InvalidArgumentException('Escrow is not locked.');
             }
 
             $buyerWallet = Wallet::where('id', $escrow->buyer_wallet_id)->lockForUpdate()->firstOrFail();
-            $buyerWallet->locked_balance = bcsub((string) $buyerWallet->locked_balance, (string) $escrow->amount, 2);
+            $amountStr = number_format((float) $escrow->amount, 2, '.', '');
+
+            if (bccomp((string) $buyerWallet->locked_balance, $amountStr, 2) < 0) {
+                throw new InvalidArgumentException('Insufficient locked balance for escrow release.');
+            }
+
+            $buyerWallet->locked_balance = bcsub((string) $buyerWallet->locked_balance, $amountStr, 2);
+            $buyerWallet->balance = bcsub((string) $buyerWallet->balance, $amountStr, 2);
             $buyerWallet->save();
 
-            $fee = bcmul((string) $escrow->amount, (string) ($feePercent / 100), 2);
-            $sellerAmount = bcsub((string) $escrow->amount, $fee, 2);
+            $this->transitionHold(
+                $buyerWallet->id,
+                WalletHoldReason::Escrow,
+                $escrow->id,
+                WalletHoldStatus::Consumed
+            );
+
+            $fee = bcmul($amountStr, (string) ($feePercent / 100), 2);
+            $sellerAmount = bcsub($amountStr, $fee, 2);
 
             if ($escrow->seller_wallet_id) {
                 $sellerWallet = Wallet::where('id', $escrow->seller_wallet_id)->lockForUpdate()->firstOrFail();
@@ -217,16 +249,27 @@ class WalletService
                 return;
             }
 
-            if ($escrow->status !== 'locked') {
+            if (! in_array($escrow->status, ['locked', 'disputed'], true)) {
                 throw new InvalidArgumentException('Escrow is not locked.');
             }
 
             $amount = $refundAmount ?? (float) $escrow->amount;
+            $amountStr = number_format($amount, 2, '.', '');
             $buyerWallet = Wallet::where('id', $escrow->buyer_wallet_id)->lockForUpdate()->firstOrFail();
 
-            $buyerWallet->locked_balance = bcsub((string) $buyerWallet->locked_balance, (string) $amount, 2);
-            $buyerWallet->balance = bcadd((string) $buyerWallet->balance, (string) $amount, 2);
+            if (bccomp((string) $buyerWallet->locked_balance, $amountStr, 2) < 0) {
+                throw new InvalidArgumentException('Insufficient locked balance to refund.');
+            }
+
+            $buyerWallet->locked_balance = bcsub((string) $buyerWallet->locked_balance, $amountStr, 2);
             $buyerWallet->save();
+
+            $this->transitionHold(
+                $buyerWallet->id,
+                WalletHoldReason::Escrow,
+                $escrow->id,
+                WalletHoldStatus::Released
+            );
 
             $this->createLedgerEntry($buyerWallet, [
                 'user_id' => $buyerWallet->user_id,
@@ -249,61 +292,229 @@ class WalletService
         });
     }
 
-    public function lockForWithdrawal(Withdrawal $withdrawal): void
+    public function lockForWithdrawal(Withdrawal $withdrawal): Transaction
     {
-        DB::transaction(function () use ($withdrawal) {
+        return DB::transaction(function () use ($withdrawal) {
             $wallet = Wallet::where('id', $withdrawal->wallet_id)->lockForUpdate()->firstOrFail();
+            $amountStr = number_format((float) $withdrawal->amount, 2, '.', '');
 
-            if (bccomp((string) $wallet->balance, (string) $withdrawal->amount, 2) < 0) {
+            if (bccomp((string) $wallet->availableBalance(), $amountStr, 2) < 0) {
                 throw new InvalidArgumentException('Insufficient balance for withdrawal.');
             }
 
-            $wallet->balance = bcsub((string) $wallet->balance, (string) $withdrawal->amount, 2);
-            $wallet->locked_balance = bcadd((string) $wallet->locked_balance, (string) $withdrawal->amount, 2);
+            $wallet->locked_balance = bcadd((string) $wallet->locked_balance, $amountStr, 2);
             $wallet->save();
+
+            $this->createHold($wallet, WalletHoldReason::Withdrawal, $withdrawal->id, (float) $amountStr);
+
+            $txn = $this->createLedgerEntry($wallet, [
+                'user_id' => $withdrawal->user_id,
+                'withdrawal_id' => $withdrawal->id,
+                'type' => TransactionType::WithdrawalHold->value,
+                'label' => 'Withdrawal hold',
+                'description' => 'Funds held for withdrawal '.$withdrawal->reference,
+                'amount' => -((float) $amountStr),
+                'currency' => 'NGN',
+                'status' => 'pending',
+            ]);
+
+            PaymentTimelineEvent::record($withdrawal, 'created', 'Created');
+
+            return $txn;
         });
     }
 
-    public function debitForWithdrawal(Withdrawal $withdrawal, ?int $approvedBy = null): Transaction
+    /**
+     * Mark approved and move to processing after Monnify accepts the transfer (or legacy complete).
+     */
+    public function markWithdrawalApproved(Withdrawal $withdrawal, int $approvedBy, ?string $approvedIp = null, ?string $approvalNote = null): void
     {
-        return DB::transaction(function () use ($withdrawal, $approvedBy) {
+        DB::transaction(function () use ($withdrawal, $approvedBy, $approvedIp, $approvalNote) {
             $withdrawal = Withdrawal::where('id', $withdrawal->id)->lockForUpdate()->firstOrFail();
 
-            if ($withdrawal->status === 'completed') {
+            if (! in_array($withdrawal->status, ['pending'], true)
+                && $withdrawal->internal_status !== 'pending_review') {
+                throw new InvalidArgumentException('Withdrawal is not pending review.');
+            }
+
+            if (in_array($withdrawal->internal_status, ['approved', 'processing', 'completed'], true)
+                || $withdrawal->status === 'completed') {
+                throw new InvalidArgumentException('Withdrawal already approved or completed.');
+            }
+
+            $withdrawal->update([
+                'status' => 'approved',
+                'internal_status' => 'approved',
+                'approved_by' => $approvedBy,
+                'approved_at' => now(),
+                'approved_ip' => $approvedIp,
+                'approval_note' => $approvalNote,
+            ]);
+
+            PaymentTimelineEvent::record($withdrawal, 'approved', 'Approved by admin');
+        });
+    }
+
+    public function markWithdrawalProcessing(Withdrawal $withdrawal, ?string $providerStatus = null): void
+    {
+        DB::transaction(function () use ($withdrawal, $providerStatus) {
+            $withdrawal = Withdrawal::where('id', $withdrawal->id)->lockForUpdate()->firstOrFail();
+            $withdrawal->update([
+                'status' => 'processing',
+                'internal_status' => 'processing',
+                'provider_status' => $providerStatus ?? $withdrawal->provider_status,
+            ]);
+            PaymentTimelineEvent::record($withdrawal, 'sent_to_provider', 'Sent to Monnify');
+        });
+    }
+
+    public function completeWithdrawalPayout(Withdrawal $withdrawal): Transaction
+    {
+        return DB::transaction(function () use ($withdrawal) {
+            $withdrawal = Withdrawal::where('id', $withdrawal->id)->lockForUpdate()->firstOrFail();
+
+            if ($withdrawal->status === 'completed' || $withdrawal->internal_status === 'completed') {
                 return $this->findWithdrawalTransaction($withdrawal)
                     ?? throw new InvalidArgumentException('Completed withdrawal has no ledger entry.');
             }
 
-            if ($withdrawal->status !== 'pending') {
-                throw new InvalidArgumentException('Withdrawal is not pending.');
+            if (! in_array($withdrawal->internal_status, ['approved', 'processing', 'pending_review', null], true)
+                && ! in_array($withdrawal->status, ['pending', 'approved', 'processing'], true)) {
+                throw new InvalidArgumentException('Withdrawal cannot be completed from current status.');
             }
 
             $wallet = Wallet::where('id', $withdrawal->wallet_id)->lockForUpdate()->firstOrFail();
+            $amountStr = number_format((float) $withdrawal->amount, 2, '.', '');
 
-            if (bccomp((string) $wallet->locked_balance, (string) $withdrawal->amount, 2) < 0) {
+            if (bccomp((string) $wallet->locked_balance, $amountStr, 2) < 0) {
                 throw new InvalidArgumentException('Insufficient locked balance for withdrawal.');
             }
 
-            $wallet->locked_balance = bcsub((string) $wallet->locked_balance, (string) $withdrawal->amount, 2);
+            $wallet->locked_balance = bcsub((string) $wallet->locked_balance, $amountStr, 2);
+            $wallet->balance = bcsub((string) $wallet->balance, $amountStr, 2);
             $wallet->save();
+
+            $this->transitionHold(
+                $wallet->id,
+                WalletHoldReason::Withdrawal,
+                $withdrawal->id,
+                WalletHoldStatus::Consumed
+            );
 
             $transaction = $this->createLedgerEntry($wallet, [
                 'user_id' => $withdrawal->user_id,
                 'withdrawal_id' => $withdrawal->id,
                 'type' => TransactionType::Withdrawal->value,
                 'label' => 'Withdrawal to bank',
-                'amount' => -$withdrawal->amount,
+                'amount' => -((float) $amountStr),
                 'currency' => 'NGN',
                 'status' => 'completed',
             ]);
 
-            $withdrawal->update(array_filter([
+            $withdrawal->update([
                 'status' => 'completed',
-                'approved_by' => $approvedBy,
-                'approved_at' => now(),
-            ], fn ($v) => $v !== null));
+                'internal_status' => 'completed',
+                'provider_status' => $withdrawal->provider_status ?? 'SUCCESS',
+            ]);
+
+            PaymentTimelineEvent::record($withdrawal, 'completed', 'Payout completed');
+
+            DB::afterCommit(function () use ($withdrawal, $transaction) {
+                WalletWithdrawalCompleted::dispatch(
+                    (int) $withdrawal->user_id,
+                    (int) $withdrawal->id,
+                    (int) $transaction->id,
+                    (float) $withdrawal->amount,
+                    (string) ($withdrawal->currency ?: 'NGN')
+                );
+            });
 
             return $transaction;
+        });
+    }
+
+    /**
+     * Legacy admin approve path (no Monnify): approve + complete in one step.
+     */
+    public function debitForWithdrawal(Withdrawal $withdrawal, ?int $approvedBy = null): Transaction
+    {
+        return DB::transaction(function () use ($withdrawal, $approvedBy) {
+            $withdrawal = Withdrawal::where('id', $withdrawal->id)->lockForUpdate()->firstOrFail();
+
+            if ($withdrawal->status === 'completed' || $withdrawal->internal_status === 'completed') {
+                return $this->findWithdrawalTransaction($withdrawal)
+                    ?? throw new InvalidArgumentException('Completed withdrawal has no ledger entry.');
+            }
+
+            if (! in_array($withdrawal->status, ['pending'], true)
+                && ! in_array($withdrawal->internal_status, ['pending_review', null], true)) {
+                throw new InvalidArgumentException('Withdrawal is not pending.');
+            }
+
+            if ($approvedBy) {
+                $withdrawal->update([
+                    'status' => 'approved',
+                    'internal_status' => 'approved',
+                    'approved_by' => $approvedBy,
+                    'approved_at' => now(),
+                ]);
+                PaymentTimelineEvent::record($withdrawal, 'approved', 'Approved by admin');
+            }
+
+            return $this->completeWithdrawalPayout($withdrawal->fresh());
+        });
+    }
+
+    public function failWithdrawalPayout(Withdrawal $withdrawal, ?string $adminNotes = null): void
+    {
+        DB::transaction(function () use ($withdrawal, $adminNotes) {
+            $withdrawal = Withdrawal::where('id', $withdrawal->id)->lockForUpdate()->firstOrFail();
+
+            // Never unlock or mutate a completed payout (late FAILED/REVERSED webhooks).
+            if ($withdrawal->status === 'completed' || $withdrawal->internal_status === 'completed') {
+                return;
+            }
+
+            if (in_array($withdrawal->status, ['rejected', 'failed'], true)
+                || $withdrawal->internal_status === 'failed') {
+                return;
+            }
+
+            $wallet = Wallet::where('id', $withdrawal->wallet_id)->lockForUpdate()->firstOrFail();
+            $amountStr = number_format((float) $withdrawal->amount, 2, '.', '');
+
+            if (bccomp((string) $wallet->locked_balance, $amountStr, 2) < 0) {
+                throw new InvalidArgumentException('Insufficient locked balance to unlock.');
+            }
+
+            $wallet->locked_balance = bcsub((string) $wallet->locked_balance, $amountStr, 2);
+            $wallet->save();
+
+            $this->transitionHold(
+                $wallet->id,
+                WalletHoldReason::Withdrawal,
+                $withdrawal->id,
+                WalletHoldStatus::Released
+            );
+
+            $this->createLedgerEntry($wallet, [
+                'user_id' => $withdrawal->user_id,
+                'withdrawal_id' => $withdrawal->id,
+                'type' => TransactionType::WithdrawalUnlock->value,
+                'label' => 'Withdrawal failed — funds returned',
+                'amount' => (float) $amountStr,
+                'currency' => 'NGN',
+                'status' => 'completed',
+            ]);
+
+            $withdrawal->update([
+                'status' => 'failed',
+                'internal_status' => 'failed',
+                'provider_status' => $withdrawal->provider_status ?? 'FAILED',
+                'admin_notes' => $adminNotes ?? $withdrawal->admin_notes,
+            ]);
+
+            PaymentTimelineEvent::record($withdrawal, 'failed', 'Payout failed — funds unlocked');
         });
     }
 
@@ -312,37 +523,125 @@ class WalletService
         DB::transaction(function () use ($withdrawal, $adminNotes) {
             $withdrawal = Withdrawal::where('id', $withdrawal->id)->lockForUpdate()->firstOrFail();
 
-            if ($withdrawal->status === 'rejected') {
-                return;
+            if ($withdrawal->status === 'rejected' || $withdrawal->internal_status === 'failed') {
+                if ($withdrawal->status === 'rejected') {
+                    return;
+                }
             }
 
-            if ($withdrawal->status !== 'pending') {
-                throw new InvalidArgumentException('Withdrawal is not pending.');
+            if (! in_array($withdrawal->status, ['pending', 'approved'], true)
+                && ! in_array($withdrawal->internal_status, ['pending_review', 'approved', null], true)) {
+                throw new InvalidArgumentException('Withdrawal cannot be rejected from current status.');
+            }
+
+            if (in_array($withdrawal->status, ['processing'], true)
+                || $withdrawal->internal_status === 'processing') {
+                throw new InvalidArgumentException('Cannot reject a withdrawal that is already processing.');
             }
 
             $wallet = Wallet::where('id', $withdrawal->wallet_id)->lockForUpdate()->firstOrFail();
+            $amountStr = number_format((float) $withdrawal->amount, 2, '.', '');
 
-            if (bccomp((string) $wallet->locked_balance, (string) $withdrawal->amount, 2) < 0) {
+            if (bccomp((string) $wallet->locked_balance, $amountStr, 2) < 0) {
                 throw new InvalidArgumentException('Insufficient locked balance to unlock.');
             }
 
-            $wallet->locked_balance = bcsub((string) $wallet->locked_balance, (string) $withdrawal->amount, 2);
-            $wallet->balance = bcadd((string) $wallet->balance, (string) $withdrawal->amount, 2);
+            $wallet->locked_balance = bcsub((string) $wallet->locked_balance, $amountStr, 2);
             $wallet->save();
+
+            $this->transitionHold(
+                $wallet->id,
+                WalletHoldReason::Withdrawal,
+                $withdrawal->id,
+                WalletHoldStatus::Released
+            );
 
             $this->createLedgerEntry($wallet, [
                 'user_id' => $withdrawal->user_id,
                 'withdrawal_id' => $withdrawal->id,
                 'type' => TransactionType::WithdrawalUnlock->value,
                 'label' => 'Withdrawal rejected — funds returned',
-                'amount' => $withdrawal->amount,
+                'amount' => (float) $amountStr,
                 'currency' => 'NGN',
                 'status' => 'completed',
             ]);
 
             $withdrawal->update([
                 'status' => 'rejected',
+                'internal_status' => 'failed',
                 'admin_notes' => $adminNotes,
+            ]);
+
+            PaymentTimelineEvent::record($withdrawal, 'rejected', 'Rejected — funds returned');
+        });
+    }
+
+    public function lockForListing(Wallet $wallet, int $listingId, float $amount, ?\DateTimeInterface $expiresAt = null): WalletHold
+    {
+        return DB::transaction(function () use ($wallet, $listingId, $amount, $expiresAt) {
+            $wallet = Wallet::where('id', $wallet->id)->lockForUpdate()->firstOrFail();
+            $amountStr = number_format($amount, 2, '.', '');
+
+            if (bccomp((string) $wallet->availableBalance(), $amountStr, 2) < 0) {
+                throw new InvalidArgumentException('Insufficient available balance for listing collateral.');
+            }
+
+            $wallet->locked_balance = bcadd((string) $wallet->locked_balance, $amountStr, 2);
+            $wallet->save();
+
+            $hold = $this->createHold(
+                $wallet,
+                WalletHoldReason::Listing,
+                $listingId,
+                (float) $amountStr,
+                $expiresAt
+            );
+
+            $this->createLedgerEntry($wallet, [
+                'user_id' => $wallet->user_id,
+                'type' => TransactionType::ListingHold->value,
+                'label' => 'Listing collateral hold',
+                'description' => 'Funds held for listing #'.$listingId,
+                'amount' => -((float) $amountStr),
+                'currency' => 'NGN',
+                'status' => 'completed',
+            ]);
+
+            return $hold;
+        });
+    }
+
+    public function releaseListingHold(int $walletId, int $listingId, WalletHoldStatus $to = WalletHoldStatus::Released): void
+    {
+        DB::transaction(function () use ($walletId, $listingId, $to) {
+            $hold = WalletHold::query()
+                ->where('wallet_id', $walletId)
+                ->where('reason_type', WalletHoldReason::Listing->value)
+                ->where('reason_id', $listingId)
+                ->where('status', WalletHoldStatus::Active->value)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $hold) {
+                return;
+            }
+
+            $wallet = Wallet::where('id', $walletId)->lockForUpdate()->firstOrFail();
+            $amountStr = number_format((float) $hold->amount, 2, '.', '');
+
+            $wallet->locked_balance = bcsub((string) $wallet->locked_balance, $amountStr, 2);
+            $wallet->save();
+
+            $hold->update(['status' => $to]);
+
+            $this->createLedgerEntry($wallet, [
+                'user_id' => $wallet->user_id,
+                'type' => TransactionType::ListingHoldRelease->value,
+                'label' => $to === WalletHoldStatus::Expired ? 'Listing hold expired' : 'Listing hold released',
+                'description' => 'Listing #'.$listingId,
+                'amount' => (float) $amountStr,
+                'currency' => 'NGN',
+                'status' => 'completed',
             ]);
         });
     }
@@ -355,6 +654,10 @@ class WalletService
             $newBalance = bcadd((string) $wallet->balance, (string) $amount, 2);
             if (bccomp($newBalance, '0', 2) < 0) {
                 throw new InvalidArgumentException('Adjustment would result in negative balance.');
+            }
+
+            if (bccomp($newBalance, (string) $wallet->locked_balance, 2) < 0) {
+                throw new InvalidArgumentException('Adjustment would make balance lower than locked funds.');
             }
 
             $wallet->balance = $newBalance;
@@ -399,6 +702,10 @@ class WalletService
                 throw new InvalidArgumentException('Reversal would result in negative balance.');
             }
 
+            if (bccomp($newBalance, (string) $wallet->locked_balance, 2) < 0) {
+                throw new InvalidArgumentException('Reversal would make balance lower than locked funds.');
+            }
+
             $wallet->balance = $newBalance;
             $wallet->save();
 
@@ -420,6 +727,7 @@ class WalletService
             if ($original->wallet_funding_id) {
                 WalletFunding::where('id', $original->wallet_funding_id)->update([
                     'status' => 'reversed',
+                    'internal_status' => 'reversed',
                     'reversed_at' => now(),
                     'reversal_transaction_id' => $reversal->id,
                 ]);
@@ -466,7 +774,41 @@ class WalletService
             'wallet_id' => $wallet->id,
             'balance' => (string) $wallet->balance,
             'locked_balance' => (string) $wallet->locked_balance,
+            'available' => (string) $wallet->availableBalance(),
         ];
+    }
+
+    public function createHold(
+        Wallet $wallet,
+        WalletHoldReason $reason,
+        ?int $reasonId,
+        float $amount,
+        ?\DateTimeInterface $expiresAt = null,
+        array $meta = [],
+    ): WalletHold {
+        return WalletHold::create([
+            'wallet_id' => $wallet->id,
+            'reason_type' => $reason->value,
+            'reason_id' => $reasonId,
+            'amount' => $amount,
+            'status' => WalletHoldStatus::Active->value,
+            'expires_at' => $expiresAt,
+            'meta' => $meta ?: null,
+        ]);
+    }
+
+    public function transitionHold(
+        int $walletId,
+        WalletHoldReason $reason,
+        int $reasonId,
+        WalletHoldStatus $to,
+    ): void {
+        WalletHold::query()
+            ->where('wallet_id', $walletId)
+            ->where('reason_type', $reason->value)
+            ->where('reason_id', $reasonId)
+            ->where('status', WalletHoldStatus::Active->value)
+            ->update(['status' => $to->value]);
     }
 
     private function findFundingTransaction(WalletFunding $funding): ?Transaction

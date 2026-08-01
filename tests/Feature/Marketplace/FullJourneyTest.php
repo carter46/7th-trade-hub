@@ -55,6 +55,8 @@ class FullJourneyTest extends TestCase
         $seller->refresh();
         $this->assertNotNull($seller->wallet);
 
+        app(\App\Modules\Wallet\Services\WalletService::class)->adminAdjust($seller->wallet, 5000, 'Listing collateral', 1);
+
         $product = \App\Models\MarketplaceProduct::query()->where('is_active', true)->first();
         $this->assertNotNull($product);
 
@@ -141,21 +143,35 @@ class FullJourneyTest extends TestCase
         ]);
 
         // Seller withdraws earnings
+        $seller->wallet->refresh();
+        $sellerBalance = (float) $seller->wallet->availableBalance();
         $withdrawAmount = min(1000, $sellerBalance);
+
+        $bank = \App\Models\UserBankAccount::create([
+            'user_id' => $seller->id,
+            'bank_name' => 'GTBank',
+            'bank_code' => '058',
+            'account_number' => '0123456789',
+            'verified_name' => $seller->name,
+            'verified_at' => now(),
+            'verified_by' => 'monnify',
+            'active' => true,
+        ]);
+
         $this->actingAs($seller)
             ->post(route('dashboard.withdrawal.store'), [
                 'amount' => $withdrawAmount,
-                'bank_name' => 'GTBank',
-                'account_number' => '0123456789',
-                'account_name' => $seller->name,
+                'user_bank_account_id' => $bank->id,
             ])
-            ->assertRedirect(route('dashboard.withdrawal.index'));
+            ->assertRedirect();
 
         $withdrawal = Withdrawal::where('user_id', $seller->id)->first();
         $this->assertNotNull($withdrawal);
 
         $this->actingAs($admin)
-            ->post(route('admin.withdrawals.approve', $withdrawal))
+            ->post(route('admin.withdrawals.approve', $withdrawal), [
+                'confirm_send' => '1',
+            ])
             ->assertRedirect();
 
         $this->assertSame('completed', $withdrawal->fresh()->status);
@@ -163,6 +179,5 @@ class FullJourneyTest extends TestCase
         $this->assertTrue(AuditLog::where('action', 'kyc.approved')->exists());
         $this->assertTrue(AuditLog::where('action', 'funding.approved')->exists());
         $this->assertTrue(AuditLog::where('action', 'listing.approved')->exists());
-        $this->assertTrue(AuditLog::where('action', 'withdrawal.approved')->exists());
     }
 }

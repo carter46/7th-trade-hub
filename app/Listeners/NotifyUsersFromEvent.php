@@ -4,6 +4,7 @@ namespace App\Listeners;
 
 use App\Events\TicketReplied;
 use App\Events\WalletFunded;
+use App\Events\WalletWithdrawalCompleted;
 use App\Models\SupportTicket;
 use App\Models\User;
 use App\Services\Notifications\NotificationDispatcher;
@@ -23,6 +24,7 @@ class NotifyUsersFromEvent
     {
         match ($event::class) {
             WalletFunded::class => $this->walletFunded($event),
+            WalletWithdrawalCompleted::class => $this->walletWithdrawalCompleted($event),
             TicketReplied::class => $this->ticketReplied($event),
             default => null,
         };
@@ -47,6 +49,35 @@ class NotifyUsersFromEvent
                 actionUrl: Route::has('dashboard.wallet') ? route('dashboard.wallet') : null,
                 meta: ['transaction_id' => $event->transactionId],
                 emailSubject: __('Wallet funded'),
+            ),
+            ['database', 'mail']
+        );
+    }
+
+    private function walletWithdrawalCompleted(WalletWithdrawalCompleted $event): void
+    {
+        $user = User::query()->find($event->userId);
+        if (! $user) {
+            return;
+        }
+
+        $this->dispatcher->notifyUser(
+            $user,
+            new NotificationMessage(
+                type: 'wallet.withdrawal_completed',
+                title: __('Withdrawal completed'),
+                body: __('Your withdrawal of :amount :currency was sent to your bank.', [
+                    'amount' => number_format($event->amount, 2),
+                    'currency' => $event->currency,
+                ]),
+                actionUrl: Route::has('dashboard.withdrawal.index')
+                    ? route('dashboard.withdrawal.index')
+                    : (Route::has('dashboard.wallet') ? route('dashboard.wallet') : null),
+                meta: [
+                    'withdrawal_id' => $event->withdrawalId,
+                    'transaction_id' => $event->transactionId,
+                ],
+                emailSubject: __('Withdrawal completed'),
             ),
             ['database', 'mail']
         );

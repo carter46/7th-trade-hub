@@ -449,6 +449,72 @@
             </form>
         </x-dashboard.card>
 
+        {{-- Monnify payments --}}
+        @php
+            $monnifyMeta = $monnify->meta ?? [];
+        @endphp
+        <x-dashboard.card variant="solid">
+            <h2 class="text-lg font-semibold text-text-primary mb-1">Monnify (payments & payouts)</h2>
+            <p class="text-sm text-text-secondary mb-4">Checkout deposits, reserved accounts, name enquiry, and disbursements. Credentials are stored here — not in <code>.env</code>.</p>
+            @error('monnify_test')
+                <p class="mb-4 text-sm text-danger">{{ $message }}</p>
+            @enderror
+            <div class="mb-4 grid gap-3 sm:grid-cols-3 text-sm">
+                <div>
+                    <p class="text-text-muted">Status</p>
+                    <p class="mt-1 font-medium text-text-primary capitalize">{{ $monnify->status ?: 'idle' }}</p>
+                </div>
+                <div>
+                    <p class="text-text-muted">Webhook URL</p>
+                    <input type="text" readonly value="{{ $monnifyWebhookUrl }}" class="mt-1 w-full rounded-lg border border-border-subtle bg-surface-muted px-3 py-2 text-xs text-text-secondary" onclick="this.select()" />
+                </div>
+                <div>
+                    <p class="text-text-muted">Ops</p>
+                    <p class="mt-1 text-text-secondary text-xs">Whitelist server IP with Monnify (D06). Enable disbursements. Prefer MFA disabled for Approve &amp; Send.</p>
+                </div>
+            </div>
+            <form method="POST" action="{{ route('admin.settings.monnify') }}" class="space-y-4">
+                @csrf
+                <input type="hidden" name="monnify_enabled" value="0">
+                <x-dashboard.toggle name="monnify_enabled" label="Enable Monnify" :checked="old('monnify_enabled', $monnify->enabled)" value="1" />
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <x-dashboard.input name="monnify_api_key" type="password" label="API Key" value="" hint="Leave blank to keep the current key.{{ filled($monnify->credential('api_key')) ? ' A key is already stored.' : '' }}" autocomplete="new-password" />
+                    <x-dashboard.input name="monnify_secret_key" type="password" label="Secret Key" value="" hint="Leave blank to keep the current secret.{{ filled($monnify->credential('secret_key')) ? ' A secret is already stored.' : '' }}" autocomplete="new-password" />
+                    <x-dashboard.input name="monnify_contract_code" label="Contract Code" :value="old('monnify_contract_code', $monnify->credential('contract_code'))" />
+                    <x-dashboard.input name="monnify_wallet_account_number" label="Disbursement wallet account number" :value="old('monnify_wallet_account_number', $monnify->credential('wallet_account_number'))" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-text-primary mb-1">Environment</label>
+                    <select name="monnify_environment" class="w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm">
+                        <option value="sandbox" @selected(old('monnify_environment', $monnifyMeta['environment'] ?? 'sandbox') === 'sandbox')>Sandbox</option>
+                        <option value="live" @selected(old('monnify_environment', $monnifyMeta['environment'] ?? 'sandbox') === 'live')>Live</option>
+                    </select>
+                </div>
+                @php
+                    $webhookIps = old(
+                        'monnify_webhook_allowed_ips',
+                        is_array($monnifyMeta['webhook_allowed_ips'] ?? null)
+                            ? implode(', ', $monnifyMeta['webhook_allowed_ips'])
+                            : '35.242.133.146'
+                    );
+                @endphp
+                <x-dashboard.input
+                    name="monnify_webhook_allowed_ips"
+                    label="Live webhook allowed IPs"
+                    :value="$webhookIps"
+                    hint="Comma-separated. Live webhooks from other IPs are rejected. Default: 35.242.133.146"
+                    autocomplete="off"
+                />
+                <input type="hidden" name="monnify_reserved_accounts_without_kyc" value="0">
+                <x-dashboard.toggle name="monnify_reserved_accounts_without_kyc" label="Allow reserved accounts when KYC is off" :checked="old('monnify_reserved_accounts_without_kyc', $monnifyMeta['reserved_accounts_without_kyc'] ?? false)" value="1" />
+                <x-dashboard.button type="submit" variant="primary">Save Monnify settings</x-dashboard.button>
+            </form>
+            <form method="POST" action="{{ route('admin.settings.monnify.test') }}" class="mt-4">
+                @csrf
+                <x-dashboard.button type="submit" variant="secondary">Test connection</x-dashboard.button>
+            </form>
+        </x-dashboard.card>
+
         {{-- Analytics (kept) --}}
         <x-dashboard.card variant="solid">
             <h2 class="text-lg font-semibold text-text-primary mb-1">Analytics & tracking</h2>

@@ -13,16 +13,17 @@
     ]"
 >
     <x-slot:actions>
-        <x-dashboard.button :href="route('dashboard.deposit.create-bank')" icon="deposit">Deposit via Bank</x-dashboard.button>
+        <x-dashboard.button :href="route('dashboard.deposit.create-checkout')" icon="deposit">Fund wallet</x-dashboard.button>
+        <x-dashboard.button :href="route('dashboard.deposit.create-bank')" variant="secondary" icon="deposit">Manual bank</x-dashboard.button>
         <x-dashboard.button :href="route('dashboard.crypto-sell.create')" variant="secondary" icon="bitcoin">Sell Crypto</x-dashboard.button>
     </x-slot:actions>
 
     <x-dashboard.table
         :empty="$fundings->isEmpty()"
         empty-title="No deposits yet"
-        empty-description="Submit a bank deposit or sell crypto to fund your wallet."
+        empty-description="Fund via Monnify Checkout or submit a manual bank deposit."
         empty-icon="deposit"
-        :empty-action="['href' => route('dashboard.deposit.create-bank'), 'label' => 'Deposit via Bank']"
+        :empty-action="['href' => route('dashboard.deposit.create-checkout'), 'label' => 'Fund wallet']"
         striped
     >
         <x-slot:head>
@@ -33,7 +34,9 @@
         </x-slot:head>
         @foreach ($fundings as $f)
             <tr class="hover:bg-muted/50">
-                <x-dashboard.td class="font-medium">{{ $f->reference }}</x-dashboard.td>
+                <x-dashboard.td class="font-medium">
+                    <a href="{{ route('dashboard.deposit.show', $f) }}" class="underline">{{ $f->reference }}</a>
+                </x-dashboard.td>
                 <x-dashboard.td>{{ $f->method }}</x-dashboard.td>
                 <x-dashboard.td>₦{{ number_format($f->amount, 2) }}</x-dashboard.td>
                 <x-dashboard.td><x-dashboard.badge :status="$f->status" /></x-dashboard.td>

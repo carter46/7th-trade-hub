@@ -73,6 +73,19 @@ class NotifyAdmins
                 'permission' => 'finance.manage',
                 'dedupeKey' => null,
             ],
+            \App\Events\WalletWithdrawalCompleted::class => [
+                'type' => 'wallet.withdrawal_completed',
+                'title' => 'Withdrawal completed',
+                'body' => 'User #'.$event->userId.' withdrawal completed ('.$event->currency.' '.number_format($event->amount, 2).').',
+                'actionUrl' => Route::has('admin.withdrawals') ? route('admin.withdrawals') : null,
+                'meta' => [
+                    'user_id' => $event->userId,
+                    'withdrawal_id' => $event->withdrawalId,
+                    'transaction_id' => $event->transactionId,
+                ],
+                'permission' => 'finance.manage',
+                'dedupeKey' => null,
+            ],
             default => null,
         };
 

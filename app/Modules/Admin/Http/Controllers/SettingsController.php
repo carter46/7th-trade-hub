@@ -65,6 +65,8 @@ class SettingsController extends Controller
             'analyticsClarity' => AnalyticsProvider::forProvider(AnalyticsProvider::PROVIDER_MICROSOFT_CLARITY),
             'googleIdentity' => IntegrationProvider::forProvider(IntegrationProvider::GOOGLE_IDENTITY),
             'googleIdentityJsOrigin' => rtrim((string) config('app.url'), '/'),
+            'monnify' => IntegrationProvider::forProvider(IntegrationProvider::MONNIFY),
+            'monnifyWebhookUrl' => url('/webhooks/monnify'),
             'siteName' => $branding['site_name'],
         ]);
     }
@@ -586,6 +588,101 @@ class SettingsController extends Controller
         }
 
         return back()->with('status', $result['message']);
+    }
+
+    public function updateMonnify(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'monnify_enabled' => ['nullable', 'boolean'],
+            'monnify_api_key' => ['nullable', 'string', 'max:255'],
+            'monnify_secret_key' => ['nullable', 'string', 'max:255'],
+            'monnify_contract_code' => ['nullable', 'string', 'max:100'],
+            'monnify_wallet_account_number' => ['nullable', 'string', 'max:30'],
+            'monnify_environment' => ['nullable', 'in:sandbox,live'],
+            'monnify_reserved_accounts_without_kyc' => ['nullable', 'boolean'],
+            'monnify_webhook_allowed_ips' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $enabled = $request->boolean('monnify_enabled');
+        $row = IntegrationProvider::forProvider(IntegrationProvider::MONNIFY);
+        $row->enabled = $enabled;
+
+        $credentials = [];
+        foreach ([
+            'api_key' => 'monnify_api_key',
+            'secret_key' => 'monnify_secret_key',
+            'contract_code' => 'monnify_contract_code',
+            'wallet_account_number' => 'monnify_wallet_account_number',
+        ] as $credKey => $input) {
+            $value = trim((string) ($validated[$input] ?? ''));
+            if ($value !== '') {
+                $credentials[$credKey] = $value;
+            }
+        }
+        if ($credentials !== []) {
+            $row->mergeCredentials($credentials);
+        }
+
+        $allowedIps = collect(preg_split('/[\s,]+/', (string) ($validated['monnify_webhook_allowed_ips'] ?? '')))
+            ->map(fn ($ip) => trim($ip))
+            ->filter()
+            ->values()
+            ->all();
+
+        $row->meta = array_merge($row->meta ?? [], [
+            'environment' => $validated['monnify_environment'] ?? ($row->meta['environment'] ?? 'sandbox'),
+            'reserved_accounts_without_kyc' => $request->boolean('monnify_reserved_accounts_without_kyc'),
+            // Empty input clears override so runtime default (35.242.133.146) applies.
+            'webhook_allowed_ips' => $allowedIps !== [] ? $allowedIps : null,
+        ]);
+
+        $configured = filled($row->credential('api_key'))
+            && filled($row->credential('secret_key'))
+            && filled($row->credential('contract_code'));
+
+        $row->status = $enabled && $configured ? 'connected' : 'idle';
+        $row->save();
+
+        app(\App\Modules\Wallet\Payments\Monnify\MonnifyClient::class)->clearTokenCache();
+
+        $this->audit->log(auth()->id(), 'settings.monnify.updated', $row, null, [
+            'enabled' => $enabled,
+            'environment' => $row->meta['environment'] ?? 'sandbox',
+        ], $request->ip());
+
+        return back()->with('status', __('Monnify settings saved.'));
+    }
+
+    public function testMonnify(Request $request): RedirectResponse
+    {
+        $client = app(\App\Modules\Wallet\Payments\Monnify\MonnifyClient::class);
+        $row = IntegrationProvider::forProvider(IntegrationProvider::MONNIFY);
+
+        try {
+            $client->clearTokenCache();
+            $token = $client->accessToken();
+            $ok = filled($token);
+            $message = 'Monnify login succeeded.';
+            if ($ok && filled($client->walletAccountNumber())) {
+                try {
+                    $bal = app(\App\Modules\Wallet\Payments\Monnify\MonnifyPaymentRail::class)->getMerchantWalletBalance();
+                    $message .= ' Merchant wallet balance: ₦'.number_format($bal, 2);
+                } catch (Throwable $e) {
+                    $message .= ' (Wallet balance check: '.$e->getMessage().')';
+                }
+            }
+            $row->recordSuccess();
+            $this->audit->log(auth()->id(), 'settings.monnify.connection_test', $row, null, ['ok' => true], $request->ip());
+
+            return back()->with('status', $message);
+        } catch (Throwable $e) {
+            $row->recordFailure($e->getMessage());
+            $this->audit->log(auth()->id(), 'settings.monnify.connection_test', $row, null, ['ok' => false], $request->ip());
+
+            return back()->withInput()->withErrors([
+                'monnify_test' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

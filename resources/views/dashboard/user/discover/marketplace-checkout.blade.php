@@ -43,7 +43,7 @@
             <x-dashboard.alert type="warning">
                 <a href="{{ route('dashboard.wallet') }}" class="underline font-medium">Create a wallet</a> to purchase.
             </x-dashboard.alert>
-        @elseif((float) $wallet->balance < (float) $listing->price)
+        @elseif((float) $wallet->availableBalance() < (float) $listing->price)
             <x-dashboard.alert type="warning">
                 Insufficient balance.
                 <a href="{{ route('dashboard.deposit.index') }}" class="underline font-medium">Deposit funds</a> then return here.

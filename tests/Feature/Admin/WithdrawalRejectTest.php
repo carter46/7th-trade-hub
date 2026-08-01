@@ -28,14 +28,18 @@ class WithdrawalRejectTest extends TestCase
             'amount' => 1000,
             'currency' => 'NGN',
             'bank_name' => 'GTBank',
+            'bank_code' => '058',
             'account_number' => '0123456789',
             'account_name' => $user->name,
             'status' => 'pending',
+            'internal_status' => 'pending_review',
             'reference' => 'WDR-REJ-001',
         ]);
 
         app(WalletService::class)->lockForWithdrawal($withdrawal);
-        $this->actingAs($admin)->post(route('admin.withdrawals.approve', $withdrawal));
+        $this->actingAs($admin)->post(route('admin.withdrawals.approve', $withdrawal), [
+            'confirm_send' => '1',
+        ]);
 
         $balanceAfterApprove = (float) $wallet->fresh()->balance;
 
@@ -59,16 +63,19 @@ class WithdrawalRejectTest extends TestCase
             'amount' => 1000,
             'currency' => 'NGN',
             'bank_name' => 'GTBank',
+            'bank_code' => '058',
             'account_number' => '0123456789',
             'account_name' => $user->name,
             'status' => 'pending',
+            'internal_status' => 'pending_review',
             'reference' => 'WDR-REJ-002',
         ]);
 
         app(WalletService::class)->lockForWithdrawal($withdrawal);
         $wallet->refresh();
-        $this->assertEquals(4000.0, (float) $wallet->balance);
+        $this->assertEquals(5000.0, (float) $wallet->balance);
         $this->assertEquals(1000.0, (float) $wallet->locked_balance);
+        $this->assertEquals(4000.0, $wallet->availableBalance());
 
         $this->actingAs($admin)->post(route('admin.withdrawals.reject', $withdrawal));
 

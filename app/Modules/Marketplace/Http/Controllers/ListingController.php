@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Listing;
 use App\Models\ListingVersion;
+use App\Models\SystemSetting;
+use App\Modules\Wallet\Services\WalletService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -14,6 +16,7 @@ use Illuminate\View\View;
 
 class ListingController extends Controller
 {
+    public function __construct(private WalletService $wallets) {}
     public function create(): View
     {
         $parents = Category::query()
@@ -218,13 +221,47 @@ class ListingController extends Controller
             return back()->with('error', __('No draft version to submit.'));
         }
 
+        $user = auth()->user();
+        $wallet = $user->wallet;
+        if (! $wallet) {
+            return back()->with('error', __('Create a wallet before listing for sale.'));
+        }
+
+        if (SystemSetting::kycRequired()) {
+            $minLevel = (int) SystemSetting::get('kyc_required_level_marketplace_sell', 1);
+            if ((int) $user->kyc_level < $minLevel) {
+                return back()->with('error', __('Complete KYC before selling on the marketplace.'));
+            }
+        }
+
+        $price = (float) $version->price;
+        if ($wallet->availableBalance() < $price) {
+            return back()->with('error', __('Insufficient available balance to collateralize this listing (₦'.number_format($price, 2).').'));
+        }
+
+        $existingHold = \App\Models\WalletHold::query()
+            ->where('wallet_id', $wallet->id)
+            ->where('reason_type', \App\Enums\WalletHoldReason::Listing->value)
+            ->where('reason_id', $listing->id)
+            ->where('status', \App\Enums\WalletHoldStatus::Active->value)
+            ->exists();
+
+        if (! $existingHold) {
+            $days = max(1, (int) SystemSetting::get('listing_hold_expiry_days', 30));
+            try {
+                $this->wallets->lockForListing($wallet, $listing->id, $price, now()->addDays($days));
+            } catch (\InvalidArgumentException $e) {
+                return back()->with('error', $e->getMessage());
+            }
+        }
+
         $version->update(['status' => 'pending_review', 'submitted_at' => now()]);
 
         if ($listing->status !== 'published') {
             $listing->update(['status' => 'pending_review']);
         }
 
-        return back()->with('status', __('Listing submitted for admin review.'));
+        return back()->with('status', __('Listing submitted for admin review. Listing collateral is held.'));
     }
 
     public function archive(Listing $listing): RedirectResponse
@@ -239,6 +276,10 @@ class ListingController extends Controller
             'status' => 'archived',
             'is_active' => false,
         ]);
+
+        if ($listing->user?->wallet) {
+            $this->wallets->releaseListingHold((int) $listing->user->wallet->id, $listing->id);
+        }
 
         return back()->with('status', __('Listing archived.'));
     }

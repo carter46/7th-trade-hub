@@ -31,12 +31,15 @@ use App\Modules\Marketplace\Http\Controllers\NotificationController as UserNotif
 use App\Modules\Marketplace\Http\Controllers\ReviewController;
 use App\Modules\Marketplace\Http\Controllers\WatchlistController;
 use App\Modules\Support\Http\Controllers\SupportTicketController;
+use App\Modules\Wallet\Http\Controllers\BankAccountController;
 use App\Modules\Wallet\Http\Controllers\CryptoSellController;
 use App\Modules\Wallet\Http\Controllers\DepositController;
 use App\Modules\Wallet\Http\Controllers\HistoryController;
 use App\Modules\Wallet\Http\Controllers\KycController;
 use App\Modules\Wallet\Http\Controllers\WalletController;
 use App\Modules\Wallet\Http\Controllers\WithdrawalController;
+use App\Http\Controllers\Webhooks\MonnifyWebhookController;
+use App\Modules\Admin\Http\Controllers\ReconciliationController;
 use App\Modules\Wallet\Services\CryptoPriceService;
 use Illuminate\Support\Facades\Route;
 
@@ -47,6 +50,8 @@ if (app()->environment('local')) {
 Route::get('/', function (CryptoPriceService $prices) {
     return view('pages.home', ['cryptoPrices' => $prices->getPrices()]);
 })->name('home');
+
+Route::post('/webhooks/monnify', MonnifyWebhookController::class)->name('webhooks.monnify');
 
 Route::view('/about', 'pages.about')->name('about');
 Route::get('/help', function () {
@@ -172,10 +177,23 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
     Route::get('/wallet', [DashboardController::class, 'wallet'])->name('.wallet');
     Route::middleware('has_wallet')->group(function () {
         Route::get('/deposit', [DepositController::class, 'index'])->name('.deposit.index');
+        Route::get('/deposit/checkout', [DepositController::class, 'createCheckout'])->name('.deposit.create-checkout');
+        Route::post('/deposit/checkout', [DepositController::class, 'storeCheckout'])
+            ->middleware('throttle:10,1')
+            ->name('.deposit.store-checkout');
+        Route::get('/deposit/callback', [DepositController::class, 'callback'])->name('.deposit.callback');
+        Route::get('/deposit/reserved', [DepositController::class, 'reservedAccount'])->name('.deposit.reserved');
         Route::get('/deposit/bank', [DepositController::class, 'createBank'])->name('.deposit.create-bank');
         Route::post('/deposit/bank', [DepositController::class, 'storeBank'])
             ->middleware('throttle:10,1')
             ->name('.deposit.store-bank');
+        Route::get('/deposit/{funding}', [DepositController::class, 'show'])->name('.deposit.show');
+        Route::get('/banks', [BankAccountController::class, 'index'])->name('.banks.index');
+        Route::get('/banks/replace', [BankAccountController::class, 'replaceForm'])->name('.banks.replace');
+        Route::post('/banks/replace/otp', [BankAccountController::class, 'sendOtp'])->middleware('throttle:5,10')->name('.banks.replace.otp');
+        Route::post('/banks/replace/verify-otp', [BankAccountController::class, 'verifyOtp'])->middleware('throttle:10,10')->name('.banks.replace.verify-otp');
+        Route::post('/banks/replace/resolve', [BankAccountController::class, 'resolve'])->middleware('throttle:10,1')->name('.banks.replace.resolve');
+        Route::post('/banks/replace/confirm', [BankAccountController::class, 'confirm'])->middleware('throttle:5,1')->name('.banks.replace.confirm');
         Route::get('/crypto-sell', [CryptoSellController::class, 'index'])->name('.crypto-sell.index');
         Route::get('/crypto-sell/create', [CryptoSellController::class, 'create'])->name('.crypto-sell.create');
         Route::post('/crypto-sell', [CryptoSellController::class, 'store'])->name('.crypto-sell.store');
@@ -183,6 +201,7 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
         Route::get('/withdrawal', [WithdrawalController::class, 'index'])->name('.withdrawal.index');
         Route::get('/withdrawal/create', [WithdrawalController::class, 'create'])->name('.withdrawal.create');
         Route::post('/withdrawal', [WithdrawalController::class, 'store'])->name('.withdrawal.store');
+        Route::get('/withdrawal/{withdrawal}', [WithdrawalController::class, 'show'])->name('.withdrawal.show');
         Route::get('/history', [HistoryController::class, 'index'])->name('.history');
         Route::post('/checkout/{listing}', [CheckoutController::class, 'store'])
             ->middleware('throttle:10,1')
@@ -323,6 +342,10 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::get('/withdrawals', [WithdrawalAdminController::class, 'index'])->name('.withdrawals');
         Route::post('/withdrawals/{withdrawal}/approve', [WithdrawalAdminController::class, 'approve'])->name('.withdrawals.approve');
         Route::post('/withdrawals/{withdrawal}/reject', [WithdrawalAdminController::class, 'reject'])->name('.withdrawals.reject');
+        Route::post('/withdrawals/{withdrawal}/retry', [WithdrawalAdminController::class, 'retry'])->name('.withdrawals.retry');
+        Route::get('/reconciliation', [ReconciliationController::class, 'index'])->name('.reconciliation');
+        Route::post('/reconciliation/fundings/{funding}/fix', [ReconciliationController::class, 'fixFunding'])->name('.reconciliation.fix-funding');
+        Route::post('/reconciliation/withdrawals/{withdrawal}/sync', [ReconciliationController::class, 'syncWithdrawal'])->name('.reconciliation.sync-withdrawal');
         Route::get('/escrows', [AdminEscrowController::class, 'index'])->name('.escrows');
         Route::post('/escrows/{escrow}/release', [AdminEscrowController::class, 'release'])->name('.escrows.release');
         Route::post('/escrows/{escrow}/refund', [AdminEscrowController::class, 'refund'])->name('.escrows.refund');
@@ -427,6 +450,8 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::post('/settings/analytics/test', [AdminSettingsController::class, 'testAnalyticsConnection'])->name('.settings.analytics.test');
         Route::post('/settings/google-identity', [AdminSettingsController::class, 'updateGoogleIdentity'])->name('.settings.google-identity');
         Route::post('/settings/google-identity/test', [AdminSettingsController::class, 'testGoogleIdentity'])->name('.settings.google-identity.test');
+        Route::post('/settings/monnify', [AdminSettingsController::class, 'updateMonnify'])->name('.settings.monnify');
+        Route::post('/settings/monnify/test', [AdminSettingsController::class, 'testMonnify'])->name('.settings.monnify.test');
         Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('.audit-logs');
     });
 

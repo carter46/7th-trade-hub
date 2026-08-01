@@ -16,6 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: env('TRUSTED_PROXIES') ? explode(',', env('TRUSTED_PROXIES')) : null);
         $middleware->append(SecurityHeaders::class);
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/monnify',
+        ]);
         $middleware->alias([
             'not_suspended' => EnsureNotSuspended::class,
             'has_wallet' => \App\Http\Middleware\EnsureHasWallet::class,

@@ -14,4 +14,7 @@ enum TransactionType: string
     case AdminAdjustment = 'admin_adjustment';
     case Reversal = 'reversal';
     case WithdrawalUnlock = 'withdrawal_unlock';
+    case WithdrawalHold = 'withdrawal_hold';
+    case ListingHold = 'listing_hold';
+    case ListingHoldRelease = 'listing_hold_release';
 }

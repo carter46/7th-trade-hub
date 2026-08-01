@@ -73,6 +73,16 @@ class User extends Authenticatable
         return $this->hasOne(Wallet::class);
     }
 
+    public function bankAccounts(): HasMany
+    {
+        return $this->hasMany(UserBankAccount::class);
+    }
+
+    public function activeBankAccount(): HasOne
+    {
+        return $this->hasOne(UserBankAccount::class)->where('active', true);
+    }
+
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);

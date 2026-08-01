@@ -55,6 +55,15 @@ class WriteAuditLogFromEvent
                     User::query()->find($event->userId),
                     ['transaction_id' => $event->transactionId, 'amount' => $event->amount],
                 ],
+                \App\Events\WalletWithdrawalCompleted::class => [
+                    'event.wallet.withdrawal_completed',
+                    User::query()->find($event->userId),
+                    [
+                        'withdrawal_id' => $event->withdrawalId,
+                        'transaction_id' => $event->transactionId,
+                        'amount' => $event->amount,
+                    ],
+                ],
                 UserRegistered::class => [
                     'event.user.registered',
                     User::query()->find($event->userId),

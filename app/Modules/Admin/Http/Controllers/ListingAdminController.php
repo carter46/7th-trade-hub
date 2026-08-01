@@ -21,7 +21,8 @@ class ListingAdminController extends Controller
 {
     public function __construct(
         private AuditLogService $audit,
-        private NotificationService $notifications
+        private NotificationService $notifications,
+        private \App\Modules\Wallet\Services\WalletService $wallets,
     ) {}
 
     public function index(Request $request): View
@@ -249,6 +250,10 @@ class ListingAdminController extends Controller
 
         if ($listing->status === 'pending_review') {
             $listing->update(['status' => 'rejected', 'is_active' => false]);
+        }
+
+        if ($listing->user?->wallet) {
+            $this->wallets->releaseListingHold((int) $listing->user->wallet->id, $listing->id);
         }
 
         $this->audit->log(

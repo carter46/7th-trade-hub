@@ -40,8 +40,8 @@ class EscrowController extends Controller
             return back()->with('status', __('Escrow already released.'));
         }
 
-        if ($escrow->status !== 'locked') {
-            return back()->with('error', __('Escrow is not locked.'));
+        if (! in_array($escrow->status, ['locked', 'disputed'], true)) {
+            return back()->with('error', __('Escrow is not locked or disputed.'));
         }
 
         $buyerWalletBefore = $escrow->buyerWallet?->replicate();
@@ -82,8 +82,8 @@ class EscrowController extends Controller
             return back()->with('status', __('Escrow already refunded.'));
         }
 
-        if ($escrow->status !== 'locked') {
-            return back()->with('error', __('Escrow is not locked.'));
+        if (! in_array($escrow->status, ['locked', 'disputed'], true)) {
+            return back()->with('error', __('Escrow is not locked or disputed.'));
         }
 
         $buyerWalletBefore = $escrow->buyerWallet?->replicate();

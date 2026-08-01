@@ -14,6 +14,7 @@ use App\Events\TicketReplied;
 use App\Events\UserRegistered;
 use App\Events\UserVerified;
 use App\Events\WalletFunded;
+use App\Events\WalletWithdrawalCompleted;
 use App\Services\Analytics\AnalyticsTracker;
 
 class DispatchMarketingAnalytics
@@ -26,6 +27,12 @@ class DispatchMarketingAnalytics
             UserRegistered::class => ['sign_up', ['user_id' => $event->userId], $event->userId],
             UserVerified::class => ['verify_email', ['user_id' => $event->userId], $event->userId],
             WalletFunded::class => ['wallet_funded', [
+                'transaction_id' => $event->transactionId,
+                'amount' => $event->amount,
+                'currency' => $event->currency,
+            ], $event->userId],
+            WalletWithdrawalCompleted::class => ['wallet_withdrawal_completed', [
+                'withdrawal_id' => $event->withdrawalId,
                 'transaction_id' => $event->transactionId,
                 'amount' => $event->amount,
                 'currency' => $event->currency,

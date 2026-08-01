@@ -46,8 +46,9 @@ class CheckoutEscrowFlowTest extends TestCase
             ->assertRedirect(route('dashboard.orders'));
 
         $buyer->wallet->refresh();
-        $this->assertEquals(4000.0, (float) $buyer->wallet->balance);
+        $this->assertEquals(5000.0, (float) $buyer->wallet->balance);
         $this->assertEquals(1000.0, (float) $buyer->wallet->locked_balance);
+        $this->assertEquals(4000.0, $buyer->wallet->availableBalance());
 
         $order = $buyer->orders()->first();
         $this->assertNotNull($order);
@@ -67,6 +68,7 @@ class CheckoutEscrowFlowTest extends TestCase
         $order->refresh();
 
         $this->assertSame('completed', $order->status);
+        $this->assertEquals(4000.0, (float) $buyer->wallet->balance);
         $this->assertEquals(0.0, (float) $buyer->wallet->locked_balance);
         $this->assertGreaterThan(0, (float) $seller->wallet->balance);
     }

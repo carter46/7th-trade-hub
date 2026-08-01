@@ -22,6 +22,8 @@ class IntegrationProvider extends Model
 
     public const GOOGLE_IDENTITY = 'google_identity';
 
+    public const MONNIFY = 'monnify';
+
     protected $fillable = [
         'provider',
         'enabled',

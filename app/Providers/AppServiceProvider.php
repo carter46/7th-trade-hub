@@ -17,6 +17,7 @@ use App\Events\TicketReplied;
 use App\Events\UserRegistered;
 use App\Events\UserVerified;
 use App\Events\WalletFunded;
+use App\Events\WalletWithdrawalCompleted;
 use App\Listeners\DispatchMarketingAnalytics;
 use App\Listeners\NotifyAdmins;
 use App\Listeners\NotifyUsersFromEvent;
@@ -48,6 +49,7 @@ class AppServiceProvider extends ServiceProvider
         UserRegistered::class,
         UserVerified::class,
         WalletFunded::class,
+        WalletWithdrawalCompleted::class,
         OrderCompleted::class,
         EscrowOpened::class,
         EscrowReleased::class,
@@ -64,6 +66,12 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Support\Demo\DemoBatchTracker::class);
         $this->app->bind(WalletProviderInterface::class, ManualProvider::class);
         $this->app->singleton(WalletService::class);
+        $this->app->singleton(\App\Modules\Wallet\Payments\Monnify\MonnifyClient::class);
+        $this->app->singleton(\App\Modules\Wallet\Payments\Monnify\MonnifyPaymentRail::class);
+        $this->app->bind(
+            \App\Modules\Wallet\Payments\Contracts\PaymentRailInterface::class,
+            \App\Modules\Wallet\Payments\Monnify\MonnifyPaymentRail::class
+        );
         $this->app->singleton(CryptoPriceService::class);
         $this->app->singleton(WalletProvisioningService::class);
         $this->app->singleton(CheckoutService::class);

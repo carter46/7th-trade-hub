@@ -21,6 +21,7 @@ class WalletFunding extends Model
             'metadata' => 'array',
             'approved_at' => 'datetime',
             'reversed_at' => 'datetime',
+            'checkout_expires_at' => 'datetime',
         ];
     }
 
@@ -37,5 +38,15 @@ class WalletFunding extends Model
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function timelineEvents(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    {
+        return $this->morphMany(PaymentTimelineEvent::class, 'subject')->orderBy('occurred_at');
+    }
+
+    public function isCheckoutExpired(): bool
+    {
+        return $this->checkout_expires_at !== null && $this->checkout_expires_at->isPast();
     }
 }

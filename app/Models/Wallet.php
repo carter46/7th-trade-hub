@@ -39,8 +39,16 @@ class Wallet extends Model
         return $this->hasMany(Transaction::class);
     }
 
+    public function holds(): HasMany
+    {
+        return $this->hasMany(WalletHold::class);
+    }
+
+    /**
+     * Spendable funds: total balance minus active locks.
+     */
     public function availableBalance(): float
     {
-        return (float) $this->balance;
+        return (float) bcsub((string) $this->balance, (string) $this->locked_balance, 2);
     }
 }

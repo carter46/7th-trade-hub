@@ -14,6 +14,7 @@ use App\Events\TicketReplied;
 use App\Events\UserRegistered;
 use App\Events\UserVerified;
 use App\Events\WalletFunded;
+use App\Events\WalletWithdrawalCompleted;
 use App\Models\Order;
 use App\Models\SupportTicket;
 use App\Services\Analytics\UserActivityRecorder;
@@ -32,6 +33,7 @@ class RecordProductActivity
             EscrowReleased::class => $this->recorder->incrementDaily('escrow.released', (string) $event->orderId),
             EscrowDisputed::class => $this->recorder->incrementDaily('escrow.disputed', (string) $event->orderId),
             WalletFunded::class => $this->handleWalletFunded($event),
+            WalletWithdrawalCompleted::class => $this->handleWalletWithdrawalCompleted($event),
             CryptoSold::class => $this->handleCryptoSold($event),
             UserRegistered::class => $this->recorder->incrementDaily('user.registered'),
             UserVerified::class => $this->recorder->incrementDaily('user.verified'),
@@ -60,6 +62,17 @@ class RecordProductActivity
     {
         $this->recorder->incrementDaily('wallet.funded', $event->currency);
         $this->recorder->record($event->userId, 'funded', null, 'wallet.funded', [
+            'transaction_id' => $event->transactionId,
+            'amount' => $event->amount,
+            'currency' => $event->currency,
+        ]);
+    }
+
+    private function handleWalletWithdrawalCompleted(WalletWithdrawalCompleted $event): void
+    {
+        $this->recorder->incrementDaily('wallet.withdrawal_completed', $event->currency);
+        $this->recorder->record($event->userId, 'withdrawal_completed', null, 'wallet.withdrawal_completed', [
+            'withdrawal_id' => $event->withdrawalId,
             'transaction_id' => $event->transactionId,
             'amount' => $event->amount,
             'currency' => $event->currency,

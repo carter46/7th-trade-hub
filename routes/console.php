@@ -13,6 +13,9 @@ Schedule::command('support:prune-attachments')->hourly()->withoutOverlapping();
 Schedule::command('app:warm-crypto-prices')->everyFiveMinutes()->withoutOverlapping();
 Schedule::command('cache:prune-stale-tags')->daily();
 
+Schedule::command('wallet:expire-listing-holds')->hourly()->withoutOverlapping();
+Schedule::command('monnify:reconcile')->everyFiveMinutes()->withoutOverlapping();
+
 Schedule::command('analytics:rollup-kpis')->hourly()->withoutOverlapping();
 Schedule::command('analytics:prune-activity')->daily()->at('04:00');
 Schedule::command('analytics:sync-ga')->daily()->at('05:00');
