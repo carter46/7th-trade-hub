@@ -9,6 +9,8 @@
         'name' => $p->name,
         'products' => $p->products->map(fn ($prod) => ['id' => $prod->id, 'name' => $prod->name])->values(),
     ])->values();
+    $initialCategoryId = (string) old('category_id', '');
+    $initialProductId = (string) old('marketplace_product_id', '');
 @endphp
 <x-layout.page
     title="Create Listing"
@@ -25,7 +27,7 @@
             method="POST"
             action="{{ route('dashboard.listings.store') }}"
             class="w-full space-y-4"
-            x-data="listingProductForm(@js($tree), @js(old('category_id', '')), @js(old('marketplace_product_id', '')))"
+            x-data="listingProductForm(@js($tree), @js($initialCategoryId), @js($initialProductId))"
             @submit="submitting = true"
         >
             @csrf
@@ -36,9 +38,9 @@
                 <label class="block text-sm font-medium text-text-secondary mb-1">Category</label>
                 <select x-model="categoryId" name="category_id" class="w-full rounded-xl border-border-default bg-elevated" required>
                     <option value="">— Select category —</option>
-                    <template x-for="parent in parents" :key="parent.id">
-                        <option :value="parent.id" x-text="parent.name"></option>
-                    </template>
+                    @foreach ($parents as $parent)
+                        <option value="{{ $parent->id }}" @selected((string) $parent->id === $initialCategoryId)>{{ $parent->name }}</option>
+                    @endforeach
                 </select>
             </div>
             <div>
@@ -46,7 +48,7 @@
                 <select x-model="productId" name="marketplace_product_id" class="w-full rounded-xl border-border-default bg-elevated" required>
                     <option value="">— Select product —</option>
                     <template x-for="prod in products" :key="prod.id">
-                        <option :value="prod.id" x-text="prod.name"></option>
+                        <option :value="String(prod.id)" x-text="prod.name" :selected="String(prod.id) === String(productId)"></option>
                     </template>
                 </select>
                 @error('marketplace_product_id')<p class="text-danger text-sm mt-1">{{ $message }}</p>@enderror
@@ -61,12 +63,16 @@
 @push('scripts')
 <script>
 function listingProductForm(tree, initialCategoryId, initialProductId) {
+    const startCategoryId = initialCategoryId ? String(initialCategoryId) : '';
+    const startProductId = initialProductId ? String(initialProductId) : '';
+
     return {
         parents: tree,
-        categoryId: initialCategoryId ? String(initialCategoryId) : '',
-        productId: initialProductId ? String(initialProductId) : '',
+        categoryId: startCategoryId,
+        productId: startProductId,
         submitting: false,
-        
+        ready: false,
+
         get products() {
             if (! this.categoryId) {
                 return [];
@@ -74,12 +80,21 @@ function listingProductForm(tree, initialCategoryId, initialProductId) {
             const parent = this.parents.find(p => String(p.id) === String(this.categoryId));
             return parent ? parent.products : [];
         },
-        
+
         init() {
+            this.$nextTick(() => {
+                this.categoryId = startCategoryId;
+                this.$nextTick(() => {
+                    this.productId = startProductId;
+                    this.ready = true;
+                });
+            });
+
             this.$watch('categoryId', (newVal, oldVal) => {
-                if (newVal !== oldVal) {
-                    this.productId = '';
+                if (! this.ready || newVal === oldVal) {
+                    return;
                 }
+                this.productId = '';
             });
         }
     };

@@ -20,7 +20,7 @@
 
 <div
     x-data="toastStore({{ \Illuminate\Support\Js::from($toasts) }})"
-    class="pointer-events-none fixed top-4 right-4 z-[100] flex w-full max-w-sm flex-col gap-2"
+    class="pointer-events-none fixed inset-x-4 top-4 z-[100] ml-auto flex w-auto max-w-sm flex-col gap-2"
     aria-live="polite"
 >
     <template x-for="toast in toasts" :key="toast.id">

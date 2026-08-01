@@ -1,8 +1,8 @@
 <aside
     id="sidebar"
     x-ref="mobileDrawer"
-    class="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[88vw] flex-col border-r border-border-default bg-sidebar shadow-panel transform transition-transform duration-200 motion-reduce:transition-none lg:static lg:h-full lg:min-h-0 lg:w-64 lg:max-w-none lg:translate-x-0 lg:shadow-none"
-    :class="open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
+    class="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[88vw] flex-col border-r border-border-default bg-sidebar shadow-panel -translate-x-full transform transition-transform duration-200 motion-reduce:transition-none lg:static lg:h-full lg:min-h-0 lg:w-64 lg:max-w-none lg:translate-x-0 lg:shadow-none"
+    :class="open ? '!translate-x-0' : ''"
     :aria-hidden="(!open && window.innerWidth < 1024).toString()"
     @keydown.tab="trapFocus($event)"
 >

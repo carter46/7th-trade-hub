@@ -17,94 +17,132 @@
         <x-dashboard.button :href="route('dashboard.listings.create')" icon="plus">Create Listing</x-dashboard.button>
     </x-slot:actions>
 
-    <x-dashboard.table
-        :empty="$listings->isEmpty()"
-        empty-title="You have no listings yet"
-        empty-description="Create a draft listing, then submit it for admin review."
-        empty-icon="listings"
-        :empty-action="['href' => route('dashboard.listings.create'), 'label' => 'Create your first listing']"
-        striped
-    >
-        <x-slot:head>
-            <x-dashboard.th>Title</x-dashboard.th>
-            <x-dashboard.th>Price</x-dashboard.th>
-            <x-dashboard.th>Status</x-dashboard.th>
-            <x-dashboard.th>Actions</x-dashboard.th>
-        </x-slot:head>
-        @foreach ($listings as $listing)
-            <tr class="hover:bg-muted/50">
-                <x-dashboard.td class="font-medium min-w-0">
-                    <div class="text-text-primary">{{ $listing->title }}</div>
-                    <div class="mt-0.5 text-xs text-text-muted">
-                        Updated {{ $listing->updated_at->format('M j, Y') }}
-                    </div>
-                </x-dashboard.td>
-                <x-dashboard.td>₦{{ number_format($listing->price, 2) }}</x-dashboard.td>
-                <x-dashboard.td>
-                    @php
-                        $badgeStatus = match ($listing->status) {
-                            'published' => 'completed',
-                            'pending_review' => 'pending',
-                            'rejected' => 'rejected',
-                            'draft' => 'neutral',
-                            'archived' => 'neutral',
-                            'suspended' => 'danger',
-                            default => 'default',
-                        };
-                    @endphp
-                    <x-dashboard.badge :status="$badgeStatus">{{ str_replace('_', ' ', $listing->status) }}</x-dashboard.badge>
-                </x-dashboard.td>
-                <x-dashboard.td>
-                    @if (in_array($listing->status, ['draft', 'rejected']))
-                        <x-dashboard.row-actions>
-                            <x-dashboard.menu-item :href="route('dashboard.listings.edit', $listing)">Edit</x-dashboard.menu-item>
-                            <form method="POST" action="{{ route('dashboard.listings.submit', $listing) }}">
-                                @csrf
-                                <x-dashboard.menu-item type="submit">Submit</x-dashboard.menu-item>
-                            </form>
-                            <form
-                                method="POST"
-                                action="{{ route('dashboard.listings.destroy', $listing) }}"
-                                onsubmit="return confirm('Delete this listing? You can ask support if you remove it by mistake.');"
+    @if ($listings->isEmpty())
+        <div class="overflow-hidden rounded-2xl border border-border-default bg-elevated shadow-panel">
+            <x-dashboard.empty-state
+                icon="listings"
+                title="You have no listings yet"
+                description="Create a draft listing, then submit it for admin review."
+                :action="['href' => route('dashboard.listings.create'), 'label' => 'Create your first listing']"
+            />
+        </div>
+    @else
+        {{-- Mobile: accordion --}}
+        <div class="space-y-3 md:hidden">
+            @foreach ($listings as $listing)
+                @php
+                    $badgeStatus = match ($listing->status) {
+                        'published' => 'completed',
+                        'pending_review' => 'pending',
+                        'rejected' => 'rejected',
+                        'draft' => 'neutral',
+                        'archived' => 'neutral',
+                        'suspended' => 'danger',
+                        default => 'default',
+                    };
+                    $hasActions = $listing->status !== 'pending_review';
+                @endphp
+                <div
+                    class="overflow-hidden rounded-2xl border border-border-default bg-elevated shadow-panel"
+                    @if ($hasActions) x-data="{ open: false }" @endif
+                >
+                    <div class="flex w-full items-start gap-3 p-4">
+                        <div class="min-w-0 flex-1">
+                            @if ($listing->status === 'published')
+                                <a
+                                    href="{{ route('dashboard.marketplace.show', $listing->slug) }}"
+                                    class="block text-base font-medium text-primary break-words hover:underline"
+                                >{{ $listing->title }}</a>
+                            @else
+                                <div class="text-base font-medium text-text-primary break-words">{{ $listing->title }}</div>
+                            @endif
+                            <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
+                                <span class="font-medium text-text-primary">₦{{ number_format($listing->price, 2) }}</span>
+                                <x-dashboard.badge :status="$badgeStatus">{{ str_replace('_', ' ', $listing->status) }}</x-dashboard.badge>
+                            </div>
+                            <div class="mt-1.5 text-xs text-text-muted">
+                                Updated {{ $listing->updated_at->format('M j, Y') }}
+                                @unless ($hasActions)
+                                    · Awaiting admin
+                                @endunless
+                            </div>
+                        </div>
+                        @if ($hasActions)
+                            <button
+                                type="button"
+                                class="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-text-secondary hover:bg-muted/60 hover:text-text-primary focus-ring"
+                                @click="open = !open"
+                                :aria-expanded="open.toString()"
+                                aria-label="Toggle actions"
                             >
-                                @csrf
-                                @method('DELETE')
-                                <x-dashboard.menu-item type="submit" variant="danger">Delete</x-dashboard.menu-item>
-                            </form>
-                        </x-dashboard.row-actions>
-                    @elseif ($listing->status === 'published')
-                        <x-dashboard.row-actions>
-                            <x-dashboard.menu-item :href="route('dashboard.marketplace.show', $listing->slug)">View live</x-dashboard.menu-item>
-                            <form method="POST" action="{{ route('dashboard.listings.revision', $listing) }}">
-                                @csrf
-                                <x-dashboard.menu-item type="submit">New revision</x-dashboard.menu-item>
-                            </form>
-                            <form method="POST" action="{{ route('dashboard.listings.archive', $listing) }}">
-                                @csrf
-                                <x-dashboard.menu-item type="submit" variant="danger">Archive</x-dashboard.menu-item>
-                            </form>
-                        </x-dashboard.row-actions>
-                    @elseif ($listing->status === 'archived')
-                        <x-dashboard.row-actions>
-                            <form method="POST" action="{{ route('dashboard.listings.restore-archive', $listing) }}">
-                                @csrf
-                                <x-dashboard.menu-item type="submit" variant="success">Restore to draft</x-dashboard.menu-item>
-                            </form>
-                        </x-dashboard.row-actions>
-                    @elseif ($listing->status === 'suspended')
-                        <x-dashboard.row-actions>
-                            <form method="POST" action="{{ route('dashboard.listings.archive', $listing) }}">
-                                @csrf
-                                <x-dashboard.menu-item type="submit" variant="danger">Archive</x-dashboard.menu-item>
-                            </form>
-                        </x-dashboard.row-actions>
-                    @else
-                        <span class="text-text-muted text-xs">Awaiting admin</span>
+                                <x-ui.icon
+                                    name="chevron-down"
+                                    class="h-5 w-5 transition-transform"
+                                    x-bind:class="open && 'rotate-180'"
+                                />
+                            </button>
+                        @endif
+                    </div>
+
+                    @if ($hasActions)
+                        <div
+                            x-show="open"
+                            x-cloak
+                            x-transition:enter="transition ease-out duration-150"
+                            x-transition:enter-start="opacity-0 -translate-y-1"
+                            x-transition:enter-end="opacity-100 translate-y-0"
+                            x-transition:leave="transition ease-in duration-100"
+                            x-transition:leave-start="opacity-100"
+                            x-transition:leave-end="opacity-0"
+                            class="border-t border-border-default px-4 py-3"
+                        >
+                            @include('dashboard.user.listings._actions', ['listing' => $listing, 'mode' => 'buttons'])
+                        </div>
                     @endif
-                </x-dashboard.td>
-            </tr>
-        @endforeach
-    </x-dashboard.table>
+                </div>
+            @endforeach
+        </div>
+
+        {{-- Desktop: table --}}
+        <div class="hidden md:block">
+            <x-dashboard.table striped :min-height="false">
+                <x-slot:head>
+                    <x-dashboard.th>Title</x-dashboard.th>
+                    <x-dashboard.th>Price</x-dashboard.th>
+                    <x-dashboard.th>Status</x-dashboard.th>
+                    <x-dashboard.th>Actions</x-dashboard.th>
+                </x-slot:head>
+                @foreach ($listings as $listing)
+                    <tr class="hover:bg-muted/50">
+                        <x-dashboard.td class="font-medium min-w-0">
+                            <div class="text-text-primary">{{ $listing->title }}</div>
+                            <div class="mt-0.5 text-xs text-text-muted">
+                                Updated {{ $listing->updated_at->format('M j, Y') }}
+                            </div>
+                        </x-dashboard.td>
+                        <x-dashboard.td>₦{{ number_format($listing->price, 2) }}</x-dashboard.td>
+                        <x-dashboard.td>
+                            @php
+                                $badgeStatus = match ($listing->status) {
+                                    'published' => 'completed',
+                                    'pending_review' => 'pending',
+                                    'rejected' => 'rejected',
+                                    'draft' => 'neutral',
+                                    'archived' => 'neutral',
+                                    'suspended' => 'danger',
+                                    default => 'default',
+                                };
+                            @endphp
+                            <x-dashboard.badge :status="$badgeStatus">{{ str_replace('_', ' ', $listing->status) }}</x-dashboard.badge>
+                        </x-dashboard.td>
+                        <x-dashboard.td>
+                            @include('dashboard.user.listings._actions', ['listing' => $listing, 'mode' => 'menu'])
+                        </x-dashboard.td>
+                    </tr>
+                @endforeach
+            </x-dashboard.table>
+        </div>
+    @endif
 
     <x-slot:pagination>
         <x-dashboard.pagination :paginator="$listings" />

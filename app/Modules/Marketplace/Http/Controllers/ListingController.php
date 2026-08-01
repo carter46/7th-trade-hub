@@ -103,7 +103,10 @@ class ListingController extends Controller
             ->orderBy('sort_order')
             ->get();
 
-        $selectedCategoryId = $listing->marketplaceProduct?->category_id ?? 0;
+        $listing->loadMissing('marketplaceProduct');
+        $selectedCategoryId = $listing->marketplaceProduct?->category_id
+            ?? $listing->category_id
+            ?? 0;
         $selectedProductId = $listing->marketplace_product_id ?? 0;
 
         return view('dashboard.user.listings-edit', [
