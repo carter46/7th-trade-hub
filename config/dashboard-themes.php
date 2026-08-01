@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'default_preference' => 'system',
+    'default_preference' => 'light',
     'fallback_theme' => 'light',
     'preferences' => ['light', 'dark', 'system'],
     'resolved' => ['light', 'dark'],

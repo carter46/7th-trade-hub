@@ -115,6 +115,9 @@ class AppServiceProvider extends ServiceProvider
             }
 
             $branding = app(\App\Services\Branding\SiteBrandingRepository::class)->all();
+            $favicon = $branding['favicon_media_id']
+                ? media_url_from_id($branding['favicon_media_id'], null, 'original')
+                : null;
 
             $view->with([
                 'dashboardThemePreference' => $preference,
@@ -123,6 +126,7 @@ class AppServiceProvider extends ServiceProvider
                 'impersonatorName' => $impersonatorName,
                 'siteName' => $branding['site_name'],
                 'siteBranding' => $branding,
+                'faviconUrl' => $favicon,
             ]);
         });
 
@@ -178,6 +182,14 @@ class AppServiceProvider extends ServiceProvider
                         ? $branding['meta_description']
                         : config('pwa.manifest.description'),
                 ]);
+            }
+
+            // Backfill PWA icons once when branding media exists but generated icons do not.
+            $hasBrandingImage = filled($branding['favicon_media_id'] ?? null)
+                || filled($branding['logo_light_media_id'] ?? null)
+                || filled($branding['logo_dark_media_id'] ?? null);
+            if ($hasBrandingImage && ! is_file(public_path('icons/icon-512x512.png'))) {
+                app(\App\Services\Branding\PwaBrandingSync::class)->sync($branding);
             }
         } catch (\Throwable) {
             // Database may be unavailable during early boot / package discovery.

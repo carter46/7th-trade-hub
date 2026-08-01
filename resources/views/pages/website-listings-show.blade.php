@@ -42,7 +42,7 @@
                     @if($product->demo_url)
                         <a href="{{ $product->demo_url }}" target="_blank" rel="noopener" class="px-5 py-3 rounded-xl border border-white/15 font-bold hover:bg-white/5">Test site</a>
                     @endif
-                    <a href="{{ route('checkout.platform.show', $product->slug) }}" class="px-5 py-3 rounded-xl bg-primary hover:bg-accent font-bold">Buy now</a>
+                    <a href="{{ route('dashboard.services.checkout', $product->slug) }}" class="px-5 py-3 rounded-xl bg-primary hover:bg-accent font-bold">{{ auth()->check() ? 'Buy now' : 'Log in to buy' }}</a>
                     @auth
                         <form method="POST" action="{{ route('favorites.toggle') }}">
                             @csrf

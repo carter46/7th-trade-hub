@@ -64,11 +64,11 @@
         <x-dashboard.card>
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-semibold text-text-primary">Recommended</h2>
-                <x-dashboard.button :href="route('marketplace')" variant="link" size="sm">View All</x-dashboard.button>
+                <x-dashboard.button :href="route('dashboard.marketplace')" variant="link" size="sm">View All</x-dashboard.button>
             </div>
             <div class="space-y-3">
                 @forelse($recommendedListings ?? collect() as $listing)
-                    <a href="{{ route('marketplace.show', $listing->slug) }}" class="block p-4 rounded-xl bg-muted/40 hover:bg-muted/60 transition-colors border border-transparent hover:border-border-default">
+                    <a href="{{ route('dashboard.marketplace.show', $listing->slug) }}" class="block p-4 rounded-xl bg-muted/40 hover:bg-muted/60 transition-colors border border-transparent hover:border-border-default">
                         <div class="flex items-start gap-3">
                             <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
                                 <x-dashboard.icon name="listings" class="w-5 h-5" />
@@ -85,7 +85,7 @@
                         icon="storefront"
                         title="No recommendations yet"
                         description="Browse the marketplace to discover services and assets."
-                        :action="['href' => route('marketplace'), 'label' => 'Browse marketplace']"
+                        :action="['href' => route('dashboard.marketplace'), 'label' => 'Browse marketplace']"
                     />
                 @endforelse
             </div>

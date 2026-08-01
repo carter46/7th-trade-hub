@@ -6,6 +6,9 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>@yield('title', config('app.name').' - Authentication')</title>
+    @if(!empty($faviconUrl))
+        <link rel="icon" href="{{ $faviconUrl }}">
+    @endif
     @PwaHead
 
     <link rel="preconnect" href="https://fonts.googleapis.com">

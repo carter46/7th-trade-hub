@@ -83,24 +83,19 @@ class SettingsController extends Controller
         $this->branding->save($validated);
         $this->syncBrandingMediaUsages($validated);
         config(['app.name' => $validated['site_name']]);
-        $short = $validated['site_short_name'] ?: $validated['site_name'];
-        $description = $validated['meta_description'] ?: config('pwa.manifest.description');
-        config([
-            'pwa.manifest.name' => $validated['site_name'],
-            'pwa.manifest.short_name' => $short,
-            'pwa.manifest.description' => $description,
-        ]);
         try {
-            app(\EragLaravelPwa\Services\PWAService::class)->createOrUpdate(config('pwa.manifest'));
+            app(\App\Services\Branding\PwaBrandingSync::class)->sync(
+                array_merge($this->branding->all(), $validated)
+            );
         } catch (Throwable) {
-            // Manifest write is best-effort (permissions / package availability).
+            // Manifest / icon write is best-effort (permissions / GD availability).
         }
 
         $this->audit->log(auth()->id(), 'settings.branding.updated', null, null, [
             'site_name' => $validated['site_name'],
         ], $request->ip());
 
-        return back()->with('status', __('Site information saved.'));
+        return back()->with('status', __('Site information saved. PWA icons were refreshed from your favicon/logo — reinstall the app if the old icon is cached.'));
     }
 
     public function updateContact(Request $request): RedirectResponse

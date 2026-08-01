@@ -26,8 +26,8 @@
             @if(auth()->check() && auth()->id() === $listing->user_id)
                 <p class="text-text-secondary">This is your listing. <a href="{{ route('dashboard.listings') }}" class="text-accent underline">Manage in dashboard</a></p>
             @else
-                <x-ui.button :href="route('marketplace.checkout', $listing->slug)" size="lg">
-                    Buy Now
+                <x-ui.button :href="route('dashboard.marketplace.checkout', $listing->slug)" size="lg">
+                    {{ auth()->check() ? 'Buy Now' : 'Log in to buy' }}
                 </x-ui.button>
                 @auth
                     <form method="POST" action="{{ route('dashboard.watchlist.toggle', $listing) }}">

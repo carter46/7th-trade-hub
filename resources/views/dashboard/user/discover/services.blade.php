@@ -3,9 +3,6 @@
 @section('title', 'Services')
 
 @section('content')
-@php
-    $browse = app(\App\Modules\Catalog\Services\CatalogBrowseService::class);
-@endphp
 <x-layout.page
     title="Services"
     subtitle="Browse platform services and pay from your wallet."
@@ -39,7 +36,10 @@
                     @foreach($recentlyPurchased as $product)
                         <x-dashboard.card>
                             <div class="font-semibold">{{ $product->title }}</div>
-                            <a href="{{ $browse->productUrl($product) }}" class="text-sm text-primary mt-2 inline-block">View / reorder →</a>
+                            @if(filled($product->short_description))
+                                <p class="mt-1 text-sm text-text-secondary line-clamp-2">{{ $product->short_description }}</p>
+                            @endif
+                            <a href="{{ route('dashboard.services.product', $product->slug) }}" class="text-sm text-primary mt-2 inline-block">View / reorder →</a>
                         </x-dashboard.card>
                     @endforeach
                 </div>
@@ -51,24 +51,11 @@
                 <h2 class="text-sm font-semibold text-text-secondary uppercase tracking-wide mb-3">You've viewed</h2>
                 <div class="flex flex-wrap gap-2">
                     @foreach($recentlyViewed as $product)
-                        <a href="{{ $browse->productUrl($product) }}" class="rounded-xl border border-border-default px-3 py-2 text-sm hover:bg-muted/50">{{ $product->title }}</a>
+                        <a href="{{ route('dashboard.services.product', $product->slug) }}" class="rounded-xl border border-border-default px-3 py-2 text-sm hover:bg-muted/50">{{ $product->title }}</a>
                     @endforeach
                 </div>
             </section>
         @endif
-
-        <section>
-            <h2 class="text-sm font-semibold text-text-secondary uppercase tracking-wide mb-3">Popular & suggested</h2>
-            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                @foreach($popular as $product)
-                    <x-dashboard.card>
-                        <div class="font-semibold">{{ $product->title }}</div>
-                        <div class="text-xs text-text-muted mt-1">{{ $product->productType?->name }}</div>
-                        <a href="{{ $browse->productUrl($product) }}" class="text-sm text-primary mt-2 inline-block">Open →</a>
-                    </x-dashboard.card>
-                @endforeach
-            </div>
-        </section>
 
         @if($searchResults)
             <section>
@@ -77,7 +64,10 @@
                     @forelse($searchResults as $product)
                         <x-dashboard.card>
                             <div class="font-semibold">{{ $product->title }}</div>
-                            <a href="{{ $browse->productUrl($product) }}" class="text-sm text-primary mt-2 inline-block">Open →</a>
+                            @if(filled($product->short_description))
+                                <p class="mt-1 text-sm text-text-secondary line-clamp-2">{{ $product->short_description }}</p>
+                            @endif
+                            <a href="{{ route('dashboard.services.product', $product->slug) }}" class="text-sm text-primary mt-2 inline-block">Open →</a>
                         </x-dashboard.card>
                     @empty
                         <p class="text-text-muted">No services matched.</p>
@@ -94,6 +84,9 @@
                     @foreach($groups as $group)
                         <x-dashboard.card>
                             <div class="font-semibold">{{ $group['label'] ?? $group['name'] ?? 'Category' }}</div>
+                            @if(!empty($group['short_description']))
+                                <p class="mt-1 text-sm text-text-secondary line-clamp-2">{{ $group['short_description'] }}</p>
+                            @endif
                             @if(!empty($group['href']))
                                 <a href="{{ $group['href'] }}" class="text-sm text-primary mt-2 inline-block">Browse →</a>
                             @endif

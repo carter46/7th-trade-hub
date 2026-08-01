@@ -1,5 +1,5 @@
 @php
-    $preference = $dashboardThemePreference ?? 'system';
+    $preference = $dashboardThemePreference ?? 'light';
     $resolved = $dashboardThemeResolved ?? 'light';
     $payload = $dashboardThemePayload ?? [];
 @endphp
@@ -28,7 +28,7 @@
         }
 
         // DB preference is authoritative for authenticated dashboards (ignore stale localStorage preference).
-        preference = preference || 'system';
+        preference = preference || 'light';
         var resolved = preference === 'system' ? systemTheme() : preference;
         if (!resolved) resolved = serverResolved || 'light';
 
@@ -64,7 +64,7 @@
         } catch (e) {}
     } catch (e) {
         document.documentElement.setAttribute('data-theme', 'light');
-        document.documentElement.setAttribute('data-theme-preference', 'system');
+        document.documentElement.setAttribute('data-theme-preference', 'light');
     }
 })();
 </script>

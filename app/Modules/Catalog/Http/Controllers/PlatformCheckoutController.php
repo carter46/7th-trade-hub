@@ -2,15 +2,12 @@
 
 namespace App\Modules\Catalog\Http\Controllers;
 
-use App\Enums\PlatformProductType;
 use App\Http\Controllers\Controller;
 use App\Models\PlatformProduct;
 use App\Modules\Catalog\Services\PlatformCheckoutService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
-use Illuminate\View\View;
 use InvalidArgumentException;
 
 class PlatformCheckoutController extends Controller
@@ -19,35 +16,15 @@ class PlatformCheckoutController extends Controller
         private PlatformCheckoutService $checkoutService
     ) {}
 
-    public function show(string $slug): View|RedirectResponse
+    public function show(string $slug): RedirectResponse
     {
-        $product = PlatformProduct::query()
-            ->published()
-            ->where('slug', $slug)
-            ->with('activeVariants')
-            ->firstOrFail();
-
-        $variants = $product->activeVariants;
-        $defaultVariant = $variants->firstWhere('is_default', true) ?? $variants->first();
-        $webTypes = [
-            PlatformProductType::WebsitePackage->value,
-            PlatformProductType::WebsiteTemplate->value,
-            PlatformProductType::Domain->value,
-        ];
-
-        return view('pages.checkout-platform', [
-            'product' => $product,
-            'variants' => $variants,
-            'defaultVariantId' => $defaultVariant?->id,
-            'basePrice' => (float) $product->base_price,
-            'showDomainOptions' => in_array($product->product_type->value, $webTypes, true),
-            'idempotencyKey' => (string) Str::uuid(),
-            'walletBalance' => auth()->user()?->wallet?->balance,
-        ]);
+        // Purchase always happens in the authenticated dashboard flow.
+        return redirect()->route('dashboard.services.checkout', $slug);
     }
 
     public function store(Request $request, string $slug): RedirectResponse
     {
+        // Legacy public POST — keep fulfilling, then send users to service orders.
         $product = PlatformProduct::query()
             ->published()
             ->where('slug', $slug)
@@ -64,7 +41,10 @@ class PlatformCheckoutController extends Controller
         try {
             $order = $this->checkoutService->purchase($request->user(), $product, $data);
         } catch (InvalidArgumentException $e) {
-            return back()->withInput()->with('error', $e->getMessage());
+            return redirect()
+                ->route('dashboard.services.checkout', $slug)
+                ->withInput()
+                ->with('error', $e->getMessage());
         } catch (\Throwable $e) {
             Log::error('Platform checkout failed', [
                 'slug' => $slug,
@@ -72,11 +52,14 @@ class PlatformCheckoutController extends Controller
                 'message' => $e->getMessage(),
             ]);
 
-            return back()->withInput()->with('error', 'Checkout failed. Please try again or contact support.');
+            return redirect()
+                ->route('dashboard.services.checkout', $slug)
+                ->withInput()
+                ->with('error', 'Checkout failed. Please try again or contact support.');
         }
 
         return redirect()
-            ->route('dashboard.orders')
+            ->route('dashboard.service-orders')
             ->with('success', 'Order '.$order->reference.' placed successfully.');
     }
 }

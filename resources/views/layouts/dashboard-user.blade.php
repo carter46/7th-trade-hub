@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ $dashboardThemeResolved ?? 'light' }}" data-theme-preference="{{ $dashboardThemePreference ?? 'system' }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ $dashboardThemeResolved ?? 'light' }}" data-theme-preference="{{ $dashboardThemePreference ?? 'light' }}">
 @include('partials.dashboard.shell-head', ['defaultTitle' => 'Dashboard'])
 <body class="dashboard-shell bg-surface font-sans text-text-primary h-dvh overflow-hidden" data-dashboard-shell="user" x-data="mobileNav" @keydown.escape.window="open && close()">
     @include('partials.dashboard.shell-skip-link')

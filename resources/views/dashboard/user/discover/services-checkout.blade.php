@@ -1,0 +1,116 @@
+@extends('layouts.dashboard-user')
+
+@section('title', 'Checkout — '.$product->title)
+
+@section('content')
+@php
+    $variantPayload = $variants->map(fn ($v) => [
+        'id' => $v->id,
+        'price' => (float) $v->price,
+        'label' => $v->displayLabel(),
+        'is_default' => (bool) $v->is_default,
+    ])->values();
+@endphp
+<x-layout.page
+    title="Checkout"
+    :subtitle="$product->title"
+    width="default"
+    :breadcrumb="[
+        ['Dashboard', route('dashboard')],
+        ['Services', route('dashboard.services')],
+        [$product->title, route('dashboard.services.product', $product->slug)],
+        ['Checkout', null],
+    ]"
+>
+    <x-dashboard.card class="max-w-lg space-y-5">
+        <div>
+            <p class="text-xs font-semibold uppercase tracking-wider text-primary mb-1">Platform service</p>
+            <h2 class="text-xl font-semibold text-text-primary">{{ $product->title }}</h2>
+            @if(filled($product->short_description))
+                <p class="text-sm text-text-secondary mt-1">{{ $product->short_description }}</p>
+            @endif
+        </div>
+
+        @if(session('error'))
+            <x-dashboard.alert type="danger">{{ session('error') }}</x-dashboard.alert>
+        @endif
+
+        @if(! auth()->user()->hasVerifiedEmail())
+            <x-dashboard.alert type="warning">
+                <a href="{{ route('verification.notice') }}" class="underline font-medium">Verify your email</a> before purchasing.
+            </x-dashboard.alert>
+        @elseif(! $wallet)
+            <x-dashboard.alert type="warning">
+                <a href="{{ route('dashboard.wallet') }}" class="underline font-medium">Create a wallet</a> to purchase.
+            </x-dashboard.alert>
+        @else
+            <form
+                method="POST"
+                action="{{ route('dashboard.services.purchase', $product->slug) }}"
+                class="space-y-5"
+                x-data="platformCheckout(@js($variantPayload), @js(['defaultVariantId' => $defaultVariantId, 'basePrice' => $basePrice]))"
+            >
+                @csrf
+                <input type="hidden" name="idempotency_key" value="{{ $idempotencyKey }}">
+
+                @if($variants->isNotEmpty())
+                    <div>
+                        <label class="block text-sm font-medium text-text-secondary mb-2">Plan / variant</label>
+                        <div class="space-y-2">
+                            @foreach($variants as $variant)
+                                <label class="flex items-center justify-between gap-3 rounded-xl border border-border-default px-4 py-3 cursor-pointer hover:border-primary/40">
+                                    <span class="flex items-center gap-3">
+                                        <input
+                                            type="radio"
+                                            name="variant_id"
+                                            value="{{ $variant->id }}"
+                                            @checked((int) $defaultVariantId === (int) $variant->id)
+                                            x-model.number="variantId"
+                                        >
+                                        <span class="text-sm text-text-primary">{{ $variant->displayLabel() }}</span>
+                                    </span>
+                                    <span class="font-semibold text-text-primary">₦{{ number_format($variant->price, 2) }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                <div>
+                    <label class="block text-sm font-medium text-text-secondary mb-2">Quantity</label>
+                    <input type="number" name="quantity" min="1" max="100" x-model.number="qty" class="w-32 rounded-lg border-border-default bg-elevated text-text-primary text-sm">
+                </div>
+
+                @if($showDomainOptions)
+                    <div>
+                        <label class="block text-sm font-medium text-text-secondary mb-2">Domain (optional)</label>
+                        <select name="domain_mode" x-model="domainMode" class="w-full rounded-lg border-border-default bg-elevated text-text-primary text-sm mb-3">
+                            <option value="none">No domain needed</option>
+                            <option value="buy">Buy a domain</option>
+                            <option value="connect">Connect existing domain</option>
+                        </select>
+                        <input type="text" name="domain_name" x-show="domainMode !== 'none'" placeholder="example.com" class="w-full rounded-lg border-border-default bg-elevated text-text-primary text-sm">
+                    </div>
+                @else
+                    <input type="hidden" name="domain_mode" value="none">
+                @endif
+
+                <p class="text-sm text-text-secondary">
+                    Wallet balance: <strong class="text-text-primary">₦{{ number_format((float) $wallet->balance, 2) }}</strong>
+                </p>
+
+                <div class="flex items-center justify-between border-t border-border-default pt-4">
+                    <span class="text-text-secondary">Total</span>
+                    <span class="text-2xl font-bold text-primary" x-text="'₦' + totalFormatted"></span>
+                </div>
+
+                <x-dashboard.button type="submit" icon="orders" class="w-full">Pay from wallet</x-dashboard.button>
+            </form>
+        @endif
+
+        <a href="{{ route('dashboard.services.product', $product->slug) }}" class="inline-flex text-sm text-text-secondary hover:text-primary">
+            ← Back to product
+        </a>
+    </x-dashboard.card>
+</x-layout.page>
+@endsection

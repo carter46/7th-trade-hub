@@ -47,7 +47,7 @@
 
     $subtitle = $product->short_description ?: null;
     $startPrice = $product->displayPrice();
-    $checkoutUrl = route('checkout.platform.show', $product->slug);
+    $checkoutUrl = route('dashboard.services.checkout', $product->slug);
 
     $variants = $product->activeVariants;
     $monthlyVariant = $variants->first(fn ($v) => (int) $v->duration_months === 1);
@@ -232,7 +232,7 @@
 
                 <div class="flex flex-col sm:flex-row gap-3 pt-1">
                     <x-ui.button :href="$checkoutUrl" variant="primary" size="lg" class="!px-8 hover:!bg-accent">
-                        Buy Now
+                        {{ auth()->check() ? 'Buy Now' : 'Log in to buy' }}
                     </x-ui.button>
                     @auth
                         <form method="POST" action="{{ route('favorites.toggle') }}">

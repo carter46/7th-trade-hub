@@ -38,7 +38,7 @@ class ThemeManager
 
     public function defaultPreference(): string
     {
-        return (string) config('dashboard-themes.default_preference', self::PREFERENCE_SYSTEM);
+        return (string) config('dashboard-themes.default_preference', self::PREFERENCE_LIGHT);
     }
 
     public function fallbackTheme(): string

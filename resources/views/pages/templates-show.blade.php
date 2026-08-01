@@ -28,7 +28,7 @@
             @endif
             <p class="text-2xl font-bold mb-6">From ₦{{ number_format($product->displayPrice(), 2) }}</p>
             <div class="flex flex-wrap gap-3">
-                <a href="{{ route('checkout.platform.show', $product->slug) }}" class="px-6 py-3 rounded-xl bg-primary hover:bg-accent font-bold">Buy now</a>
+                <a href="{{ route('dashboard.services.checkout', $product->slug) }}" class="px-6 py-3 rounded-xl bg-primary hover:bg-accent font-bold">{{ auth()->check() ? 'Buy now' : 'Log in to buy' }}</a>
                 @auth
                     <form method="POST" action="{{ route('favorites.toggle') }}">
                         @csrf

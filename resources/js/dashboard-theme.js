@@ -104,7 +104,7 @@ function bindSystemListener(enabled) {
     if (!enabled) return;
 
     mediaHandler = () => {
-        const preference = document.documentElement.getAttribute('data-theme-preference') || 'system';
+        const preference = document.documentElement.getAttribute('data-theme-preference') || 'light';
         if (preference !== 'system') return;
         applyTheme('system', systemTheme());
     };
@@ -118,7 +118,7 @@ function bindSystemListener(enabled) {
 
 export async function setDashboardThemePreference(preference, { persist = true } = {}) {
     const previous = {
-        preference: document.documentElement.getAttribute('data-theme-preference') || 'system',
+        preference: document.documentElement.getAttribute('data-theme-preference') || 'light',
         resolved: document.documentElement.getAttribute('data-theme') || 'light',
     };
 

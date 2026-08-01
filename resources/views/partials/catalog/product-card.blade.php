@@ -1,17 +1,19 @@
 @php
     $browse = app(\App\Modules\Catalog\Services\CatalogBrowseService::class);
+    // Public cards still open the public product page; purchase CTAs go to dashboard checkout.
     $href = match ($product->product_type?->defaultRoute()) {
         'templates' => route('templates.show', $product->slug),
         'website-listings' => route('website-listings.show', $product->slug),
         default => $browse->productUrl($product),
     };
+    $checkoutHref = route('dashboard.services.checkout', $product->slug);
     $typeLabel = $product->productType?->name
         ?? $product->product_type?->label()
         ?? 'Service';
     $initials = strtoupper(mb_substr(preg_replace('/[^A-Za-z0-9]/', '', $product->title) ?: 'P', 0, 2));
 @endphp
-<a href="{{ $href }}" class="group flex flex-col h-full overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm hover:shadow-md transition-shadow">
-    <div class="relative aspect-[2/1] bg-slate-800 overflow-hidden shrink-0">
+<div class="group flex flex-col h-full overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-900 shadow-sm hover:shadow-md transition-shadow">
+    <a href="{{ $href }}" class="relative aspect-[2/1] bg-slate-800 overflow-hidden shrink-0 block">
         @if($product->hero_image)
             <img src="{{ asset($product->hero_image) }}" alt="" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]">
         @else
@@ -24,14 +26,14 @@
         <span class="absolute top-2 left-2 rounded bg-slate-950/75 border border-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
             {{ $typeLabel }}
         </span>
-    </div>
+    </a>
     <div class="flex flex-1 flex-col gap-2 p-4 sm:p-5 text-left">
-        <h3 class="font-bold text-sm sm:text-base text-slate-900 leading-snug line-clamp-2">{{ $product->title }}</h3>
+        <a href="{{ $href }}" class="font-bold text-sm sm:text-base text-slate-900 leading-snug line-clamp-2 hover:text-primary">{{ $product->title }}</a>
         <div class="mt-auto flex flex-wrap items-center justify-between gap-2 pt-1">
             <span class="font-bold text-primary text-sm sm:text-base">₦{{ number_format($product->displayPrice(), 0) }}</span>
-            <span class="inline-flex items-center justify-center rounded-lg bg-primary px-3 py-1.5 text-xs sm:text-sm font-semibold text-white group-hover:bg-accent transition-colors whitespace-nowrap">
-                Buy now
-            </span>
+            <a href="{{ $checkoutHref }}" class="inline-flex items-center justify-center rounded-lg bg-primary px-3 py-1.5 text-xs sm:text-sm font-semibold text-white hover:bg-accent transition-colors whitespace-nowrap">
+                {{ auth()->check() ? 'Buy now' : 'Log in to buy' }}
+            </a>
         </div>
     </div>
-</a>
+</div>

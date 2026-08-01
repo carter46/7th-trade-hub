@@ -19,7 +19,7 @@
                 icon="watchlist"
                 title="Your watchlist is empty"
                 description="Save listings from the marketplace to find them here later."
-                :action="['href' => route('marketplace'), 'label' => 'Browse marketplace']"
+                :action="['href' => route('dashboard.marketplace'), 'label' => 'Browse marketplace']"
             />
         </x-dashboard.card>
     @else
@@ -30,7 +30,7 @@
                         <h2 class="text-lg font-semibold text-text-primary">{{ $item->listing->title }}</h2>
                         <p class="text-primary font-bold mt-2">₦{{ number_format($item->listing->price, 2) }}</p>
                         <div class="mt-4">
-                            <x-dashboard.button :href="route('marketplace.show', $item->listing->slug)" variant="secondary" size="sm" icon="eye">View listing</x-dashboard.button>
+                            <x-dashboard.button :href="route('dashboard.marketplace.show', $item->listing->slug)" variant="secondary" size="sm" icon="eye">View listing</x-dashboard.button>
                         </div>
                     </x-dashboard.card>
                 @endif
