@@ -15,9 +15,15 @@ class SupportTicketController extends Controller
 {
     public function index(): View
     {
-        $tickets = SupportTicket::where('user_id', auth()->id())
-            ->orderByDesc('created_at')
-            ->paginate(15);
+        try {
+            $tickets = SupportTicket::query()
+                ->where('user_id', auth()->id())
+                ->orderByDesc('created_at')
+                ->paginate(15);
+        } catch (\Throwable $e) {
+            report($e);
+            $tickets = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15);
+        }
 
         return view('dashboard.user.support.index', compact('tickets'));
     }

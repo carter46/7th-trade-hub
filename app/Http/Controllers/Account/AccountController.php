@@ -58,10 +58,28 @@ class AccountController extends Controller
         return Redirect::route('home');
     }
 
-    public function notifications(Request $request): View
+    public function notifications(Request $request): RedirectResponse
     {
-        return $this->view($request, 'notifications', [
-            'unreadCount' => $request->user()->unreadNotificationsCount(),
+        // Single inbox — Account → Notifications is not a separate page.
+        if (self::routePrefix($request) === 'admin') {
+            return Redirect::route('admin.inbox');
+        }
+
+        return Redirect::route('dashboard.notifications');
+    }
+
+    public function kyc(Request $request): View|RedirectResponse
+    {
+        abort_unless(self::routePrefix($request) === 'dashboard', 404);
+
+        $user = $request->user();
+        $submission = $user->kycSubmissions()->latest()->first();
+        $kycRequired = \App\Models\SystemSetting::get('kyc_required', '1') !== '0';
+
+        return $this->view($request, 'kyc', [
+            'submission' => $submission,
+            'kycLevel' => (int) $user->kyc_level,
+            'kycRequired' => $kycRequired,
         ]);
     }
 

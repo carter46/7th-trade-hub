@@ -18,7 +18,15 @@
         <p class="mt-1 max-w-md text-sm text-text-secondary">{{ $description }}</p>
     @endif
     @if ($action)
-        <div class="mt-4">{{ $action }}</div>
+        <div class="mt-4">
+            @if (is_array($action))
+                <x-dashboard.button :href="$action['href'] ?? '#'" variant="primary">
+                    {{ $action['label'] ?? 'Continue' }}
+                </x-dashboard.button>
+            @else
+                {{ $action }}
+            @endif
+        </div>
     @endif
     {{ $slot }}
 </div>

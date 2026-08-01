@@ -58,7 +58,7 @@
                         </x-dashboard.row-actions>
                     @elseif ($listing->status === 'published')
                         <x-dashboard.row-actions>
-                            <x-dashboard.menu-item :href="route('marketplace.show', $listing->slug)">View live</x-dashboard.menu-item>
+                            <x-dashboard.menu-item :href="route('dashboard.discover.marketplace.show', $listing->slug)">View live</x-dashboard.menu-item>
                             <form method="POST" action="{{ route('dashboard.listings.revision', $listing) }}">
                                 @csrf
                                 <x-dashboard.menu-item type="submit">New revision</x-dashboard.menu-item>

@@ -2,12 +2,23 @@
     $items = [
         'profile' => ['label' => 'Profile', 'icon' => 'user'],
         'security' => ['label' => 'Security', 'icon' => 'lock'],
-        'notifications' => ['label' => 'Notifications', 'icon' => 'notifications'],
-        'preferences' => ['label' => 'Preferences', 'icon' => 'tune'],
-        'sessions' => ['label' => 'Sessions', 'icon' => 'monitoring'],
     ];
 
-    $active = collect($items)->keys()->first(fn ($key) => request()->routeIs($prefix.'.account.'.$key)) ?? 'profile';
+    // KYC lives under Account for members (not the sidebar).
+    if (($prefix ?? '') === 'dashboard') {
+        $items['kyc'] = ['label' => 'KYC', 'icon' => 'kyc'];
+    }
+
+    $items['preferences'] = ['label' => 'Preferences', 'icon' => 'tune'];
+    $items['sessions'] = ['label' => 'Sessions', 'icon' => 'monitoring'];
+
+    $active = collect($items)->keys()->first(function ($key) use ($prefix) {
+        if ($key === 'kyc') {
+            return request()->routeIs('dashboard.account.kyc', 'dashboard.kyc', 'dashboard.kyc.*');
+        }
+
+        return request()->routeIs($prefix.'.account.'.$key);
+    }) ?? 'profile';
 
     $tabs = collect($items)->map(fn ($item, $key) => [
         'id' => $key,

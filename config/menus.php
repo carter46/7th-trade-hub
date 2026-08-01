@@ -13,16 +13,6 @@ return [
             'sort' => 10,
         ],
         [
-            'type' => 'link',
-            'id' => 'kyc',
-            'label' => 'KYC',
-            'route' => 'dashboard.kyc',
-            'match' => ['dashboard.kyc', 'dashboard.kyc.*'],
-            'icon' => 'kyc',
-            'keywords' => ['identity', 'verification'],
-            'sort' => 20,
-        ],
-        [
             'type' => 'group',
             'id' => 'wallet',
             'label' => 'Wallet',

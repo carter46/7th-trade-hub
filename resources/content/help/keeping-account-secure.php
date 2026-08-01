@@ -11,7 +11,7 @@ return [
     'printable' => true,
     'related' => ['getting-started', 'buying-selling-marketplace', 'billing-wallets-payments'],
     'platform_actions' => [
-        ['label' => 'KYC', 'route' => 'dashboard.kyc', 'auth' => true],
+        ['label' => 'KYC', 'route' => 'dashboard.account.kyc', 'auth' => true],
         ['label' => 'Contact us', 'route' => 'contact'],
         ['label' => 'Help Center', 'route' => 'help'],
     ],

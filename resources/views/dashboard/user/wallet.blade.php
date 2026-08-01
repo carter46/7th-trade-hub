@@ -16,7 +16,7 @@
         <x-dashboard.card>
             @if (($kycLevel ?? 0) < 1)
                 <x-dashboard.alert type="warning" title="KYC required">
-                    Complete <a href="{{ route('dashboard.kyc') }}" class="underline font-medium">KYC Level 1</a> then create your wallet.
+                    Complete <a href="{{ route('dashboard.account.kyc') }}" class="underline font-medium">KYC Level 1</a> then create your wallet.
                 </x-dashboard.alert>
             @else
                 <form method="POST" action="{{ route('dashboard.wallet.create') }}" x-data="{ submitting: false }" @submit="submitting = true">

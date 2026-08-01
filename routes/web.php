@@ -161,11 +161,12 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
         Route::get('/security', 'security')->name('.security');
         Route::delete('/security', 'destroy')->name('.destroy');
         Route::get('/notifications', 'notifications')->name('.notifications');
+        Route::get('/kyc', 'kyc')->name('.kyc');
         Route::get('/preferences', 'preferences')->name('.preferences');
         Route::get('/sessions', 'sessions')->name('.sessions');
         Route::delete('/sessions/{session}', 'revokeSession')->name('.sessions.destroy');
     });
-    Route::get('/kyc', [KycController::class, 'show'])->name('.kyc');
+    Route::get('/kyc', fn () => redirect()->route('dashboard.account.kyc'))->name('.kyc');
     Route::post('/kyc', [KycController::class, 'store'])->name('.kyc.store');
     Route::post('/wallet/create', [WalletController::class, 'create'])->name('.wallet.create');
     Route::get('/wallet', [DashboardController::class, 'wallet'])->name('.wallet');
@@ -274,12 +275,14 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::post('/administrators/{administrator}/restore', [AdministratorController::class, 'restore'])->name('.administrators.restore');
     });
 
-    Route::get('/notifications', [UserNotificationController::class, 'index'])->name('.inbox');
-    Route::post('/notifications/{notification}/read', [UserNotificationController::class, 'markRead'])->name('.inbox.read');
-    Route::post('/notifications/read-all', [UserNotificationController::class, 'markAllRead'])->name('.inbox.read-all');
+    // Personal user-notification inbox (distinct from admin system alerts at /admin/notifications).
+    Route::get('/inbox', [UserNotificationController::class, 'index'])->name('.inbox');
+    Route::post('/inbox/{notification}/read', [UserNotificationController::class, 'markRead'])->name('.inbox.read');
+    Route::post('/inbox/read-all', [UserNotificationController::class, 'markAllRead'])->name('.inbox.read-all');
 
     Route::middleware('permission:compliance.manage')->group(function () {
         Route::get('/kyc', [AdminKycController::class, 'index'])->name('.kyc');
+        Route::post('/kyc/requirement', [AdminKycController::class, 'updateRequirement'])->name('.kyc.requirement');
         Route::post('/kyc/{submission}/approve', [AdminKycController::class, 'approve'])->name('.kyc.approve');
         Route::post('/kyc/{submission}/reject', [AdminKycController::class, 'reject'])->name('.kyc.reject');
         Route::post('/kyc/{submission}/return-pending', [AdminKycController::class, 'returnToPending'])->name('.kyc.return-pending');

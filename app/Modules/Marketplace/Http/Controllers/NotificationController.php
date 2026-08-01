@@ -12,17 +12,23 @@ class NotificationController extends Controller
 {
     public function index(): View
     {
-        $notifications = auth()->user()
-            ->notifications()
-            ->orderByDesc('created_at')
-            ->paginate(20);
+        $user = auth()->user();
+        $isAdmin = (bool) $user?->hasRole('admin');
 
-        $layout = auth()->user()->hasRole('admin')
-            ? 'layouts.dashboard-admin'
-            : 'layouts.dashboard-user';
-        $notificationPrefix = auth()->user()->hasRole('admin') ? 'admin' : 'dashboard';
+        $notifications = ($user && \Illuminate\Support\Facades\Schema::hasTable('user_notifications'))
+            ? $user->notifications()->orderByDesc('created_at')->paginate(20)
+            : new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20);
 
-        return view('dashboard.user.notifications', compact('notifications', 'layout', 'notificationPrefix'));
+        $layout = $isAdmin ? 'layouts.dashboard-admin' : 'layouts.dashboard-user';
+        $notificationReadAll = $isAdmin ? 'admin.inbox.read-all' : 'dashboard.notifications.read-all';
+        $notificationRead = $isAdmin ? 'admin.inbox.read' : 'dashboard.notifications.read';
+
+        return view('dashboard.user.notifications', compact(
+            'notifications',
+            'layout',
+            'notificationReadAll',
+            'notificationRead',
+        ));
     }
 
     public function markRead(UserNotification $notification): RedirectResponse

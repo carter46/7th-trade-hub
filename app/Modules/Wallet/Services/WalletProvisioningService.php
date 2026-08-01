@@ -16,7 +16,7 @@ class WalletProvisioningService
 
     public function createWallet(User $user): Wallet
     {
-        if ($user->kyc_level < 1) {
+        if (! $user->hasApprovedKyc()) {
             throw new \RuntimeException('KYC Level 1 required before creating a wallet.');
         }
 

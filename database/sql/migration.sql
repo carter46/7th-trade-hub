@@ -128,6 +128,7 @@ CREATE TABLE IF NOT EXISTS `listings` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `user_id` bigint unsigned DEFAULT NULL,
   `category_id` bigint unsigned DEFAULT NULL,
+  `marketplace_product_id` bigint unsigned DEFAULT NULL,
   `title` varchar(255) NOT NULL,
   `slug` varchar(255) NOT NULL,
   `description` text,
@@ -137,12 +138,15 @@ CREATE TABLE IF NOT EXISTS `listings` (
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
   `status` varchar(20) NOT NULL DEFAULT 'published',
   `featured` tinyint(1) NOT NULL DEFAULT 0,
+  `deleted_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `listings_slug_unique` (`slug`),
   KEY `listings_user_id_foreign` (`user_id`),
-  KEY `listings_category_id_foreign` (`category_id`)
+  KEY `listings_category_id_foreign` (`category_id`),
+  KEY `listings_marketplace_product_id_foreign` (`marketplace_product_id`),
+  KEY `listings_deleted_at_index` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `transactions` (
@@ -807,6 +811,7 @@ CREATE TABLE IF NOT EXISTS `marketplace_products` (
   CONSTRAINT `marketplace_products_category_id_foreign` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Existing DBs created before SoftDeletes / marketplace product FK (run once if column missing):
 -- ALTER TABLE `listings` ADD COLUMN `marketplace_product_id` bigint unsigned DEFAULT NULL AFTER `category_id`;
 -- ALTER TABLE `listings` ADD COLUMN `deleted_at` timestamp NULL DEFAULT NULL;
 -- ALTER TABLE `listings` ADD KEY `listings_marketplace_product_id_foreign` (`marketplace_product_id`);

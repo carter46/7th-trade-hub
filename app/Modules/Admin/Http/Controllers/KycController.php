@@ -4,6 +4,7 @@ namespace App\Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\KycSubmission;
+use App\Models\SystemSetting;
 use App\Models\User;
 use App\Modules\Admin\Services\AuditLogService;
 use Illuminate\Http\RedirectResponse;
@@ -46,13 +47,34 @@ class KycController extends Controller
             'rejected' => KycSubmission::where('status', 'rejected')->count(),
         ];
 
-        $data = compact('submissions', 'status', 'counts', 'search');
+        $kycRequired = SystemSetting::get('kyc_required', '1') !== '0';
+
+        $data = compact('submissions', 'status', 'counts', 'search', 'kycRequired');
 
         if ($this->wantsTabPartial($request)) {
             return view('dashboard.admin.kyc._panel', $data);
         }
 
         return view('dashboard.admin.kyc', $data);
+    }
+
+    public function updateRequirement(Request $request): RedirectResponse
+    {
+        $enabled = $request->boolean('kyc_required');
+        SystemSetting::set('kyc_required', $enabled ? '1' : '0');
+
+        $this->audit->log(
+            auth()->id(),
+            'kyc.requirement.updated',
+            null,
+            null,
+            ['kyc_required' => $enabled],
+            $request->ip()
+        );
+
+        return back()->with('status', $enabled
+            ? __('KYC is now required for wallet creation.')
+            : __('KYC is optional — users can create wallets without verification.'));
     }
 
     public function approve(KycSubmission $submission, Request $request): RedirectResponse

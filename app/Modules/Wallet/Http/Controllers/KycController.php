@@ -6,18 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\KycSubmission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 
 class KycController extends Controller
 {
-    public function show(): View
+    public function show(): RedirectResponse
     {
-        $submission = auth()->user()->kycSubmissions()->latest()->first();
-
-        return view('dashboard.user.kyc', [
-            'submission' => $submission,
-            'kycLevel' => auth()->user()->kyc_level,
-        ]);
+        return redirect()->route('dashboard.account.kyc');
     }
 
     public function store(Request $request): RedirectResponse

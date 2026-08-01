@@ -18,9 +18,31 @@
     ]"
 >
     <x-dashboard.card class="mb-4">
-        <form method="GET" action="{{ route('admin.kyc') }}" class="flex flex-wrap gap-3 items-end">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+                <h2 class="text-base font-semibold text-text-primary">KYC requirement</h2>
+                <p class="text-sm text-text-secondary mt-1">
+                    When off, members can create wallets without submitting identity documents.
+                </p>
+            </div>
+            <form method="POST" action="{{ route('admin.kyc.requirement') }}" class="w-full max-w-sm">
+                @csrf
+                <input type="hidden" name="kyc_required" value="0">
+                <x-dashboard.toggle
+                    name="kyc_required"
+                    label="Require KYC for wallet creation"
+                    :checked="old('kyc_required', $kycRequired ?? true)"
+                    value="1"
+                    onchange="this.form.requestSubmit()"
+                />
+            </form>
+        </div>
+    </x-dashboard.card>
+
+    <x-dashboard.card class="mb-4">
+        <form method="GET" action="{{ route('admin.kyc') }}" class="flex flex-wrap gap-3 items-end w-full">
             <input type="hidden" name="status" value="{{ $status }}">
-            <div class="min-w-[16rem] flex-1">
+            <div class="min-w-[16rem] flex-1 w-full">
                 <x-dashboard.input name="q" label="Search user" :value="$search" placeholder="Name, email, username..." />
             </div>
             <x-dashboard.button type="submit" variant="secondary">Search</x-dashboard.button>

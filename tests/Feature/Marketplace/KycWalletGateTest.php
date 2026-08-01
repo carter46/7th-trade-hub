@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Marketplace;
 
+use App\Models\SystemSetting;
 use App\Models\User;
 use App\Modules\Wallet\Services\WalletProvisioningService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,10 +22,28 @@ class KycWalletGateTest extends TestCase
 
         $this->actingAs($user)
             ->post(route('dashboard.wallet.create'))
-            ->assertRedirect(route('dashboard.kyc'))
+            ->assertRedirect(route('dashboard.account.kyc'))
             ->assertSessionHas('error');
 
         $this->assertNull($user->fresh()->wallet);
+    }
+
+    public function test_wallet_creation_allowed_when_kyc_not_required(): void
+    {
+        SystemSetting::set('kyc_required', '0');
+
+        $user = User::factory()->create([
+            'email_verified_at' => now(),
+            'kyc_level' => 0,
+        ]);
+        $user->assignRole('user');
+
+        $this->actingAs($user)
+            ->post(route('dashboard.wallet.create'))
+            ->assertRedirect(route('dashboard.wallet'))
+            ->assertSessionHas('status');
+
+        $this->assertNotNull($user->fresh()->wallet);
     }
 
     public function test_wallet_creation_succeeds_after_kyc_approval(): void

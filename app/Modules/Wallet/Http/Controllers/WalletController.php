@@ -17,7 +17,7 @@ class WalletController extends Controller
         $user = auth()->user();
 
         if (! $user->hasApprovedKyc()) {
-            return redirect()->route('dashboard.kyc')->with('error', __('Complete KYC Level 1 before creating a wallet.'));
+            return redirect()->route('dashboard.account.kyc')->with('error', __('Complete KYC Level 1 before creating a wallet.'));
         }
 
         if ($user->wallet()->exists()) {

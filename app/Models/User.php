@@ -197,11 +197,24 @@ class User extends Authenticatable
 
     public function unreadNotificationsCount(): int
     {
-        return $this->notifications()->whereNull('read_at')->count();
+        try {
+            if (! Schema::hasTable('user_notifications')) {
+                return 0;
+            }
+
+            return (int) $this->notifications()->whereNull('read_at')->count();
+        } catch (\Throwable) {
+            return 0;
+        }
     }
 
     public function hasApprovedKyc(int $level = 1): bool
     {
+        // Platform-wide toggle: when KYC is not required, treat members as verified.
+        if (SystemSetting::get('kyc_required', '1') === '0') {
+            return true;
+        }
+
         return $this->kyc_level >= $level;
     }
 

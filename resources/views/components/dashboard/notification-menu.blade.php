@@ -6,22 +6,30 @@
     $isAdmin = auth()->user()?->hasRole('admin') ?? false;
     $useAdminNotifications = $isAdmin && \Illuminate\Support\Facades\Route::has('admin.notifications');
 
-    if ($useAdminNotifications) {
-        $unread = \App\Models\AdminNotification::unreadCount();
-        $items = \App\Models\AdminNotification::query()
-            ->orderByDesc('created_at')
-            ->limit($limit)
-            ->get();
-        $inboxRoute = route('admin.notifications');
-        $readRoute = fn ($n) => route('admin.notifications.read', $n);
-    } else {
-        $unread = auth()->user()?->unreadNotificationsCount() ?? 0;
-        $items = auth()->user()
-            ?->notifications()
-            ->orderByDesc('created_at')
-            ->limit($limit)
-            ->get() ?? collect();
-        $inboxRoute = route('dashboard.notifications');
+    try {
+        if ($useAdminNotifications) {
+            $unread = \Illuminate\Support\Facades\Schema::hasTable('admin_notifications')
+                ? \App\Models\AdminNotification::unreadCount()
+                : 0;
+            $items = \Illuminate\Support\Facades\Schema::hasTable('admin_notifications')
+                ? \App\Models\AdminNotification::query()->orderByDesc('created_at')->limit($limit)->get()
+                : collect();
+            $inboxRoute = route('admin.notifications');
+            $readRoute = fn ($n) => route('admin.notifications.read', $n);
+        } else {
+            $unread = auth()->user()?->unreadNotificationsCount() ?? 0;
+            $items = (\Illuminate\Support\Facades\Schema::hasTable('user_notifications') && auth()->user())
+                ? auth()->user()->notifications()->orderByDesc('created_at')->limit($limit)->get()
+                : collect();
+            $inboxRoute = route('dashboard.notifications');
+            $readRoute = null;
+        }
+    } catch (\Throwable) {
+        $unread = 0;
+        $items = collect();
+        $inboxRoute = $useAdminNotifications
+            ? (\Illuminate\Support\Facades\Route::has('admin.notifications') ? route('admin.notifications') : '#')
+            : (\Illuminate\Support\Facades\Route::has('dashboard.notifications') ? route('dashboard.notifications') : '#');
         $readRoute = null;
     }
 @endphp

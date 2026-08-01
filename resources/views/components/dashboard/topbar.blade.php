@@ -11,8 +11,9 @@
     $destinations = $destinations ?: \App\Support\DashboardNavigation::searchIndex($role, auth()->user());
 @endphp
 
+{{-- Shared topbar: logo lives in the sidebar only (admin + user). --}}
 <header class="h-16 shrink-0 border-b border-border-default bg-header z-30">
-    {{-- Mobile topbar: menu, context, search, notifications, account --}}
+    {{-- Mobile topbar --}}
     <div class="flex h-full items-center justify-between gap-2 px-4 lg:hidden">
         <div class="flex min-w-0 items-center gap-2">
             <button
@@ -43,13 +44,10 @@
         </div>
     </div>
 
-    {{-- Desktop topbar --}}
+    {{-- Desktop topbar — no brand logo (sidebar owns branding) --}}
     <div class="hidden h-full items-center justify-between gap-4 px-4 sm:px-6 lg:flex lg:px-10">
-        <div class="flex items-center gap-4 sm:gap-8">
-            <a href="{{ $homeRoute }}" class="flex items-center gap-3 text-primary">
-                <x-dashboard.asset key="logo" class="h-8 w-auto" alt="{{ config('app.name') }}" />
-                <h2 class="text-lg font-bold leading-tight tracking-tight text-text-primary">{{ $context }}</h2>
-            </a>
+        <div class="min-w-0">
+            <p class="truncate text-sm font-semibold text-text-primary">{{ $context }}</p>
         </div>
         <div class="flex items-center gap-2 sm:gap-3">
             <div class="hidden lg:block" data-desktop-theme-switcher>
