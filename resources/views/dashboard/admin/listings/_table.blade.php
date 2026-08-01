@@ -64,7 +64,7 @@
                             @csrf
                             <x-dashboard.menu-item type="submit" variant="success">Restore from Trash</x-dashboard.menu-item>
                         </form>
-                        <x-dashboard.menu-item type="button" variant="danger" @click="$dispatch('open-modal', 'delete-listing-{{ $listing->id }}')">
+                        <x-dashboard.menu-item type="button" variant="danger" x-on:click.stop="$dispatch('open-modal', 'delete-listing-{{ $listing->id }}')">
                             Permanently Delete
                         </x-dashboard.menu-item>
                     @else
@@ -100,7 +100,7 @@
                             <x-dashboard.menu-item type="submit">Duplicate</x-dashboard.menu-item>
                         </form>
                         @if(in_array($listing->status, ['suspended', 'rejected', 'archived'], true))
-                            <x-dashboard.menu-item type="button" variant="danger" @click="$dispatch('open-modal', 'delete-listing-{{ $listing->id }}')">
+                            <x-dashboard.menu-item type="button" variant="danger" x-on:click.stop="$dispatch('open-modal', 'delete-listing-{{ $listing->id }}')">
                                 Move to Trash
                             </x-dashboard.menu-item>
                         @endif

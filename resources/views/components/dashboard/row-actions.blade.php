@@ -33,4 +33,9 @@
             {{ $slot }}
         </div>
     </template>
+
+    {{-- Non-menu content (e.g. confirm modals) passed via named slot stays outside the teleport. --}}
+    @isset($outside)
+        {{ $outside }}
+    @endisset
 </div>

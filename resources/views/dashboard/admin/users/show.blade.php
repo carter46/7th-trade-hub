@@ -68,7 +68,12 @@
                     @csrf
                     <x-dashboard.button type="submit" variant="success" size="sm">Restore</x-dashboard.button>
                 </form>
-                <x-dashboard.button type="button" variant="danger" size="sm" @click="$dispatch('open-modal', 'delete-user-{{ $user->id }}')">
+                <x-dashboard.button
+                    type="button"
+                    variant="danger"
+                    size="sm"
+                    x-on:click="$dispatch('open-modal', 'delete-user-{{ $user->id }}')"
+                >
                     Permanently Delete
                 </x-dashboard.button>
                 <x-dashboard.modal

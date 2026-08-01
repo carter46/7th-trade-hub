@@ -68,19 +68,13 @@
                                 @csrf
                                 <x-dashboard.menu-item type="submit" variant="success">Restore</x-dashboard.menu-item>
                             </form>
-                            <x-dashboard.menu-item type="button" variant="danger" @click="$dispatch('open-modal', 'delete-user-{{ $u->id }}')">
+                            <x-dashboard.menu-item
+                                type="button"
+                                variant="danger"
+                                x-on:click.stop="$dispatch('open-modal', 'delete-user-{{ $u->id }}')"
+                            >
                                 Permanently Delete
                             </x-dashboard.menu-item>
-                            <x-dashboard.modal
-                                name="delete-user-{{ $u->id }}"
-                                title="Permanently delete this user?"
-                                variant="danger"
-                                confirm-label="Permanently Delete"
-                                :form-action="route('admin.users.destroy', $u)"
-                                method="DELETE"
-                            >
-                                This anonymizes personal data and cannot be undone.
-                            </x-dashboard.modal>
                         @else
                             <form method="POST" action="{{ route('admin.users.suspend', $u) }}">
                                 @csrf
@@ -88,6 +82,19 @@
                             </form>
                         @endif
                     </x-dashboard.row-actions>
+                    {{-- Modal must sit outside row-actions teleport or the confirm dialog never stays open. --}}
+                    @if ($u->is_suspended && ! $u->anonymized_at)
+                        <x-dashboard.modal
+                            name="delete-user-{{ $u->id }}"
+                            title="Permanently delete this user?"
+                            variant="danger"
+                            confirm-label="Permanently Delete"
+                            :form-action="route('admin.users.destroy', $u)"
+                            method="DELETE"
+                        >
+                            This anonymizes personal data and cannot be undone.
+                        </x-dashboard.modal>
+                    @endif
                 @endif
             </x-dashboard.td>
         </tr>
