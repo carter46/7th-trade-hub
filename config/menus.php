@@ -140,10 +140,8 @@ return [
             'icon' => 'bitcoin',
             'sort' => 40,
             'children' => [
-                ['route' => 'admin.fundings', 'match' => ['admin.fundings', 'admin.fundings.*'], 'label' => 'Deposits', 'icon' => 'deposit', 'keywords' => ['fundings', 'bank'], 'permission' => 'finance.manage', 'sort' => 10],
-                ['route' => 'admin.crypto-sells', 'match' => ['admin.crypto-sells', 'admin.crypto-sells.*'], 'label' => 'Sell Requests', 'icon' => 'bitcoin', 'keywords' => ['otc', 'crypto'], 'permission' => 'finance.manage', 'sort' => 20],
-                ['route' => 'admin.withdrawals', 'match' => ['admin.withdrawals', 'admin.withdrawals.*'], 'label' => 'Withdrawals', 'icon' => 'withdraw', 'keywords' => ['payouts'], 'permission' => 'finance.manage', 'sort' => 30],
-                ['route' => 'admin.exchange-rates', 'match' => ['admin.exchange-rates', 'admin.exchange-rates.*'], 'label' => 'Exchange Rates', 'icon' => 'bitcoin', 'keywords' => ['rates', 'fx', 'crypto'], 'permission' => 'catalog.manage', 'sort' => 40],
+                ['route' => 'admin.crypto-sells', 'match' => ['admin.crypto-sells', 'admin.crypto-sells.*'], 'label' => 'Sell Requests', 'icon' => 'bitcoin', 'keywords' => ['otc', 'crypto'], 'permission' => 'finance.manage', 'sort' => 10],
+                ['route' => 'admin.exchange-rates', 'match' => ['admin.exchange-rates', 'admin.exchange-rates.*'], 'label' => 'Exchange Rates', 'icon' => 'bitcoin', 'keywords' => ['rates', 'fx', 'crypto'], 'permission' => 'catalog.manage', 'sort' => 20],
             ],
         ],
         [
@@ -153,8 +151,10 @@ return [
             'icon' => 'wallet',
             'sort' => 50,
             'children' => [
-                ['route' => 'admin.wallet-adjustment', 'match' => ['admin.wallet-adjustment', 'admin.wallet-adjustment.*'], 'label' => 'Wallet Adjustments', 'icon' => 'wallet-adjust', 'keywords' => ['credit', 'debit', 'adjust'], 'permission' => 'finance.manage', 'sort' => 10],
-                ['route' => 'admin.transactions', 'match' => ['admin.transactions', 'admin.transactions.*'], 'label' => 'Transactions', 'icon' => 'transactions', 'keywords' => ['ledger', 'history'], 'permission' => 'finance.manage', 'sort' => 20],
+                ['route' => 'admin.fundings', 'match' => ['admin.fundings', 'admin.fundings.*'], 'label' => 'Deposits', 'icon' => 'deposit', 'keywords' => ['fundings', 'bank'], 'permission' => 'finance.manage', 'sort' => 10],
+                ['route' => 'admin.withdrawals', 'match' => ['admin.withdrawals', 'admin.withdrawals.*'], 'label' => 'Withdrawals', 'icon' => 'withdraw', 'keywords' => ['payouts'], 'permission' => 'finance.manage', 'sort' => 20],
+                ['route' => 'admin.wallet-adjustment', 'match' => ['admin.wallet-adjustment', 'admin.wallet-adjustment.*'], 'label' => 'Wallet Adjustments', 'icon' => 'wallet-adjust', 'keywords' => ['credit', 'debit', 'adjust'], 'permission' => 'finance.manage', 'sort' => 30],
+                ['route' => 'admin.transactions', 'match' => ['admin.transactions', 'admin.transactions.*'], 'label' => 'Transactions', 'icon' => 'transactions', 'keywords' => ['ledger', 'history'], 'permission' => 'finance.manage', 'sort' => 40],
             ],
         ],
         [
