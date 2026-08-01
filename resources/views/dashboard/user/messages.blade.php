@@ -55,7 +55,7 @@
             <tr class="hover:bg-muted/50">
                 <x-dashboard.td class="font-mono text-sm">{{ $order->reference }}</x-dashboard.td>
                 <x-dashboard.td>{{ $order->listing?->title ?? 'Listing unavailable' }}</x-dashboard.td>
-                <x-dashboard.td>{{ $counterpart?->name ?? '—' }}</x-dashboard.td>
+                <x-dashboard.td>{{ \App\Models\User::nameFor($counterpart) }}</x-dashboard.td>
                 <x-dashboard.td><x-dashboard.badge :status="$order->escrow?->status ?? 'default'">{{ $order->escrow?->status ?? '—' }}</x-dashboard.badge></x-dashboard.td>
                 <x-dashboard.td>
                     <x-dashboard.button :href="route('dashboard.messages.order', $order)" size="xs">Open</x-dashboard.button>

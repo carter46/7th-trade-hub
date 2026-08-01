@@ -29,12 +29,16 @@
             <x-dashboard.th>Title</x-dashboard.th>
             <x-dashboard.th>Price</x-dashboard.th>
             <x-dashboard.th>Status</x-dashboard.th>
-            <x-dashboard.th>Updated</x-dashboard.th>
             <x-dashboard.th>Actions</x-dashboard.th>
         </x-slot:head>
         @foreach ($listings as $listing)
             <tr class="hover:bg-muted/50">
-                <x-dashboard.td class="font-medium">{{ $listing->title }}</x-dashboard.td>
+                <x-dashboard.td class="font-medium min-w-0">
+                    <div class="text-text-primary">{{ $listing->title }}</div>
+                    <div class="mt-0.5 text-xs text-text-muted">
+                        Updated {{ $listing->updated_at->format('M j, Y') }}
+                    </div>
+                </x-dashboard.td>
                 <x-dashboard.td>₦{{ number_format($listing->price, 2) }}</x-dashboard.td>
                 <x-dashboard.td>
                     @php
@@ -42,12 +46,14 @@
                             'published' => 'completed',
                             'pending_review' => 'pending',
                             'rejected' => 'rejected',
+                            'draft' => 'neutral',
+                            'archived' => 'neutral',
+                            'suspended' => 'danger',
                             default => 'default',
                         };
                     @endphp
                     <x-dashboard.badge :status="$badgeStatus">{{ str_replace('_', ' ', $listing->status) }}</x-dashboard.badge>
                 </x-dashboard.td>
-                <x-dashboard.td class="text-text-secondary">{{ $listing->updated_at->format('M j, Y') }}</x-dashboard.td>
                 <x-dashboard.td>
                     @if (in_array($listing->status, ['draft', 'rejected']))
                         <x-dashboard.row-actions>
@@ -55,6 +61,15 @@
                             <form method="POST" action="{{ route('dashboard.listings.submit', $listing) }}">
                                 @csrf
                                 <x-dashboard.menu-item type="submit">Submit</x-dashboard.menu-item>
+                            </form>
+                            <form
+                                method="POST"
+                                action="{{ route('dashboard.listings.destroy', $listing) }}"
+                                onsubmit="return confirm('Delete this listing? You can ask support if you remove it by mistake.');"
+                            >
+                                @csrf
+                                @method('DELETE')
+                                <x-dashboard.menu-item type="submit" variant="danger">Delete</x-dashboard.menu-item>
                             </form>
                         </x-dashboard.row-actions>
                     @elseif ($listing->status === 'published')

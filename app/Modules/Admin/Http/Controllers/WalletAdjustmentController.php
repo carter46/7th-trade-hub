@@ -30,7 +30,15 @@ class WalletAdjustmentController extends Controller
             'reason' => ['required', 'string', 'max:500'],
         ]);
 
-        $user = User::where('email', $validated['user_email'])->firstOrFail();
+        $user = User::query()
+            ->notAnonymized()
+            ->where('email', $validated['user_email'])
+            ->first();
+
+        if (! $user) {
+            return back()->withInput()->with('error', __('No active user found with that email.'));
+        }
+
         $wallet = $user->wallet;
 
         if (! $wallet) {

@@ -186,6 +186,38 @@ class User extends Authenticatable
         return $this->anonymized_at !== null;
     }
 
+    /** Safe name for UI (never expose tombstone usernames). */
+    public function displayName(): string
+    {
+        return $this->isAnonymized() ? __('Deleted User') : (string) ($this->name ?: __('User'));
+    }
+
+    /** Safe email for UI — null when anonymized so tombstone addresses are never shown. */
+    public function displayEmail(): ?string
+    {
+        return $this->isAnonymized() ? null : $this->email;
+    }
+
+    /** Single-line admin label (email preferred; falls back to name). */
+    public function adminLabel(): string
+    {
+        if ($this->isAnonymized()) {
+            return __('Deleted User');
+        }
+
+        return (string) ($this->email ?: $this->name ?: __('User'));
+    }
+
+    public static function labelFor(?self $user): string
+    {
+        return $user?->adminLabel() ?? __('Deleted User');
+    }
+
+    public static function nameFor(?self $user): string
+    {
+        return $user?->displayName() ?? __('Deleted User');
+    }
+
     /**
      * Scrub personal data immediately. The tombstone is hidden from admin lists and
      * hard-purged after 24 hours by `users:purge-anonymized`.

@@ -239,6 +239,7 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
     Route::post('/listings/{listing}/submit', [ListingController::class, 'submitForReview'])->name('.listings.submit');
     Route::post('/listings/{listing}/archive', [ListingController::class, 'archive'])->name('.listings.archive');
     Route::post('/listings/{listing}/restore-archive', [ListingController::class, 'restoreArchive'])->name('.listings.restore-archive');
+    Route::delete('/listings/{listing}', [ListingController::class, 'destroy'])->name('.listings.destroy');
     Route::get('/orders', [DashboardController::class, 'orders'])->name('.orders');
     Route::get('/sales', [DashboardController::class, 'sales'])->name('.sales');
     Route::post('/orders/{order}/confirm', [CheckoutController::class, 'confirmDelivery'])->name('.orders.confirm');
@@ -357,6 +358,7 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
     Route::middleware('permission:catalog.manage')->group(function () {
         Route::get('/listings', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'index'])->name('.listings');
         Route::get('/listings/pending', fn () => redirect()->route('admin.listings', ['status' => 'pending'], 301))->name('.listings.pending');
+        Route::delete('/listings/trash', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'bulkDestroy'])->name('.listings.trash.destroy');
         Route::get('/listings/{listing}', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'show'])->withTrashed()->name('.listings.show');
         Route::post('/listings/{listing}/approve', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'approve'])->withTrashed()->name('.listings.approve');
         Route::post('/listings/{listing}/reject', [\App\Modules\Admin\Http\Controllers\ListingAdminController::class, 'reject'])->withTrashed()->name('.listings.reject');

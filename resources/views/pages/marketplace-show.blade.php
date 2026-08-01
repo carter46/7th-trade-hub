@@ -44,7 +44,7 @@
                 <h2 class="text-xl font-bold text-text-primary mb-4">Reviews</h2>
                 @foreach($listing->reviews->take(10) as $review)
                     <x-ui.card>
-                        <p class="text-warning text-sm">★ {{ $review->rating }}/5 — {{ $review->user->name }}</p>
+                        <p class="text-warning text-sm">★ {{ $review->rating }}/5 — {{ \App\Models\User::nameFor($review->user) }}</p>
                         @if($review->comment)
                             <p class="text-text-secondary text-sm mt-1">{{ $review->comment }}</p>
                         @endif

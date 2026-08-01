@@ -61,17 +61,17 @@
                     @endif
                 </x-dashboard.td>
                 <x-dashboard.td>
-                    @if($buyer)
-                        <a href="{{ route('admin.users.show', $buyer) }}" class="hover:underline">{{ $buyer->name }}</a>
+                    @if($buyer && ! $buyer->isAnonymized())
+                        <a href="{{ route('admin.users.show', $buyer) }}" class="hover:underline">{{ $buyer->displayName() }}</a>
                     @else
-                        —
+                        {{ \App\Models\User::nameFor($buyer) }}
                     @endif
                 </x-dashboard.td>
                 <x-dashboard.td>
-                    @if($seller)
-                        <a href="{{ route('admin.users.show', $seller) }}" class="hover:underline">{{ $seller->name }}</a>
+                    @if($seller && ! $seller->isAnonymized())
+                        <a href="{{ route('admin.users.show', $seller) }}" class="hover:underline">{{ $seller->displayName() }}</a>
                     @else
-                        —
+                        {{ \App\Models\User::nameFor($seller) }}
                     @endif
                 </x-dashboard.td>
                 <x-dashboard.td>₦{{ number_format((float) $e->amount, 2) }}</x-dashboard.td>

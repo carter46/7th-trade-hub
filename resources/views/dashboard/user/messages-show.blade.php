@@ -9,7 +9,7 @@
 @endphp
 <x-layout.page
     title="Order {{ $order->reference }}"
-    :subtitle="($order->listing?->title ?? 'Listing unavailable').' · '.($counterpart?->name ?? '—')"
+    :subtitle="($order->listing?->title ?? 'Listing unavailable').' · '.\App\Models\User::nameFor($counterpart)"
     width="default"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
@@ -26,7 +26,7 @@
         @forelse ($messages as $message)
             <x-dashboard.card :class="(int) $message->from_user_id === (int) auth()->id() ? 'border border-primary/20' : ''">
                 <p class="text-xs text-text-muted mb-2">
-                    {{ $message->fromUser?->name ?? 'User' }}
+                    {{ \App\Models\User::nameFor($message->fromUser) }}
                     · {{ $message->created_at->format('M j, Y H:i') }}
                 </p>
                 <p class="text-sm text-text-primary whitespace-pre-wrap">{{ $message->body }}</p>

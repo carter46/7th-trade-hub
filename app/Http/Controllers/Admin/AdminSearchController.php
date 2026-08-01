@@ -31,14 +31,14 @@ class AdminSearchController extends Controller
         $like = '%'.$q.'%';
 
         if ($user?->can('users.manage')) {
-            $items = Search::apply(User::query()->role('user'), $q)
+            $items = Search::apply(User::query()->role('user')->notAnonymized(), $q)
                 ->orderByDesc('created_at')
                 ->limit(5)
                 ->get()
                 ->map(fn (User $row) => [
                     'id' => 'user-'.$row->id,
-                    'label' => $row->name,
-                    'subtitle' => $row->email,
+                    'label' => $row->displayName(),
+                    'subtitle' => $row->displayEmail(),
                     'url' => route('admin.users.show', $row),
                     'group' => 'Users',
                 ])
@@ -167,7 +167,7 @@ class AdminSearchController extends Controller
                 ->where(function ($query) use ($like, $q) {
                     $query->where('id', is_numeric($q) ? (int) $q : -1)
                         ->orWhereHas('user', function ($u) use ($like, $q) {
-                            $u->where(function ($inner) use ($like, $q) {
+                            $u->notAnonymized()->where(function ($inner) use ($like, $q) {
                                 $inner->where('name', 'like', $like)
                                     ->orWhere('email', 'like', $like)
                                     ->orWhere('username', 'like', $q.'%');
@@ -177,13 +177,18 @@ class AdminSearchController extends Controller
                 ->orderByDesc('updated_at')
                 ->limit(5)
                 ->get()
-                ->map(fn (Wallet $row) => [
-                    'id' => 'wallet-'.$row->id,
-                    'label' => $row->user?->name ?? 'Wallet #'.$row->id,
-                    'subtitle' => 'Balance ₦'.number_format((float) $row->balance, 2),
-                    'url' => $row->user ? route('admin.users.show', $row->user) : route('admin.transactions'),
-                    'group' => 'Wallets',
-                ])
+                ->map(function (Wallet $row) {
+                    $owner = $row->user;
+                    $canOpen = $owner && ! $owner->isAnonymized();
+
+                    return [
+                        'id' => 'wallet-'.$row->id,
+                        'label' => \App\Models\User::nameFor($owner),
+                        'subtitle' => 'Balance ₦'.number_format((float) $row->balance, 2),
+                        'url' => $canOpen ? route('admin.users.show', $owner) : route('admin.transactions'),
+                        'group' => 'Wallets',
+                    ];
+                })
                 ->all();
 
             if ($wallets !== []) {
@@ -224,7 +229,7 @@ class AdminSearchController extends Controller
                 ->map(fn (WalletFunding $row) => [
                     'id' => 'funding-'.$row->id,
                     'label' => $row->reference ?: 'Funding #'.$row->id,
-                    'subtitle' => ($row->user?->name ?? '—').' · '.$row->status,
+                    'subtitle' => \App\Models\User::nameFor($row->user).' · '.$row->status,
                     'url' => route('admin.fundings'),
                     'group' => 'Fundings',
                 ])

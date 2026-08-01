@@ -1,7 +1,7 @@
 @php
     $href = route('marketplace.show', $listing->slug);
-    $vendor = $listing->user?->name ?? 'Seller';
-    $initials = strtoupper(mb_substr(preg_replace('/[^A-Za-z0-9]/', '', $vendor) ?: 'V', 0, 2));
+    $vendor = \App\Models\User::nameFor($listing->user);
+    $initials = strtoupper(mb_substr(preg_replace('/[^A-Za-z0-9]/', '', $vendor) ?: 'DU', 0, 2));
     $avg = round((float) ($listing->reviews_avg_rating ?? 0), 1);
     $reviewCount = (int) ($listing->reviews_count ?? 0);
     $filled = (int) round($avg);

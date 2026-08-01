@@ -20,7 +20,7 @@
             <x-dashboard.td>
                 <a href="{{ route('admin.tickets.show', $ticket) }}" class="text-primary hover:underline font-medium">#{{ $ticket->id }}</a>
             </x-dashboard.td>
-            <x-dashboard.td>{{ $ticket->user?->email ?? '—' }}</x-dashboard.td>
+            <x-dashboard.td>{{ \App\Models\User::labelFor($ticket->user) }}</x-dashboard.td>
             <x-dashboard.td class="text-text-muted text-xs">{{ $ticket->category }}</x-dashboard.td>
             <x-dashboard.td>{{ $ticket->subject }}</x-dashboard.td>
             <x-dashboard.td><x-dashboard.badge :status="$ticket->status" /></x-dashboard.td>

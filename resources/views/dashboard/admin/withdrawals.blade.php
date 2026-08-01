@@ -30,7 +30,7 @@
         @foreach ($withdrawals as $w)
             <tr>
                 <x-dashboard.td class="font-medium">{{ $w->reference }}</x-dashboard.td>
-                <x-dashboard.td>{{ $w->user->email }}</x-dashboard.td>
+                <x-dashboard.td>{{ \App\Models\User::labelFor($w->user) }}</x-dashboard.td>
                 <x-dashboard.td>₦{{ number_format($w->amount, 2) }}</x-dashboard.td>
                 <x-dashboard.td class="text-sm">
                     {{ $w->bank_name }} · {{ $w->maskedAccountNumber() }}<br>
@@ -52,7 +52,7 @@
                             <div class="space-y-3 text-sm">
                                 <p>This initiates a <strong>real bank transfer</strong>.</p>
                                 <ul class="list-disc pl-5 space-y-1">
-                                    <li>User: {{ $w->user->email }}</li>
+                                    <li>User: {{ \App\Models\User::labelFor($w->user) }}</li>
                                     <li>Amount: ₦{{ number_format($w->amount, 2) }}</li>
                                     <li>Recipient: {{ $w->account_name }}</li>
                                     <li>Bank: {{ $w->bank_name }} {{ $w->maskedAccountNumber() }}</li>

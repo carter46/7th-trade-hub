@@ -28,7 +28,7 @@ class ListingAdminController extends Controller
     public function index(Request $request): View
     {
         $status = $request->get('status', 'active');
-        if (! in_array($status, ['active', 'pending', 'suspended', 'rejected', 'sold', 'archived', 'trash'], true)) {
+        if (! in_array($status, ['active', 'pending', 'draft', 'suspended', 'rejected', 'sold', 'archived', 'trash'], true)) {
             $status = 'active';
         }
 
@@ -80,7 +80,8 @@ class ListingAdminController extends Controller
                         $inner->where('status', 'published')
                             ->whereHas('versions', fn ($v) => $v->where('status', 'pending_review'));
                     });
-            })->whereNotIn('status', ['archived', 'sold'])->count(),
+            })->whereNotIn('status', ['archived', 'sold', 'draft'])->count(),
+            'draft' => Listing::query()->where('status', 'draft')->count(),
             'suspended' => Listing::query()->where('status', 'suspended')->count(),
             'rejected' => Listing::query()->where('status', 'rejected')->count(),
             'sold' => Listing::query()->where('status', 'sold')->count(),
@@ -101,7 +102,11 @@ class ListingAdminController extends Controller
             ->orderBy('name')
             ->get();
 
-        $sellers = User::whereHas('listings')->orderBy('name')->get();
+        $sellers = User::query()
+            ->notAnonymized()
+            ->whereHas('listings')
+            ->orderBy('name')
+            ->get();
 
         $filters = [
             'q' => $request->get('q'),
@@ -141,7 +146,8 @@ class ListingAdminController extends Controller
                         $inner->where('status', 'published')
                             ->whereHas('versions', fn ($v) => $v->where('status', 'pending_review'));
                     });
-            })->whereNotIn('status', ['archived', 'sold']),
+            })->whereNotIn('status', ['archived', 'sold', 'draft']),
+            'draft' => $query->where('status', 'draft'),
             'suspended' => $query->where('status', 'suspended'),
             'rejected' => $query->where('status', 'rejected'),
             'sold' => $query->where('status', 'sold'),
@@ -422,8 +428,8 @@ class ListingAdminController extends Controller
 
     public function destroy(Listing $listing, Request $request): RedirectResponse
     {
-        if (! in_array($listing->status, ['suspended', 'rejected', 'archived'], true) && ! $listing->trashed()) {
-            return back()->with('error', __('Only suspended, rejected, or archived listings can be deleted.'));
+        if (! in_array($listing->status, ['suspended', 'rejected', 'archived', 'draft'], true) && ! $listing->trashed()) {
+            return back()->with('error', __('Only draft, suspended, rejected, or archived listings can be deleted.'));
         }
 
         $listingData = $listing->toArray();
@@ -446,7 +452,51 @@ class ListingAdminController extends Controller
         );
 
         return redirect()
-            ->route('admin.listings')
-            ->with('status', $force ? __('Listing permanently deleted.') : __('Listing deleted.'));
+            ->route('admin.listings', ['status' => $force ? 'trash' : $listingData['status'] ?? 'active'])
+            ->with('status', $force ? __('Listing permanently deleted.') : __('Listing moved to trash.'));
+    }
+
+    /**
+     * Permanently delete trashed listings (selected ids, or entire trash).
+     */
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['nullable', 'array'],
+            'ids.*' => ['integer'],
+            'scope' => ['required', 'in:selected,all'],
+        ]);
+
+        if ($validated['scope'] === 'selected') {
+            $ids = array_values(array_unique(array_map('intval', $validated['ids'] ?? [])));
+            if ($ids === []) {
+                return back()->with('error', __('Select at least one listing.'));
+            }
+            $query = Listing::onlyTrashed()->whereIn('id', $ids);
+        } else {
+            $query = Listing::onlyTrashed();
+        }
+
+        $count = 0;
+        $query->orderBy('id')->chunkById(50, function ($listings) use ($request, &$count) {
+            foreach ($listings as $listing) {
+                $listingData = $listing->toArray();
+                $listingId = $listing->id;
+                $listing->forceDelete();
+                $this->audit->log(
+                    auth()->id(),
+                    'listing.deleted',
+                    null,
+                    $listingData,
+                    ['id' => $listingId, 'force' => true, 'bulk' => true],
+                    $request->ip()
+                );
+                $count++;
+            }
+        });
+
+        return redirect()
+            ->route('admin.listings', ['status' => 'trash'])
+            ->with('status', __(':count listing(s) permanently deleted.', ['count' => $count]));
     }
 }

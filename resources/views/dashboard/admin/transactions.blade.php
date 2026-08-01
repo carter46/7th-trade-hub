@@ -32,7 +32,7 @@
         @foreach ($transactions as $tx)
             <tr class="hover:bg-muted/50">
                 <x-dashboard.td class="font-mono text-xs">{{ $tx->reference }}</x-dashboard.td>
-                <x-dashboard.td>{{ $tx->user?->name ?? $tx->user?->email ?? '—' }}</x-dashboard.td>
+                <x-dashboard.td>{{ \App\Models\User::labelFor($tx->user) }}</x-dashboard.td>
                 <x-dashboard.td>{{ $tx->type }}</x-dashboard.td>
                 <x-dashboard.td>{{ $tx->label }}</x-dashboard.td>
                 <x-dashboard.td>{{ $tx->currency }} {{ number_format($tx->amount, 2) }}</x-dashboard.td>

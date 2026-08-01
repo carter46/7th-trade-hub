@@ -24,7 +24,7 @@
         <div class="text-2xl font-bold text-primary mb-4">₦{{ number_format((float) $listing->price, 2) }}</div>
         <p class="text-text-secondary whitespace-pre-line">{{ $listing->description }}</p>
         <div class="mt-4 text-sm text-text-muted">
-            Seller: {{ $listing->user?->name ?? '—' }}
+            Seller: {{ \App\Models\User::nameFor($listing->user) }}
             @if($avgRating > 0)
                 · ★ {{ number_format($avgRating, 1) }}
             @endif

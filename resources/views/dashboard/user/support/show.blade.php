@@ -27,7 +27,7 @@
     @foreach ($ticket->replies as $reply)
         <x-dashboard.card :class="$reply->is_staff ? 'border border-primary/30' : ''">
             <p class="text-xs text-text-muted mb-2">
-                {{ $reply->user->name }}
+                {{ \App\Models\User::nameFor($reply->user) }}
                 @if ($reply->is_staff)
                     <span class="text-primary font-medium">(Staff)</span>
                 @endif

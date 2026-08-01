@@ -17,6 +17,13 @@ class ListingPolicy
         return $user->id === $listing->user_id;
     }
 
+    public function delete(User $user, Listing $listing): bool
+    {
+        return $user->id === $listing->user_id
+            && in_array($listing->status, ['draft', 'rejected'], true)
+            && ! $listing->trashed();
+    }
+
     public function purchase(User $user, Listing $listing): bool
     {
         if (! $listing->user_id) {

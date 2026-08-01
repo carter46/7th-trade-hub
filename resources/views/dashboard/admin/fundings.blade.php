@@ -25,7 +25,7 @@
         @foreach ($fundings as $f)
             <tr>
                 <x-dashboard.td class="font-medium">{{ $f->reference }}</x-dashboard.td>
-                <x-dashboard.td>{{ $f->user->email }}</x-dashboard.td>
+                <x-dashboard.td>{{ \App\Models\User::labelFor($f->user) }}</x-dashboard.td>
                 <x-dashboard.td>{{ $f->method }}</x-dashboard.td>
                 <x-dashboard.td>₦{{ number_format($f->amount, 2) }}</x-dashboard.td>
                 <x-dashboard.td><x-dashboard.badge :status="$f->status" /></x-dashboard.td>
@@ -57,7 +57,7 @@
                             confirm-label="Approve"
                             :form-action="route('admin.fundings.approve', $f)"
                         >
-                            Credit ₦{{ number_format($f->amount, 2) }} to {{ $f->user->email }}?
+                            Credit ₦{{ number_format($f->amount, 2) }} to {{ \App\Models\User::labelFor($f->user) }}?
                         </x-dashboard.modal>
                         <x-dashboard.modal
                             name="reject-funding-{{ $f->id }}"

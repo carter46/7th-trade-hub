@@ -58,4 +58,64 @@ class ListingReviewFlowTest extends TestCase
             ->assertOk()
             ->assertSee('My Service');
     }
+
+    public function test_seller_can_delete_draft_listing(): void
+    {
+        $seller = User::factory()->kycApproved()->create(['email_verified_at' => now()]);
+        $seller->assignRole('user');
+        app(WalletProvisioningService::class)->createWallet($seller);
+
+        $product = \App\Models\MarketplaceProduct::query()->where('is_active', true)->first();
+        $this->assertNotNull($product);
+
+        $this->actingAs($seller)
+            ->post(route('dashboard.listings.store'), [
+                'title' => 'Draft to delete',
+                'description' => 'Will be removed',
+                'price' => 1000,
+                'category_id' => $product->category_id,
+                'marketplace_product_id' => $product->id,
+            ])
+            ->assertRedirect(route('dashboard.listings'));
+
+        $listing = $seller->listings()->first();
+        $this->assertNotNull($listing);
+        $this->assertSame('draft', $listing->status);
+
+        $this->actingAs($seller)
+            ->delete(route('dashboard.listings.destroy', $listing))
+            ->assertRedirect(route('dashboard.listings'));
+
+        $this->assertSoftDeleted($listing);
+    }
+
+    public function test_seller_cannot_delete_pending_listing(): void
+    {
+        $seller = User::factory()->kycApproved()->create(['email_verified_at' => now()]);
+        $seller->assignRole('user');
+        app(WalletProvisioningService::class)->createWallet($seller);
+
+        $product = \App\Models\MarketplaceProduct::query()->where('is_active', true)->first();
+        $this->assertNotNull($product);
+
+        $this->actingAs($seller)
+            ->post(route('dashboard.listings.store'), [
+                'title' => 'Pending listing',
+                'description' => 'Cannot delete while pending',
+                'price' => 1000,
+                'category_id' => $product->category_id,
+                'marketplace_product_id' => $product->id,
+            ]);
+
+        $listing = $seller->listings()->first();
+        $this->actingAs($seller)->post(route('dashboard.listings.submit', $listing));
+        $listing->refresh();
+        $this->assertSame('pending_review', $listing->status);
+
+        $this->actingAs($seller)
+            ->delete(route('dashboard.listings.destroy', $listing))
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('listings', ['id' => $listing->id, 'deleted_at' => null]);
+    }
 }

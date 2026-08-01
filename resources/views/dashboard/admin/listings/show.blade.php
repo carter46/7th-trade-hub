@@ -214,12 +214,14 @@
                 @if($listing->user)
                     <div class="flex items-start gap-4">
                         <div class="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xl font-bold">
-                            {{ substr($listing->user->name, 0, 2) }}
+                            {{ substr(\App\Models\User::nameFor($listing->user), 0, 2) }}
                         </div>
                         <div class="flex-1">
-                            <h3 class="text-lg font-semibold text-text-primary">{{ $listing->user->name }}</h3>
-                            <div class="text-sm text-text-muted mb-3">{{ $listing->user->email }}</div>
-                            
+                            <h3 class="text-lg font-semibold text-text-primary">{{ \App\Models\User::nameFor($listing->user) }}</h3>
+                            @if($listing->user->displayEmail())
+                                <div class="text-sm text-text-muted mb-3">{{ $listing->user->displayEmail() }}</div>
+                            @endif
+
                             <div class="grid grid-cols-2 gap-4 mt-4">
                                 <div>
                                     <div class="text-sm text-text-muted mb-1">Total Listings</div>
@@ -231,15 +233,17 @@
                                 </div>
                             </div>
 
-                            <div class="mt-4">
-                                <x-dashboard.button 
-                                    tag="a" 
-                                    href="{{ route('admin.users.show', $listing->user) }}" 
-                                    variant="secondary"
-                                >
-                                    View User Profile
-                                </x-dashboard.button>
-                            </div>
+                            @if(! $listing->user->isAnonymized())
+                                <div class="mt-4">
+                                    <x-dashboard.button
+                                        tag="a"
+                                        href="{{ route('admin.users.show', $listing->user) }}"
+                                        variant="secondary"
+                                    >
+                                        View User Profile
+                                    </x-dashboard.button>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 @else
@@ -345,7 +349,7 @@
                             <div class="border-b border-border-default pb-4 last:border-0 last:pb-0">
                                 <div class="flex items-start justify-between mb-2">
                                     <div>
-                                        <div class="font-medium text-text-primary">{{ $review->user->name }}</div>
+                                        <div class="font-medium text-text-primary">{{ \App\Models\User::nameFor($review->user) }}</div>
                                         <div class="text-sm text-text-muted">{{ $review->created_at->format('M j, Y') }}</div>
                                     </div>
                                     <div class="flex items-center gap-1">

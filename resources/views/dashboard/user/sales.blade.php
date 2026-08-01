@@ -33,7 +33,7 @@
             <tr>
                 <x-dashboard.td class="font-mono text-sm">{{ $order->reference }}</x-dashboard.td>
                 <x-dashboard.td>{{ $order->listing?->title ?? '—' }}</x-dashboard.td>
-                <x-dashboard.td>{{ $order->user?->name ?? '—' }}</x-dashboard.td>
+                <x-dashboard.td>{{ \App\Models\User::nameFor($order->user) }}</x-dashboard.td>
                 <x-dashboard.td>₦{{ number_format((float) ($order->total_amount ?? $order->amount), 2) }}</x-dashboard.td>
                 <x-dashboard.td class="text-sm">{{ $order->escrow?->status ?? '—' }}</x-dashboard.td>
                 <x-dashboard.td class="text-sm text-text-muted">{{ $order->created_at->format('M j, Y H:i') }}</x-dashboard.td>

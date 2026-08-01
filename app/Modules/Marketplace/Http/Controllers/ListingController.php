@@ -300,6 +300,21 @@ class ListingController extends Controller
         return back()->with('status', __('Listing restored to draft. Edit and submit for review.'));
     }
 
+    public function destroy(Listing $listing): RedirectResponse
+    {
+        $this->authorize('delete', $listing);
+
+        if ($listing->user?->wallet) {
+            $this->wallets->releaseListingHold((int) $listing->user->wallet->id, $listing->id);
+        }
+
+        $listing->delete();
+
+        return redirect()
+            ->route('dashboard.listings')
+            ->with('status', __('Listing deleted.'));
+    }
+
     private function editableVersion(Listing $listing): ?ListingVersion
     {
         return $listing->versions()

@@ -59,7 +59,11 @@ class SupportTicketAdminController extends Controller
 
     public function create(): View
     {
-        $users = User::role('user')->orderBy('name')->limit(200)->get(['id', 'name', 'email']);
+        $users = User::role('user')
+            ->notAnonymized()
+            ->orderBy('name')
+            ->limit(200)
+            ->get(['id', 'name', 'email']);
 
         return view('dashboard.admin.tickets.create', compact('users'));
     }
@@ -67,15 +71,25 @@ class SupportTicketAdminController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
+            'user_id' => ['required', 'integer', 'exists:users,id'],
             'category' => ['required', 'string', 'max:30'],
             'subject' => ['required', 'string', 'max:255'],
             'body' => ['required', 'string'],
             'priority' => ['nullable', 'string', 'max:20'],
         ]);
 
+        $member = User::query()
+            ->role('user')
+            ->notAnonymized()
+            ->whereKey($validated['user_id'])
+            ->first();
+
+        if (! $member) {
+            return back()->withInput()->with('error', __('Select an active member account.'));
+        }
+
         $ticket = SupportTicket::create([
-            'user_id' => $validated['user_id'],
+            'user_id' => $member->id,
             'category' => $validated['category'],
             'subject' => $validated['subject'],
             'body' => $validated['body'],

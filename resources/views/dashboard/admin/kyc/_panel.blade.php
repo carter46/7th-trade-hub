@@ -8,7 +8,7 @@
     </x-slot:head>
     @foreach ($submissions as $s)
         <tr>
-            <x-dashboard.td>{{ $s->user->email }}</x-dashboard.td>
+            <x-dashboard.td>{{ \App\Models\User::labelFor($s->user) }}</x-dashboard.td>
             <x-dashboard.td>Level {{ $s->level_requested }}</x-dashboard.td>
             <x-dashboard.td><x-dashboard.badge :status="$s->status" /></x-dashboard.td>
             <x-dashboard.td class="text-xs text-text-muted">{{ $s->created_at->format('M j, Y') }}</x-dashboard.td>
@@ -25,7 +25,7 @@
 
                 @if ($s->status === 'pending')
                     <x-dashboard.modal name="approve-kyc-{{ $s->id }}" title="Approve KYC?" confirm-label="Approve" :form-action="route('admin.kyc.approve', $s)">
-                        Grant level {{ $s->level_requested }} to {{ $s->user->email }}.
+                        Grant level {{ $s->level_requested }} to {{ \App\Models\User::labelFor($s->user) }}.
                     </x-dashboard.modal>
                     <x-dashboard.modal name="reject-kyc-{{ $s->id }}" title="Reject KYC?" variant="danger" confirm-label="Reject" :form-action="route('admin.kyc.reject', $s)">
                         The user will need to resubmit documentation.

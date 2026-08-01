@@ -22,7 +22,7 @@
         </x-slot:head>
         @foreach ($requests as $r)
             <tr>
-                <x-dashboard.td>{{ $r->user->email }}</x-dashboard.td>
+                <x-dashboard.td>{{ \App\Models\User::labelFor($r->user) }}</x-dashboard.td>
                 <x-dashboard.td>{{ $r->amount_crypto }} {{ $r->coin }} → ₦{{ number_format($r->expected_ngn, 2) }}</x-dashboard.td>
                 <x-dashboard.td class="text-text-secondary text-xs">{{ $r->expires_at }}</x-dashboard.td>
                 <x-dashboard.td>

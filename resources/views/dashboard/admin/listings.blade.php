@@ -74,7 +74,7 @@
                         <option value="">All sellers</option>
                         @foreach ($sellers as $seller)
                             <option value="{{ $seller->id }}" @selected($filters['seller'] == $seller->id)>
-                                {{ $seller->name }}
+                                {{ $seller->displayName() }}
                             </option>
                         @endforeach
                     </select>
@@ -116,6 +116,7 @@
         :tabs="[
             ['id' => 'active', 'label' => 'Active', 'href' => route('admin.listings', array_merge($filterQuery, ['status' => 'active'])), 'count' => $counts['active']],
             ['id' => 'pending', 'label' => 'Pending', 'href' => route('admin.listings', array_merge($filterQuery, ['status' => 'pending'])), 'count' => $counts['pending']],
+            ['id' => 'draft', 'label' => 'Drafts', 'href' => route('admin.listings', array_merge($filterQuery, ['status' => 'draft'])), 'count' => $counts['draft']],
             ['id' => 'suspended', 'label' => 'Suspended', 'href' => route('admin.listings', array_merge($filterQuery, ['status' => 'suspended'])), 'count' => $counts['suspended']],
             ['id' => 'rejected', 'label' => 'Rejected', 'href' => route('admin.listings', array_merge($filterQuery, ['status' => 'rejected'])), 'count' => $counts['rejected']],
             ['id' => 'sold', 'label' => 'Sold', 'href' => route('admin.listings', array_merge($filterQuery, ['status' => 'sold'])), 'count' => $counts['sold']],

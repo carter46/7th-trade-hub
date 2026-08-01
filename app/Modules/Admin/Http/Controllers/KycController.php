@@ -33,9 +33,12 @@ class KycController extends Controller
         if ($search !== '') {
             $query->whereHas('user', function ($q) use ($search) {
                 $like = '%'.$search.'%';
-                $q->where('email', 'like', $like)
-                    ->orWhere('name', 'like', $like)
-                    ->orWhere('username', 'like', $search.'%');
+                $q->notAnonymized()
+                    ->where(function ($inner) use ($like, $search) {
+                        $inner->where('email', 'like', $like)
+                            ->orWhere('name', 'like', $like)
+                            ->orWhere('username', 'like', $search.'%');
+                    });
             });
         }
 

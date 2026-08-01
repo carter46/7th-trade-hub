@@ -1,3 +1,7 @@
+@php
+    $trashBulk = $trashBulk ?? false;
+@endphp
+
 <x-dashboard.table
     :empty="$listings->isEmpty()"
     empty-title="No listings found"
@@ -6,6 +10,17 @@
     striped
 >
     <x-slot:head>
+        @if ($trashBulk)
+            <x-dashboard.th class="w-10">
+                <input
+                    type="checkbox"
+                    class="rounded border-border-default"
+                    x-bind:checked="pageIds.length > 0 && selected.length === pageIds.length"
+                    x-on:change="toggleAll($event)"
+                    aria-label="Select all on this page"
+                >
+            </x-dashboard.th>
+        @endif
         <x-dashboard.th>Title</x-dashboard.th>
         <x-dashboard.th>Seller</x-dashboard.th>
         <x-dashboard.th>Category</x-dashboard.th>
@@ -17,14 +32,26 @@
 
     @foreach ($listings as $listing)
         <tr>
+            @if ($trashBulk)
+                <x-dashboard.td>
+                    <input
+                        type="checkbox"
+                        class="rounded border-border-default"
+                        value="{{ $listing->id }}"
+                        x-bind:checked="selected.includes({{ (int) $listing->id }})"
+                        x-on:change="toggleOne({{ (int) $listing->id }}, $event.target.checked)"
+                        aria-label="Select listing #{{ $listing->id }}"
+                    >
+                </x-dashboard.td>
+            @endif
             <x-dashboard.td class="font-medium">
                 <div class="font-medium text-text-primary">{{ \Illuminate\Support\Str::limit($listing->title, 50) }}</div>
                 <div class="text-xs text-text-muted mt-0.5">Updated {{ $listing->updated_at?->diffForHumans() }}</div>
             </x-dashboard.td>
             <x-dashboard.td>
-                <div class="text-sm">{{ $listing->user?->name ?? '—' }}</div>
-                @if($listing->user)
-                    <div class="text-xs text-text-muted">{{ $listing->user->email }}</div>
+                <div class="text-sm">{{ \App\Models\User::nameFor($listing->user) }}</div>
+                @if($listing->user?->displayEmail())
+                    <div class="text-xs text-text-muted">{{ $listing->user->displayEmail() }}</div>
                 @endif
             </x-dashboard.td>
             <x-dashboard.td>
@@ -64,9 +91,14 @@
                             @csrf
                             <x-dashboard.menu-item type="submit" variant="success">Restore from Trash</x-dashboard.menu-item>
                         </form>
-                        <x-dashboard.menu-item type="button" variant="danger" x-on:click.stop="$dispatch('open-modal', 'delete-listing-{{ $listing->id }}')">
+                        <button
+                            type="button"
+                            role="menuitem"
+                            class="block w-full rounded-lg px-3 py-2 text-left text-sm text-danger hover:bg-danger/10 focus-ring"
+                            @click.stop="close(); $dispatch('open-modal', 'delete-listing-{{ $listing->id }}')"
+                        >
                             Permanently Delete
-                        </x-dashboard.menu-item>
+                        </button>
                     @else
                         @if($listing->status === 'published' && $listing->is_active)
                             <x-dashboard.menu-item :href="route('marketplace.show', $listing->slug)" target="_blank">Preview Public Page</x-dashboard.menu-item>
@@ -74,7 +106,7 @@
                         @if($listing->status === 'pending_review' || $listing->versions->contains(fn ($v) => $v->status === 'pending_review'))
                             <x-dashboard.menu-item :href="route('admin.listings.show', ['listing' => $listing, 'tab' => 'moderation'])">Review</x-dashboard.menu-item>
                         @endif
-                        @if($listing->user)
+                        @if($listing->user && ! $listing->user->isAnonymized())
                             <x-dashboard.menu-item :href="route('admin.users.show', $listing->user)">View Seller</x-dashboard.menu-item>
                         @endif
                         @if(in_array($listing->status, ['published'], true) && $listing->is_active)
@@ -99,14 +131,19 @@
                             @csrf
                             <x-dashboard.menu-item type="submit">Duplicate</x-dashboard.menu-item>
                         </form>
-                        @if(in_array($listing->status, ['suspended', 'rejected', 'archived'], true))
-                            <x-dashboard.menu-item type="button" variant="danger" x-on:click.stop="$dispatch('open-modal', 'delete-listing-{{ $listing->id }}')">
+                        @if(in_array($listing->status, ['suspended', 'rejected', 'archived', 'draft'], true))
+                            <button
+                                type="button"
+                                role="menuitem"
+                                class="block w-full rounded-lg px-3 py-2 text-left text-sm text-danger hover:bg-danger/10 focus-ring"
+                                @click.stop="close(); $dispatch('open-modal', 'delete-listing-{{ $listing->id }}')"
+                            >
                                 Move to Trash
-                            </x-dashboard.menu-item>
+                            </button>
                         @endif
                     @endif
                 </x-dashboard.row-actions>
-                @if($listing->trashed() || in_array($listing->status, ['suspended', 'rejected', 'archived'], true))
+                @if($listing->trashed() || in_array($listing->status, ['suspended', 'rejected', 'archived', 'draft'], true))
                     <x-dashboard.modal
                         name="delete-listing-{{ $listing->id }}"
                         title="{{ $listing->trashed() ? 'Permanently delete this listing?' : 'Move listing to trash?' }}"
