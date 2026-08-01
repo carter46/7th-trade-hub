@@ -23,18 +23,25 @@
         <x-dashboard.card variant="solid">
             <h2 class="text-lg font-semibold text-text-primary mb-1">Site information</h2>
             <p class="text-sm text-text-secondary mb-4">Name, heading, favicon, and light/dark logos used across the site and themes.</p>
-            <form method="POST" action="{{ route('admin.settings.branding') }}" class="space-y-4">
+            <form method="POST" action="{{ route('admin.settings.branding') }}" class="space-y-6">
                 @csrf
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <x-dashboard.input name="site_name" label="Site name" :value="old('site_name', $branding['site_name'])" required />
-                    <x-dashboard.input name="site_short_name" label="Short name" :value="old('site_short_name', $branding['site_short_name'])" />
-                    <x-dashboard.input name="heading" label="Heading" :value="old('heading', $branding['heading'])" class="md:col-span-2" />
-                    <x-dashboard.input name="tagline" label="Tagline" :value="old('tagline', $branding['tagline'])" class="md:col-span-2" />
-                    <x-dashboard.input name="meta_description" label="Meta description" :value="old('meta_description', $branding['meta_description'])" class="md:col-span-2" />
-                    <x-dashboard.media-picker name="favicon_media_id" label="Favicon" :value="old('favicon_media_id', $branding['favicon_media_id'])" />
-                    <div></div>
-                    <x-dashboard.media-picker name="logo_light_media_id" label="Light theme logo" :value="old('logo_light_media_id', $branding['logo_light_media_id'])" preview="wide" />
-                    <x-dashboard.media-picker name="logo_dark_media_id" label="Dark theme logo" :value="old('logo_dark_media_id', $branding['logo_dark_media_id'])" preview="wide" />
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                    <div class="w-full"><x-dashboard.input name="site_name" label="Site name" :value="old('site_name', $branding['site_name'])" required /></div>
+                    <div class="w-full"><x-dashboard.input name="site_short_name" label="Short name" :value="old('site_short_name', $branding['site_short_name'])" /></div>
+                    <div class="w-full md:col-span-2"><x-dashboard.input name="heading" label="Heading" :value="old('heading', $branding['heading'])" /></div>
+                    <div class="w-full md:col-span-2"><x-dashboard.input name="tagline" label="Tagline" :value="old('tagline', $branding['tagline'])" /></div>
+                    <div class="w-full md:col-span-2"><x-dashboard.input name="meta_description" label="Meta description" :value="old('meta_description', $branding['meta_description'])" /></div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 w-full items-start">
+                    <div class="w-full">
+                        <x-dashboard.media-picker name="favicon_media_id" label="Favicon" :value="old('favicon_media_id', $branding['favicon_media_id'])" hint="Square icon for browser tabs." />
+                    </div>
+                    <div class="w-full">
+                        <x-dashboard.media-picker name="logo_light_media_id" label="Light theme logo" :value="old('logo_light_media_id', $branding['logo_light_media_id'])" preview="wide" />
+                    </div>
+                    <div class="w-full">
+                        <x-dashboard.media-picker name="logo_dark_media_id" label="Dark theme logo" :value="old('logo_dark_media_id', $branding['logo_dark_media_id'])" preview="wide" />
+                    </div>
                 </div>
                 <x-dashboard.button type="submit" variant="primary">Save site information</x-dashboard.button>
             </form>
@@ -70,19 +77,33 @@
                 </div>
 
                 <hr class="border-border-subtle my-4">
-                <h3 class="text-base font-semibold text-text-primary">Live chat</h3>
-                <div>
-                    <label class="block text-sm font-medium text-text-secondary mb-2" for="live_chat_provider">Provider</label>
-                    <select id="live_chat_provider" name="live_chat_provider" class="w-full rounded-lg border-border-default bg-elevated text-text-primary text-sm">
-                        <option value="none" @selected($chatProvider === 'none')>Off</option>
-                        <option value="smartsupp" @selected($chatProvider === 'smartsupp')>Smartsupp</option>
-                        <option value="jivo" @selected($chatProvider === 'jivo')>JivoChat</option>
-                        <option value="chatway" @selected($chatProvider === 'chatway')>Chatway</option>
-                    </select>
+                <div class="space-y-4" x-data="{ provider: @js($chatProvider) }">
+                    <h3 class="text-base font-semibold text-text-primary">Live chat</h3>
+                    <div>
+                        <label class="block text-sm font-medium text-text-secondary mb-2" for="live_chat_provider">Provider</label>
+                        <select
+                            id="live_chat_provider"
+                            name="live_chat_provider"
+                            x-model="provider"
+                            class="w-full rounded-lg border-border-default bg-elevated text-text-primary text-sm"
+                        >
+                            <option value="none">Off</option>
+                            <option value="smartsupp">Smartsupp</option>
+                            <option value="jivo">JivoChat</option>
+                            <option value="chatway">Chatway</option>
+                        </select>
+                    </div>
+                    <div x-show="provider === 'smartsupp'" x-cloak>
+                        <x-dashboard.input name="smartsupp_key" type="password" label="Smartsupp key" hint="Leave blank to keep the current key. {{ $smartsuppKeySet ? 'Key is set.' : 'No key set.' }}" autocomplete="new-password" />
+                    </div>
+                    <div x-show="provider === 'jivo'" x-cloak>
+                        <x-dashboard.input name="jivo_widget_id" label="Jivo widget ID" :value="$jivoId" hint="Widget ID only, or paste the full Jivo script URL." />
+                    </div>
+                    <div x-show="provider === 'chatway'" x-cloak>
+                        <x-dashboard.input name="chatway_widget_id" label="Chatway widget ID" :value="$chatwayId" hint="Widget ID from Chatway install snippet." />
+                    </div>
+                    <p x-show="provider === 'none'" x-cloak class="text-sm text-text-muted">Live chat is off. Choose a provider to configure credentials.</p>
                 </div>
-                <x-dashboard.input name="smartsupp_key" type="password" label="Smartsupp key" hint="Leave blank to keep the current key. {{ $smartsuppKeySet ? 'Key is set.' : 'No key set.' }}" autocomplete="new-password" />
-                <x-dashboard.input name="jivo_widget_id" label="Jivo widget ID" :value="$jivoId" hint="Widget ID only, or paste the full Jivo script URL." />
-                <x-dashboard.input name="chatway_widget_id" label="Chatway widget ID" :value="$chatwayId" hint="Widget ID from Chatway install snippet." />
                 <x-dashboard.button type="submit" variant="primary">Save contact & live chat</x-dashboard.button>
             </form>
         </x-dashboard.card>
@@ -90,34 +111,93 @@
         {{-- Social links --}}
         <x-dashboard.card variant="solid">
             <h2 class="text-lg font-semibold text-text-primary mb-1">Social links</h2>
-            <p class="text-sm text-text-secondary mb-4">Add any platform. Only enabled links with URLs appear in the footer and Contact page.</p>
-            <form method="POST" action="{{ route('admin.settings.social') }}" class="space-y-4">
+            <p class="text-sm text-text-secondary mb-4">Add platforms with optional custom logos. Without a logo, the footer uses built-in brand icons (or a letter fallback).</p>
+            @php
+                $socialRows = $socialLinks->values();
+                $blankSlots = 5;
+                $baseIndex = $socialRows->count();
+            @endphp
+            <form
+                method="POST"
+                action="{{ route('admin.settings.social') }}"
+                class="space-y-4"
+                x-data="{ visibleNew: {{ old('links.'.$baseIndex.'.platform') || old('links.'.$baseIndex.'.url') ? 1 : 0 }} }"
+            >
                 @csrf
-                @foreach($socialLinks as $i => $link)
-                    <div class="grid grid-cols-1 md:grid-cols-6 gap-3 items-end border border-border-subtle rounded-lg p-3">
+                @foreach($socialRows as $i => $link)
+                    <div
+                        class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end border border-border-subtle rounded-lg p-4"
+                        x-data="{ removed: false }"
+                        x-show="!removed"
+                    >
                         <input type="hidden" name="links[{{ $i }}][id]" value="{{ $link->id }}">
-                        <x-dashboard.input name="links[{{ $i }}][platform]" label="Platform" :value="old('links.'.$i.'.platform', $link->platform)" />
-                        <x-dashboard.input name="links[{{ $i }}][url]" label="URL" :value="old('links.'.$i.'.url', $link->url)" class="md:col-span-2" />
-                        <x-dashboard.input name="links[{{ $i }}][icon]" label="Icon key" :value="old('links.'.$i.'.icon', $link->icon)" />
-                        <x-dashboard.input name="links[{{ $i }}][sort_order]" type="number" label="Sort" :value="old('links.'.$i.'.sort_order', $link->sort_order)" />
-                        <label class="flex items-center gap-2 text-sm text-text-secondary pb-2">
-                            <input type="checkbox" name="links[{{ $i }}][enabled]" value="1" @checked(old('links.'.$i.'.enabled', $link->enabled))>
-                            Enabled
-                        </label>
-                        <label class="flex items-center gap-2 text-sm text-danger pb-2 md:col-span-6">
-                            <input type="checkbox" name="links[{{ $i }}][delete]" value="1">
-                            Delete this link
-                        </label>
+                        <input type="hidden" name="links[{{ $i }}][delete]" :value="removed ? '1' : '0'">
+                        <div class="md:col-span-2 w-full">
+                            <x-dashboard.input name="links[{{ $i }}][platform]" label="Platform" :value="old('links.'.$i.'.platform', $link->platform)" />
+                        </div>
+                        <div class="md:col-span-3 w-full">
+                            <x-dashboard.input name="links[{{ $i }}][url]" label="URL" :value="old('links.'.$i.'.url', $link->url)" />
+                        </div>
+                        <div class="md:col-span-2 w-full">
+                            <x-dashboard.input name="links[{{ $i }}][icon]" label="Icon key" :value="old('links.'.$i.'.icon', $link->icon)" hint="e.g. facebook" />
+                        </div>
+                        <div class="md:col-span-1 w-full">
+                            <x-dashboard.input name="links[{{ $i }}][sort_order]" type="number" label="Sort" :value="old('links.'.$i.'.sort_order', $link->sort_order)" />
+                        </div>
+                        <div class="md:col-span-2 w-full">
+                            <x-dashboard.media-picker name="links[{{ $i }}][icon_media_id]" label="Logo" :value="old('links.'.$i.'.icon_media_id', $link->icon_media_id)" />
+                        </div>
+                        <div class="md:col-span-2 flex flex-wrap items-center gap-3 pb-2">
+                            <label class="inline-flex items-center gap-2 text-sm text-text-secondary">
+                                <input type="hidden" name="links[{{ $i }}][enabled]" value="0">
+                                <input type="checkbox" name="links[{{ $i }}][enabled]" value="1" @checked(old('links.'.$i.'.enabled', $link->enabled))>
+                                Enabled
+                            </label>
+                            <button type="button" class="text-sm text-danger hover:underline" @click="removed = true">Remove</button>
+                        </div>
                     </div>
                 @endforeach
-                @php $n = $socialLinks->count(); @endphp
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 border border-dashed border-border-subtle rounded-lg p-3">
-                    <x-dashboard.input name="links[{{ $n }}][platform]" label="New platform" :value="old('links.'.$n.'.platform')" placeholder="e.g. Instagram" />
-                    <x-dashboard.input name="links[{{ $n }}][url]" label="URL" :value="old('links.'.$n.'.url')" class="md:col-span-2" />
-                    <x-dashboard.input name="links[{{ $n }}][sort_order]" type="number" label="Sort" :value="old('links.'.$n.'.sort_order', $n)" />
-                    <input type="hidden" name="links[{{ $n }}][enabled]" value="1">
+
+                @for($s = 0; $s < $blankSlots; $s++)
+                    @php $idx = $baseIndex + $s; @endphp
+                    <div
+                        class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end border border-dashed border-border-subtle rounded-lg p-4"
+                        x-show="visibleNew > {{ $s }}"
+                        x-cloak
+                    >
+                        <div class="md:col-span-2 w-full">
+                            <x-dashboard.input name="links[{{ $idx }}][platform]" label="Platform" :value="old('links.'.$idx.'.platform')" placeholder="e.g. Instagram" />
+                        </div>
+                        <div class="md:col-span-3 w-full">
+                            <x-dashboard.input name="links[{{ $idx }}][url]" label="URL" :value="old('links.'.$idx.'.url')" />
+                        </div>
+                        <div class="md:col-span-2 w-full">
+                            <x-dashboard.input name="links[{{ $idx }}][icon]" label="Icon key" :value="old('links.'.$idx.'.icon')" hint="e.g. instagram" />
+                        </div>
+                        <div class="md:col-span-1 w-full">
+                            <x-dashboard.input name="links[{{ $idx }}][sort_order]" type="number" label="Sort" :value="old('links.'.$idx.'.sort_order', $idx)" />
+                        </div>
+                        <div class="md:col-span-2 w-full">
+                            <x-dashboard.media-picker name="links[{{ $idx }}][icon_media_id]" label="Logo" :value="old('links.'.$idx.'.icon_media_id')" />
+                        </div>
+                        <div class="md:col-span-2 flex items-center pb-2">
+                            <input type="hidden" name="links[{{ $idx }}][enabled]" value="1">
+                            <span class="text-xs text-text-muted">New link</span>
+                        </div>
+                    </div>
+                @endfor
+
+                <div class="flex flex-wrap items-center gap-3">
+                    <x-dashboard.button
+                        type="button"
+                        variant="secondary"
+                        x-on:click="if (visibleNew < {{ $blankSlots }}) visibleNew++"
+                        x-bind:disabled="visibleNew >= {{ $blankSlots }}"
+                    >
+                        Add social link
+                    </x-dashboard.button>
+                    <x-dashboard.button type="submit" variant="primary">Save social links</x-dashboard.button>
                 </div>
-                <x-dashboard.button type="submit" variant="primary">Save social links</x-dashboard.button>
             </form>
         </x-dashboard.card>
 

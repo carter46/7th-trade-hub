@@ -48,12 +48,13 @@ class DashboardController extends Controller
             abort(403);
         }
 
-        $section = $request->string('section')->toString() ?: ($allowedSections[0] ?? 'revenue');
-        if (! in_array($section, $allowedSections, true)) {
+        $section = $request->string('section')->toString() ?: 'all';
+        $selectable = array_merge(['all'], $allowedSections);
+        if (! in_array($section, $selectable, true)) {
             abort(403);
         }
 
-        $sessionKey = "admin.analytics.range.{$section}";
+        $sessionKey = 'admin.analytics.range.'.($section === 'all' ? 'all' : $section);
         $filters = [
             'range' => $request->string('range')->toString()
                 ?: (string) session($sessionKey, '30d'),
@@ -65,26 +66,49 @@ class DashboardController extends Controller
             session([$sessionKey => $filters['range']]);
         }
 
-        $report = $this->analytics->getReport($section, $filters, $user);
-        if (($report['error'] ?? null) === 'Forbidden') {
-            abort(403);
-        }
-
-        $range = $report['range'] ?? $this->analytics->parseRange($filters);
-        $data = $report['data'] ?? [];
         $gaProvider = AnalyticsProvider::forProvider(AnalyticsProvider::PROVIDER_GOOGLE_ANALYTICS);
         $gaEnabled = $gaProvider->enabled;
         $gaConnected = $gaEnabled && $gaProvider->status === 'connected';
+        $range = $this->analytics->parseRange($filters);
 
+        $sectionBundles = [];
+        $data = [];
         $productMetrics = [];
-        if ($section === 'marketplace' && $user?->can('catalog.manage')) {
-            $productMetrics = app(\App\Services\Analytics\ProductAnalyticsProvider::class)
-                ->topMetrics((int) ($range['days'] ?? 30));
-        }
-
         $marketing = [];
-        if ($section === 'traffic' && $user?->can('analytics.view') && $gaConnected) {
-            $marketing = $this->business->marketingSnapshots((int) ($range['days'] ?? 7));
+
+        $buildBundle = function (string $sec) use ($filters, $user, $gaConnected, $range): array {
+            $report = $this->analytics->getReport($sec, $filters, $user);
+            if (($report['error'] ?? null) === 'Forbidden') {
+                return ['data' => [], 'productMetrics' => [], 'marketing' => []];
+            }
+
+            $bundle = [
+                'data' => $report['data'] ?? [],
+                'productMetrics' => [],
+                'marketing' => [],
+            ];
+
+            if ($sec === 'marketplace' && $user?->can('catalog.manage')) {
+                $bundle['productMetrics'] = app(\App\Services\Analytics\ProductAnalyticsProvider::class)
+                    ->topMetrics((int) ($range['days'] ?? 30));
+            }
+
+            if ($sec === 'traffic' && $user?->can('analytics.view') && $gaConnected) {
+                $bundle['marketing'] = $this->business->marketingSnapshots((int) ($range['days'] ?? 7));
+            }
+
+            return $bundle;
+        };
+
+        if ($section === 'all') {
+            foreach ($allowedSections as $sec) {
+                $sectionBundles[$sec] = $buildBundle($sec);
+            }
+        } else {
+            $bundle = $buildBundle($section);
+            $data = $bundle['data'];
+            $productMetrics = $bundle['productMetrics'];
+            $marketing = $bundle['marketing'];
         }
 
         $payload = [
@@ -96,7 +120,8 @@ class DashboardController extends Controller
             'gaConnected' => $gaConnected,
             'productMetrics' => $productMetrics,
             'marketing' => $marketing,
-            'sections' => $allowedSections,
+            'sectionBundles' => $sectionBundles,
+            'sections' => $selectable,
             'greeting' => $this->greeting(),
             'adminName' => $user?->name ?? 'Admin',
         ];

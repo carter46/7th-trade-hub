@@ -146,6 +146,7 @@ return new class extends Migration
                 $table->string('platform', 60);
                 $table->string('url');
                 $table->string('icon', 60)->nullable();
+                $table->unsignedBigInteger('icon_media_id')->nullable();
                 $table->boolean('enabled')->default(true);
                 $table->unsignedInteger('sort_order')->default(0);
                 $table->timestamps();

@@ -1008,6 +1008,7 @@ CREATE TABLE IF NOT EXISTS `social_links` (
   `platform` varchar(60) NOT NULL,
   `url` varchar(255) NOT NULL,
   `icon` varchar(60) DEFAULT NULL,
+  `icon_media_id` bigint unsigned DEFAULT NULL,
   `enabled` tinyint(1) NOT NULL DEFAULT 1,
   `sort_order` int unsigned NOT NULL DEFAULT 0,
   `created_at` timestamp NULL DEFAULT NULL,
@@ -1015,6 +1016,9 @@ CREATE TABLE IF NOT EXISTS `social_links` (
   PRIMARY KEY (`id`),
   KEY `social_links_enabled_sort_order_index` (`enabled`,`sort_order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Existing DBs: add social logo column if missing
+-- ALTER TABLE `social_links` ADD COLUMN `icon_media_id` bigint unsigned DEFAULT NULL AFTER `icon`;
 
 INSERT INTO `permissions` (`name`, `guard_name`, `created_at`, `updated_at`)
 SELECT 'fees.manage', 'web', NOW(), NOW()

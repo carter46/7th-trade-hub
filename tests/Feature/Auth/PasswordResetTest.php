@@ -37,12 +37,6 @@ class PasswordResetTest extends TestCase
 
     public function test_reset_password_screen_can_be_rendered(): void
     {
-        $emails = Mockery::mock(EmailService::class);
-        $emails->shouldReceive('sendMailableHtml')
-            ->once()
-            ->andReturn(SendResult::ok('laravel_mail'));
-        $this->app->instance(EmailService::class, $emails);
-
         $user = User::factory()->create();
         $token = Password::broker()->createToken($user);
 

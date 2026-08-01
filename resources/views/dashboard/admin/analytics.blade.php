@@ -4,9 +4,10 @@
 
 @section('content')
 @php
-    $section = $section ?? 'revenue';
+    $section = $section ?? 'all';
     $rangeKey = $range['range'] ?? ($filters['range'] ?? '30d');
     $sectionLabels = [
+        'all' => 'All',
         'traffic' => 'Traffic',
         'revenue' => 'Revenue',
         'marketplace' => 'Marketplace',
@@ -30,7 +31,10 @@
                 <span>Admin</span><span aria-hidden="true">/</span><span class="text-brand">Analytics</span>
             </nav>
             <h1 class="text-3xl font-bold tracking-tight text-text-primary">Analytics</h1>
-            <p class="mt-1 text-sm text-text-secondary">Drill-down reports · {{ $sectionLabels[$section] ?? ucfirst($section) }}</p>
+            <p class="mt-1 text-sm text-text-secondary">
+                {{ $section === 'all' ? 'All analytics sections' : 'Drill-down report' }}
+                · {{ $sectionLabels[$section] ?? ucfirst($section) }}
+            </p>
         </div>
         <div class="flex flex-wrap items-end gap-3">
             <div>

@@ -40,16 +40,21 @@
                 $color = $brandColors[$key] ?? '#94A3B8';
                 $label = ucfirst($link->platform);
                 $path = $paths[$key] ?? null;
+                $customLogo = ! empty($link->icon_media_id)
+                    ? media_url_from_id((int) $link->icon_media_id)
+                    : null;
             @endphp
             <a
                 href="{{ $link->url }}"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors overflow-hidden"
                 aria-label="{{ $label }}"
                 title="{{ $label }}"
             >
-                @if($path)
+                @if($customLogo)
+                    <img src="{{ $customLogo }}" alt="" class="h-5 w-5 object-contain">
+                @elseif($path)
                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="{{ $color }}" aria-hidden="true">
                         <path d="{{ $path }}"></path>
                     </svg>

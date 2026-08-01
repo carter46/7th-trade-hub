@@ -177,6 +177,7 @@ class SettingsController extends Controller
             'links.*.platform' => ['nullable', 'string', 'max:60'],
             'links.*.url' => ['nullable', 'url', 'max:500'],
             'links.*.icon' => ['nullable', 'string', 'max:60'],
+            'links.*.icon_media_id' => ['nullable', 'integer'],
             'links.*.enabled' => ['nullable', 'boolean'],
             'links.*.sort_order' => ['nullable', 'integer', 'min:0'],
             'links.*.delete' => ['nullable', 'boolean'],
@@ -196,30 +197,28 @@ class SettingsController extends Controller
         }
         $validated['links'] = $normalized;
 
-            foreach ($validated['links'] ?? [] as $row) {
-            if (blank($row['platform'] ?? null) || blank($row['url'] ?? null)) {
-                continue;
-            }
+        foreach ($validated['links'] ?? [] as $row) {
             if (! empty($row['delete']) && ! empty($row['id'])) {
                 SocialLink::query()->whereKey($row['id'])->delete();
                 continue;
             }
+            if (blank($row['platform'] ?? null) || blank($row['url'] ?? null)) {
+                continue;
+            }
+
+            $payload = [
+                'platform' => $row['platform'],
+                'url' => $row['url'],
+                'icon' => $row['icon'] ?? $row['platform'],
+                'icon_media_id' => filled($row['icon_media_id'] ?? null) ? (int) $row['icon_media_id'] : null,
+                'enabled' => filter_var($row['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'sort_order' => (int) ($row['sort_order'] ?? 0),
+            ];
+
             if (! empty($row['id'])) {
-                SocialLink::query()->whereKey($row['id'])->update([
-                    'platform' => $row['platform'],
-                    'url' => $row['url'],
-                    'icon' => $row['icon'] ?? $row['platform'],
-                    'enabled' => (bool) ($row['enabled'] ?? true),
-                    'sort_order' => (int) ($row['sort_order'] ?? 0),
-                ]);
+                SocialLink::query()->whereKey($row['id'])->update($payload);
             } else {
-                SocialLink::query()->create([
-                    'platform' => $row['platform'],
-                    'url' => $row['url'],
-                    'icon' => $row['icon'] ?? $row['platform'],
-                    'enabled' => (bool) ($row['enabled'] ?? true),
-                    'sort_order' => (int) ($row['sort_order'] ?? 0),
-                ]);
+                SocialLink::query()->create($payload);
             }
         }
 

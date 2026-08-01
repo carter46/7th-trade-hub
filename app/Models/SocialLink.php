@@ -10,6 +10,7 @@ class SocialLink extends Model
         'platform',
         'url',
         'icon',
+        'icon_media_id',
         'enabled',
         'sort_order',
     ];
@@ -19,6 +20,7 @@ class SocialLink extends Model
         return [
             'enabled' => 'boolean',
             'sort_order' => 'integer',
+            'icon_media_id' => 'integer',
         ];
     }
 
