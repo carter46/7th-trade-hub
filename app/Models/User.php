@@ -23,6 +23,7 @@ class User extends Authenticatable
         'username',
         'email',
         'password',
+        'password_set_at',
         'phone',
         'country',
         'bio',
@@ -43,12 +44,28 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'password_set_at' => 'datetime',
             'is_suspended' => 'boolean',
             'suspended_at' => 'datetime',
             'anonymized_at' => 'datetime',
             'terms_accepted_at' => 'datetime',
             'profile_completed_at' => 'datetime',
         ];
+    }
+
+    public function authProviders(): HasMany
+    {
+        return $this->hasMany(UserAuthProvider::class);
+    }
+
+    public function hasPasswordSet(): bool
+    {
+        return $this->password_set_at !== null;
+    }
+
+    public function hasAuthProvider(string $provider): bool
+    {
+        return $this->authProviders()->where('provider', $provider)->exists();
     }
 
     public function wallet(): HasOne
@@ -174,11 +191,14 @@ class User extends Authenticatable
                 'remember_token' => null,
                 // Plain string — hashed cast will hash once.
                 'password' => Str::random(64),
+                'password_set_at' => null,
                 'is_suspended' => true,
                 'suspended_at' => $this->suspended_at ?? now(),
                 'suspended_by' => $administratorId ?? $this->suspended_by,
                 'anonymized_at' => now(),
             ])->save();
+
+            $this->authProviders()->delete();
 
             if (Schema::hasTable('sessions')) {
                 DB::table('sessions')->where('user_id', $id)->delete();

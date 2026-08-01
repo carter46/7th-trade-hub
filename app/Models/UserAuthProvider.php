@@ -1,0 +1,24 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class UserAuthProvider extends Model
+{
+    public const GOOGLE = 'google';
+
+    protected $fillable = [
+        'user_id',
+        'provider',
+        'provider_user_id',
+        'provider_email',
+        'avatar_url',
+    ];
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+}

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
+use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\OtpVerificationController;
 use App\Http\Controllers\Auth\PasswordController;
@@ -21,6 +22,10 @@ Route::middleware('guest')->group(function () {
 
     Route::post('login', [AuthenticatedSessionController::class, 'store'])
         ->middleware('throttle:5,1');
+
+    Route::post('auth/google', [GoogleAuthController::class, 'store'])
+        ->middleware('throttle:5,1')
+        ->name('auth.google');
 
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');
@@ -55,6 +60,14 @@ Route::middleware('auth')->group(function () {
     Route::post('confirm-password', [ConfirmablePasswordController::class, 'store']);
 
     Route::put('password', [PasswordController::class, 'update'])->name('password.update');
+
+    Route::post('auth/google/link', [GoogleAuthController::class, 'link'])
+        ->middleware('throttle:5,1')
+        ->name('auth.google.link');
+
+    Route::delete('auth/google', [GoogleAuthController::class, 'unlink'])
+        ->middleware('throttle:5,1')
+        ->name('auth.google.unlink');
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');

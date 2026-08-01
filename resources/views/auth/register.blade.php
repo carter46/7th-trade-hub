@@ -3,11 +3,11 @@
         <div class="text-center mb-8">
             <a href="{{ route('home') }}" class="inline-flex flex-col items-center gap-3 group">
                 @if(!empty($footer?->logoDarkUrl))
-                    <img src="{{ $footer->logoDarkUrl }}" alt="{{ $siteName ?? config('app.name') }}" class="h-12 w-auto max-w-[160px] object-contain">
+                    <img src="{{ $footer->logoDarkUrl }}" alt="{{ $siteName ?? config('app.name') }}" class="h-12 w-auto max-w-[200px] object-contain">
+                    <span class="sr-only">{{ $siteName ?? config('app.name') }}</span>
                 @else
-                    <div class="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center font-bold text-xl text-white shadow-lg">7</div>
+                    <h1 class="text-3xl font-bold text-white tracking-tight group-hover:text-accent transition-colors">{{ $siteName ?? config('app.name') }}</h1>
                 @endif
-                <h1 class="text-3xl font-bold text-white tracking-tight group-hover:text-accent transition-colors">{{ $siteName ?? config('app.name') }}</h1>
             </a>
             <p class="text-text-secondary mt-2">{{ $siteTagline ?? 'Connecting markets, empowering traders.' }}</p>
         </div>
@@ -33,6 +33,8 @@
                     <x-ui.button type="submit" x-bind:loading="submitting">Register</x-ui.button>
                 </div>
             </form>
+            @include('partials.auth.google-gis', ['mode' => 'button', 'surface' => 'register', 'buttonText' => 'signup_with'])
+            @include('partials.auth.google-gis', ['mode' => 'one_tap', 'surface' => 'register'])
         </x-ui.card>
     </main>
 </x-layouts.auth>

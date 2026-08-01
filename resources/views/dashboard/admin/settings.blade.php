@@ -364,6 +364,91 @@
             </form>
         </x-dashboard.card>
 
+        {{-- Google Identity --}}
+        @php
+            $giMeta = $googleIdentity->meta ?? [];
+            $giCooldown = (int) ($giMeta['one_tap_prompt_cooldown_hours'] ?? 24);
+        @endphp
+        <x-dashboard.card variant="solid">
+            <h2 class="text-lg font-semibold text-text-primary mb-1">Google Identity</h2>
+            <p class="text-sm text-text-secondary mb-4">
+                Sign in with Google and One Tap via Google Identity Services. Configure the OAuth client in Google Cloud, then paste the Client ID here.
+                A Client Secret is not required for Sign-In / One Tap.
+            </p>
+
+            <div class="mb-4 grid gap-3 sm:grid-cols-3">
+                <div class="rounded-xl border border-border-subtle p-3">
+                    <p class="text-xs text-text-secondary">Status</p>
+                    <p class="mt-1 text-sm font-medium text-text-primary capitalize">{{ $googleIdentity->status ?: 'idle' }}</p>
+                </div>
+                <div class="rounded-xl border border-border-subtle p-3">
+                    <p class="text-xs text-text-secondary">Last success</p>
+                    <p class="mt-1 text-sm text-text-primary">{{ $googleIdentity->last_success_at?->diffForHumans() ?? '—' }}</p>
+                </div>
+                <div class="rounded-xl border border-border-subtle p-3">
+                    <p class="text-xs text-text-secondary">Last error</p>
+                    <p class="mt-1 text-sm text-text-primary break-words">{{ $googleIdentity->last_error ? \Illuminate\Support\Str::limit($googleIdentity->last_error, 120) : '—' }}</p>
+                </div>
+            </div>
+
+            @error('google_identity_test')
+                <p class="mb-4 text-sm text-danger">{{ $message }}</p>
+            @enderror
+
+            <form method="POST" action="{{ route('admin.settings.google-identity') }}" class="space-y-6">
+                @csrf
+                <div class="rounded-xl border border-border-subtle p-4 space-y-4">
+                    <h3 class="text-base font-semibold text-text-primary">Credentials</h3>
+                    <input type="hidden" name="google_identity_enabled" value="0">
+                    <x-dashboard.toggle name="google_identity_enabled" label="Enable Google Sign-In" :checked="old('google_identity_enabled', $googleIdentity->enabled)" value="1" />
+                    <x-dashboard.input name="google_identity_client_id" label="Google Client ID" :value="old('google_identity_client_id', $googleIdentity->credential('client_id'))" hint="Required when Google Sign-In is enabled." />
+                    <x-dashboard.input name="google_identity_client_secret" type="password" label="Client Secret (optional)" value="" hint="Only required for future Google API integrations (Gmail, Calendar, Drive, offline access). Not needed for Sign-In / One Tap. Leave blank to keep the current value.{{ filled($googleIdentity->credential('client_secret')) ? ' A secret is already stored.' : '' }}" autocomplete="new-password" />
+                    <div>
+                        <label class="block text-sm font-medium text-text-primary mb-1">Authorized JavaScript Origin</label>
+                        <input type="text" readonly value="{{ $googleIdentityJsOrigin }}" class="w-full rounded-lg border border-border-subtle bg-surface-muted px-3 py-2 text-sm text-text-secondary" />
+                        <p class="mt-1 text-xs text-text-secondary">Add this exact origin in Google Cloud Console → Credentials.</p>
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-border-subtle p-4 space-y-4">
+                    <h3 class="text-base font-semibold text-text-primary">One Tap</h3>
+                    <p class="text-sm text-text-secondary">Control where One Tap appears for guests. Sign-In buttons on login/register follow Enable Google Sign-In above.</p>
+                    <input type="hidden" name="google_identity_one_tap_enabled" value="0">
+                    <x-dashboard.toggle name="google_identity_one_tap_enabled" label="Enable One Tap" :checked="old('google_identity_one_tap_enabled', $giMeta['one_tap_enabled'] ?? false)" value="1" />
+                    <input type="hidden" name="google_identity_auto_select_enabled" value="0">
+                    <x-dashboard.toggle name="google_identity_auto_select_enabled" label="Automatic sign-in" :checked="old('google_identity_auto_select_enabled', $giMeta['auto_select_enabled'] ?? false)" value="1" />
+                    <input type="hidden" name="google_identity_one_tap_show_home" value="0">
+                    <x-dashboard.toggle name="google_identity_one_tap_show_home" label="Show on Home" :checked="old('google_identity_one_tap_show_home', $giMeta['one_tap_show_home'] ?? true)" value="1" />
+                    <input type="hidden" name="google_identity_one_tap_show_login" value="0">
+                    <x-dashboard.toggle name="google_identity_one_tap_show_login" label="Show on Login" :checked="old('google_identity_one_tap_show_login', $giMeta['one_tap_show_login'] ?? false)" value="1" />
+                    <input type="hidden" name="google_identity_one_tap_show_register" value="0">
+                    <x-dashboard.toggle name="google_identity_one_tap_show_register" label="Show on Register" :checked="old('google_identity_one_tap_show_register', $giMeta['one_tap_show_register'] ?? false)" value="1" />
+                    <input type="hidden" name="google_identity_one_tap_disable_after_dismiss" value="0">
+                    <x-dashboard.toggle name="google_identity_one_tap_disable_after_dismiss" label="Disable after dismiss" :checked="old('google_identity_one_tap_disable_after_dismiss', $giMeta['one_tap_disable_after_dismiss'] ?? true)" value="1" />
+                    <x-dashboard.input name="google_identity_one_tap_prompt_cooldown_hours" type="number" min="1" max="8760" label="Prompt cooldown (hours)" :value="old('google_identity_one_tap_prompt_cooldown_hours', $giCooldown)" hint="Hours to wait after dismiss before showing One Tap again." />
+                </div>
+
+                <details class="rounded-xl border border-border-subtle p-4 text-sm text-text-secondary">
+                    <summary class="cursor-pointer font-medium text-text-primary">Google Cloud setup checklist</summary>
+                    <ul class="mt-3 list-disc space-y-1 pl-5">
+                        <li>Create an OAuth client (Web application) in Google Cloud Console.</li>
+                        <li>Configure the OAuth consent screen and authorized domains.</li>
+                        <li>Add the Authorized JavaScript Origin shown above.</li>
+                        <li>Publish Privacy Policy and Terms of Service URLs on the consent screen.</li>
+                        <li>Only basic scopes are used: openid, email, profile.</li>
+                    </ul>
+                </details>
+
+                <x-dashboard.button type="submit" variant="primary">Save Google Identity settings</x-dashboard.button>
+            </form>
+
+            <form method="POST" action="{{ route('admin.settings.google-identity.test') }}" class="mt-4">
+                @csrf
+                <input type="hidden" name="google_identity_client_id" value="{{ old('google_identity_client_id', $googleIdentity->credential('client_id')) }}">
+                <x-dashboard.button type="submit" variant="secondary">Test configuration</x-dashboard.button>
+            </form>
+        </x-dashboard.card>
+
         {{-- Analytics (kept) --}}
         <x-dashboard.card variant="solid">
             <h2 class="text-lg font-semibold text-text-primary mb-1">Analytics & tracking</h2>

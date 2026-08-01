@@ -63,6 +63,8 @@ class SettingsController extends Controller
                 : collect(),
             'analyticsGoogle' => AnalyticsProvider::forProvider(AnalyticsProvider::PROVIDER_GOOGLE_ANALYTICS),
             'analyticsClarity' => AnalyticsProvider::forProvider(AnalyticsProvider::PROVIDER_MICROSOFT_CLARITY),
+            'googleIdentity' => IntegrationProvider::forProvider(IntegrationProvider::GOOGLE_IDENTITY),
+            'googleIdentityJsOrigin' => rtrim((string) config('app.url'), '/'),
             'siteName' => $branding['site_name'],
         ]);
     }
@@ -499,6 +501,87 @@ class SettingsController extends Controller
         if (! $result['ok']) {
             return back()->withInput()->withErrors([
                 'analytics_connection' => $result['message'],
+            ]);
+        }
+
+        return back()->with('status', $result['message']);
+    }
+
+    public function updateGoogleIdentity(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'google_identity_enabled' => ['nullable', 'boolean'],
+            'google_identity_client_id' => ['nullable', 'string', 'max:255'],
+            'google_identity_client_secret' => ['nullable', 'string', 'max:255'],
+            'google_identity_one_tap_enabled' => ['nullable', 'boolean'],
+            'google_identity_auto_select_enabled' => ['nullable', 'boolean'],
+            'google_identity_one_tap_show_home' => ['nullable', 'boolean'],
+            'google_identity_one_tap_show_login' => ['nullable', 'boolean'],
+            'google_identity_one_tap_show_register' => ['nullable', 'boolean'],
+            'google_identity_one_tap_disable_after_dismiss' => ['nullable', 'boolean'],
+            'google_identity_one_tap_prompt_cooldown_hours' => ['nullable', 'integer', 'min:1', 'max:8760'],
+        ]);
+
+        $enabled = $request->boolean('google_identity_enabled');
+        $clientId = trim((string) ($validated['google_identity_client_id'] ?? ''));
+
+        if ($enabled && $clientId === '') {
+            return back()->withInput()->withErrors([
+                'google_identity_client_id' => 'Client ID is required when Google Sign-In is enabled.',
+            ]);
+        }
+
+        $row = IntegrationProvider::forProvider(IntegrationProvider::GOOGLE_IDENTITY);
+        $row->enabled = $enabled;
+
+        $credentials = ['client_id' => $clientId];
+        $secret = trim((string) ($validated['google_identity_client_secret'] ?? ''));
+        if ($secret !== '') {
+            $credentials['client_secret'] = $secret;
+        }
+        $row->mergeCredentials($credentials);
+
+        $row->meta = array_merge($row->meta ?? [], [
+            'one_tap_enabled' => $request->boolean('google_identity_one_tap_enabled'),
+            'auto_select_enabled' => $request->boolean('google_identity_auto_select_enabled'),
+            'one_tap_show_home' => $request->boolean('google_identity_one_tap_show_home'),
+            'one_tap_show_login' => $request->boolean('google_identity_one_tap_show_login'),
+            'one_tap_show_register' => $request->boolean('google_identity_one_tap_show_register'),
+            'one_tap_disable_after_dismiss' => $request->boolean('google_identity_one_tap_disable_after_dismiss'),
+            'one_tap_prompt_cooldown_hours' => max(1, (int) ($validated['google_identity_one_tap_prompt_cooldown_hours'] ?? 24)),
+        ]);
+
+        $row->status = $enabled && $clientId !== '' ? 'connected' : 'idle';
+        $row->save();
+
+        $this->audit->log(auth()->id(), 'settings.google_identity.updated', $row, null, [
+            'enabled' => $enabled,
+            'one_tap_enabled' => (bool) ($row->meta['one_tap_enabled'] ?? false),
+        ], $request->ip());
+
+        return back()->with('status', __('Google Identity settings saved.'));
+    }
+
+    public function testGoogleIdentity(Request $request): RedirectResponse
+    {
+        $row = IntegrationProvider::forProvider(IntegrationProvider::GOOGLE_IDENTITY);
+        $clientId = trim((string) $request->input('google_identity_client_id', $row->credential('client_id', '')));
+
+        $result = app(\App\Services\Auth\Identity\GoogleIdTokenVerifier::class)->testConfiguration($clientId);
+
+        if ($result['ok']) {
+            $row->recordSuccess();
+        } else {
+            $row->recordFailure($result['message']);
+        }
+
+        $this->audit->log(auth()->id(), 'settings.google_identity.connection_test', $row, null, [
+            'ok' => $result['ok'],
+        ], $request->ip());
+
+        if (! $result['ok']) {
+            return back()->withInput()->withErrors([
+                'google_identity_test' => $result['message'],
             ]);
         }
 

@@ -3,11 +3,11 @@
         <div class="text-center mb-8" data-purpose="branding">
             <a href="{{ route('home') }}" class="inline-flex flex-col items-center gap-3 group">
                 @if(!empty($footer?->logoDarkUrl))
-                    <img src="{{ $footer->logoDarkUrl }}" alt="{{ $siteName ?? config('app.name') }}" class="h-12 w-auto max-w-[160px] object-contain">
+                    <img src="{{ $footer->logoDarkUrl }}" alt="{{ $siteName ?? config('app.name') }}" class="h-12 w-auto max-w-[200px] object-contain">
+                    <span class="sr-only">{{ $siteName ?? config('app.name') }}</span>
                 @else
-                    <div class="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center font-bold text-xl text-white shadow-lg">7</div>
+                    <h1 class="text-3xl font-bold text-white tracking-tight group-hover:text-accent transition-colors">{{ $siteName ?? config('app.name') }}</h1>
                 @endif
-                <h1 class="text-3xl font-bold text-white tracking-tight group-hover:text-accent transition-colors">{{ $siteName ?? config('app.name') }}</h1>
             </a>
             <p class="text-text-secondary mt-2">{{ $siteTagline ?? 'Connecting markets, empowering traders.' }}</p>
         </div>
@@ -49,6 +49,7 @@
                     </div>
                     <x-ui.button type="submit" class="w-full" size="lg" x-bind:loading="submitting">Login</x-ui.button>
                 </form>
+                @include('partials.auth.google-gis', ['mode' => 'button', 'surface' => 'login', 'buttonText' => 'continue_with'])
                 <footer class="mt-8 pt-6 border-t border-border-default text-center">
                     <p class="text-text-secondary text-sm">
                         Don't have an account?
@@ -124,6 +125,7 @@
                     </div>
                     <x-ui.button type="submit" class="w-full" size="lg" x-bind:loading="submitting">Create Account</x-ui.button>
                 </form>
+                @include('partials.auth.google-gis', ['mode' => 'button', 'surface' => 'register', 'buttonText' => 'signup_with'])
                 <footer class="mt-6 pt-6 border-t border-border-default text-center">
                     <p class="text-text-secondary text-sm">
                         Already have an account?
@@ -132,5 +134,10 @@
                 </footer>
             </x-ui.card>
         </section>
+
+        @php
+            $gisSurface = (request()->get('view') === 'signup' || ($showSignup ?? false)) ? 'register' : 'login';
+        @endphp
+        @include('partials.auth.google-gis', ['mode' => 'one_tap', 'surface' => $gisSurface])
     </main>
 </x-layouts.auth>

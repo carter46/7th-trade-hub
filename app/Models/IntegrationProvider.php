@@ -20,6 +20,8 @@ class IntegrationProvider extends Model
 
     public const MICROSOFT_CLARITY = 'microsoft_clarity';
 
+    public const GOOGLE_IDENTITY = 'google_identity';
+
     protected $fillable = [
         'provider',
         'enabled',

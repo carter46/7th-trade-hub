@@ -1,6 +1,7 @@
 import './bootstrap';
 import './dashboard-theme';
 import { mountCommandCharts, bindCommandRange } from './command-charts';
+import { initGoogleIdentity } from './google-identity';
 
 import Alpine from 'alpinejs';
 import Chart from 'chart.js/auto';
@@ -12,6 +13,7 @@ window.bindCommandRange = bindCommandRange;
 
 document.addEventListener('DOMContentLoaded', () => {
     mountCommandCharts(document);
+    initGoogleIdentity();
 });
 
 document.addEventListener('alpine:init', () => {

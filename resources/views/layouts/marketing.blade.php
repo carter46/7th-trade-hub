@@ -3,6 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
 
         @php
             $siteName = $siteName ?? config('app.name', '7th Trade Hub');
@@ -230,6 +231,12 @@
         <x-ui.toast />
 
         @include('partials.marketing.live-chat-widget')
+
+        @guest
+            @if (request()->routeIs('home'))
+                @include('partials.auth.google-gis', ['mode' => 'one_tap', 'surface' => 'home'])
+            @endif
+        @endguest
 
         @RegisterServiceWorkerScript
     </body>

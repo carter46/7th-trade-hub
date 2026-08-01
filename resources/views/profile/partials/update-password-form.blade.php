@@ -1,10 +1,17 @@
 <section>
+    @php
+        $passwordIsSet = $passwordIsSet ?? ($user->hasPasswordSet() ?? true);
+    @endphp
     <header class="mb-6">
         <h2 class="text-lg font-medium text-text-primary">
-            {{ __('Update Password') }}
+            {{ $passwordIsSet ? __('Update Password') : __('Set Password') }}
         </h2>
         <p class="mt-1 text-sm text-text-secondary">
-            {{ __('Ensure your account is using a long, random password to stay secure.') }}
+            @if ($passwordIsSet)
+                {{ __('Ensure your account is using a long, random password to stay secure.') }}
+            @else
+                {{ __('You signed in with Google. Set a password to also sign in with email, disconnect Google later, or delete your account.') }}
+            @endif
         </p>
     </header>
 
@@ -12,17 +19,19 @@
         @csrf
         @method('put')
 
-        <x-dashboard.input
-            label="{{ __('Current Password') }}"
-            name="current_password"
-            type="password"
-            id="update_password_current_password"
-            autocomplete="current-password"
-            :error="$errors->updatePassword->first('current_password')"
-        />
+        @if ($passwordIsSet)
+            <x-dashboard.input
+                label="{{ __('Current Password') }}"
+                name="current_password"
+                type="password"
+                id="update_password_current_password"
+                autocomplete="current-password"
+                :error="$errors->updatePassword->first('current_password')"
+            />
+        @endif
 
         <x-dashboard.input
-            label="{{ __('New Password') }}"
+            label="{{ $passwordIsSet ? __('New Password') : __('Password') }}"
             name="password"
             type="password"
             id="update_password_password"

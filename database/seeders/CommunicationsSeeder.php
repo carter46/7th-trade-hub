@@ -18,8 +18,13 @@ class CommunicationsSeeder extends Seeder
             IntegrationProvider::CHATWAY,
             IntegrationProvider::GOOGLE_ANALYTICS,
             IntegrationProvider::MICROSOFT_CLARITY,
+            IntegrationProvider::GOOGLE_IDENTITY,
         ] as $provider) {
-            IntegrationProvider::forProvider($provider);
+            $row = IntegrationProvider::forProvider($provider);
+            if ($provider === IntegrationProvider::GOOGLE_IDENTITY && empty($row->meta)) {
+                $row->meta = \App\Services\Auth\Identity\GoogleIdentityProvider::defaultMeta();
+                $row->save();
+            }
         }
 
         $fromName = config('mail.from.name') ?: config('app.name', '7th Trade Hub');

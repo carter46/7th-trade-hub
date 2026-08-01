@@ -119,6 +119,15 @@ class AppServiceProvider extends ServiceProvider
                 ? media_url_from_id($branding['favicon_media_id'], null, 'original')
                 : null;
 
+            $googleIdentityConfig = [];
+            try {
+                if (\Illuminate\Support\Facades\Schema::hasTable('integration_providers')) {
+                    $googleIdentityConfig = \App\Services\Auth\Identity\GoogleIdentityProvider::configForFrontend();
+                }
+            } catch (\Throwable) {
+                $googleIdentityConfig = [];
+            }
+
             $view->with([
                 'dashboardThemePreference' => $preference,
                 'dashboardThemeResolved' => $resolved,
@@ -127,6 +136,7 @@ class AppServiceProvider extends ServiceProvider
                 'siteName' => $branding['site_name'],
                 'siteBranding' => $branding,
                 'faviconUrl' => $favicon,
+                'googleIdentityConfig' => $googleIdentityConfig,
             ]);
         });
 
@@ -137,6 +147,15 @@ class AppServiceProvider extends ServiceProvider
                 ? media_url_from_id($branding['favicon_media_id'], null, 'original')
                 : null;
 
+            $googleIdentityConfig = [];
+            try {
+                if (\Illuminate\Support\Facades\Schema::hasTable('integration_providers')) {
+                    $googleIdentityConfig = \App\Services\Auth\Identity\GoogleIdentityProvider::configForFrontend();
+                }
+            } catch (\Throwable) {
+                $googleIdentityConfig = [];
+            }
+
             $view->with([
                 'siteName' => $branding['site_name'],
                 'siteHeading' => $branding['heading'],
@@ -144,6 +163,7 @@ class AppServiceProvider extends ServiceProvider
                 'siteBranding' => $branding,
                 'footer' => $footer,
                 'faviconUrl' => $favicon,
+                'googleIdentityConfig' => $googleIdentityConfig,
             ]);
         });
 

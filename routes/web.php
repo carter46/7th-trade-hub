@@ -425,6 +425,8 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::post('/settings/test-mail', [AdminSettingsController::class, 'testMail'])->name('.settings.test-mail');
         Route::post('/settings/analytics', [AdminSettingsController::class, 'updateAnalytics'])->name('.settings.analytics');
         Route::post('/settings/analytics/test', [AdminSettingsController::class, 'testAnalyticsConnection'])->name('.settings.analytics.test');
+        Route::post('/settings/google-identity', [AdminSettingsController::class, 'updateGoogleIdentity'])->name('.settings.google-identity');
+        Route::post('/settings/google-identity/test', [AdminSettingsController::class, 'testGoogleIdentity'])->name('.settings.google-identity.test');
         Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('.audit-logs');
     });
 

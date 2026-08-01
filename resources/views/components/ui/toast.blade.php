@@ -4,6 +4,9 @@
         'verification-link-sent' => 'A new verification link has been sent to your email address.',
         'profile-updated' => 'Profile updated.',
         'password-updated' => 'Password updated.',
+        'password-set' => 'Password set successfully.',
+        'google-linked' => 'Google account connected.',
+        'google-unlinked' => 'Google account disconnected.',
         'session-revoked' => 'Session revoked.',
     ];
     $toasts = [];

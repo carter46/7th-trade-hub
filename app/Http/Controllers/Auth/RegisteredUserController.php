@@ -44,6 +44,7 @@ class RegisteredUserController extends Controller
             'username' => $request->username,
             'email' => $request->email,
             'password' => $request->password,
+            'password_set_at' => now(),
             'terms_accepted_at' => now(),
         ]);
 

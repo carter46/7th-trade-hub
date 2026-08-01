@@ -36,12 +36,29 @@ class AccountController extends Controller
 
     public function security(Request $request): View
     {
-        return $this->view($request, 'security', ['user' => $request->user()]);
+        $user = $request->user();
+        $googleLinked = $user->hasAuthProvider(\App\Models\UserAuthProvider::GOOGLE);
+        $canDisconnectGoogle = app(\App\Services\Auth\Identity\SocialAuthService::class)->canDisconnectGoogle($user);
+
+        return $this->view($request, 'security', [
+            'user' => $user,
+            'passwordIsSet' => $user->hasPasswordSet(),
+            'googleLinked' => $googleLinked,
+            'canDisconnectGoogle' => $canDisconnectGoogle,
+            'googleIdentityConfig' => \App\Services\Auth\Identity\GoogleIdentityProvider::configForFrontend(),
+        ]);
     }
 
     public function destroy(Request $request): RedirectResponse
     {
         abort_if($request->user()->hasRole('admin'), 403);
+
+        if (! $request->user()->hasPasswordSet()) {
+            return Redirect::route($this->routeName($request, 'security'))
+                ->withErrors([
+                    'userDeletion' => __('Set a password before deleting your account.'),
+                ]);
+        }
 
         $request->validateWithBag('userDeletion', [
             'password' => ['required', 'current_password'],
