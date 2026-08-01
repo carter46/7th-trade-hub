@@ -169,6 +169,7 @@ return [
                 ['route' => 'admin.monitoring', 'match' => ['admin.monitoring', 'admin.monitoring.*'], 'label' => 'Monitoring', 'icon' => 'audit', 'keywords' => ['health', 'heartbeat', 'system'], 'permission' => 'system.manage', 'sort' => 12],
                 ['route' => 'admin.media', 'match' => ['admin.media', 'admin.media.*'], 'label' => 'Media Library', 'icon' => 'listings', 'keywords' => ['media', 'images', 'upload'], 'permission' => 'system.manage', 'sort' => 15],
                 ['route' => 'admin.settings', 'match' => ['admin.settings', 'admin.settings.*'], 'label' => 'Settings', 'icon' => 'settings', 'keywords' => ['platform', 'config'], 'permission' => 'system.manage', 'sort' => 20],
+                ['route' => 'admin.tracking', 'match' => ['admin.tracking', 'admin.tracking.*'], 'label' => 'Marketing & Tracking', 'icon' => 'analytics', 'keywords' => ['gtm', 'pixel', 'scripts', 'clarity', 'ga'], 'permission' => 'system.manage', 'sort' => 21],
             ],
         ],
     ],

@@ -20,6 +20,10 @@ class IntegrationProvider extends Model
 
     public const MICROSOFT_CLARITY = 'microsoft_clarity';
 
+    public const GOOGLE_TAG_MANAGER = 'google_tag_manager';
+
+    public const META_PIXEL = 'meta_pixel';
+
     public const GOOGLE_IDENTITY = 'google_identity';
 
     public const MONNIFY = 'monnify';

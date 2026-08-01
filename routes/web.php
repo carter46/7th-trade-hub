@@ -19,6 +19,7 @@ use App\Modules\Admin\Http\Controllers\EscrowController as AdminEscrowController
 use App\Modules\Admin\Http\Controllers\KycController as AdminKycController;
 use App\Modules\Admin\Http\Controllers\ListingAdminController;
 use App\Modules\Admin\Http\Controllers\SettingsController as AdminSettingsController;
+use App\Modules\Admin\Http\Controllers\TrackingSettingsController;
 use App\Modules\Admin\Http\Controllers\SupportTicketAdminController;
 use App\Modules\Admin\Http\Controllers\WalletAdjustmentController;
 use App\Modules\Admin\Http\Controllers\WalletFundingController as AdminWalletFundingController;
@@ -450,6 +451,12 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::post('/settings/test-mail', [AdminSettingsController::class, 'testMail'])->name('.settings.test-mail');
         Route::post('/settings/analytics', [AdminSettingsController::class, 'updateAnalytics'])->name('.settings.analytics');
         Route::post('/settings/analytics/test', [AdminSettingsController::class, 'testAnalyticsConnection'])->name('.settings.analytics.test');
+        Route::get('/tracking', [TrackingSettingsController::class, 'index'])->name('.tracking');
+        Route::post('/tracking/providers', [TrackingSettingsController::class, 'updateProviders'])->name('.tracking.providers');
+        Route::post('/tracking/test', [TrackingSettingsController::class, 'testProvider'])->name('.tracking.test');
+        Route::post('/tracking/scripts', [TrackingSettingsController::class, 'storeScript'])->name('.tracking.scripts.store');
+        Route::put('/tracking/scripts/{script}', [TrackingSettingsController::class, 'updateScript'])->name('.tracking.scripts.update');
+        Route::delete('/tracking/scripts/{script}', [TrackingSettingsController::class, 'destroyScript'])->name('.tracking.scripts.destroy');
         Route::post('/settings/google-identity', [AdminSettingsController::class, 'updateGoogleIdentity'])->name('.settings.google-identity');
         Route::post('/settings/google-identity/test', [AdminSettingsController::class, 'testGoogleIdentity'])->name('.settings.google-identity.test');
         Route::post('/settings/monnify', [AdminSettingsController::class, 'updateMonnify'])->name('.settings.monnify');

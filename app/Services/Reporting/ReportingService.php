@@ -211,11 +211,15 @@ class ReportingService
             return ['enabled' => false, 'value' => null, 'hint' => 'Google Analytics disabled'];
         }
 
-        $snap = AnalyticsGaSnapshot::query()
-            ->whereDate('captured_at', today())
-            ->where('metric', 'sessions')
-            ->orderByDesc('captured_at')
-            ->first();
+        try {
+            $snap = AnalyticsGaSnapshot::query()
+                ->whereDate('fetched_at', today())
+                ->where('metric', 'sessions')
+                ->orderByDesc('fetched_at')
+                ->first();
+        } catch (\Throwable) {
+            return ['enabled' => true, 'value' => null, 'hint' => 'GA snapshot unavailable'];
+        }
 
         return [
             'enabled' => true,

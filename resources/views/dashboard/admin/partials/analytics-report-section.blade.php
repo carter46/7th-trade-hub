@@ -8,7 +8,7 @@
     <x-dashboard.command.section-label title="Marketing — Traffic" accent="blue" />
     @if (! ($gaEnabled ?? false) || ! ($gaConnected ?? false) || ! ($data['ga_connected'] ?? false))
         <div class="rounded-2xl border border-border-default bg-elevated p-5">
-            <p class="text-sm text-text-secondary">{{ $data['message'] ?? 'Connect GA in Settings' }}. Open <a href="{{ route('admin.settings') }}" class="text-brand hover:underline">Settings → Analytics</a>.</p>
+            <p class="text-sm text-text-secondary">{{ $data['message'] ?? 'Connect GA in Marketing & Tracking' }}. Open <a href="{{ route('admin.tracking') }}" class="text-brand hover:underline">Marketing & Tracking</a>.</p>
         </div>
     @else
         @php

@@ -11,7 +11,7 @@
 @endphp
 <x-layout.page
     title="Platform Settings"
-    subtitle="Site information, contact, social links, email providers, and analytics."
+    subtitle="Site information, contact, social links, and email providers."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
@@ -515,42 +515,12 @@
             </form>
         </x-dashboard.card>
 
-        {{-- Analytics (kept) --}}
         <x-dashboard.card variant="solid">
-            <h2 class="text-lg font-semibold text-text-primary mb-1">Analytics & tracking</h2>
-            <p class="text-sm text-text-secondary mb-4">Optional Google Analytics and Microsoft Clarity. Scripts load only when enabled.</p>
-            @error('analytics_connection')
-                <p class="mb-4 text-sm text-danger">{{ $message }}</p>
-            @enderror
-            <form method="POST" action="{{ route('admin.settings.analytics') }}" class="space-y-6">
-                @csrf
-                <div class="rounded-xl border border-border-subtle p-4 space-y-4">
-                    <h3 class="text-base font-semibold text-text-primary">Google Analytics</h3>
-                    <input type="hidden" name="google_enabled" value="0">
-                    <x-dashboard.toggle name="google_enabled" label="Enable Google Analytics" :checked="old('google_enabled', $analyticsGoogle->enabled)" value="1" />
-                    <x-dashboard.input name="google_measurement_id" label="Measurement ID" :value="old('google_measurement_id', $analyticsGoogle->credential('measurement_id'))" hint="Format: G-XXXXXXXXXX" />
-                    <x-dashboard.input name="google_property_id" label="Property ID (optional)" :value="old('google_property_id', $analyticsGoogle->credential('property_id'))" />
-                </div>
-                <div class="rounded-xl border border-border-subtle p-4 space-y-4">
-                    <h3 class="text-base font-semibold text-text-primary">Microsoft Clarity</h3>
-                    <input type="hidden" name="clarity_enabled" value="0">
-                    <x-dashboard.toggle name="clarity_enabled" label="Enable Microsoft Clarity" :checked="old('clarity_enabled', $analyticsClarity->enabled)" value="1" />
-                    <x-dashboard.input name="clarity_project_id" label="Project ID" :value="old('clarity_project_id', $analyticsClarity->credential('project_id'))" />
-                </div>
-                <x-dashboard.button type="submit" variant="primary">Save analytics settings</x-dashboard.button>
-            </form>
-            <div class="mt-6 flex flex-wrap gap-3">
-                <form method="POST" action="{{ route('admin.settings.analytics.test') }}">
-                    @csrf
-                    <input type="hidden" name="provider" value="google_analytics">
-                    <x-dashboard.button type="submit" variant="secondary">Test GA connection</x-dashboard.button>
-                </form>
-                <form method="POST" action="{{ route('admin.settings.analytics.test') }}">
-                    @csrf
-                    <input type="hidden" name="provider" value="microsoft_clarity">
-                    <x-dashboard.button type="submit" variant="secondary">Test Clarity connection</x-dashboard.button>
-                </form>
-            </div>
+            <h2 class="text-lg font-semibold text-text-primary mb-1">Marketing & tracking</h2>
+            <p class="text-sm text-text-secondary mb-4">
+                Google Tag Manager, Analytics, Clarity, Meta Pixel, verification tags, and custom scripts have moved to a dedicated page.
+            </p>
+            <x-dashboard.button :href="route('admin.tracking')" variant="primary">Open Marketing & Tracking</x-dashboard.button>
         </x-dashboard.card>
     </div>
 </x-layout.page>

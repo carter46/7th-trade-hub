@@ -174,21 +174,6 @@ class AppServiceProvider extends ServiceProvider
                 'googleIdentityConfig' => $googleIdentityConfig,
             ]);
         });
-
-        View::composer([
-            'layouts.dashboard-user',
-            'layouts.dashboard-admin',
-            'layouts.marketing',
-            'partials.analytics.tracker-scripts',
-        ], function ($view) {
-            $ga = app(GoogleAnalyticsProvider::class);
-            $clarity = app(MicrosoftClarityProvider::class);
-
-            $view->with([
-                'analyticsMarketingScript' => $ga->isEnabled() ? $ga->measurementScript() : null,
-                'analyticsHeatmapScript' => $clarity->isEnabled() ? $clarity->script() : null,
-            ]);
-        });
     }
 
     private function applySiteBrandingConfig(): void

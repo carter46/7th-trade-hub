@@ -42,9 +42,10 @@
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
-        @include('partials.analytics.tracker-scripts')
+        @include('partials.tracking.head')
     </head>
     <body class="bg-dark text-slate-100 font-sans selection:bg-accent selection:text-white" x-data="mobileNav" @keydown.escape.window="close()">
+        @include('partials.tracking.body-start')
         <header class="fixed top-0 w-full z-50 glassmorphism border-b border-white/10">
             <nav class="max-w-marketing mx-auto px-5 sm:px-6 h-20 flex items-center justify-between gap-3">
                 <a class="flex items-center gap-2 min-w-0" href="{{ route('home') }}">
@@ -237,6 +238,8 @@
                 @include('partials.auth.google-gis', ['mode' => 'one_tap', 'surface' => 'home'])
             @endif
         @endguest
+
+        @include('partials.tracking.body-end')
 
         @RegisterServiceWorkerScript
     </body>

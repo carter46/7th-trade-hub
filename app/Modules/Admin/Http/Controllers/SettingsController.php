@@ -12,6 +12,7 @@ use App\Models\SocialLink;
 use App\Modules\Admin\Services\AuditLogService;
 use App\Services\Analytics\Providers\GoogleAnalyticsProvider;
 use App\Services\Analytics\Providers\MicrosoftClarityProvider;
+use App\Services\Tracking\TrackingScriptRenderer;
 use App\Services\Branding\SiteBrandingRepository;
 use App\Services\Communications\Contact\PlatformContactRepository;
 use App\Services\Communications\Email\EmailProfile;
@@ -448,12 +449,16 @@ class SettingsController extends Controller
         ]);
         $clarity->save();
 
+        app(TrackingScriptRenderer::class)->flushCache();
+
         $this->audit->log(auth()->id(), 'settings.analytics.updated', null, null, [
             'google_enabled' => $googleEnabled,
             'clarity_enabled' => $clarityEnabled,
         ], $request->ip());
 
-        return back()->with('status', __('Analytics settings saved.'));
+        return redirect()
+            ->route('admin.tracking')
+            ->with('status', __('Analytics settings saved. Manage all marketing tags under Marketing & Tracking.'));
     }
 
     public function testAnalyticsConnection(Request $request): RedirectResponse

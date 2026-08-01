@@ -16,8 +16,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @include('partials.tracking.head')
 </head>
 <body class="relative isolate min-h-screen flex items-center justify-center bg-[#0F172A] font-sans text-text-primary antialiased overflow-x-hidden p-4 sm:p-8">
+    @include('partials.tracking.body-start')
     {{-- Cover background (never drives layout height) --}}
     <div
         class="pointer-events-none absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
@@ -42,6 +44,7 @@
     <div class="relative z-10">
         <x-ui.toast />
     </div>
+    @include('partials.tracking.body-end')
     @RegisterServiceWorkerScript
 </body>
 </html>
