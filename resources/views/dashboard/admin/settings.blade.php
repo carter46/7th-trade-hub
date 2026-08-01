@@ -300,15 +300,67 @@
                 <x-dashboard.button type="submit" variant="primary">Save email settings</x-dashboard.button>
             </form>
 
-            <form method="POST" action="{{ route('admin.settings.test-mail') }}" class="mt-6 space-y-4 border-t border-border-subtle pt-6">
+            <form
+                method="POST"
+                action="{{ route('admin.settings.test-mail') }}"
+                class="mt-6 space-y-4 border-t border-border-subtle pt-6"
+                x-data="{
+                    sending: false,
+                    status: '',
+                    ok: null,
+                    async submit(e) {
+                        e.preventDefault();
+                        if (this.sending) return;
+                        this.sending = true;
+                        this.status = '';
+                        this.ok = null;
+                        try {
+                            const res = await fetch(e.target.action, {
+                                method: 'POST',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'X-CSRF-TOKEN': e.target.querySelector('[name=_token]')?.value || '',
+                                },
+                                body: new FormData(e.target),
+                            });
+                            const data = await res.json().catch(() => ({}));
+                            this.ok = !!data.ok;
+                            if (res.ok && data.ok) {
+                                this.status = data.message || 'Test email sent.';
+                            } else if (data.errors?.test_email?.[0]) {
+                                this.status = data.errors.test_email[0];
+                            } else {
+                                this.status = data.message || data.error || 'Mail send failed.';
+                            }
+                        } catch (err) {
+                            this.ok = false;
+                            this.status = err?.message || 'Mail send failed.';
+                        } finally {
+                            this.sending = false;
+                        }
+                    }
+                }"
+                @submit="submit"
+            >
                 @csrf
                 <h3 class="font-semibold text-text-primary">Send test email</h3>
                 <x-dashboard.input name="test_email" type="email" label="Send test to" :value="old('test_email', auth()->user()->email)" required />
                 <x-dashboard.input name="test_subject" label="Subject (optional)" :value="old('test_subject', $siteName.' — test email')" />
+                <p
+                    x-show="status"
+                    x-text="status"
+                    class="text-sm break-words"
+                    :class="ok === true ? 'text-success' : 'text-danger'"
+                    x-cloak
+                ></p>
                 @error('test_email')
-                    <p class="text-sm text-danger">{{ $message }}</p>
+                    <p class="text-sm text-danger" x-show="!status">{{ $message }}</p>
                 @enderror
-                <x-dashboard.button type="submit" variant="secondary">Send test email</x-dashboard.button>
+                <x-dashboard.button type="submit" variant="secondary" x-bind:disabled="sending">
+                    <span x-show="!sending">Send test email</span>
+                    <span x-show="sending" x-cloak>Sending…</span>
+                </x-dashboard.button>
             </form>
         </x-dashboard.card>
 

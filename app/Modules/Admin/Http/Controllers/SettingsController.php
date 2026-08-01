@@ -18,6 +18,7 @@ use App\Services\Communications\Email\EmailProfile;
 use App\Services\Communications\Email\EmailService;
 use App\Services\Communications\LiveChat\LiveChatManager;
 use App\Services\Communications\Social\SocialLinkRepository;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -305,7 +306,7 @@ class SettingsController extends Controller
         return back()->with('status', __('Email settings saved.'));
     }
 
-    public function testMail(Request $request): RedirectResponse
+    public function testMail(Request $request): RedirectResponse|JsonResponse
     {
         $validated = $request->validate([
             'test_email' => ['required', 'email', 'max:255'],
@@ -315,6 +316,7 @@ class SettingsController extends Controller
         $to = $validated['test_email'];
         $siteName = $this->branding->siteName();
         $subject = $validated['test_subject'] ?: $siteName.' — test email';
+        $wantsJson = $request->expectsJson() || $request->ajax();
 
         try {
             $result = $this->emails->sendRaw(
@@ -328,6 +330,10 @@ class SettingsController extends Controller
             $errorDetail = $result->error
                 ?: $brevo->last_error
                 ?: ($brevo->meta['last_fallback_reason'] ?? null);
+            $fallbackReason = $brevo->meta['last_fallback_reason'] ?? null;
+            $usedFallback = $result->success
+                && $result->provider === IntegrationProvider::LARAVEL_MAIL
+                && filled($fallbackReason);
 
             $this->audit->log(auth()->id(), 'settings.mail_test', null, null, [
                 'recipient' => $to,
@@ -339,30 +345,60 @@ class SettingsController extends Controller
             ], $request->ip());
 
             if (! $result->success) {
-                return back()->withInput()->withErrors([
-                    'test_email' => 'Mail send failed via '.$result->provider.': '.($errorDetail ?: 'Unknown error'),
+                $message = 'Mail send failed via '.$result->provider.': '.($errorDetail ?: 'Unknown error');
+
+                if ($wantsJson) {
+                    return response()->json([
+                        'ok' => false,
+                        'message' => $message,
+                        'provider' => $result->provider,
+                        'error' => $errorDetail,
+                        'http_status' => $result->httpStatus,
+                    ], 422);
+                }
+
+                return back()->withInput()->withErrors(['test_email' => $message]);
+            }
+
+            if ($usedFallback) {
+                $message = __('Sent via Laravel Mail fallback. Brevo error: :error', [
+                    'error' => $fallbackReason,
+                ]);
+            } else {
+                $message = __('Test email sent to :email via :provider.', [
+                    'email' => $to,
+                    'provider' => $result->provider === 'brevo' ? 'Brevo' : $result->provider,
+                ]);
+                if ($result->messageId) {
+                    $message .= ' Message ID: '.$result->messageId;
+                }
+            }
+
+            if ($wantsJson) {
+                return response()->json([
+                    'ok' => true,
+                    'message' => $message,
+                    'provider' => $result->provider,
+                    'message_id' => $result->messageId,
+                    'http_status' => $result->httpStatus,
+                    'used_fallback' => $usedFallback,
+                    'fallback_reason' => $usedFallback ? $fallbackReason : null,
                 ]);
             }
 
-            if ($result->provider === IntegrationProvider::LARAVEL_MAIL && filled($brevo->meta['last_fallback_reason'] ?? null)) {
-                return back()->with('status', __('Sent via Laravel Mail fallback. Brevo error: :error', [
-                    'error' => $brevo->meta['last_fallback_reason'],
-                ]));
-            }
-
-            $status = __('Test email sent to :email via :provider.', [
-                'email' => $to,
-                'provider' => $result->provider === 'brevo' ? 'Brevo' : $result->provider,
-            ]);
-            if ($result->messageId) {
-                $status .= ' Message ID: '.$result->messageId;
-            }
-
-            return back()->with('status', $status);
+            return back()->with('status', $message);
         } catch (Throwable $e) {
-            return back()->withInput()->withErrors([
-                'test_email' => 'Mail send failed: '.$e->getMessage(),
-            ]);
+            $message = 'Mail send failed: '.$e->getMessage();
+
+            if ($wantsJson) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => $message,
+                    'error' => $e->getMessage(),
+                ], 500);
+            }
+
+            return back()->withInput()->withErrors(['test_email' => $message]);
         }
     }
 
