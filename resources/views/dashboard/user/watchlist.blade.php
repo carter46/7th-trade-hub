@@ -9,6 +9,7 @@
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
+        ['Marketplace', route('dashboard.marketplace')],
         ['Watchlist', null],
     ]"
 >

@@ -108,7 +108,7 @@ return [
             'nav' => 'Understanding navigation',
             'title' => 'Understanding the navigation',
             'blocks' => [
-                ['type' => 'paragraph', 'content' => 'Marketing pages use the top nav: Home, Services, Marketplace, Exchange, and Help. Inside the dashboard, the sidebar covers Wallet, Orders, Listings, Messages, Support, and Settings.'],
+                ['type' => 'paragraph', 'content' => 'Marketing pages use the top nav: Home, Services, Marketplace, Exchange, and Help. Inside the dashboard, the sidebar covers Services, Marketplace (listings, sales, watchlist, escrow conversations, orders), Wallet, Exchange, Support, and Settings.'],
                 [
                     'type' => 'screenshot',
                     'title' => 'Navigation menu',

@@ -62,6 +62,8 @@ class DashboardController extends Controller
             'wallet' => $wallet,
             'transactions' => $transactions,
             'kycLevel' => $user->kyc_level,
+            'kycRequired' => \App\Models\SystemSetting::kycRequired(),
+            'canCreateWallet' => $user->hasApprovedKyc(),
         ]);
     }
 
@@ -79,22 +81,52 @@ class DashboardController extends Controller
 
     public function orders(): View
     {
+        return $this->ordersForSource('marketplace', [
+            'title' => 'Marketplace orders',
+            'subtitle' => 'Purchases from marketplace listings.',
+            'breadcrumbParent' => ['Marketplace', route('dashboard.marketplace')],
+            'emptyTitle' => 'No marketplace orders yet',
+            'emptyDescription' => 'When you buy a listing, it will appear here with escrow tracking.',
+            'emptyAction' => ['href' => route('dashboard.marketplace'), 'label' => 'Browse marketplace'],
+        ]);
+    }
+
+    public function serviceOrders(): View
+    {
+        return $this->ordersForSource('platform', [
+            'title' => 'Service orders',
+            'subtitle' => 'Purchases from platform services.',
+            'breadcrumbParent' => ['Services', route('dashboard.services')],
+            'emptyTitle' => 'No service orders yet',
+            'emptyDescription' => 'When you buy a platform service, it will appear here.',
+            'emptyAction' => ['href' => route('dashboard.services'), 'label' => 'Browse services'],
+        ]);
+    }
+
+    /**
+     * @param  array{title: string, subtitle: string, breadcrumbParent: array{0: string, 1: string}, emptyTitle: string, emptyDescription: string, emptyAction: array{href: string, label: string}}  $meta
+     */
+    private function ordersForSource(string $source, array $meta): View
+    {
         $orders = auth()->user()
             ->orders()
+            ->where('source', $source)
             ->with(['listing', 'escrow', 'review', 'items.variant'])
             ->orderByDesc('created_at')
             ->paginate(15);
 
         return view('dashboard.user.orders', [
             'orders' => $orders,
+            'source' => $source,
+            ...$meta,
         ]);
     }
 
     public function sales(): View
     {
         $orders = Order::query()
-            ->whereHas('listing', fn ($q) => $q->where('user_id', auth()->id()))
-            ->with(['listing', 'escrow', 'user'])
+            ->whereHas('listing', fn ($q) => $q->withTrashed()->where('user_id', auth()->id()))
+            ->with(['listing' => fn ($q) => $q->withTrashed(), 'escrow', 'user'])
             ->orderByDesc('created_at')
             ->paginate(15);
 

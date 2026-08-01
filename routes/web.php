@@ -191,9 +191,20 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
     Route::get('/exchange', [DashboardController::class, 'exchange'])->name('.exchange');
     Route::get('/social', [DashboardController::class, 'social'])->name('.social');
     Route::get('/documents', [DashboardController::class, 'documents'])->name('.documents');
-    Route::get('/discover/marketplace', [\App\Http\Controllers\Dashboard\DiscoverMarketplaceController::class, 'index'])->name('.discover.marketplace');
-    Route::get('/discover/marketplace/{slug}', [\App\Http\Controllers\Dashboard\DiscoverMarketplaceController::class, 'show'])->name('.discover.marketplace.show');
-    Route::get('/discover/services', [\App\Http\Controllers\Dashboard\DiscoverServicesController::class, 'index'])->name('.discover.services');
+
+    // Services (primary section; discover paths redirect)
+    Route::get('/services', [\App\Http\Controllers\Dashboard\DiscoverServicesController::class, 'index'])->name('.services');
+    Route::redirect('/discover/services', '/dashboard/services', 301)->name('.discover.services');
+    Route::get('/service-orders', [DashboardController::class, 'serviceOrders'])->name('.service-orders');
+
+    // Marketplace (primary section; discover paths redirect)
+    Route::get('/marketplace', [\App\Http\Controllers\Dashboard\DiscoverMarketplaceController::class, 'index'])->name('.marketplace');
+    Route::get('/marketplace/{slug}/checkout', [\App\Http\Controllers\Dashboard\DiscoverMarketplaceController::class, 'checkout'])->name('.marketplace.checkout');
+    Route::get('/marketplace/{slug}', [\App\Http\Controllers\Dashboard\DiscoverMarketplaceController::class, 'show'])->name('.marketplace.show');
+    Route::redirect('/discover/marketplace', '/dashboard/marketplace', 301)->name('.discover.marketplace');
+    Route::get('/discover/marketplace/{slug}/checkout', fn (string $slug) => redirect()->to(route('dashboard.marketplace.checkout', $slug), 301))->name('.discover.marketplace.checkout');
+    Route::get('/discover/marketplace/{slug}', fn (string $slug) => redirect()->to(route('dashboard.marketplace.show', $slug), 301))->name('.discover.marketplace.show');
+
     Route::get('/listings', [DashboardController::class, 'listings'])->name('.listings');
     Route::get('/listings/create', [ListingController::class, 'create'])->name('.listings.create');
     Route::post('/listings', [ListingController::class, 'store'])->name('.listings.store');
@@ -212,6 +223,8 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
     Route::get('/messages', [MessageController::class, 'index'])->name('.messages');
     Route::get('/messages/create', [MessageController::class, 'create'])->name('.messages.create');
     Route::post('/messages', [MessageController::class, 'store'])->name('.messages.store');
+    Route::get('/messages/order/{order}', [MessageController::class, 'showOrder'])->name('.messages.order');
+    Route::post('/messages/order/{order}/reply', [MessageController::class, 'replyOrder'])->name('.messages.order.reply');
     Route::get('/messages/{message}', [MessageController::class, 'show'])->name('.messages.show');
     Route::post('/messages/{message}/reply', [MessageController::class, 'reply'])->name('.messages.reply');
     Route::get('/notifications', [UserNotificationController::class, 'index'])->name('.notifications');
@@ -222,6 +235,9 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
     Route::get('/support', [SupportTicketController::class, 'index'])->name('.support.index');
     Route::get('/support/create', [SupportTicketController::class, 'create'])->name('.support.create');
     Route::post('/support', [SupportTicketController::class, 'store'])->name('.support.store');
+    Route::get('/support/attachments/{attachment}', [SupportTicketController::class, 'downloadAttachment'])
+        ->middleware('signed')
+        ->name('.support.attachments.download');
     Route::get('/support/{ticket}', [SupportTicketController::class, 'show'])->name('.support.show');
     Route::post('/support/{ticket}/reply', [SupportTicketController::class, 'reply'])->name('.support.reply');
 });

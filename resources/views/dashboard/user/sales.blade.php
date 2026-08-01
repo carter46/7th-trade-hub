@@ -9,6 +9,7 @@
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
+        ['Marketplace', route('dashboard.marketplace')],
         ['Sales', null],
     ]"
 >
@@ -37,25 +38,30 @@
                 <x-dashboard.td class="text-sm">{{ $order->escrow?->status ?? '—' }}</x-dashboard.td>
                 <x-dashboard.td class="text-sm text-text-muted">{{ $order->created_at->format('M j, Y H:i') }}</x-dashboard.td>
                 <x-dashboard.td>
-                    @if ($order->status === 'processing' && $order->escrow?->status === 'locked')
-                        <x-dashboard.button type="button" size="xs" variant="primary" @click="$dispatch('open-modal', 'mark-delivered-{{ $order->id }}')">
-                            Mark delivered
-                        </x-dashboard.button>
-                        <x-dashboard.modal
-                            name="mark-delivered-{{ $order->id }}"
-                            title="Mark as delivered?"
-                            confirm-label="Mark delivered"
-                            :form-action="route('dashboard.orders.mark-delivered', $order)"
-                        >
-                            <p class="mb-3 text-sm text-text-secondary">Optional note for the buyer (credentials, download link, etc.).</p>
-                            <label class="block text-sm font-medium mb-1">Delivery note</label>
-                            <textarea name="delivery_note" maxlength="1000" rows="3" class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2 text-sm"></textarea>
-                        </x-dashboard.modal>
-                    @elseif ($order->escrow?->status === 'disputed')
-                        <span class="text-xs text-warning">Disputed</span>
-                    @else
-                        <span class="text-xs text-text-muted">—</span>
-                    @endif
+                    <div class="flex flex-wrap gap-2 items-center">
+                        @if ($order->escrow)
+                            <x-dashboard.button :href="route('dashboard.messages.order', $order)" size="xs" variant="ghost">
+                                Escrow chat
+                            </x-dashboard.button>
+                        @endif
+                        @if ($order->status === 'processing' && $order->escrow?->status === 'locked')
+                            <x-dashboard.button type="button" size="xs" variant="primary" @click="$dispatch('open-modal', 'mark-delivered-{{ $order->id }}')">
+                                Mark delivered
+                            </x-dashboard.button>
+                            <x-dashboard.modal
+                                name="mark-delivered-{{ $order->id }}"
+                                title="Mark as delivered?"
+                                confirm-label="Mark delivered"
+                                :form-action="route('dashboard.orders.mark-delivered', $order)"
+                            >
+                                <p class="mb-3 text-sm text-text-secondary">Optional note for the buyer (credentials, download link, etc.).</p>
+                                <label class="block text-sm font-medium mb-1">Delivery note</label>
+                                <textarea name="delivery_note" maxlength="1000" rows="3" class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2 text-sm"></textarea>
+                            </x-dashboard.modal>
+                        @elseif ($order->escrow?->status === 'disputed')
+                            <span class="text-xs text-warning">Disputed</span>
+                        @endif
+                    </div>
                 </x-dashboard.td>
             </tr>
         @endforeach

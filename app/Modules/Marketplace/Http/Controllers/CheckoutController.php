@@ -43,7 +43,9 @@ class CheckoutController extends Controller
                 return redirect()->route('dashboard.deposit.create-bank')->with('error', $message);
             }
 
-            return redirect()->route('marketplace.show', $listing->slug)->with('error', $message);
+            return redirect()
+                ->route('dashboard.marketplace.checkout', $listing->slug)
+                ->with('error', $message);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Marketplace checkout failed', [
                 'listing_id' => $listing->id,
@@ -51,7 +53,8 @@ class CheckoutController extends Controller
                 'message' => $e->getMessage(),
             ]);
 
-            return redirect()->route('marketplace.show', $listing->slug)
+            return redirect()
+                ->route('dashboard.marketplace.checkout', $listing->slug)
                 ->with('error', __('Checkout failed. Please try again.'));
         }
 
@@ -62,7 +65,7 @@ class CheckoutController extends Controller
                 'order',
                 __('New order received'),
                 __('Order :ref for :title', ['ref' => $order->reference, 'title' => $listing->title]),
-                route('dashboard.orders')
+                route('dashboard.messages.order', $order)
             );
 
             Message::create([

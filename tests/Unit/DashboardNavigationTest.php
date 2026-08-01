@@ -137,4 +137,30 @@ class DashboardNavigationTest extends TestCase
             }
         }
     }
+
+    public function test_user_sidebar_matches_locked_ia(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole('user');
+
+        $entries = collect(DashboardNavigation::for('user', $user))->keyBy('id');
+
+        $this->assertArrayHasKey('services', $entries);
+        $this->assertArrayHasKey('marketplace', $entries);
+        $this->assertArrayHasKey('wallet', $entries);
+        $this->assertArrayHasKey('exchange', $entries);
+        $this->assertArrayHasKey('support', $entries);
+        $this->assertArrayHasKey('settings', $entries);
+        $this->assertArrayNotHasKey('discover', $entries);
+        $this->assertArrayNotHasKey('inbox', $entries);
+
+        $serviceLabels = collect($entries['services']['children'])->pluck('label')->all();
+        $this->assertContains('Browse', $serviceLabels);
+        $this->assertContains('Orders', $serviceLabels);
+
+        $marketLabels = collect($entries['marketplace']['children'])->pluck('label')->all();
+        $this->assertContains('Escrow Conversations', $marketLabels);
+        $this->assertContains('My Listings', $marketLabels);
+        $this->assertNotContains('Sell Crypto', collect($entries['wallet']['children'])->pluck('label')->all());
+    }
 }

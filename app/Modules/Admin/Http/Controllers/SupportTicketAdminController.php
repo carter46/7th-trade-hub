@@ -97,7 +97,12 @@ class SupportTicketAdminController extends Controller
     {
         $this->authorize('manage', $ticket);
 
-        $ticket->load(['user', 'replies.user', 'assignee']);
+        $ticket->load([
+            'user',
+            'replies.user',
+            'assignee',
+            'attachments' => fn ($q) => $q->where('expires_at', '>', now())->orderBy('id'),
+        ]);
         $staff = User::role('admin')->orderBy('name')->get(['id', 'name', 'email']);
 
         return view('dashboard.admin.ticket-show', compact('ticket', 'staff'));
@@ -107,14 +112,25 @@ class SupportTicketAdminController extends Controller
     {
         $this->authorize('manage', $ticket);
 
-        $validated = $request->validate(['body' => ['required', 'string']]);
+        $validated = $request->validate([
+            'body' => ['required', 'string'],
+            'attachments' => ['nullable', 'array', 'max:'.\App\Modules\Support\Services\SupportAttachmentService::MAX_FILES],
+            'attachments.*' => ['file', 'max:'.(int) (\App\Modules\Support\Services\SupportAttachmentService::MAX_BYTES / 1024)],
+        ]);
 
-        SupportTicketReply::create([
+        $reply = SupportTicketReply::create([
             'support_ticket_id' => $ticket->id,
             'user_id' => auth()->id(),
             'body' => $validated['body'],
             'is_staff' => true,
         ]);
+
+        app(\App\Modules\Support\Services\SupportAttachmentService::class)->storeMany(
+            $request->file('attachments'),
+            $ticket,
+            $request->user(),
+            $reply
+        );
 
         if (in_array($ticket->status, ['closed', 'resolved'], true)) {
             $ticket->update(['status' => 'open']);

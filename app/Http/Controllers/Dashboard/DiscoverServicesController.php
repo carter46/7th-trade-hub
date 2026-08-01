@@ -24,7 +24,7 @@ class DiscoverServicesController extends Controller
     public function index(Request $request): View
     {
         $user = $request->user();
-        $this->activity->record($user->id, 'viewed', null, 'discover.services');
+        $this->activity->record($user->id, 'viewed', null, 'services.hub');
 
         $q = $request->string('q')->toString();
         $groups = $this->browse->groupCards($this->content);

@@ -211,7 +211,7 @@ class User extends Authenticatable
     public function hasApprovedKyc(int $level = 1): bool
     {
         // Platform-wide toggle: when KYC is not required, treat members as verified.
-        if (SystemSetting::get('kyc_required', '1') === '0') {
+        if (! SystemSetting::kycRequired()) {
             return true;
         }
 

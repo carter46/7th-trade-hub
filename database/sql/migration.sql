@@ -376,6 +376,26 @@ CREATE TABLE IF NOT EXISTS `support_ticket_replies` (
   CONSTRAINT `support_ticket_replies_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS `support_attachments` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `support_ticket_id` bigint unsigned NOT NULL,
+  `support_ticket_reply_id` bigint unsigned DEFAULT NULL,
+  `user_id` bigint unsigned NOT NULL,
+  `disk` varchar(32) NOT NULL DEFAULT 'local',
+  `path` varchar(255) NOT NULL,
+  `original_name` varchar(255) NOT NULL,
+  `mime` varchar(120) NOT NULL,
+  `size` bigint unsigned NOT NULL,
+  `expires_at` timestamp NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `support_attachments_expires_at_index` (`expires_at`),
+  CONSTRAINT `support_attachments_ticket_id_foreign` FOREIGN KEY (`support_ticket_id`) REFERENCES `support_tickets` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `support_attachments_reply_id_foreign` FOREIGN KEY (`support_ticket_reply_id`) REFERENCES `support_ticket_replies` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `support_attachments_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS `messages` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `from_user_id` bigint unsigned NOT NULL,

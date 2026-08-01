@@ -9,16 +9,20 @@ class SupportTicketPolicy
 {
     public function view(User $user, SupportTicket $ticket): bool
     {
-        return $user->id === $ticket->user_id || $user->hasRole('admin');
+        return $user->id === $ticket->user_id
+            || $user->hasRole('admin')
+            || $user->can('support.manage');
     }
 
     public function reply(User $user, SupportTicket $ticket): bool
     {
-        return $user->id === $ticket->user_id || $user->hasRole('admin');
+        return $user->id === $ticket->user_id
+            || $user->hasRole('admin')
+            || $user->can('support.manage');
     }
 
     public function manage(User $user, SupportTicket $ticket): bool
     {
-        return $user->hasRole('admin');
+        return $user->hasRole('admin') || $user->can('support.manage');
     }
 }

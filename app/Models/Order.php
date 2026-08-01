@@ -39,7 +39,8 @@ class Order extends Model
 
     public function listing(): BelongsTo
     {
-        return $this->belongsTo(Listing::class);
+        // Soft-deleted listings must still resolve for escrow/sales history.
+        return $this->belongsTo(Listing::class)->withTrashed();
     }
 
     public function items(): HasMany

@@ -41,4 +41,9 @@ class SupportTicket extends Model
     {
         return $this->hasMany(SupportTicketReply::class);
     }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(SupportAttachment::class);
+    }
 }

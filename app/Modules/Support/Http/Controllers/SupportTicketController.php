@@ -5,14 +5,24 @@ namespace App\Modules\Support\Http\Controllers;
 use App\Events\TicketOpened;
 use App\Events\TicketReplied;
 use App\Http\Controllers\Controller;
+use App\Models\SupportAttachment;
 use App\Models\SupportTicket;
 use App\Models\SupportTicketReply;
+use App\Modules\Support\Services\SupportAttachmentService;
+use App\Services\Communications\Contact\PlatformContactRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SupportTicketController extends Controller
 {
+    public function __construct(
+        private PlatformContactRepository $contact,
+        private SupportAttachmentService $attachments,
+    ) {}
+
     public function index(): View
     {
         try {
@@ -25,7 +35,10 @@ class SupportTicketController extends Controller
             $tickets = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15);
         }
 
-        return view('dashboard.user.support.index', compact('tickets'));
+        return view('dashboard.user.support.index', [
+            'tickets' => $tickets,
+            'contact' => $this->contact->all(),
+        ]);
     }
 
     public function create(): View
@@ -41,6 +54,8 @@ class SupportTicketController extends Controller
             'category' => ['required', 'in:'.implode(',', SupportTicket::CATEGORIES)],
             'subject' => ['required', 'string', 'max:255'],
             'body' => ['required', 'string'],
+            'attachments' => ['nullable', 'array', 'max:'.SupportAttachmentService::MAX_FILES],
+            'attachments.*' => ['file', 'max:'.(int) (SupportAttachmentService::MAX_BYTES / 1024)],
         ]);
 
         $ticket = SupportTicket::create([
@@ -51,9 +66,15 @@ class SupportTicketController extends Controller
             'status' => 'open',
         ]);
 
+        $this->attachments->storeMany(
+            $request->file('attachments'),
+            $ticket,
+            $request->user()
+        );
+
         TicketOpened::dispatch($ticket->id, (int) auth()->id());
 
-        return redirect()->route('dashboard.support.index')
+        return redirect()->route('dashboard.support.show', $ticket)
             ->with('status', __('Support ticket created.'));
     }
 
@@ -61,7 +82,10 @@ class SupportTicketController extends Controller
     {
         $this->authorize('view', $ticket);
 
-        $ticket->load('replies.user');
+        $ticket->load([
+            'replies.user',
+            'attachments' => fn ($q) => $q->where('expires_at', '>', now())->orderBy('id'),
+        ]);
 
         return view('dashboard.user.support.show', compact('ticket'));
     }
@@ -70,19 +94,58 @@ class SupportTicketController extends Controller
     {
         $this->authorize('reply', $ticket);
 
-        $validated = $request->validate(['body' => ['required', 'string']]);
+        $validated = $request->validate([
+            'body' => ['required', 'string'],
+            'attachments' => ['nullable', 'array', 'max:'.SupportAttachmentService::MAX_FILES],
+            'attachments.*' => ['file', 'max:'.(int) (SupportAttachmentService::MAX_BYTES / 1024)],
+        ]);
 
         $isStaff = auth()->user()->hasRole('admin');
 
-        SupportTicketReply::create([
+        $reply = SupportTicketReply::create([
             'support_ticket_id' => $ticket->id,
             'user_id' => auth()->id(),
             'body' => $validated['body'],
             'is_staff' => $isStaff,
         ]);
 
+        $this->attachments->storeMany(
+            $request->file('attachments'),
+            $ticket,
+            $request->user(),
+            $reply
+        );
+
         TicketReplied::dispatch($ticket->id, (int) auth()->id(), $isStaff);
 
         return back()->with('status', __('Reply sent.'));
+    }
+
+    public function downloadAttachment(Request $request, SupportAttachment $attachment): StreamedResponse
+    {
+        if ($attachment->isExpired()) {
+            abort(410, __('This evidence file has expired.'));
+        }
+
+        $ticket = $attachment->ticket;
+        abort_unless($ticket, 404);
+
+        $this->authorize('view', $ticket);
+
+        if (! Storage::disk($attachment->disk)->exists($attachment->path)) {
+            abort(404);
+        }
+
+        $disposition = $attachment->isImage() ? 'inline' : 'attachment';
+
+        return Storage::disk($attachment->disk)->response(
+            $attachment->path,
+            $attachment->original_name,
+            [
+                'Content-Type' => $attachment->mime,
+                'Content-Disposition' => $disposition.'; filename="'.$attachment->original_name.'"',
+                'X-Content-Type-Options' => 'nosniff',
+            ]
+        );
     }
 }

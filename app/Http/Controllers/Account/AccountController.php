@@ -74,7 +74,7 @@ class AccountController extends Controller
 
         $user = $request->user();
         $submission = $user->kycSubmissions()->latest()->first();
-        $kycRequired = \App\Models\SystemSetting::get('kyc_required', '1') !== '0';
+        $kycRequired = \App\Models\SystemSetting::kycRequired();
 
         return $this->view($request, 'kyc', [
             'submission' => $submission,

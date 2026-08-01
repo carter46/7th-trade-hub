@@ -9,7 +9,7 @@
     width="default"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
-        ['Marketplace', route('dashboard.discover.marketplace')],
+        ['Marketplace', route('dashboard.marketplace')],
         [$listing->title, null],
     ]"
 >
@@ -17,8 +17,7 @@
         @if($wallet)
             <span class="text-sm text-text-muted">₦{{ number_format((float) $wallet->balance, 0) }}</span>
         @endif
-        <x-dashboard.button :href="route('marketplace.checkout', $listing->slug)" size="sm">Buy now</x-dashboard.button>
-        <x-dashboard.button :href="route('marketplace.show', $listing->slug)" variant="secondary" size="sm">Public page</x-dashboard.button>
+        <x-dashboard.button :href="route('dashboard.marketplace.checkout', $listing->slug)" size="sm">Buy now</x-dashboard.button>
     </x-slot:actions>
 
     <x-dashboard.card>

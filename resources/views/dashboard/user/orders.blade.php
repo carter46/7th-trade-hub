@@ -1,23 +1,33 @@
 @extends('layouts.dashboard-user')
 
-@section('title', 'Orders')
+@section('title', $title ?? 'Orders')
 
 @section('content')
+@php
+    $title = $title ?? 'Orders';
+    $subtitle = $subtitle ?? 'View and manage your purchases.';
+    $breadcrumbParent = $breadcrumbParent ?? null;
+    $emptyTitle = $emptyTitle ?? 'No orders yet';
+    $emptyDescription = $emptyDescription ?? 'Your purchases will appear here.';
+    $emptyAction = $emptyAction ?? ['href' => route('dashboard.marketplace'), 'label' => 'Browse marketplace'];
+    $crumbs = [['Dashboard', route('dashboard')]];
+    if ($breadcrumbParent) {
+        $crumbs[] = $breadcrumbParent;
+    }
+    $crumbs[] = [$title, null];
+@endphp
 <x-layout.page
-    title="Orders"
-    subtitle="View and manage your purchases."
+    :title="$title"
+    :subtitle="$subtitle"
     width="full"
-    :breadcrumb="[
-        ['Dashboard', route('dashboard')],
-        ['Orders', null],
-    ]"
+    :breadcrumb="$crumbs"
 >
     <x-dashboard.table
         :empty="$orders->isEmpty()"
-        empty-title="No orders yet"
-        empty-description="When you buy from Services or the marketplace, your orders will appear here."
+        :empty-title="$emptyTitle"
+        :empty-description="$emptyDescription"
         empty-icon="orders"
-        :empty-action="['href' => route('services'), 'label' => 'Browse services']"
+        :empty-action="$emptyAction"
         striped
     >
         <x-slot:head>
@@ -66,6 +76,11 @@
                 <x-dashboard.td class="text-text-secondary text-sm">{{ $order->escrow?->status ?? '—' }}</x-dashboard.td>
                 <x-dashboard.td class="text-text-secondary text-sm">{{ $order->created_at->format('M j, Y H:i') }}</x-dashboard.td>
                 <x-dashboard.td>
+                    @if ($order->source === 'marketplace' && $order->escrow)
+                        <x-dashboard.button :href="route('dashboard.messages.order', $order)" size="xs" variant="ghost" class="mb-2">
+                            Escrow chat
+                        </x-dashboard.button>
+                    @endif
                     @if ($order->status === 'processing' && $order->escrow?->status === 'locked')
                         <div class="flex flex-wrap gap-2">
                             <x-dashboard.button type="button" size="xs" variant="success" @click="$dispatch('open-modal', 'confirm-delivery-{{ $order->id }}')">

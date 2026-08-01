@@ -47,7 +47,7 @@ class KycController extends Controller
             'rejected' => KycSubmission::where('status', 'rejected')->count(),
         ];
 
-        $kycRequired = SystemSetting::get('kyc_required', '1') !== '0';
+        $kycRequired = SystemSetting::kycRequired();
 
         $data = compact('submissions', 'status', 'counts', 'search', 'kycRequired');
 
@@ -60,8 +60,9 @@ class KycController extends Controller
 
     public function updateRequirement(Request $request): RedirectResponse
     {
+        // Hidden 0 + checkbox 1: last value wins; boolean() treats "0" as false.
         $enabled = $request->boolean('kyc_required');
-        SystemSetting::set('kyc_required', $enabled ? '1' : '0');
+        SystemSetting::set('kyc_required', $enabled);
 
         $this->audit->log(
             auth()->id(),

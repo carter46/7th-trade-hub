@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Listing;
-use App\Models\Order;
 use App\Models\Watchlist;
 use App\Modules\Marketplace\Services\MarketplaceBrowseService;
 use App\Services\Analytics\UserActivityRecorder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -21,7 +21,7 @@ class DiscoverMarketplaceController extends Controller
     public function index(Request $request): View
     {
         $user = $request->user();
-        $this->activity->record($user->id, 'viewed', null, 'discover.marketplace');
+        $this->activity->record($user->id, 'viewed', null, 'marketplace.hub');
 
         $listings = $this->browse->paginate($request, 12);
         $parents = $this->browse->categoryTree();
@@ -34,51 +34,13 @@ class DiscoverMarketplaceController extends Controller
         ];
 
         $products = $this->browse->productsForCategory($filters['category']);
-
-        $recentlyViewed = $this->activity->recentSubjects($user->id, Listing::class, 6);
-        $recommended = $this->browse->featured(6);
-        if ($recommended->isEmpty()) {
-            $recommended = $this->browse->newest(6);
-        }
-
-        $watchlistIds = Watchlist::query()
-            ->where('user_id', $user->id)
-            ->orderByDesc('created_at')
-            ->limit(6)
-            ->pluck('listing_id');
-        $saved = Listing::published()
-            ->with(['marketplaceProduct.category'])
-            ->whereIn('id', $watchlistIds)
-            ->get();
-
-        $purchasedListingIds = Order::query()
-            ->where('user_id', $user->id)
-            ->whereNotNull('listing_id')
-            ->whereIn('status', ['completed', 'delivered', 'paid', 'released', 'processing'])
-            ->orderByDesc('created_at')
-            ->limit(12)
-            ->pluck('listing_id')
-            ->unique();
-        $recentlyPurchased = Listing::query()
-            ->with(['marketplaceProduct.category'])
-            ->whereIn('id', $purchasedListingIds)
-            ->get();
-
         $wallet = $user->wallet ?? null;
-        $continueBrowsing = $recentlyViewed->isNotEmpty()
-            ? $recentlyViewed
-            : $this->browse->newest(6);
 
         return view('dashboard.user.discover.marketplace', compact(
             'listings',
             'parents',
             'products',
             'filters',
-            'continueBrowsing',
-            'recentlyViewed',
-            'recommended',
-            'saved',
-            'recentlyPurchased',
             'wallet',
         ));
     }
@@ -105,5 +67,26 @@ class DiscoverMarketplaceController extends Controller
             'watchlisted',
             'wallet',
         ));
+    }
+
+    public function checkout(Request $request, string $slug): View|RedirectResponse
+    {
+        $listing = Listing::published()
+            ->where('slug', $slug)
+            ->with(['user', 'marketplaceProduct.category', 'listingCategory'])
+            ->firstOrFail();
+
+        if ($request->user()->id === $listing->user_id) {
+            return redirect()
+                ->route('dashboard.marketplace.show', $listing->slug)
+                ->with('error', __('You cannot purchase your own listing.'));
+        }
+
+        $this->activity->record($request->user()->id, 'viewed', $listing, 'listing.checkout');
+
+        return view('dashboard.user.discover.marketplace-checkout', [
+            'listing' => $listing,
+            'wallet' => $request->user()->wallet,
+        ]);
     }
 }

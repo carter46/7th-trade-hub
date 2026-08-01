@@ -33,7 +33,7 @@
             icon="shopping-bag"
         />
         <x-dashboard.stats-card
-            label="New Messages"
+            label="Escrow chats"
             :value="(string) ($messagesCount ?? 0)"
             hint="Check inbox"
             icon="chat"

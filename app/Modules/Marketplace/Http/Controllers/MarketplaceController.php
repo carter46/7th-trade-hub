@@ -234,22 +234,10 @@ class MarketplaceController extends Controller
         return view('pages.marketplace-show', compact('listing', 'avgRating', 'watchlisted'));
     }
 
-    public function checkout(string $slug): View|RedirectResponse
+    public function checkout(string $slug): RedirectResponse
     {
-        $listing = Listing::published()
-            ->where('slug', $slug)
-            ->with(['user', 'marketplaceProduct.category'])
-            ->firstOrFail();
-
-        if (auth()->id() === $listing->user_id) {
-            return redirect()
-                ->route('marketplace.show', $listing->slug)
-                ->with('error', 'You cannot purchase your own listing.');
-        }
-
-        return view('pages.marketplace-checkout', [
-            'listing' => $listing,
-        ]);
+        // Logged-in checkout lives in the dashboard shell (public URL kept for old links).
+        return redirect()->route('dashboard.marketplace.checkout', $slug);
     }
 
     private function findMarketplaceCategory(string $slug): ?Category

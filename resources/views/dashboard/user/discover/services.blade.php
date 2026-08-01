@@ -1,15 +1,14 @@
 @extends('layouts.dashboard-user')
 
-@section('title', 'Discover Services')
+@section('title', 'Services')
 
 @section('content')
 <x-layout.page
     title="Services"
-    subtitle="Browse platform services, reorder past purchases, and pay from your wallet."
+    subtitle="Browse platform services and pay from your wallet."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
-        ['Discover', route('dashboard.discover.services')],
         ['Services', null],
     ]"
 >
@@ -17,7 +16,7 @@
         @if($wallet)
             <span class="text-sm text-text-muted mr-2">Wallet: <strong class="text-text-primary">₦{{ number_format((float) $wallet->balance, 0) }}</strong></span>
         @endif
-        <x-dashboard.button :href="route('services')" variant="secondary" size="sm">Public services</x-dashboard.button>
+        <x-dashboard.button :href="route('dashboard.service-orders')" variant="secondary" size="sm" icon="orders">My orders</x-dashboard.button>
     </x-slot:actions>
 
     <div class="space-y-8">

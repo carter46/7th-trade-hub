@@ -19,6 +19,9 @@
 
     <x-dashboard.card>
         <div class="text-text-primary whitespace-pre-wrap">{{ $ticket->body }}</div>
+        @include('dashboard.user.support._attachments', [
+            'attachments' => $ticket->attachments->whereNull('support_ticket_reply_id'),
+        ])
     </x-dashboard.card>
 
     @foreach ($ticket->replies as $reply)
@@ -30,13 +33,27 @@
                 @endif
             </p>
             <p class="text-sm text-text-primary whitespace-pre-wrap">{{ $reply->body }}</p>
+            @include('dashboard.user.support._attachments', [
+                'attachments' => $ticket->attachments->where('support_ticket_reply_id', $reply->id),
+            ])
         </x-dashboard.card>
     @endforeach
 
     <x-dashboard.card>
-        <form method="POST" action="{{ route('dashboard.support.reply', $ticket) }}" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
+        <form method="POST" action="{{ route('dashboard.support.reply', $ticket) }}" enctype="multipart/form-data" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
             <x-dashboard.textarea label="Reply" name="body" :rows="3" required />
+            <div>
+                <label class="block text-sm font-medium text-text-primary mb-1">Attach evidence</label>
+                <input
+                    type="file"
+                    name="attachments[]"
+                    multiple
+                    accept="image/*,.pdf,.doc,.docx,.txt,capture=environment"
+                    class="block w-full text-sm text-text-secondary file:mr-3 file:rounded-lg file:border-0 file:bg-muted file:px-3 file:py-2"
+                >
+                <p class="mt-1 text-xs text-text-muted">Screenshots welcome · auto-deleted after 72 hours</p>
+            </div>
             <x-dashboard.button type="submit" size="sm" icon="chat" x-bind:disabled="submitting">Reply</x-dashboard.button>
         </form>
     </x-dashboard.card>

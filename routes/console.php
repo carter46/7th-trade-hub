@@ -9,6 +9,7 @@ Schedule::call(function () {
 
 Schedule::command('app:expire-crypto-quotes')->hourly()->withoutOverlapping();
 Schedule::command('app:prune-notifications')->weekly()->sundays()->at('03:00');
+Schedule::command('support:prune-attachments')->hourly()->withoutOverlapping();
 Schedule::command('app:warm-crypto-prices')->everyFiveMinutes()->withoutOverlapping();
 Schedule::command('cache:prune-stale-tags')->daily();
 

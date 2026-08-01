@@ -13,7 +13,7 @@ class DiscoverHubsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_authenticated_user_can_open_discover_marketplace_and_services(): void
+    public function test_authenticated_user_can_open_marketplace_and_services_hubs(): void
     {
         $user = User::factory()->kycApproved()->create(['email_verified_at' => now()]);
         $user->assignRole('user');
@@ -30,14 +30,31 @@ class DiscoverHubsTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('dashboard.discover.marketplace'))
+            ->get(route('dashboard.marketplace'))
             ->assertOk()
             ->assertSee('Marketplace')
-            ->assertSee('Discover Hub Listing');
+            ->assertSee('Discover Hub Listing')
+            ->assertDontSee('Continue browsing')
+            ->assertDontSee('Recommended');
 
         $this->actingAs($user)
-            ->get(route('dashboard.discover.services'))
+            ->get(route('dashboard.services'))
             ->assertOk()
-            ->assertSee('Services');
+            ->assertSee('Services')
+            ->assertSee('My orders');
+    }
+
+    public function test_legacy_discover_urls_redirect(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $user->assignRole('user');
+
+        $this->actingAs($user)
+            ->get('/dashboard/discover/marketplace')
+            ->assertRedirect('/dashboard/marketplace');
+
+        $this->actingAs($user)
+            ->get('/dashboard/discover/services')
+            ->assertRedirect('/dashboard/services');
     }
 }

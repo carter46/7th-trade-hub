@@ -30,7 +30,7 @@ class KycWalletGateTest extends TestCase
 
     public function test_wallet_creation_allowed_when_kyc_not_required(): void
     {
-        SystemSetting::set('kyc_required', '0');
+        SystemSetting::set('kyc_required', false);
 
         $user = User::factory()->create([
             'email_verified_at' => now(),
@@ -44,6 +44,40 @@ class KycWalletGateTest extends TestCase
             ->assertSessionHas('status');
 
         $this->assertNotNull($user->fresh()->wallet);
+    }
+
+    public function test_deposit_auto_provisions_wallet_when_kyc_not_required(): void
+    {
+        SystemSetting::set('kyc_required', false);
+
+        $user = User::factory()->create([
+            'email_verified_at' => now(),
+            'kyc_level' => 0,
+        ]);
+        $user->assignRole('user');
+
+        $this->actingAs($user)
+            ->get(route('dashboard.deposit.index'))
+            ->assertOk();
+
+        $this->assertNotNull($user->fresh()->wallet);
+    }
+
+    public function test_wallet_page_offers_create_when_kyc_not_required(): void
+    {
+        SystemSetting::set('kyc_required', false);
+
+        $user = User::factory()->create([
+            'email_verified_at' => now(),
+            'kyc_level' => 0,
+        ]);
+        $user->assignRole('user');
+
+        $this->actingAs($user)
+            ->get(route('dashboard.wallet'))
+            ->assertOk()
+            ->assertSee('Create Wallet', false)
+            ->assertDontSee('KYC required', false);
     }
 
     public function test_wallet_creation_succeeds_after_kyc_approval(): void
