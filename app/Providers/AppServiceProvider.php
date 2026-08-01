@@ -76,6 +76,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\Communications\Contact\PlatformContactRepository::class);
         $this->app->singleton(\App\Services\Communications\Social\SocialLinkRepository::class);
         $this->app->singleton(\App\Services\Communications\LiveChat\LiveChatManager::class);
+        $this->app->singleton(\App\Services\Communications\Email\EmailDeliveryLogger::class);
         $this->app->singleton(\App\Services\Communications\Email\EmailService::class);
         $this->app->singleton(\App\Services\Communications\Email\Providers\BrevoApiProvider::class);
         $this->app->singleton(\App\Services\Communications\Email\Providers\LaravelMailProvider::class);

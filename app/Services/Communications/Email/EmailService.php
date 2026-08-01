@@ -17,6 +17,7 @@ class EmailService
     public function __construct(
         private BrevoApiProvider $brevo,
         private LaravelMailProvider $laravelMail,
+        private EmailDeliveryLogger $logger,
     ) {}
 
     /**
@@ -26,24 +27,30 @@ class EmailService
     {
         $this->hydrateTemplate($email);
         [$fromName, $fromEmail, $replyTo] = $this->resolveIdentity($email);
+        $correlationId = $this->logger->newCorrelationId();
+        $attempt = 0;
+        $brevoError = null;
 
-        $brevoResult = $this->attemptBrevo($email, $fromName, $fromEmail, $replyTo);
+        $brevoResult = $this->attemptBrevo($email, $fromName, $fromEmail, $replyTo, $correlationId, ++$attempt);
         if ($brevoResult->success) {
             return $brevoResult;
         }
+        $brevoError = $brevoResult->error;
 
-        // Immediate second Brevo attempt (locked policy).
-        $brevoRetry = $this->attemptBrevo($email, $fromName, $fromEmail, $replyTo);
+        $brevoRetry = $this->attemptBrevo($email, $fromName, $fromEmail, $replyTo, $correlationId, ++$attempt);
         if ($brevoRetry->success) {
             return $brevoRetry;
         }
+        $brevoError = $brevoRetry->error ?: $brevoError;
 
-        $laravelResult = $this->attemptLaravel($email, $fromName, $fromEmail, $replyTo);
+        $laravelResult = $this->attemptLaravel($email, $fromName, $fromEmail, $replyTo, $correlationId, ++$attempt, true);
         if ($laravelResult->success) {
+            $this->rememberFallback($brevoError);
+
             return $laravelResult;
         }
 
-        return $this->handleTotalFailure($email, $laravelResult, $deferredStage);
+        return $this->handleTotalFailure($email, $laravelResult, $deferredStage, $correlationId, $attempt);
     }
 
     public function sendRaw(
@@ -82,10 +89,19 @@ class EmailService
         ));
     }
 
-    private function attemptBrevo(OutgoingEmail $email, string $fromName, string $fromEmail, ?string $replyTo): SendResult
-    {
+    private function attemptBrevo(
+        OutgoingEmail $email,
+        string $fromName,
+        string $fromEmail,
+        ?string $replyTo,
+        string $correlationId,
+        int $attemptNumber,
+    ): SendResult {
         if (! $this->brevo->isAvailable()) {
-            return SendResult::fail(IntegrationProvider::BREVO, 'Brevo is disabled or missing API key.');
+            $result = SendResult::fail(IntegrationProvider::BREVO, 'Brevo is disabled or missing API key.');
+            $this->logger->log($correlationId, $email, $result, $attemptNumber);
+
+            return $result;
         }
 
         $result = $this->brevo->send($email, $fromName, $fromEmail, $replyTo);
@@ -93,17 +109,29 @@ class EmailService
         if ($result->success) {
             $row->recordSuccess($result->latencyMs);
             $this->bumpDailyUsage($row);
+            $this->clearFallbackMeta($row);
         } else {
-            $row->recordFailure((string) $result->error);
+            $row->recordFailure($this->formatError($result));
         }
+        $this->logger->log($correlationId, $email, $result, $attemptNumber);
 
         return $result;
     }
 
-    private function attemptLaravel(OutgoingEmail $email, string $fromName, string $fromEmail, ?string $replyTo): SendResult
-    {
+    private function attemptLaravel(
+        OutgoingEmail $email,
+        string $fromName,
+        string $fromEmail,
+        ?string $replyTo,
+        string $correlationId,
+        int $attemptNumber,
+        bool $isFallback,
+    ): SendResult {
         if (! $this->laravelMail->isAvailable()) {
-            return SendResult::fail(IntegrationProvider::LARAVEL_MAIL, 'Laravel mail fallback is unavailable.');
+            $result = SendResult::fail(IntegrationProvider::LARAVEL_MAIL, 'Laravel mail fallback is unavailable.');
+            $this->logger->log($correlationId, $email, $result, $attemptNumber, $isFallback);
+
+            return $result;
         }
 
         $result = $this->laravelMail->send($email, $fromName, $fromEmail, $replyTo);
@@ -114,37 +142,69 @@ class EmailService
         } else {
             $row->recordFailure((string) $result->error);
         }
+        $this->logger->log($correlationId, $email, $result, $attemptNumber, $isFallback, $result->success ? 'fallback_success' : 'failed');
 
         return $result;
     }
 
-    private function handleTotalFailure(OutgoingEmail $email, SendResult $last, int $deferredStage): SendResult
-    {
+    private function handleTotalFailure(
+        OutgoingEmail $email,
+        SendResult $last,
+        int $deferredStage,
+        string $correlationId,
+        int $attemptNumber,
+    ): SendResult {
         $queue = (string) config('queue.default', 'sync');
 
         if ($queue !== 'sync' && $deferredStage < 1) {
             Log::warning('email.retry_scheduled', ['stage' => 1, 'minutes' => 5]);
             RetryFailedEmailJob::dispatch($email, 1)->delay(now()->addMinutes(5));
 
-            return SendResult::fail($last->provider, 'Deferred retry in 5 minutes: '.$last->error);
+            return SendResult::fail($last->provider, 'Deferred retry in 5 minutes: '.$last->error, $last->latencyMs, $last->httpStatus, $last->providerErrorCode, $last->responseBody, $last->requestId, 'deferred');
         }
 
         if ($queue !== 'sync' && $deferredStage === 1) {
             Log::warning('email.retry_scheduled', ['stage' => 2, 'minutes' => 30]);
             RetryFailedEmailJob::dispatch($email, 2)->delay(now()->addMinutes(30));
 
-            return SendResult::fail($last->provider, 'Deferred retry in 30 minutes: '.$last->error);
-        }
-
-        if ($queue === 'sync') {
-            Log::warning('email.retry_deferred_skipped_sync', [
-                'error' => $last->error,
-            ]);
+            return SendResult::fail($last->provider, 'Deferred retry in 30 minutes: '.$last->error, $last->latencyMs, $last->httpStatus, $last->providerErrorCode, $last->responseBody, $last->requestId, 'deferred');
         }
 
         $this->notifyAdminsOfFailure($email, (string) $last->error);
 
         return $last;
+    }
+
+    private function formatError(SendResult $result): string
+    {
+        $parts = [];
+        if ($result->httpStatus) {
+            $parts[] = 'HTTP '.$result->httpStatus;
+        }
+        if ($result->providerErrorCode) {
+            $parts[] = (string) $result->providerErrorCode;
+        }
+        $parts[] = (string) $result->error;
+
+        return mb_substr(implode(' — ', array_filter($parts)), 0, 2000);
+    }
+
+    private function rememberFallback(?string $brevoError): void
+    {
+        $row = IntegrationProvider::forProvider(IntegrationProvider::BREVO);
+        $meta = $row->meta ?? [];
+        $meta['last_fallback_reason'] = $brevoError;
+        $meta['last_fallback_at'] = now()->toIso8601String();
+        $row->meta = $meta;
+        $row->save();
+    }
+
+    private function clearFallbackMeta(IntegrationProvider $row): void
+    {
+        $meta = $row->meta ?? [];
+        unset($meta['last_fallback_reason'], $meta['last_fallback_at']);
+        $row->meta = $meta;
+        $row->save();
     }
 
     private function notifyAdminsOfFailure(OutgoingEmail $email, string $error): void
@@ -201,7 +261,6 @@ class EmailService
         $day = now()->toDateString();
         $usage = $meta['daily_usage'] ?? [];
         $usage[$day] = (int) ($usage[$day] ?? 0) + 1;
-        // Keep last 14 days only.
         $usage = array_slice($usage, -14, null, true);
         $meta['daily_usage'] = $usage;
         $meta['last_email_sent_at'] = now()->toIso8601String();

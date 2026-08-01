@@ -206,12 +206,19 @@
             <h2 class="text-lg font-semibold text-text-primary mb-1">Email</h2>
             <p class="text-sm text-text-secondary mb-4">Brevo API is primary. Laravel Mail is the fallback. Identities control From addresses.</p>
 
+            @if($brevo->last_error)
+                <x-dashboard.alert type="danger" class="mb-4" title="Last Brevo error">
+                    <p class="text-sm break-words">{{ $brevo->last_error }}</p>
+                    @if(!empty($brevo->meta['last_fallback_reason']))
+                        <p class="text-sm mt-2">Fallback was used after: {{ $brevo->meta['last_fallback_reason'] }}</p>
+                    @endif
+                </x-dashboard.alert>
+            @endif
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 @foreach([
                     ['label' => 'Brevo', 'row' => $brevo],
                     ['label' => 'Laravel Mail', 'row' => $laravelMail],
-                    ['label' => 'Google Analytics', 'row' => $analyticsGoogle],
-                    ['label' => 'Microsoft Clarity', 'row' => $analyticsClarity],
                 ] as $health)
                     <div class="rounded-xl border border-border-subtle p-4 text-sm">
                         <div class="flex items-center justify-between gap-2 mb-2">
@@ -222,10 +229,8 @@
                             </span>
                         </div>
                         <dl class="space-y-1 text-text-secondary">
-                            <div class="flex justify-between gap-2"><dt>Last test</dt><dd>{{ $health['row']->last_tested_at?->diffForHumans() ?? '—' }}</dd></div>
                             <div class="flex justify-between gap-2"><dt>Last success</dt><dd>{{ $health['row']->last_success_at?->diffForHumans() ?? '—' }}</dd></div>
-                            <div class="flex justify-between gap-2"><dt>Success rate</dt><dd>{{ $health['row']->successRate() !== null ? $health['row']->successRate().'%' : '—' }}</dd></div>
-                            <div class="flex justify-between gap-2"><dt>Avg response</dt><dd>{{ $health['row']->avg_latency_ms ? $health['row']->avg_latency_ms.' ms' : '—' }}</dd></div>
+                            <div class="flex justify-between gap-2"><dt>Last error</dt><dd>{{ $health['row']->last_error_at?->diffForHumans() ?? '—' }}</dd></div>
                             @if($health['row']->last_error)
                                 <p class="text-danger text-xs mt-2 break-words">{{ $health['row']->last_error }}</p>
                             @endif
@@ -233,6 +238,18 @@
                     </div>
                 @endforeach
             </div>
+
+            @if(isset($recentEmailFailures) && $recentEmailFailures->isNotEmpty())
+                <div class="rounded-xl border border-border-subtle p-4 mb-6 space-y-2">
+                    <h3 class="font-semibold text-text-primary">Recent send failures</h3>
+                    @foreach($recentEmailFailures as $attempt)
+                        <div class="text-sm text-text-secondary border-t border-border-subtle pt-2 first:border-0 first:pt-0">
+                            <p class="text-text-primary">{{ $attempt->created_at?->diffForHumans() }} · {{ $attempt->provider }} · {{ $attempt->recipient ?? '—' }}@if($attempt->http_status) · HTTP {{ $attempt->http_status }}@endif</p>
+                            <p class="text-danger break-words">{{ $attempt->error_message ?: 'Unknown error' }}</p>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
 
             <form method="POST" action="{{ route('admin.settings.email') }}" class="space-y-6">
                 @csrf

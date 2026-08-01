@@ -4,6 +4,7 @@ namespace App\Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\AnalyticsProvider;
+use App\Models\EmailDeliveryAttempt;
 use App\Models\EmailIdentity;
 use App\Models\IntegrationProvider;
 use App\Models\MediaUsage;
@@ -19,6 +20,7 @@ use App\Services\Communications\LiveChat\LiveChatManager;
 use App\Services\Communications\Social\SocialLinkRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 use Throwable;
 
@@ -51,6 +53,13 @@ class SettingsController extends Controller
             'emailIdentities' => EmailIdentity::query()->orderBy('id')->get(),
             'brevo' => $brevo,
             'laravelMail' => $laravelMail,
+            'recentEmailFailures' => Schema::hasTable('email_delivery_attempts')
+                ? EmailDeliveryAttempt::query()
+                    ->where('success', false)
+                    ->latest('created_at')
+                    ->limit(10)
+                    ->get()
+                : collect(),
             'analyticsGoogle' => AnalyticsProvider::forProvider(AnalyticsProvider::PROVIDER_GOOGLE_ANALYTICS),
             'analyticsClarity' => AnalyticsProvider::forProvider(AnalyticsProvider::PROVIDER_MICROSOFT_CLARITY),
             'siteName' => $branding['site_name'],
@@ -315,23 +324,41 @@ class SettingsController extends Controller
                 EmailProfile::NoReply,
             );
 
+            $brevo = IntegrationProvider::forProvider(IntegrationProvider::BREVO)->fresh();
+            $errorDetail = $result->error
+                ?: $brevo->last_error
+                ?: ($brevo->meta['last_fallback_reason'] ?? null);
+
             $this->audit->log(auth()->id(), 'settings.mail_test', null, null, [
                 'recipient' => $to,
                 'ok' => $result->success,
                 'provider' => $result->provider,
-                'error' => $result->error,
+                'error' => $errorDetail,
+                'message_id' => $result->messageId,
+                'http_status' => $result->httpStatus,
             ], $request->ip());
 
             if (! $result->success) {
                 return back()->withInput()->withErrors([
-                    'test_email' => 'Mail send failed via '.$result->provider.': '.$result->error,
+                    'test_email' => 'Mail send failed via '.$result->provider.': '.($errorDetail ?: 'Unknown error'),
                 ]);
             }
 
-            return back()->with('status', __('Test email sent to :email via :provider.', [
+            if ($result->provider === IntegrationProvider::LARAVEL_MAIL && filled($brevo->meta['last_fallback_reason'] ?? null)) {
+                return back()->with('status', __('Sent via Laravel Mail fallback. Brevo error: :error', [
+                    'error' => $brevo->meta['last_fallback_reason'],
+                ]));
+            }
+
+            $status = __('Test email sent to :email via :provider.', [
                 'email' => $to,
-                'provider' => $result->provider,
-            ]));
+                'provider' => $result->provider === 'brevo' ? 'Brevo' : $result->provider,
+            ]);
+            if ($result->messageId) {
+                $status .= ' Message ID: '.$result->messageId;
+            }
+
+            return back()->with('status', $status);
         } catch (Throwable $e) {
             return back()->withInput()->withErrors([
                 'test_email' => 'Mail send failed: '.$e->getMessage(),
