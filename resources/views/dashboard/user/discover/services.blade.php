@@ -3,6 +3,9 @@
 @section('title', 'Services')
 
 @section('content')
+@php
+    $browse = app(\App\Modules\Catalog\Services\CatalogBrowseService::class);
+@endphp
 <x-layout.page
     title="Services"
     subtitle="Browse platform services and pay from your wallet."
@@ -36,7 +39,7 @@
                     @foreach($recentlyPurchased as $product)
                         <x-dashboard.card>
                             <div class="font-semibold">{{ $product->title }}</div>
-                            <a href="{{ route('services.show', $product->slug) }}" class="text-sm text-primary mt-2 inline-block">View / reorder →</a>
+                            <a href="{{ $browse->productUrl($product) }}" class="text-sm text-primary mt-2 inline-block">View / reorder →</a>
                         </x-dashboard.card>
                     @endforeach
                 </div>
@@ -48,7 +51,7 @@
                 <h2 class="text-sm font-semibold text-text-secondary uppercase tracking-wide mb-3">You've viewed</h2>
                 <div class="flex flex-wrap gap-2">
                     @foreach($recentlyViewed as $product)
-                        <a href="{{ route('services.show', $product->slug) }}" class="rounded-xl border border-border-default px-3 py-2 text-sm hover:bg-muted/50">{{ $product->title }}</a>
+                        <a href="{{ $browse->productUrl($product) }}" class="rounded-xl border border-border-default px-3 py-2 text-sm hover:bg-muted/50">{{ $product->title }}</a>
                     @endforeach
                 </div>
             </section>
@@ -61,7 +64,7 @@
                     <x-dashboard.card>
                         <div class="font-semibold">{{ $product->title }}</div>
                         <div class="text-xs text-text-muted mt-1">{{ $product->productType?->name }}</div>
-                        <a href="{{ route('services.show', $product->slug) }}" class="text-sm text-primary mt-2 inline-block">Open →</a>
+                        <a href="{{ $browse->productUrl($product) }}" class="text-sm text-primary mt-2 inline-block">Open →</a>
                     </x-dashboard.card>
                 @endforeach
             </div>
@@ -74,7 +77,7 @@
                     @forelse($searchResults as $product)
                         <x-dashboard.card>
                             <div class="font-semibold">{{ $product->title }}</div>
-                            <a href="{{ route('services.show', $product->slug) }}" class="text-sm text-primary mt-2 inline-block">Open →</a>
+                            <a href="{{ $browse->productUrl($product) }}" class="text-sm text-primary mt-2 inline-block">Open →</a>
                         </x-dashboard.card>
                     @empty
                         <p class="text-text-muted">No services matched.</p>
