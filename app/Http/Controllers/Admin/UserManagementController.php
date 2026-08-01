@@ -94,7 +94,7 @@ class UserManagementController extends Controller
             $status = 'active';
         }
 
-        $base = User::role('user');
+        $base = User::role('user')->notAnonymized();
 
         $activeCount = (clone $base)->where('is_suspended', false)->count();
         $suspendedCount = (clone $base)->where('is_suspended', true)->count();
@@ -102,6 +102,7 @@ class UserManagementController extends Controller
         $search = trim($request->string('q')->toString());
 
         $users = User::role('user')
+            ->notAnonymized()
             ->when($status === 'suspended', fn ($q) => $q->where('is_suspended', true))
             ->when($status === 'active', fn ($q) => $q->where('is_suspended', false))
             ->when($search !== '', fn ($q) => \App\Support\Search::apply($q, $search))
@@ -459,7 +460,7 @@ class UserManagementController extends Controller
 
         return redirect()
             ->route('admin.users', ['status' => 'suspended'])
-            ->with('status', __('User permanently deleted (anonymized).'));
+            ->with('status', __('User permanently deleted. They are hidden now and will be fully removed within 24 hours.'));
     }
 
     /**
@@ -472,6 +473,7 @@ class UserManagementController extends Controller
 
     private function ensureMember(User $user): void
     {
+        abort_if($user->isAnonymized(), 404);
         abort_unless($user->hasRole('user') && ! $user->hasRole('admin'), 404);
     }
 

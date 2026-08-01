@@ -42,7 +42,7 @@ class UserManagementTest extends TestCase
             ->assertDontSee('Active Member');
     }
 
-    public function test_anonymize_scrubs_pii_and_keeps_record(): void
+    public function test_anonymize_scrubs_pii_and_hides_from_admin_list(): void
     {
         $admin = User::factory()->admin()->create(['email_verified_at' => now()]);
         $member = User::factory()->create([
@@ -50,6 +50,7 @@ class UserManagementTest extends TestCase
             'is_suspended' => true,
             'email' => 'keep-history@example.com',
             'username' => 'keep_history',
+            'name' => 'Keep History',
         ]);
         $member->assignRole('user');
         $memberId = $member->id;
@@ -64,6 +65,54 @@ class UserManagementTest extends TestCase
         $this->assertSame('deleted_'.$memberId, $member->username);
         $this->assertSame('deleted+'.$memberId.'@invalid.local', $member->email);
         $this->assertDatabaseHas('users', ['id' => $memberId]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.users', ['status' => 'suspended']))
+            ->assertOk()
+            ->assertDontSee('Deleted User')
+            ->assertDontSee('deleted+'.$memberId.'@invalid.local')
+            ->assertDontSee('Keep History');
+
+        $this->actingAs($admin)
+            ->get(route('admin.users.show', $member))
+            ->assertNotFound();
+    }
+
+    public function test_purge_anonymized_removes_tombstones_after_retention(): void
+    {
+        $member = User::factory()->create([
+            'email_verified_at' => now(),
+            'is_suspended' => true,
+            'anonymized_at' => now()->subHours(25),
+            'name' => 'Deleted User',
+            'email' => 'deleted+99@invalid.local',
+            'username' => 'deleted_99',
+        ]);
+        $member->assignRole('user');
+        $id = $member->id;
+
+        $this->artisan('users:purge-anonymized', ['--hours' => 24])
+            ->assertSuccessful();
+
+        $this->assertDatabaseMissing('users', ['id' => $id]);
+    }
+
+    public function test_purge_anonymized_keeps_recent_tombstones(): void
+    {
+        $member = User::factory()->create([
+            'email_verified_at' => now(),
+            'is_suspended' => true,
+            'anonymized_at' => now()->subHours(2),
+            'name' => 'Deleted User',
+            'email' => 'deleted+88@invalid.local',
+            'username' => 'deleted_88',
+        ]);
+        $member->assignRole('user');
+
+        $this->artisan('users:purge-anonymized', ['--hours' => 24])
+            ->assertSuccessful();
+
+        $this->assertDatabaseHas('users', ['id' => $member->id]);
     }
 
     public function test_user_workspace_overview_loads(): void

@@ -20,6 +20,7 @@ Schedule::command('analytics:rollup-kpis')->hourly()->withoutOverlapping();
 Schedule::command('analytics:prune-activity')->daily()->at('04:00');
 Schedule::command('analytics:sync-ga')->daily()->at('05:00');
 Schedule::command('monitoring:heartbeat')->everyFiveMinutes()->withoutOverlapping();
+Schedule::command('users:purge-anonymized')->hourly()->withoutOverlapping();
 
 // Uncomment when mysqldump is available on the server (e.g. via cPanel cron + SSH):
 // Schedule::command('app:backup-database')->daily()->at('02:00');

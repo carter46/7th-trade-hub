@@ -39,55 +39,47 @@
             </x-dashboard.td>
             <x-dashboard.td class="text-text-secondary">{{ $u->email }}</x-dashboard.td>
             <x-dashboard.td>
-                @if ($u->anonymized_at)
-                    <x-dashboard.badge status="neutral">Deleted</x-dashboard.badge>
-                @else
-                    <x-dashboard.badge :status="$u->is_suspended ? 'suspended' : 'active'" />
-                @endif
+                <x-dashboard.badge :status="$u->is_suspended ? 'suspended' : 'active'" />
             </x-dashboard.td>
             <x-dashboard.td>
-                @if ($u->anonymized_at)
-                    <span class="text-xs text-text-muted">—</span>
-                @else
-                    <x-dashboard.row-actions>
-                        <x-dashboard.menu-item :href="route('admin.users.show', $u)">View</x-dashboard.menu-item>
-                        <x-dashboard.menu-item :href="route('admin.users.edit', $u)">Edit</x-dashboard.menu-item>
-                        @if (! $u->is_suspended)
-                            <form method="POST" action="{{ route('admin.users.impersonate', $u) }}">
-                                @csrf
-                                <x-dashboard.menu-item type="submit">Login as user</x-dashboard.menu-item>
-                            </form>
-                        @endif
-                        <form method="POST" action="{{ route('admin.users.password-reset', $u) }}">
+                <x-dashboard.row-actions>
+                    <x-dashboard.menu-item :href="route('admin.users.show', $u)">View</x-dashboard.menu-item>
+                    <x-dashboard.menu-item :href="route('admin.users.edit', $u)">Edit</x-dashboard.menu-item>
+                    @if (! $u->is_suspended)
+                        <form method="POST" action="{{ route('admin.users.impersonate', $u) }}">
                             @csrf
-                            <x-dashboard.menu-item type="submit">Send password reset</x-dashboard.menu-item>
+                            <x-dashboard.menu-item type="submit">Login as user</x-dashboard.menu-item>
                         </form>
+                    @endif
+                    <form method="POST" action="{{ route('admin.users.password-reset', $u) }}">
+                        @csrf
+                        <x-dashboard.menu-item type="submit">Send password reset</x-dashboard.menu-item>
+                    </form>
 
-                        @if ($u->is_suspended)
-                            <form method="POST" action="{{ route('admin.users.restore', $u) }}">
-                                @csrf
-                                <x-dashboard.menu-item type="submit" variant="success">Restore</x-dashboard.menu-item>
-                            </form>
-                            <button
-                                type="button"
-                                role="menuitem"
-                                class="block w-full rounded-lg px-3 py-2 text-left text-sm text-danger hover:bg-danger/10 focus-ring"
-                                @click.stop="close(); $dispatch('admin-delete-user', {
-                                    id: {{ (int) $u->id }},
-                                    label: {{ \Illuminate\Support\Js::from($u->name.' ('.$u->email.')') }},
-                                    action: {{ \Illuminate\Support\Js::from(route('admin.users.destroy', $u)) }},
-                                })"
-                            >
-                                Permanently Delete
-                            </button>
-                        @else
-                            <form method="POST" action="{{ route('admin.users.suspend', $u) }}">
-                                @csrf
-                                <x-dashboard.menu-item type="submit" variant="danger">Suspend</x-dashboard.menu-item>
-                            </form>
-                        @endif
-                    </x-dashboard.row-actions>
-                @endif
+                    @if ($u->is_suspended)
+                        <form method="POST" action="{{ route('admin.users.restore', $u) }}">
+                            @csrf
+                            <x-dashboard.menu-item type="submit" variant="success">Restore</x-dashboard.menu-item>
+                        </form>
+                        <button
+                            type="button"
+                            role="menuitem"
+                            class="block w-full rounded-lg px-3 py-2 text-left text-sm text-danger hover:bg-danger/10 focus-ring"
+                            @click.stop="close(); $dispatch('admin-delete-user', {
+                                id: {{ (int) $u->id }},
+                                label: {{ \Illuminate\Support\Js::from($u->name.' ('.$u->email.')') }},
+                                action: {{ \Illuminate\Support\Js::from(route('admin.users.destroy', $u)) }},
+                            })"
+                        >
+                            Permanently Delete
+                        </button>
+                    @else
+                        <form method="POST" action="{{ route('admin.users.suspend', $u) }}">
+                            @csrf
+                            <x-dashboard.menu-item type="submit" variant="danger">Suspend</x-dashboard.menu-item>
+                        </form>
+                    @endif
+                </x-dashboard.row-actions>
             </x-dashboard.td>
         </tr>
     @endforeach

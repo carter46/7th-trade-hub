@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -175,8 +176,19 @@ class User extends Authenticatable
         ])->save();
     }
 
+    public function scopeNotAnonymized(Builder $query): Builder
+    {
+        return $query->whereNull($this->getTable().'.anonymized_at');
+    }
+
+    public function isAnonymized(): bool
+    {
+        return $this->anonymized_at !== null;
+    }
+
     /**
-     * Irreversibly scrub personal data while preserving financial and audit records.
+     * Scrub personal data immediately. The tombstone is hidden from admin lists and
+     * hard-purged after 24 hours by `users:purge-anonymized`.
      * Admins must never be anonymized.
      */
     public function anonymize(?int $administratorId = null): bool
@@ -223,6 +235,49 @@ class User extends Authenticatable
 
             return $saved;
         });
+    }
+
+    /**
+     * Hard-delete anonymized tombstones older than the retention window.
+     * Pass 0 hours to purge every anonymized tombstone immediately.
+     *
+     * @return array{purged: int, failed: int}
+     */
+    public static function purgeAnonymizedOlderThanHours(int $hours = 24): array
+    {
+        $cutoff = $hours <= 0 ? now() : now()->subHours($hours);
+        $purged = 0;
+        $failed = 0;
+
+        static::query()
+            ->whereNotNull('anonymized_at')
+            ->where('anonymized_at', '<=', $cutoff)
+            ->orderBy('id')
+            ->chunkById(50, function ($users) use (&$purged, &$failed) {
+                foreach ($users as $user) {
+                    try {
+                        DB::transaction(function () use ($user) {
+                            // Clear reverse refs that block delete (nullOnDelete columns).
+                            static::query()->where('suspended_by', $user->id)->update(['suspended_by' => null]);
+
+                            if (method_exists($user, 'roles')) {
+                                $user->roles()->detach();
+                            }
+                            if (method_exists($user, 'permissions')) {
+                                $user->permissions()->detach();
+                            }
+
+                            $user->delete();
+                        });
+                        $purged++;
+                    } catch (\Throwable $e) {
+                        report($e);
+                        $failed++;
+                    }
+                }
+            });
+
+        return compact('purged', 'failed');
     }
 
     public function unreadNotificationsCount(): int
