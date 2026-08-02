@@ -19,7 +19,7 @@ class TronGridClient implements ChainExplorerClient
         $headers = $this->headers();
         $coin = strtoupper($coin);
         $isUsdt = $coin === 'USDT';
-        $allowedContract = $this->allowedContract($coin, $network ?: 'TRC20');
+        $allowedContract = $this->allowedContract($coin, $network ?: 'tron');
 
         if ($isUsdt) {
             $query = ['limit' => 50, 'only_to' => 'true'];
@@ -96,7 +96,7 @@ class TronGridClient implements ChainExplorerClient
                     'from_address' => $tx['from'] ?? null,
                     'to_address' => $address,
                     'coin' => $coin,
-                    'network' => $network ?: 'TRC20',
+                    'network' => app(\App\Modules\Wallet\Services\NetworkRegistry::class)->resolveId($network ?: 'tron'),
                     'token_contract' => $contract !== '' ? $contract : $allowedContract,
                     'raw' => $tx,
                 ];
@@ -134,7 +134,7 @@ class TronGridClient implements ChainExplorerClient
                     'from_address' => null,
                     'to_address' => $address,
                     'coin' => $coin,
-                    'network' => $network ?: 'TRC20',
+                    'network' => app(\App\Modules\Wallet\Services\NetworkRegistry::class)->resolveId($network ?: 'tron'),
                     'token_contract' => null,
                     'raw' => $tx,
                 ];
@@ -171,7 +171,7 @@ class TronGridClient implements ChainExplorerClient
             return ((float) ($data['balance'] ?? 0)) / 1e6;
         }
 
-        $allowedContract = $this->allowedContract($coin, $network ?: 'TRC20');
+        $allowedContract = $this->allowedContract($coin, $network ?: 'tron');
         $trc20 = $data['trc20'] ?? [];
         if (! is_array($trc20)) {
             return 0.0;
@@ -244,18 +244,8 @@ class TronGridClient implements ChainExplorerClient
 
     private function allowedContract(string $coin, ?string $network): ?string
     {
-        $map = config('crypto.token_contracts.'.$coin, []);
-        if (! is_array($map)) {
-            return null;
-        }
-        $network = $network ?: 'TRC20';
-        foreach ($map as $label => $contract) {
-            if (strcasecmp((string) $label, $network) === 0 && is_string($contract) && $contract !== '') {
-                return $contract;
-            }
-        }
-
-        return null;
+        return app(\App\Modules\Wallet\Services\NetworkRegistry::class)
+            ->tokenContract($coin, $network ?: 'tron');
     }
 
     /** @return array<string, string> */

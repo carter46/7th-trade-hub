@@ -281,7 +281,7 @@ class DepositMatchingServiceTest extends TestCase
     {
         $deposit = \App\Models\CryptoDepositWallet::create([
             'coin' => 'BTC',
-            'network' => 'Bitcoin',
+            'network' => 'bitcoin',
             'address' => 'bc1snap',
             'required_confirmations' => 2,
             'is_active' => true,
@@ -294,7 +294,7 @@ class DepositMatchingServiceTest extends TestCase
             'wallet_id' => $wallet->id,
             'crypto_deposit_wallet_id' => $deposit->id,
             'coin' => 'BTC',
-            'network' => 'Bitcoin',
+            'network' => 'bitcoin',
             'amount_crypto' => 0.005,
             'quoted_rate_ngn' => 1400,
             'expected_ngn' => 7000,
@@ -309,7 +309,7 @@ class DepositMatchingServiceTest extends TestCase
 
         $incoming = IncomingCryptoTransaction::create([
             'coin' => 'BTC',
-            'network' => 'Bitcoin',
+            'network' => 'bitcoin',
             'wallet_address' => 'bc1snap',
             'tx_hash' => 'hash-snap-1',
             'amount' => 0.005,
@@ -326,9 +326,18 @@ class DepositMatchingServiceTest extends TestCase
 
     public function test_expected_ngn_unchanged_by_fingerprint_nudge(): void
     {
+        \App\Models\ExchangeRate::query()->create([
+            'asset' => 'USDT',
+            'allowed_network_ids' => ['tron', 'ethereum'],
+            'preferred_network_id' => 'tron',
+            'is_active' => true,
+            'spread_ngn' => 25,
+            'sort_order' => 0,
+        ]);
+
         $deposit = \App\Models\CryptoDepositWallet::create([
             'coin' => 'USDT',
-            'network' => 'TRC20',
+            'network' => 'tron',
             'address' => 'TNgnFreeze',
             'required_confirmations' => 1,
             'is_active' => true,
@@ -341,7 +350,7 @@ class DepositMatchingServiceTest extends TestCase
             'wallet_id' => $wallet->id,
             'crypto_deposit_wallet_id' => $deposit->id,
             'coin' => 'USDT',
-            'network' => 'TRC20',
+            'network' => 'tron',
             'amount_crypto' => 25.0,
             'amount_usd' => 25,
             'quoted_rate_ngn' => 1400,

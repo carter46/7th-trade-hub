@@ -109,7 +109,7 @@ class EtherscanClient implements ChainExplorerClient
                 'from_address' => $tx['from'] ?? null,
                 'to_address' => $address,
                 'coin' => $coin,
-                'network' => $network ?: ($isNative ? 'Ethereum' : 'ERC20'),
+                'network' => app(\App\Modules\Wallet\Services\NetworkRegistry::class)->resolveId($network ?: 'ethereum'),
                 'token_contract' => $contract ?: $allowedContract,
                 'raw' => $tx,
             ];
@@ -212,9 +212,19 @@ class EtherscanClient implements ChainExplorerClient
     private function resolveChain(?string $network): array
     {
         $map = config('crypto.evm_chains', []);
+        $id = null;
         if (is_string($network) && $network !== '') {
+            try {
+                $id = app(\App\Modules\Wallet\Services\NetworkRegistry::class)->resolveId($network);
+            } catch (\Throwable) {
+                $id = strtolower(trim($network));
+            }
             foreach ($map as $label => $meta) {
-                if (strcasecmp((string) $label, $network) === 0 && is_array($meta)) {
+                if (! is_array($meta)) {
+                    continue;
+                }
+                if (strcasecmp((string) $label, $network) === 0
+                    || ($id && strcasecmp((string) $label, $id) === 0)) {
                     return [
                         'chainid' => (int) ($meta['chainid'] ?? 1),
                         'native' => array_map('strtoupper', $meta['native'] ?? ['ETH']),
@@ -269,17 +279,9 @@ class EtherscanClient implements ChainExplorerClient
         if ($network === null || $network === '') {
             return null;
         }
-        $map = config('crypto.token_contracts.'.$coin, []);
-        if (! is_array($map)) {
-            return null;
-        }
-        foreach ($map as $label => $contract) {
-            if (strcasecmp((string) $label, $network) === 0 && is_string($contract) && $contract !== '') {
-                return strtolower($contract);
-            }
-        }
+        $contract = app(\App\Modules\Wallet\Services\NetworkRegistry::class)->tokenContract($coin, $network);
 
-        return null;
+        return is_string($contract) && $contract !== '' ? strtolower($contract) : null;
     }
 
     private function fromWei(string $value, int $decimals): float

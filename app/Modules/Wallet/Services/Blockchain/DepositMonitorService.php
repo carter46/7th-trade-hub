@@ -41,12 +41,14 @@ class DepositMonitorService
             })
             ->get();
 
-        $addressKeys = $wallets->map(fn ($w) => strtoupper($w->coin).'|'.strtolower($w->network).'|'.$w->address)->all();
+        $addressKeys = $wallets->map(
+            fn ($w) => strtoupper($w->coin).'|'.$this->catalog->resolveId((string) $w->network).'|'.$w->address
+        )->all();
         $orphanAddresses = CryptoSellRequest::query()
             ->whereIn('status', CryptoSellRequest::OPEN_STATUSES)
             ->whereNotNull('platform_address')
             ->get(['coin', 'network', 'platform_address'])
-            ->unique(fn ($r) => strtoupper($r->coin).'|'.strtolower((string) $r->network).'|'.$r->platform_address);
+            ->unique(fn ($r) => strtoupper($r->coin).'|'.$this->catalog->resolveId((string) $r->network).'|'.$r->platform_address);
 
         $detected = 0;
         $errors = [];
@@ -61,7 +63,7 @@ class DepositMonitorService
             $groups[$groupKey] ??= [
                 'network_id' => $networkId,
                 'address' => $wallet->address,
-                'network_label' => $wallet->network,
+                'network_label' => $this->catalog->label($networkId),
                 'wallets' => [],
             ];
             $groups[$groupKey]['wallets'][] = $wallet;
@@ -246,9 +248,16 @@ class DepositMonitorService
             return false;
         }
 
+        $networkRaw = $transfer['network'] ?: $fallbackNetwork;
+        try {
+            $networkId = app(\App\Modules\Wallet\Services\NetworkRegistry::class)->resolveId((string) $networkRaw);
+        } catch (\Throwable) {
+            $networkId = strtolower(trim((string) $networkRaw));
+        }
+
         $row = IncomingCryptoTransaction::query()->create([
             'coin' => strtoupper($transfer['coin']),
-            'network' => $transfer['network'] ?: $fallbackNetwork,
+            'network' => $networkId,
             'wallet_address' => $transfer['to_address'],
             'tx_hash' => $hash,
             'amount' => $transfer['amount'],
@@ -267,7 +276,7 @@ class DepositMonitorService
             body: sprintf(
                 '%s (%s) %.8f — tx %s',
                 $row->coin,
-                $row->network,
+                $this->catalog->label((string) $row->network),
                 (float) $row->amount,
                 $row->tx_hash
             ),

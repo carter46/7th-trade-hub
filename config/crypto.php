@@ -2,6 +2,10 @@
 
 /**
  * CoinGecko + OTC pricing / explorer / wallet pool config for Crypto OTC v1.
+ *
+ * Network Registry SoT for chains: monitored_networks (+ explorers/clients).
+ * Coin → networks SoT: exchange_rates.allowed_network_ids (catalog).
+ * suggest_network_ids_by_coin is soft defaults only — never a runtime ceiling.
  */
 return [
     'api_base' => env('COINGECKO_API_BASE', 'https://api.coingecko.com/api/v3'),
@@ -41,9 +45,34 @@ return [
     'cache_ttl_seconds' => (int) env('COINGECKO_CACHE_TTL', 60),
 
     /**
-     * Controlled coin → allowed networks (canonical labels).
-     * Admin and allocation must use these values only.
+     * Soft defaults when creating a catalog coin (not a runtime whitelist).
      *
+     * @var array<string, list<string>>
+     */
+    'suggest_network_ids_by_coin' => [
+        'BTC' => ['bitcoin'],
+        'ETH' => ['ethereum', 'base', 'arbitrum'],
+        'USDT' => ['tron', 'ethereum', 'bsc', 'polygon', 'base', 'arbitrum', 'solana'],
+        'USDC' => ['ethereum', 'polygon', 'solana', 'base', 'arbitrum'],
+        'SOL' => ['solana'],
+        'BNB' => ['bsc'],
+    ],
+
+    /**
+     * @deprecated Use suggest_network_ids_by_coin. Kept for legacy readers during transition.
+     * @var array<string, list<string>>
+     */
+    'network_ids_by_coin' => [
+        'BTC' => ['bitcoin'],
+        'ETH' => ['ethereum', 'base', 'arbitrum'],
+        'USDT' => ['ethereum', 'tron', 'bsc', 'polygon', 'base', 'arbitrum', 'solana'],
+        'USDC' => ['ethereum', 'polygon', 'solana', 'base', 'arbitrum'],
+        'SOL' => ['solana'],
+        'BNB' => ['bsc'],
+    ],
+
+    /**
+     * @deprecated Labels are no longer stored; display via NetworkRegistry::label().
      * @var array<string, list<string>>
      */
     'networks_by_coin' => [
@@ -55,30 +84,10 @@ return [
         'BNB' => ['BEP20'],
     ],
 
-    /**
-     * Canonical monitored_networks IDs allowed per coin (whitelist for catalog + wallets).
-     * UI never lets admins pick IDs outside this map for that asset.
-     *
-     * @var array<string, list<string>>
-     */
-    'network_ids_by_coin' => [
-        'BTC' => ['bitcoin'],
-        'ETH' => ['ethereum', 'base', 'arbitrum'],
-        'USDT' => ['ethereum', 'tron', 'bep20', 'polygon', 'base', 'arbitrum', 'solana'],
-        'USDC' => ['ethereum', 'polygon', 'solana', 'base', 'arbitrum'],
-        'SOL' => ['solana'],
-        'BNB' => ['bep20'],
-    ],
-
-    /**
-     * Max valid Our Buy Rate (₦ per $1). Values above this are treated as corrupt full-coin prices.
-     */
     'max_buy_rate_ngn_per_usd' => 10000,
 
-    /** Default per-coin spread (₦ below market) when a catalog coin has no spread set. */
     'default_coin_spread_ngn' => 25,
 
-    /** Decimal places for fingerprint rounding */
     'amount_precision' => [
         'BTC' => 8,
         'ETH' => 8,
@@ -88,39 +97,28 @@ return [
         'BNB' => 8,
     ],
 
-    /** Max active deposit wallets per coin+network (business rule). */
     'max_active_wallets_per_network' => 5,
 
-    /** Default max concurrent open sell orders per wallet (overridable in OTC settings). */
     'max_orders_per_wallet' => 8,
 
     /**
-     * Default confirmations before a deposit is treated as ready (per network label).
-     * The chain reports how many confirmations a tx has; these values are your credit policy.
+     * Default confirmations by canonical network ID (registry owns defaults).
      *
      * @var array<string, int>
      */
     'default_confirmations' => [
-        'Bitcoin' => 2,
-        'Ethereum' => 12,
-        'ERC20' => 12,
-        'TRC20' => 20,
-        'BEP20' => 15,
-        'Polygon' => 64,
-        'Base' => 12,
-        'Arbitrum' => 12,
-        'Solana' => 32,
+        'bitcoin' => 2,
+        'ethereum' => 12,
+        'tron' => 20,
+        'bsc' => 15,
+        'polygon' => 64,
+        'base' => 12,
+        'arbitrum' => 12,
+        'solana' => 32,
     ],
 
-    /** Fingerprint nudge attempts per wallet before trying the next. */
     'fingerprint_max_nudges' => 50,
 
-    /**
-     * Absolute dust for unexplained balance delta alerts (coin => amount).
-     * Falls back to 10^-precision from amount_precision.
-     *
-     * @var array<string, float>
-     */
     'balance_dust' => [
         'BTC' => 0.00001,
         'ETH' => 0.0001,
@@ -131,37 +129,37 @@ return [
     ],
 
     /**
-     * Official token contracts (lowercase for EVM; Tron base58 as published).
-     * Native coins use null (no contract filter).
+     * Token contracts keyed by canonical network ID.
      *
      * @var array<string, array<string, string|null>>
      */
     'token_contracts' => [
         'USDT' => [
-            'TRC20' => 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
-            'ERC20' => '0xdac17f958d2ee523a2206206994597c13d831ec7',
-            'BEP20' => '0x55d398326f99059ff775485246999027b3197955',
-            'Polygon' => '0xc2132d05d31c914a87c6611c10748aeb04b58e8f',
-            'Solana' => 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
-            'Base' => '0xfde4c96c8593536e31f229ea8f37b2ada2699bb2',
-            'Arbitrum' => '0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9',
+            'tron' => 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
+            'ethereum' => '0xdac17f958d2ee523a2206206994597c13d831ec7',
+            'bsc' => '0x55d398326f99059ff775485246999027b3197955',
+            'polygon' => '0xc2132d05d31c914a87c6611c10748aeb04b58e8f',
+            'solana' => 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+            'base' => '0xfde4c96c8593536e31f229ea8f37b2ada2699bb2',
+            'arbitrum' => '0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9',
         ],
         'USDC' => [
-            'ERC20' => '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
-            'Polygon' => '0x3c499c542cef5e3811e1192ce70d8cc03d5c3359',
-            'Solana' => 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-            'Base' => '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913',
-            'Arbitrum' => '0xaf88d065e77c8cc2239327c5edb3a432268e5831',
+            'ethereum' => '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+            'polygon' => '0x3c499c542cef5e3811e1192ce70d8cc03d5c3359',
+            'solana' => 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+            'base' => '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913',
+            'arbitrum' => '0xaf88d065e77c8cc2239327c5edb3a432268e5831',
         ],
     ],
 
-    /** Network => explorer tx URL template ({hash}) */
+    /** Network ID => explorer tx URL template ({hash}) */
     'explorers' => [
         'bitcoin' => 'https://mempool.space/tx/{hash}',
         'btc' => 'https://mempool.space/tx/{hash}',
         'ethereum' => 'https://etherscan.io/tx/{hash}',
         'erc20' => 'https://etherscan.io/tx/{hash}',
         'eth' => 'https://etherscan.io/tx/{hash}',
+        'bsc' => 'https://bscscan.com/tx/{hash}',
         'bep20' => 'https://bscscan.com/tx/{hash}',
         'polygon' => 'https://polygonscan.com/tx/{hash}',
         'base' => 'https://basescan.org/tx/{hash}',
@@ -173,7 +171,7 @@ return [
     ],
 
     /**
-     * Map canonical wallet/order network label → monitored network_id.
+     * Legacy label → network_id (aliases also live on monitored_networks).
      *
      * @var array<string, string>
      */
@@ -182,16 +180,18 @@ return [
         'Ethereum' => 'ethereum',
         'ERC20' => 'ethereum',
         'TRC20' => 'tron',
-        'BEP20' => 'bep20',
+        'TRON' => 'tron',
+        'BEP20' => 'bsc',
+        'BSC' => 'bsc',
         'Polygon' => 'polygon',
         'Base' => 'base',
         'Arbitrum' => 'arbitrum',
+        'Arbitrum One' => 'arbitrum',
         'Solana' => 'solana',
     ],
 
     /**
-     * Dynamic networks for Settings health UI and poller health keys.
-     * Adding a chain here (+ client mapping) is enough — no Blade rewrite.
+     * Network Registry: available blockchains + explorer clients.
      *
      * @var array<string, array{
      *   label: string,
@@ -218,9 +218,9 @@ return [
             'ui_provider_native' => 'Native',
             'blockchain_com' => true,
         ],
-        'bep20' => [
+        'bsc' => [
             'label' => 'BNB Smart Chain (BEP20)',
-            'aliases' => ['BEP20'],
+            'aliases' => ['BEP20', 'BSC', 'bep20', 'BNB Smart Chain'],
             'native_client' => 'etherscan',
             'chainid' => 56,
             'ui_provider_native' => 'Native',
@@ -228,7 +228,7 @@ return [
         ],
         'polygon' => [
             'label' => 'Polygon',
-            'aliases' => ['Polygon'],
+            'aliases' => ['Polygon', 'MATIC'],
             'native_client' => 'etherscan',
             'chainid' => 137,
             'ui_provider_native' => 'Native',
@@ -243,8 +243,8 @@ return [
             'blockchain_com' => false,
         ],
         'arbitrum' => [
-            'label' => 'Arbitrum',
-            'aliases' => ['Arbitrum'],
+            'label' => 'Arbitrum One',
+            'aliases' => ['Arbitrum', 'Arbitrum One', 'ARB'],
             'native_client' => 'etherscan',
             'chainid' => 42161,
             'ui_provider_native' => 'Native',
@@ -266,12 +266,6 @@ return [
         ],
     ],
 
-    /**
-     * Monitor provider catalog for Admin Settings.
-     * enabled=false → Coming soon (no backend).
-     *
-     * @var array<string, array{label: string, enabled: bool, description: string}>
-     */
     'monitor_providers' => [
         'native' => [
             'label' => 'Native',
@@ -300,12 +294,6 @@ return [
         ],
     ],
 
-    /**
-     * Credential keys stored in IntegrationProvider credentials bag.
-     * Adding Alchemy later = new key name + registry entry, not a migration.
-     *
-     * @var list<string>
-     */
     'monitor_credential_keys' => [
         'etherscan_api_key',
         'trongrid_api_key',
@@ -315,11 +303,17 @@ return [
     ],
 
     /**
-     * EVM chain metadata for Etherscan Multichain API (v2 + chainid).
+     * EVM chain metadata keyed by canonical network ID.
      *
      * @var array<string, array{chainid: int, native: list<string>}>
      */
     'evm_chains' => [
+        'ethereum' => ['chainid' => 1, 'native' => ['ETH']],
+        'bsc' => ['chainid' => 56, 'native' => ['BNB']],
+        'polygon' => ['chainid' => 137, 'native' => ['MATIC', 'POL']],
+        'base' => ['chainid' => 8453, 'native' => ['ETH']],
+        'arbitrum' => ['chainid' => 42161, 'native' => ['ETH']],
+        // Legacy label keys (transition).
         'Ethereum' => ['chainid' => 1, 'native' => ['ETH']],
         'ERC20' => ['chainid' => 1, 'native' => ['ETH']],
         'BEP20' => ['chainid' => 56, 'native' => ['BNB']],
@@ -337,7 +331,6 @@ return [
     'blockchain_com' => [
         'base_url' => env('BLOCKCHAIN_COM_EXPLORER_BASE', 'https://api.blockchain.info/explorer-gateway-kt'),
         'auth_header' => 'X-Explorer-Auth-Key',
-        /** Networks the gateway covers natively (TRON/EVM L2s fall back). */
         'supported_networks' => ['bitcoin', 'ethereum', 'solana'],
     ],
 

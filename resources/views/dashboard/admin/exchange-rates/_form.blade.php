@@ -7,11 +7,13 @@
     $calculatedBuyRate = $calculatedBuyRate ?? ($usdNgnReference > 0 ? max(0, $usdNgnReference - $coinSpread) : null);
     $initialCoinUsd = (float) ($initialCoinUsd ?? 0);
     $initialCoinNgn = $initialCoinNgn ?? null;
-    $networkIdsByCoin = $networkIdsByCoin ?? [];
+    $registryNetworks = $registryNetworks ?? [];
+    $suggestNetworkIdsByCoin = $suggestNetworkIdsByCoin ?? [];
     $selectedNetworkIds = old('allowed_network_ids', $selectedNetworkIds ?? []);
     if (! is_array($selectedNetworkIds)) {
         $selectedNetworkIds = [];
     }
+    $preferredNetworkId = old('preferred_network_id', $preferredNetworkId ?? null);
     $coinMarketUrl = $coinMarketUrl ?? route('admin.exchange-rates.coin-market');
     $otcSettingsUrl = $otcSettingsUrl ?? route('admin.otc-pricing');
     $selected = [
@@ -27,8 +29,10 @@
     x-data="{
         coins: @js($coins),
         selected: @js($selected),
-        networkIdsByCoin: @js($networkIdsByCoin),
+        registryNetworks: @js($registryNetworks),
+        suggestByCoin: @js($suggestNetworkIdsByCoin),
         selectedNetworkIds: @js(array_values($selectedNetworkIds)),
+        preferredNetworkId: @js($preferredNetworkId),
         usdNgn: @js($usdNgnReference),
         coinSpread: @js($coinSpread),
         coinUsd: @js($initialCoinUsd > 0 ? $initialCoinUsd : null),
@@ -40,32 +44,55 @@
             if (! (m > 0) || Number.isNaN(s)) return null;
             return Math.round(Math.max(0, m - s) * 100) / 100;
         },
+        get monitorableSelected() {
+            return this.selectedNetworkIds.filter((id) => {
+                const row = this.registryNetworks.find((n) => n.id === id);
+                return row && row.monitorable;
+            });
+        },
+        get canEnableOtc() {
+            return this.monitorableSelected.length > 0;
+        },
         query: @js(($selected['symbol'] ?? null) ? (($selected['symbol'] ?? '').(isset($selected['name']) && $selected['name'] ? ' · '.$selected['name'] : '')) : ''),
         open: false,
         coinMarketUrl: @js($coinMarketUrl),
         init() {
             if (this.selected?.symbol) {
                 this.refreshCoinMarket(this.selected.symbol, false);
-                this.ensureNetworkSelection();
+                this.ensureNetworkSelection(false);
             }
-            this.$watch('selected.symbol', () => this.ensureNetworkSelection());
+            this.$watch('selected.symbol', () => this.ensureNetworkSelection(true));
         },
         get networkOptions() {
-            const sym = (this.selected?.symbol || '').toUpperCase();
-            return this.networkIdsByCoin[sym] || [];
+            return this.registryNetworks || [];
         },
-        ensureNetworkSelection() {
-            const opts = this.networkOptions.map((o) => o.id);
-            this.selectedNetworkIds = this.selectedNetworkIds.filter((id) => opts.includes(id));
-            if (this.selectedNetworkIds.length === 0 && opts.length > 0) {
-                this.selectedNetworkIds = [...opts];
+        ensureNetworkSelection(applySuggest = false) {
+            const registryIds = this.networkOptions.map((o) => o.id);
+            this.selectedNetworkIds = this.selectedNetworkIds.filter((id) => registryIds.includes(id));
+            // Soft defaults only when switching coin (or brand-new create with empty selection).
+            if (applySuggest) {
+                const sym = (this.selected?.symbol || '').toUpperCase();
+                const suggested = this.suggestByCoin[sym] || [];
+                if (suggested.length > 0) {
+                    this.selectedNetworkIds = suggested.filter((id) => registryIds.includes(id));
+                } else {
+                    this.selectedNetworkIds = [];
+                }
+            }
+            if (! this.selectedNetworkIds.includes(this.preferredNetworkId)) {
+                this.preferredNetworkId = this.selectedNetworkIds[0] || null;
             }
         },
         toggleNetwork(id) {
+            const row = this.registryNetworks.find((n) => n.id === id);
+            if (row && ! row.monitorable) return;
             if (this.selectedNetworkIds.includes(id)) {
                 this.selectedNetworkIds = this.selectedNetworkIds.filter((x) => x !== id);
             } else {
                 this.selectedNetworkIds = [...this.selectedNetworkIds, id];
+            }
+            if (! this.selectedNetworkIds.includes(this.preferredNetworkId)) {
+                this.preferredNetworkId = this.selectedNetworkIds[0] || null;
             }
         },
         filteredCoins() {
@@ -251,37 +278,65 @@
         @endif
     </div>
 
-    {{-- Deposit networks (whitelist only) --}}
+    {{-- Deposit networks from Network Registry --}}
     <div class="rounded-xl border border-border-subtle px-4 py-4 space-y-3">
         <div>
             <p class="text-sm font-medium text-text-primary">Deposit networks</p>
-            <p class="text-xs text-text-muted">Only networks this coin can use. Stored as canonical IDs for matching.</p>
+            <p class="text-xs text-text-muted">Choose which blockchains this coin may use. Only monitorable networks can power OTC deposits.</p>
         </div>
 
-        <template x-if="networkOptions.length === 0">
-            <p class="text-sm text-text-muted">
-                No deposit networks configured for this asset. It will not appear when creating deposit wallets until you add networks.
-            </p>
-        </template>
+        <div
+            class="rounded-xl border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning"
+            x-show="selected?.symbol && !canEnableOtc"
+            x-cloak
+        >
+            <span x-text="(selected?.symbol || 'This coin')"></span> cannot currently be enabled for OTC deposits until you select a network with a blockchain monitor.
+        </div>
 
-        <div class="space-y-2" x-show="networkOptions.length > 0" x-cloak>
+        <div class="space-y-3">
             <template x-for="opt in networkOptions" :key="opt.id">
-                <label class="flex items-center gap-2 text-sm text-text-primary">
-                    <input
-                        type="checkbox"
-                        class="rounded border-border-default"
-                        :value="opt.id"
-                        :checked="selectedNetworkIds.includes(opt.id)"
-                        @change="toggleNetwork(opt.id)"
+                <div class="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-border-subtle px-3 py-2.5">
+                    <label class="flex items-start gap-2 text-sm text-text-primary" :class="!opt.monitorable ? 'opacity-50' : ''">
+                        <input
+                            type="checkbox"
+                            class="mt-0.5 rounded border-border-default"
+                            :value="opt.id"
+                            :checked="selectedNetworkIds.includes(opt.id)"
+                            :disabled="!opt.monitorable"
+                            @change="toggleNetwork(opt.id)"
+                        >
+                        <span>
+                            <span class="font-medium" x-text="opt.label"></span>
+                            <span class="mt-0.5 block text-xs text-text-muted">
+                                Explorer: <span x-text="opt.explorer"></span>
+                                · <span :class="opt.monitorable ? 'text-success' : 'text-warning'" x-text="opt.monitorable ? 'Monitorable' : 'No monitor'"></span>
+                            </span>
+                        </span>
+                    </label>
+                    <label
+                        class="flex items-center gap-1.5 text-xs text-text-secondary"
+                        x-show="selectedNetworkIds.includes(opt.id)"
+                        x-cloak
                     >
-                    <span x-text="opt.label"></span>
-                </label>
+                        <input
+                            type="radio"
+                            class="border-border-default"
+                            :value="opt.id"
+                            x-model="preferredNetworkId"
+                        >
+                        Preferred
+                    </label>
+                </div>
             </template>
             <template x-for="id in selectedNetworkIds" :key="'hid-'+id">
                 <input type="hidden" name="allowed_network_ids[]" :value="id">
             </template>
+            <input type="hidden" name="preferred_network_id" :value="preferredNetworkId || ''">
         </div>
         @error('allowed_network_ids')
+            <p class="text-xs text-danger">{{ $message }}</p>
+        @enderror
+        @error('preferred_network_id')
             <p class="text-xs text-danger">{{ $message }}</p>
         @enderror
     </div>
@@ -290,9 +345,17 @@
         <input type="checkbox" name="is_featured" value="1" class="rounded border-border-default" @checked(old('is_featured', $rate?->is_featured))>
         Featured
     </label>
-    <label class="flex items-center gap-2 text-sm text-text-secondary">
+    <label class="flex items-center gap-2 text-sm text-text-secondary" :class="!canEnableOtc ? 'opacity-60' : ''">
         <input type="hidden" name="is_active" value="0">
-        <input type="checkbox" name="is_active" value="1" class="rounded border-border-default" @checked(old('is_active', $rate?->is_active ?? true))>
-        Active
+        <input
+            type="checkbox"
+            name="is_active"
+            value="1"
+            class="rounded border-border-default"
+            @checked(old('is_active', $rate?->is_active ?? true))
+            x-bind:disabled="!canEnableOtc"
+        >
+        Active (OTC deposits)
     </label>
+    <p class="text-xs text-text-muted" x-show="!canEnableOtc" x-cloak>Active is disabled until a monitorable network is selected.</p>
 </div>

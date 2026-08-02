@@ -40,7 +40,7 @@ class ExplorerClientRegistryTest extends TestCase
         $this->assertInstanceOf(TronGridClient::class, $registry->resolve('TRC20')['client']);
         $this->assertInstanceOf(SolanaRpcClient::class, $registry->resolve('Solana')['client']);
         $this->assertSame('bitcoin', $registry->resolve('Bitcoin')['network_id']);
-        $this->assertSame('bep20', $registry->resolve('BEP20')['network_id']);
+        $this->assertSame('bsc', $registry->resolve('BEP20')['network_id']);
     }
 
     public function test_blockchain_com_resolves_gateway_for_btc_eth_sol_and_tron_always_trongrid(): void

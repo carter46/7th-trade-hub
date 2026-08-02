@@ -20,10 +20,18 @@
         'warning' => 'bg-warning/20 text-warning',
         'success' => 'bg-success/20 text-success',
         'danger' => 'bg-danger/20 text-danger',
+        'waiting_deposit' => 'bg-warning/20 text-warning',
+        'submitted' => 'bg-primary/15 text-primary',
+        'verifying' => 'bg-primary/15 text-primary',
+        'underpaid_waiting_customer' => 'bg-warning/20 text-warning',
+        'overpaid_review' => 'bg-warning/20 text-warning',
+        'expired' => 'bg-muted text-text-secondary',
+        'cancelled' => 'bg-muted text-text-secondary',
     ];
     $key = strtolower((string) $status);
+    $label = str_replace('_', ' ', $key);
 @endphp
 
 <span {{ $attributes->merge(['class' => 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ' . ($map[$key] ?? $map['default'])]) }}>
-    {{ $slot->isEmpty() ? ucfirst($key) : $slot }}
+    {{ $slot->isEmpty() ? ucwords($label) : $slot }}
 </span>

@@ -38,6 +38,9 @@
                 $cap = $w->capacityLabel($maxPerWallet);
                 $logo = $logos[strtoupper($w->coin)] ?? null;
                 $precision = (int) (config('crypto.amount_precision.'.strtoupper($w->coin)) ?? 8);
+                $networkId = isset($networkRegistry) ? $networkRegistry->resolveId((string) $w->network) : strtolower((string) $w->network);
+                $networkLabel = isset($networkRegistry) ? $networkRegistry->label($networkId) : $w->network;
+                $supports = $supportsByNetwork[$networkId] ?? [];
             @endphp
             <tr>
                 <x-dashboard.td>
@@ -45,13 +48,27 @@
                         @if ($logo)
                             <img src="{{ $logo }}" alt="" class="h-6 w-6 rounded-full bg-white" width="24" height="24" loading="lazy" referrerpolicy="no-referrer">
                         @endif
-                        <span>{{ $w->coin }} · {{ $w->network }}</span>
+                        <div>
+                            <div>{{ $w->coin }} · {{ $networkLabel }}</div>
+                            @if ($supports !== [])
+                                <div class="text-[11px] text-text-muted">Supports: {{ implode(', ', $supports) }}</div>
+                            @endif
+                        </div>
                     </div>
                 </x-dashboard.td>
                 <x-dashboard.td class="font-mono text-xs break-all max-w-[14rem]">{{ $w->address }}</x-dashboard.td>
                 <x-dashboard.td class="text-xs">
                     @if ($w->live_balance !== null)
-                        <div>{{ rtrim(rtrim(number_format((float) $w->live_balance, $precision, '.', ''), '0'), '.') ?: '0' }}</div>
+                        @php
+                            $bal = (float) $w->live_balance;
+                            $val = $valuations[strtoupper($w->coin)] ?? ['usd_price' => 0, 'ngn_per_usd' => 0];
+                            $usd = $bal * (float) ($val['usd_price'] ?? 0);
+                            $ngn = $usd * (float) ($val['ngn_per_usd'] ?? 0);
+                        @endphp
+                        <div>{{ rtrim(rtrim(number_format($bal, $precision, '.', ''), '0'), '.') ?: '0' }} {{ strtoupper($w->coin) }}</div>
+                        @if ($usd > 0)
+                            <div class="text-text-muted">${{ number_format($usd, 2) }} · ₦{{ number_format($ngn, 0) }}</div>
+                        @endif
                         <div class="text-text-muted">{{ $w->live_balance_updated_at?->diffForHumans() ?? '—' }}</div>
                     @else
                         <span class="text-text-muted">—</span>

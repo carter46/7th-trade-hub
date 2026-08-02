@@ -341,6 +341,8 @@ class CryptoSellShowUxTest extends TestCase
         ExchangeRate::query()->create([
             'asset' => 'BTC',
             'bybit_symbol' => 'BTCUSDT',
+            'allowed_network_ids' => ['bitcoin'],
+            'preferred_network_id' => 'bitcoin',
             'spread_ngn' => 20,
             'sell_rate_ngn' => 1580,
             'buy_rate_ngn' => 1580,
@@ -352,7 +354,7 @@ class CryptoSellShowUxTest extends TestCase
 
         CryptoDepositWallet::create([
             'coin' => 'BTC',
-            'network' => 'Bitcoin',
+            'network' => 'bitcoin',
             'address' => 'bc1qstoretestaddress',
             'required_confirmations' => 2,
             'is_active' => true,

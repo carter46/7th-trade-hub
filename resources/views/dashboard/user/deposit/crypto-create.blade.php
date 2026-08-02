@@ -70,7 +70,7 @@
                             class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2.5 text-sm text-text-primary"
                         >
                             <template x-for="n in networks" :key="n.network">
-                                <option :value="n.network" x-text="n.network + ' · ' + n.confirmations + ' conf'"></option>
+                                <option :value="n.network" x-text="(n.label || n.network) + ' · ' + n.confirmations + ' conf'"></option>
                             </template>
                         </select>
                         @error('network')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror

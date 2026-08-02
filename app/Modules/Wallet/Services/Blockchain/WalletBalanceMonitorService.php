@@ -133,7 +133,7 @@ class WalletBalanceMonitorService
                     body: sprintf(
                         '%s (%s) wallet #%d rose by %.8f (prev %.8f → %.8f). Detected deposits since last sync: %.8f.',
                         $wallet->coin,
-                        $wallet->network,
+                        app(\App\Modules\Wallet\Services\NetworkRegistry::class)->label((string) $wallet->network),
                         $wallet->id,
                         $delta,
                         $previous,
@@ -166,7 +166,7 @@ class WalletBalanceMonitorService
             body: sprintf(
                 '%s (%s) wallet #%d fell by %.8f (prev %.8f → %.8f).',
                 $wallet->coin,
-                $wallet->network,
+                app(\App\Modules\Wallet\Services\NetworkRegistry::class)->label((string) $wallet->network),
                 $wallet->id,
                 abs($delta),
                 $previous,

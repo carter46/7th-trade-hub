@@ -57,7 +57,7 @@ class SupportTicketAdminController extends Controller
         return view('dashboard.admin.tickets', $data);
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
         $users = User::role('user')
             ->notAnonymized()
@@ -65,7 +65,18 @@ class SupportTicketAdminController extends Controller
             ->limit(200)
             ->get(['id', 'name', 'email']);
 
-        return view('dashboard.admin.tickets.create', compact('users'));
+        $prefillUserId = $request->query('user_id');
+        if ($prefillUserId && ! $users->contains('id', (int) $prefillUserId)) {
+            $extra = User::query()->notAnonymized()->whereKey((int) $prefillUserId)->first(['id', 'name', 'email']);
+            if ($extra) {
+                $users = $users->prepend($extra)->unique('id')->values();
+            }
+        }
+
+        return view('dashboard.admin.tickets.create', [
+            'users' => $users,
+            'prefillUserId' => $prefillUserId ? (int) $prefillUserId : null,
+        ]);
     }
 
     public function store(Request $request): RedirectResponse

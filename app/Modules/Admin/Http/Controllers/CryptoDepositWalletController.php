@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CryptoDepositWallet;
 use App\Modules\Admin\Services\AuditLogService;
 use App\Modules\Wallet\Services\ExchangeQuoteService;
+use App\Modules\Wallet\Services\NetworkRegistry;
 use App\Modules\Wallet\Services\WalletAllocationService;
 use App\Support\SortOrder;
 use Illuminate\Http\RedirectResponse;
@@ -22,6 +23,7 @@ class CryptoDepositWalletController extends Controller
         private AuditLogService $audit,
         private WalletAllocationService $allocation,
         private ExchangeQuoteService $quotes,
+        private NetworkRegistry $networks,
     ) {}
 
     public function index(): View
@@ -36,11 +38,30 @@ class CryptoDepositWalletController extends Controller
             ->mapWithKeys(fn ($r) => [strtoupper((string) $r->asset) => $r->resolvedLogoUrl()]);
 
         $capacityByPair = [];
-        foreach ($wallets->where('is_active', true)->groupBy(fn ($w) => strtoupper($w->coin).'|'.$w->network) as $pair => $group) {
-            [$coin, $network] = explode('|', $pair, 2);
+        foreach ($wallets->where('is_active', true)->groupBy(
+            fn ($w) => strtoupper($w->coin).'|'.$this->networks->resolveId((string) $w->network)
+        ) as $pair => $group) {
+            [$coin, $networkId] = explode('|', $pair, 2);
+            $networkLabel = $this->networks->label($networkId);
             $capacityByPair[$pair] = [
-                'label' => "{$coin} / {$network} ({$group->count()}/{$maxActive})",
+                'label' => "{$coin} / {$networkLabel} ({$group->count()}/{$maxActive})",
                 'count' => $group->count(),
+            ];
+        }
+
+        $supportsByNetwork = [];
+        foreach ($this->networks->ids() as $networkId) {
+            $supportsByNetwork[$networkId] = $this->networks->coinsUsingNetwork($networkId);
+        }
+
+        $valuations = [];
+        foreach ($wallets->pluck('coin')->unique() as $coin) {
+            $symbol = strtoupper((string) $coin);
+            $usdPrice = $this->safeCoinUsd($symbol);
+            $ngnPerUsd = (float) ($this->quotes->resolveCustomerRateForCoin($symbol)['rate'] ?? 0);
+            $valuations[$symbol] = [
+                'usd_price' => $usdPrice,
+                'ngn_per_usd' => $ngnPerUsd,
             ];
         }
 
@@ -50,6 +71,9 @@ class CryptoDepositWalletController extends Controller
             'maxPerWallet' => $maxPerWallet,
             'maxActive' => $maxActive,
             'capacityByPair' => $capacityByPair,
+            'supportsByNetwork' => $supportsByNetwork,
+            'networkRegistry' => $this->networks,
+            'valuations' => $valuations,
         ]);
     }
 
@@ -151,10 +175,21 @@ class CryptoDepositWalletController extends Controller
 
     public function edit(CryptoDepositWallet $cryptoDepositWallet): View
     {
+        $coin = strtoupper((string) $cryptoDepositWallet->coin);
+        $balance = (float) ($cryptoDepositWallet->live_balance ?? 0);
+        $usdPrice = $this->safeCoinUsd($coin);
+        $ngnPerUsd = (float) ($this->quotes->resolveCustomerRateForCoin($coin)['rate'] ?? 0);
+        $networkId = $this->networks->resolveId((string) $cryptoDepositWallet->network);
+
         return view('dashboard.admin.crypto-wallets.edit', array_merge($this->walletFormData($cryptoDepositWallet), [
             'wallet' => $cryptoDepositWallet,
             'openOrders' => $cryptoDepositWallet->openOrdersUsingAddress(),
             'maxPerWallet' => $this->allocation->maxOrdersPerWallet(),
+            'supportsCoins' => $this->networks->coinsUsingNetwork($networkId),
+            'networkLabel' => $this->networks->label($networkId),
+            'liveBalance' => $balance,
+            'liveBalanceUsd' => $balance * $usdPrice,
+            'liveBalanceNgn' => $balance * $usdPrice * $ngnPerUsd,
         ]));
     }
 
@@ -196,37 +231,54 @@ class CryptoDepositWalletController extends Controller
             ? CryptoDepositWallet::query()->find($exceptWalletId)
             : null;
         $form = $this->walletFormData($existing);
-        /** @var array<string, list<string>> $networksByCoin */
+        /** @var array<string, list<array{id: string, label: string}>> $networksByCoin */
         $networksByCoin = $form['networksByCoin'];
         $coins = array_keys($networksByCoin);
 
         if ($coins === []) {
-            throw new RuntimeException('Add an active coin in Coin Catalog before creating a deposit wallet.');
+            throw new RuntimeException('Add an active coin with a monitorable deposit network in Coin Catalog before creating a wallet.');
         }
 
         $validated = $request->validate([
             'coin' => ['required', 'string', 'max:20', Rule::in($coins)],
             'network' => ['required', 'string', 'max:40'],
             'address' => ['required', 'string', 'max:255'],
+            'required_confirmations' => ['nullable', 'integer', 'min:1', 'max:500'],
+            'label' => ['nullable', 'string', 'max:120'],
+            'purpose' => ['nullable', 'string', 'max:120'],
+            'owner' => ['nullable', 'string', 'max:120'],
             'is_active' => ['nullable', 'boolean'],
             'is_exchange_managed' => ['nullable', 'boolean'],
         ]);
 
         $validated['coin'] = strtoupper($validated['coin']);
+        if (! $this->networks->canEnableForOtc($validated['coin'])) {
+            $supported = collect($this->networks->checkboxOptions())
+                ->where('monitorable', true)
+                ->pluck('label')
+                ->implode(', ');
+            throw new RuntimeException(
+                "{$validated['coin']} is unsupported for OTC deposits. No blockchain monitor is configured for its networks. Currently supported: {$supported}."
+            );
+        }
+
         $validated['network'] = $this->allocation->canonicalizeNetwork($validated['coin'], $validated['network']);
-        $allowed = $networksByCoin[$validated['coin']] ?? [];
-        if (! in_array($validated['network'], $allowed, true)) {
-            throw new RuntimeException("Network {$validated['network']} is not allowed for {$validated['coin']}.");
+        $allowedIds = array_column($networksByCoin[$validated['coin']] ?? [], 'id');
+        if (! in_array($validated['network'], $allowedIds, true)) {
+            throw new RuntimeException('Selected network is not allowed for '.$validated['coin'].'.');
         }
 
         $validated['is_active'] = $request->boolean('is_active');
         $validated['is_exchange_managed'] = $request->boolean('is_exchange_managed');
-        $validated['required_confirmations'] = $this->defaultConfirmations($validated['network']);
+        $validated['required_confirmations'] = isset($validated['required_confirmations'])
+            ? max(1, (int) $validated['required_confirmations'])
+            : $this->networks->defaultConfirmations($validated['network']);
 
         if ($validated['is_active'] && ! $this->allocation->canActivateAnother($validated['coin'], $validated['network'], $exceptWalletId)) {
             $max = $this->allocation->maxActiveWallets();
+            $label = $this->networks->label($validated['network']);
             throw new RuntimeException(
-                "Maximum of {$max} active wallets reached for {$validated['coin']} / {$validated['network']}. Disable another wallet first."
+                "Maximum of {$max} active wallets reached for {$validated['coin']} / {$label}. Disable another wallet first."
             );
         }
 
@@ -234,73 +286,91 @@ class CryptoDepositWalletController extends Controller
     }
 
     /**
-     * @return array{
-     *   catalogCoins: list<array{symbol: string, logo: ?string}>,
-     *   networksByCoin: array<string, list<string>>,
-     *   maxActive: int
-     * }
+     * @return array<string, mixed>
      */
     private function walletFormData(?CryptoDepositWallet $wallet = null): array
     {
         $catalog = \App\Models\ExchangeRate::query()
-            ->active()
             ->orderBy('sort_order')
             ->orderBy('asset')
             ->get();
 
         $catalogCoins = [];
         $networksByCoin = [];
+        $unsupportedCoins = [];
+        $defaultConfs = [];
+        $usedBy = [];
+
+        foreach ($this->networks->ids() as $networkId) {
+            $coins = $this->networks->coinsUsingNetwork($networkId);
+            $usedBy[$networkId] = [
+                'count' => count($coins),
+                'coins' => $coins,
+                'label' => $this->networks->label($networkId),
+            ];
+            $defaultConfs[$networkId] = $this->networks->defaultConfirmations($networkId);
+        }
+
         foreach ($catalog as $rate) {
             $symbol = strtoupper((string) $rate->asset);
             if ($symbol === '') {
                 continue;
             }
-            $labels = $this->allocation->networksForCoin($symbol);
-            if ($labels === []) {
+            $options = $this->networks->optionsForCoin($symbol);
+            if ($options === []) {
+                if ($rate->is_active) {
+                    $unsupportedCoins[] = [
+                        'symbol' => $symbol,
+                        'reason' => 'No monitorable deposit network in Coin Catalog.',
+                    ];
+                }
+
+                continue;
+            }
+            if (! $rate->is_active && (! $wallet || strtoupper((string) $wallet->coin) !== $symbol)) {
                 continue;
             }
             $catalogCoins[] = [
                 'symbol' => $symbol,
                 'logo' => $rate->resolvedLogoUrl(),
             ];
-            $networksByCoin[$symbol] = $labels;
+            $networksByCoin[$symbol] = $options;
         }
 
-        // Keep the current wallet coin selectable even if it was deactivated in catalog.
         if ($wallet) {
             $symbol = strtoupper((string) $wallet->coin);
             if ($symbol !== '' && ! isset($networksByCoin[$symbol])) {
-                $labels = $this->allocation->networksForCoin($symbol);
-                if ($labels !== []) {
-                    $catalogCoins[] = [
-                        'symbol' => $symbol,
-                        'logo' => \App\Models\ExchangeRate::query()
-                            ->whereRaw('UPPER(asset) = ?', [$symbol])
-                            ->first()
-                            ?->resolvedLogoUrl(),
-                    ];
-                    $networksByCoin[$symbol] = $labels;
+                $options = $this->networks->optionsForCoin($symbol);
+                if ($options === []) {
+                    $options = [[
+                        'id' => $this->networks->resolveId((string) $wallet->network),
+                        'label' => $this->networks->label((string) $wallet->network),
+                    ]];
                 }
+                $catalogCoins[] = [
+                    'symbol' => $symbol,
+                    'logo' => \App\Models\ExchangeRate::query()
+                        ->whereRaw('UPPER(asset) = ?', [$symbol])
+                        ->first()
+                        ?->resolvedLogoUrl(),
+                ];
+                $networksByCoin[$symbol] = $options;
             }
         }
 
         return [
             'catalogCoins' => $catalogCoins,
             'networksByCoin' => $networksByCoin,
+            'unsupportedCoins' => $unsupportedCoins,
+            'usedByByNetwork' => $usedBy,
+            'defaultConfirmationsByNetwork' => $defaultConfs,
+            'supportedNetworkLabels' => collect($this->networks->checkboxOptions())
+                ->where('monitorable', true)
+                ->pluck('label')
+                ->values()
+                ->all(),
             'maxActive' => $this->allocation->maxActiveWallets(),
         ];
-    }
-
-    private function defaultConfirmations(string $network): int
-    {
-        $map = config('crypto.default_confirmations', []);
-        foreach ($map as $label => $count) {
-            if (strcasecmp((string) $label, $network) === 0) {
-                return max(1, (int) $count);
-            }
-        }
-
-        return 3;
     }
 
     private function safeCoinUsd(string $coin): float

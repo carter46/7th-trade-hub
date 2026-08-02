@@ -95,6 +95,7 @@ class ExplorerClientRegistry
             'any:tron' => 'trongrid',
             'native:bitcoin' => 'mempool',
             'native:ethereum' => 'etherscan',
+            'native:bsc' => 'etherscan',
             'native:bep20' => 'etherscan',
             'native:polygon' => 'etherscan',
             'native:base' => 'etherscan',

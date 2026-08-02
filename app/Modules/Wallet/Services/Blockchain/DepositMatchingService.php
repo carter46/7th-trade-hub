@@ -184,7 +184,7 @@ class DepositMatchingService
             body: sprintf(
                 '%s (%s) %.8f — %s',
                 $row->coin,
-                $row->network,
+                app(\App\Modules\Wallet\Services\NetworkRegistry::class)->label((string) $row->network),
                 (float) $row->amount,
                 $detail
             ),
@@ -198,28 +198,6 @@ class DepositMatchingService
 
     private function networksCompatible(string $a, string $b): bool
     {
-        $norm = fn (string $n) => strtolower(str_replace([' ', '-'], '', $n));
-        $map = [
-            'bitcoin' => 'bitcoin',
-            'btc' => 'bitcoin',
-            'ethereum' => 'ethereum',
-            'eth' => 'ethereum',
-            'erc20' => 'ethereum',
-            'bep20' => 'bep20',
-            'bsc' => 'bep20',
-            'polygon' => 'polygon',
-            'matic' => 'polygon',
-            'base' => 'base',
-            'arbitrum' => 'arbitrum',
-            'arb' => 'arbitrum',
-            'trc20' => 'tron',
-            'tron' => 'tron',
-            'solana' => 'solana',
-            'sol' => 'solana',
-        ];
-        $na = $map[$norm($a)] ?? $norm($a);
-        $nb = $map[$norm($b)] ?? $norm($b);
-
-        return $na === $nb;
+        return app(\App\Modules\Wallet\Services\NetworkRegistry::class)->sameNetwork($a, $b);
     }
 }

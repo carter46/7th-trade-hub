@@ -8,6 +8,7 @@ use App\Models\CryptoSellRequest;
 use App\Models\ExchangeRate;
 use App\Modules\Wallet\Services\CryptoExplorerUrl;
 use App\Modules\Wallet\Services\ExchangeQuoteService;
+use App\Modules\Wallet\Services\NetworkRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,6 +23,7 @@ class CryptoSellController extends Controller
     public function __construct(
         private ExchangeQuoteService $quoteService,
         private \App\Modules\Wallet\Services\WalletAllocationService $allocation,
+        private NetworkRegistry $networks,
     ) {}
 
     public function index(): View
@@ -72,25 +74,22 @@ class CryptoSellController extends Controller
         }
 
         $rateMap = [];
-        $allowedNetworks = config('crypto.networks_by_coin', []);
         foreach ($coins as $symbol) {
+            if (! $this->networks->canEnableForOtc($symbol)) {
+                continue;
+            }
+
             $rate = $catalog->first(fn ($r) => strtoupper((string) $r->asset) === $symbol);
             $customer = $this->quoteService->resolveCustomerRateForCoin($symbol);
             $coinWallets = $wallets[$symbol] ?? collect();
-            $canonicalList = $allowedNetworks[$symbol] ?? [];
+            $allowed = collect($this->networks->monitorableIdsForCoin($symbol));
             $networks = $coinWallets
-                ->groupBy(fn ($w) => $w->network)
-                ->map(function ($group, $network) use ($symbol, $canonicalList) {
-                    $label = $network;
-                    foreach ($canonicalList as $canonical) {
-                        if (strcasecmp($canonical, (string) $network) === 0) {
-                            $label = $canonical;
-                            break;
-                        }
-                    }
-
+                ->groupBy(fn ($w) => $this->networks->resolveId((string) $w->network))
+                ->filter(fn ($group, $networkId) => $allowed->contains($networkId))
+                ->map(function ($group, $networkId) {
                     return [
-                        'network' => $label,
+                        'network' => $networkId,
+                        'label' => $this->networks->label((string) $networkId),
                         'id' => $group->first()->id,
                         'confirmations' => (int) $group->min('required_confirmations'),
                         'available' => $group->where('is_active', true)->count(),
@@ -99,7 +98,7 @@ class CryptoSellController extends Controller
                 ->values()
                 ->all();
 
-            if ($networks === [] && $canonicalList !== []) {
+            if ($networks === []) {
                 continue;
             }
 
@@ -107,6 +106,12 @@ class CryptoSellController extends Controller
                 $coinUsd = $this->quoteService->coinUsdPrice($symbol);
             } catch (\Throwable) {
                 $coinUsd = 0;
+            }
+
+            $preferred = $this->networks->preferredNetworkId($symbol);
+            $networkIds = array_column($networks, 'network');
+            if ($preferred && ! in_array($preferred, $networkIds, true)) {
+                $preferred = $networkIds[0] ?? null;
             }
 
             $rateMap[$symbol] = [
@@ -119,6 +124,7 @@ class CryptoSellController extends Controller
                 'max_usd' => (float) ($rate?->max_amount_usd ?? 0),
                 'logo' => $rate?->resolvedLogoUrl(),
                 'networks' => $networks,
+                'preferred_network' => $preferred ?? ($networkIds[0] ?? null),
             ];
         }
 
@@ -358,7 +364,8 @@ class CryptoSellController extends Controller
             'status' => $sell->status,
             'stage' => $stage,
             'coin' => $sell->coin,
-            'network' => $sell->network,
+            'network' => $this->networks->label((string) $sell->network),
+            'network_id' => $this->networks->resolveId((string) $sell->network),
             'platform_address' => $sell->platform_address,
             'amount_usd' => (float) $sell->amount_usd,
             'amount_crypto' => $expectedCrypto,

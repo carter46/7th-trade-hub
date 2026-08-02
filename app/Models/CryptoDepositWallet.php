@@ -65,10 +65,7 @@ class CryptoDepositWallet extends Model
 
     public function openOrdersUsingAddress(): int
     {
-        $q = CryptoSellRequest::query()
-            ->where('platform_address', $this->address)
-            ->whereRaw('UPPER(coin) = ?', [strtoupper($this->coin)])
-            ->whereRaw('LOWER(network) = ?', [strtolower((string) $this->network)]);
+        $q = $this->openOrdersQuery();
 
         return app(\App\Modules\Wallet\Services\WalletAllocationService::class)
             ->applyOccupyingOrdersFilter($q)
@@ -80,14 +77,26 @@ class CryptoDepositWallet extends Model
      */
     public function reservedCrypto(): float
     {
-        $sum = CryptoSellRequest::query()
-            ->where('platform_address', $this->address)
-            ->whereRaw('UPPER(coin) = ?', [strtoupper($this->coin)])
-            ->whereRaw('LOWER(network) = ?', [strtolower((string) $this->network)])
+        $sum = $this->openOrdersQuery()
             ->whereIn('status', CryptoSellRequest::OPEN_STATUSES)
             ->sum('amount_crypto');
 
         return (float) $sum;
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Builder<\App\Models\CryptoSellRequest>
+     */
+    private function openOrdersQuery()
+    {
+        $variants = app(\App\Modules\Wallet\Services\NetworkRegistry::class)
+            ->storageVariants((string) $this->network);
+        $placeholders = implode(',', array_fill(0, count($variants), '?'));
+
+        return CryptoSellRequest::query()
+            ->where('platform_address', $this->address)
+            ->whereRaw('UPPER(coin) = ?', [strtoupper($this->coin)])
+            ->whereRaw('LOWER(network) IN ('.$placeholders.')', $variants);
     }
 
     public function availableCrypto(): float

@@ -13,7 +13,7 @@ class MonitoredNetworkCatalogTest extends TestCase
 
         $this->assertSame('bitcoin', $catalog->resolveId('Bitcoin'));
         $this->assertSame('ethereum', $catalog->resolveId('ERC20'));
-        $this->assertSame('bep20', $catalog->resolveId('BEP20'));
+        $this->assertSame('bsc', $catalog->resolveId('BEP20'));
         $this->assertSame('polygon', $catalog->resolveId('Polygon'));
         $this->assertSame('tron', $catalog->resolveId('TRC20'));
         $this->assertSame('solana', $catalog->resolveId('Solana'));

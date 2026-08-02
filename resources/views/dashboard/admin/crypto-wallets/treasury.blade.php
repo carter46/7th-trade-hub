@@ -77,6 +77,7 @@
                         <table class="min-w-full text-sm">
                             <thead class="bg-surface/50 text-left text-xs text-text-muted">
                                 <tr>
+                                    <th class="px-4 py-2 font-medium">Network</th>
                                     <th class="px-4 py-2 font-medium">Address</th>
                                     <th class="px-4 py-2 font-medium">Status</th>
                                     <th class="px-4 py-2 font-medium">Open</th>
@@ -89,8 +90,12 @@
                             </thead>
                             <tbody>
                                 @foreach ($card['rows'] as $row)
-                                    @php $w = $row['wallet']; @endphp
+                                    @php
+                                        $w = $row['wallet'];
+                                        $networkLabel = app(\App\Modules\Wallet\Services\NetworkRegistry::class)->label((string) $w->network);
+                                    @endphp
                                     <tr class="border-t border-border-default/60 align-top">
+                                        <td class="px-4 py-3 text-xs">{{ $networkLabel }}</td>
                                         <td class="px-4 py-3 font-mono text-xs break-all max-w-[12rem]">{{ $w->address }}</td>
                                         <td class="px-4 py-3 text-xs">
                                             <div>{{ $w->is_active ? 'Active' : 'Disabled' }}</div>

@@ -17,7 +17,7 @@ class SolanaRpcClient implements ChainExplorerClient
     {
         $rpc = $this->rpcUrl();
         $coin = strtoupper($coin);
-        $mint = $this->allowedMint($coin, $network ?: 'Solana');
+        $mint = $this->allowedMint($coin, $network ?: 'solana');
         $isSpl = $mint !== null;
 
         $sigRes = $this->rpc($rpc, 'getSignaturesForAddress', [
@@ -99,7 +99,7 @@ class SolanaRpcClient implements ChainExplorerClient
                 'from_address' => null,
                 'to_address' => $address,
                 'coin' => $coin,
-                'network' => $network ?: 'Solana',
+                'network' => app(\App\Modules\Wallet\Services\NetworkRegistry::class)->resolveId($network ?: 'solana'),
                 'token_contract' => $tokenContract,
                 'raw' => $tx,
             ];
@@ -112,7 +112,7 @@ class SolanaRpcClient implements ChainExplorerClient
     {
         $rpc = $this->rpcUrl();
         $coin = strtoupper($coin);
-        $mint = $this->allowedMint($coin, $network ?: 'Solana');
+        $mint = $this->allowedMint($coin, $network ?: 'solana');
 
         if ($mint === null) {
             $res = $this->rpc($rpc, 'getBalance', [$address]);
@@ -211,20 +211,11 @@ class SolanaRpcClient implements ChainExplorerClient
 
     private function allowedMint(string $coin, string $network): ?string
     {
-        if (in_array($coin, ['SOL'], true)) {
+        if (in_array(strtoupper($coin), ['SOL'], true)) {
             return null;
-        }
-        $map = config('crypto.token_contracts.'.$coin, []);
-        if (! is_array($map)) {
-            return null;
-        }
-        foreach ($map as $label => $mint) {
-            if (strcasecmp((string) $label, $network) === 0 && is_string($mint) && $mint !== '') {
-                return $mint;
-            }
         }
 
-        return $map['Solana'] ?? null;
+        return app(\App\Modules\Wallet\Services\NetworkRegistry::class)->tokenContract($coin, $network);
     }
 
     private function rpcUrl(): string

@@ -21,7 +21,7 @@
                 <select name="user_id" class="w-full rounded-xl border-border-default bg-elevated" required>
                     <option value="">Select user...</option>
                     @foreach ($users as $user)
-                        <option value="{{ $user->id }}" @selected(old('user_id') == $user->id)>{{ $user->name }} ({{ $user->email }})</option>
+                        <option value="{{ $user->id }}" @selected((string) old('user_id', $prefillUserId ?? '') === (string) $user->id)>{{ $user->name }} ({{ $user->email }})</option>
                     @endforeach
                 </select>
             </div>

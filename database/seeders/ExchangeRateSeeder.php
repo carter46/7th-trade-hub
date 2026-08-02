@@ -72,10 +72,23 @@ class ExchangeRateSeeder extends Seeder
             ],
         ];
 
+        $suggest = config('crypto.suggest_network_ids_by_coin', []);
+
         foreach ($rates as $rate) {
+            $asset = strtoupper($rate['asset']);
+            $networks = $suggest[$asset] ?? [];
+            $preferred = $networks[0] ?? null;
+            if ($asset === 'USDT' && in_array('tron', $networks, true)) {
+                $preferred = 'tron';
+            }
+
             ExchangeRate::updateOrCreate(
                 ['asset' => $rate['asset']],
-                array_merge($rate, ['is_active' => true])
+                array_merge($rate, [
+                    'is_active' => true,
+                    'allowed_network_ids' => $networks,
+                    'preferred_network_id' => $preferred,
+                ])
             );
         }
     }

@@ -10,8 +10,13 @@ class CryptoExplorerUrl
             return null;
         }
 
-        $key = strtolower(trim((string) $network));
-        $template = config('crypto.explorers.'.$key);
+        try {
+            $id = app(NetworkRegistry::class)->resolveId((string) $network);
+        } catch (\Throwable) {
+            $id = strtolower(trim((string) $network));
+        }
+
+        $template = config('crypto.explorers.'.$id);
         if (! is_string($template) || $template === '') {
             return null;
         }

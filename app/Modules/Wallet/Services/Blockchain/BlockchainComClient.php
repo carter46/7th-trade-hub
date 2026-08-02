@@ -30,9 +30,9 @@ class BlockchainComClient implements ChainExplorerClient
         $coin = strtoupper($coin);
 
         return match ($networkId) {
-            'bitcoin' => $this->fetchBitcoin($address, $coin, $network ?: 'Bitcoin'),
-            'ethereum' => $this->fetchEthereum($address, $coin, $network ?: 'Ethereum'),
-            'solana' => $this->fetchSolana($address, $coin, $network ?: 'Solana'),
+            'bitcoin' => $this->fetchBitcoin($address, $coin, $networkId),
+            'ethereum' => $this->fetchEthereum($address, $coin, $networkId),
+            'solana' => $this->fetchSolana($address, $coin, $networkId),
             default => throw new RuntimeException("Blockchain.com does not support network: {$networkId}"),
         };
     }
@@ -46,10 +46,10 @@ class BlockchainComClient implements ChainExplorerClient
             'bitcoin' => $this->balanceBitcoin($address),
             'ethereum' => $coin === 'ETH'
                 ? $this->balanceEthereum($address)
-                : $this->etherscan->fetchBalance($address, $coin, $network ?: 'Ethereum'),
+                : $this->etherscan->fetchBalance($address, $coin, $networkId),
             'solana' => $coin === 'SOL'
                 ? $this->balanceSolana($address)
-                : $this->solana->fetchBalance($address, $coin, $network ?: 'Solana'),
+                : $this->solana->fetchBalance($address, $coin, $networkId),
             default => throw new RuntimeException("Blockchain.com does not support network: {$networkId}"),
         };
     }
@@ -89,7 +89,7 @@ class BlockchainComClient implements ChainExplorerClient
         }
 
         // Prefer native mempool client when gateway has no balance field.
-        return app(MempoolBitcoinClient::class)->fetchBalance($address, 'BTC', 'Bitcoin');
+        return app(MempoolBitcoinClient::class)->fetchBalance($address, 'BTC', 'bitcoin');
     }
 
     private function balanceEthereum(string $address): float
@@ -111,7 +111,7 @@ class BlockchainComClient implements ChainExplorerClient
             // Fall through.
         }
 
-        return $this->etherscan->fetchBalance($address, 'ETH', 'Ethereum');
+        return $this->etherscan->fetchBalance($address, 'ETH', 'ethereum');
     }
 
     private function balanceSolana(string $address): float
@@ -133,13 +133,13 @@ class BlockchainComClient implements ChainExplorerClient
             // Fall through.
         }
 
-        return $this->solana->fetchBalance($address, 'SOL', 'Solana');
+        return $this->solana->fetchBalance($address, 'SOL', 'solana');
     }
 
     /**
      * @return list<array<string, mixed>>
      */
-    private function fetchBitcoin(string $address, string $coin, string $networkLabel): array
+    private function fetchBitcoin(string $address, string $coin, string $networkId): array
     {
         $json = $this->post('/btc/address/transactions', ['address' => $address]);
         $txs = $json['transactions'] ?? [];
@@ -147,7 +147,7 @@ class BlockchainComClient implements ChainExplorerClient
             return [];
         }
 
-        $tip = $this->tipHeight('Bitcoin');
+        $tip = $this->tipHeight('bitcoin');
         $out = [];
 
         foreach ($txs as $tx) {
@@ -212,7 +212,7 @@ class BlockchainComClient implements ChainExplorerClient
                 'from_address' => $from,
                 'to_address' => $address,
                 'coin' => $coin,
-                'network' => $networkLabel,
+                'network' => $networkId,
                 'token_contract' => null,
                 'raw' => $tx,
             ];
@@ -224,11 +224,11 @@ class BlockchainComClient implements ChainExplorerClient
     /**
      * @return list<array<string, mixed>>
      */
-    private function fetchEthereum(string $address, string $coin, string $networkLabel): array
+    private function fetchEthereum(string $address, string $coin, string $networkId): array
     {
         // Gateway has native ETH transfers only; ERC-20 needs Etherscan.
         if ($coin !== 'ETH') {
-            return $this->etherscan->fetchIncoming($address, $coin, $networkLabel);
+            return $this->etherscan->fetchIncoming($address, $coin, $networkId);
         }
 
         $json = $this->post('/eth/address', [
@@ -240,7 +240,7 @@ class BlockchainComClient implements ChainExplorerClient
             return [];
         }
 
-        $tip = $this->tipHeight('Ethereum');
+        $tip = $this->tipHeight('ethereum');
         $out = [];
 
         foreach ($txs as $tx) {
@@ -277,7 +277,7 @@ class BlockchainComClient implements ChainExplorerClient
                 'from_address' => $tx['from'] ?? null,
                 'to_address' => $address,
                 'coin' => $coin,
-                'network' => $networkLabel,
+                'network' => $networkId,
                 'token_contract' => null,
                 'raw' => $tx,
             ];
@@ -289,11 +289,11 @@ class BlockchainComClient implements ChainExplorerClient
     /**
      * @return list<array<string, mixed>>
      */
-    private function fetchSolana(string $address, string $coin, string $networkLabel): array
+    private function fetchSolana(string $address, string $coin, string $networkId): array
     {
         // Gateway lacks a reliable SPL transfer feed; use Solana RPC for SPL / full parse.
         if ($coin !== 'SOL') {
-            return $this->solana->fetchIncoming($address, $coin, $networkLabel);
+            return $this->solana->fetchIncoming($address, $coin, $networkId);
         }
 
         // Prefer Solana RPC for amount accuracy; gateway used for health/tip.
@@ -304,10 +304,10 @@ class BlockchainComClient implements ChainExplorerClient
         ]);
         $txs = $json['transactions'] ?? [];
         if (! is_array($txs) || $txs === []) {
-            return $this->solana->fetchIncoming($address, $coin, $networkLabel);
+            return $this->solana->fetchIncoming($address, $coin, $networkId);
         }
 
-        $tip = $this->tipHeight('Solana');
+        $tip = $this->tipHeight('solana');
         $out = [];
 
         foreach ($txs as $tx) {
@@ -348,13 +348,13 @@ class BlockchainComClient implements ChainExplorerClient
                 'from_address' => $tx['from'] ?? null,
                 'to_address' => $address,
                 'coin' => $coin,
-                'network' => $networkLabel,
+                'network' => $networkId,
                 'token_contract' => null,
                 'raw' => $tx,
             ];
         }
 
-        return $out !== [] ? $out : $this->solana->fetchIncoming($address, $coin, $networkLabel);
+        return $out !== [] ? $out : $this->solana->fetchIncoming($address, $coin, $networkId);
     }
 
     private function tipForPath(string $path, array $body): ?int

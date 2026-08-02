@@ -169,7 +169,7 @@ class DemoWalletSeeder extends Seeder
                     'user_id' => $user->id,
                     'wallet_id' => $wallet->id,
                     'coin' => 'USDT',
-                    'network' => 'TRC20',
+                    'network' => 'tron',
                     'amount_crypto' => 50,
                     'quoted_rate_ngn' => 1600,
                     'expected_ngn' => 80000,

@@ -71,7 +71,7 @@ class MempoolBitcoinClient implements ChainExplorerClient
                 'from_address' => $from,
                 'to_address' => $address,
                 'coin' => strtoupper($coin),
-                'network' => $network ?: 'Bitcoin',
+                'network' => app(\App\Modules\Wallet\Services\NetworkRegistry::class)->resolveId($network ?: 'bitcoin'),
                 'token_contract' => null,
                 'raw' => $tx,
             ];

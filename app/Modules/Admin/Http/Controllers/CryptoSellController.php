@@ -11,6 +11,7 @@ use App\Models\WalletFunding;
 use App\Modules\Admin\Services\AuditLogService;
 use App\Modules\Admin\Services\FinancialAuditLog;
 use App\Modules\Wallet\Services\CryptoExplorerUrl;
+use App\Modules\Wallet\Services\NetworkRegistry;
 use App\Modules\Wallet\Services\WalletService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,6 +24,7 @@ class CryptoSellController extends Controller
         private WalletService $walletService,
         private AuditLogService $audit,
         private FinancialAuditLog $financialAudit,
+        private NetworkRegistry $networks,
     ) {}
 
     public function index(Request $request): View
@@ -131,6 +133,31 @@ class CryptoSellController extends Controller
         $required = (int) ($cryptoSellRequest->required_confirmations ?? 1);
         $observed = (int) ($cryptoSellRequest->confirmations_observed ?? $incoming?->confirmations ?? 0);
 
+        $userId = (int) $cryptoSellRequest->user_id;
+        $approvedSells = CryptoSellRequest::query()
+            ->where('user_id', $userId)
+            ->where('status', CryptoSellRequest::STATUS_APPROVED)
+            ->count();
+        $rejectedSells = CryptoSellRequest::query()
+            ->where('user_id', $userId)
+            ->where('status', CryptoSellRequest::STATUS_REJECTED)
+            ->count();
+        $totalSells = CryptoSellRequest::query()->where('user_id', $userId)->count();
+
+        $depositWallet = $cryptoSellRequest->depositWallet;
+        $openOnWallet = $depositWallet ? $depositWallet->openOrdersUsingAddress() : 0;
+
+        $expected = (float) $cryptoSellRequest->amount_crypto;
+        $received = $incoming ? (float) $incoming->amount : null;
+        $difference = null;
+        $differenceLabel = '—';
+        if ($received !== null) {
+            $difference = round($received - $expected, 10);
+            $differenceLabel = abs($difference) < 1e-12
+                ? 'Exact'
+                : ($difference < 0 ? 'Under' : 'Over');
+        }
+
         return view('dashboard.admin.crypto-sells.show', [
             'request' => $cryptoSellRequest,
             'incoming' => $incoming,
@@ -138,6 +165,21 @@ class CryptoSellController extends Controller
             'confirmationsReady' => $observed >= $required,
             'required' => $required,
             'observed' => $observed,
+            'networkLabel' => $this->networks->label((string) $cryptoSellRequest->network),
+            'stage' => $cryptoSellRequest->trackingStage(),
+            'customerTrust' => [
+                'approved' => $approvedSells,
+                'rejected' => $rejectedSells,
+                'total' => $totalSells,
+                'first' => $totalSells <= 1,
+                'disputes' => $rejectedSells,
+            ],
+            'expectedCrypto' => $expected,
+            'receivedCrypto' => $received,
+            'difference' => $difference,
+            'differenceLabel' => $differenceLabel,
+            'depositWallet' => $depositWallet,
+            'openOnWallet' => $openOnWallet,
         ]);
     }
 

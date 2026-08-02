@@ -22,6 +22,7 @@ class ExchangeRate extends Model
         'coingecko_id',
         'bybit_symbol',
         'allowed_network_ids',
+        'preferred_network_id',
         'logo_url',
         'buy_rate_ngn',
         'sell_rate_ngn',
@@ -124,19 +125,33 @@ class ExchangeRate extends Model
     }
 
     /**
+     * Allowed network IDs from catalog (business SoT). Null/unset = none until admin saves.
+     *
      * @return list<string>
      */
     public function resolvedNetworkIds(): array
     {
         $stored = $this->allowed_network_ids;
-
-        if (is_array($stored)) {
-            return array_values(array_filter($stored, fn ($id) => is_string($id) && $id !== ''));
+        if (! is_array($stored)) {
+            return [];
         }
 
-        $map = config('crypto.network_ids_by_coin', []);
-        $list = $map[strtoupper((string) $this->asset)] ?? [];
+        return array_values(array_unique(array_filter(
+            array_map(function ($id) {
+                if (! is_string($id) || $id === '') {
+                    return '';
+                }
+                $id = strtolower(trim($id));
 
-        return array_values(array_filter($list, fn ($id) => is_string($id) && $id !== ''));
+                return $id === 'bep20' ? 'bsc' : $id;
+            }, $stored),
+            fn ($id) => $id !== ''
+        )));
+    }
+
+    public function canEnableForOtcDeposits(): bool
+    {
+        return app(\App\Modules\Wallet\Services\NetworkRegistry::class)
+            ->canEnableForOtc((string) $this->asset);
     }
 }

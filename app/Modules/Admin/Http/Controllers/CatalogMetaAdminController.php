@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ExchangeRate;
 use App\Modules\Wallet\Services\CryptoPriceService;
 use App\Modules\Wallet\Services\ExchangeQuoteService;
+use App\Modules\Wallet\Services\NetworkRegistry;
 use App\Modules\Wallet\Services\WalletAllocationService;
 use App\Support\SortOrder;
 use Illuminate\Http\JsonResponse;
@@ -20,6 +21,7 @@ class CatalogMetaAdminController extends Controller
     public function __construct(
         private ExchangeQuoteService $quotes,
         private WalletAllocationService $allocation,
+        private NetworkRegistry $networks,
     ) {}
 
     public function platformCategories(): RedirectResponse
@@ -137,7 +139,7 @@ class CatalogMetaAdminController extends Controller
             'max_amount_usd' => $data['max_amount_usd'] ?? null,
             'processing_time' => $data['processing_time'] ?? null,
             'is_featured' => $request->boolean('is_featured'),
-            'is_active' => $request->boolean('is_active', true),
+            'is_active' => (bool) ($data['is_active'] ?? false),
             'sort_order' => SortOrder::next(ExchangeRate::class),
         ];
         if (Schema::hasColumn('exchange_rates', 'spread_ngn')) {
@@ -145,6 +147,9 @@ class CatalogMetaAdminController extends Controller
         }
         if (Schema::hasColumn('exchange_rates', 'allowed_network_ids')) {
             $payload['allowed_network_ids'] = $data['allowed_network_ids'];
+        }
+        if (Schema::hasColumn('exchange_rates', 'preferred_network_id')) {
+            $payload['preferred_network_id'] = $data['preferred_network_id'] ?? null;
         }
 
         ExchangeRate::create($payload);
@@ -182,13 +187,16 @@ class CatalogMetaAdminController extends Controller
             'max_amount_usd' => $data['max_amount_usd'] ?? null,
             'processing_time' => $data['processing_time'] ?? null,
             'is_featured' => $request->boolean('is_featured'),
-            'is_active' => $request->boolean('is_active', true),
+            'is_active' => (bool) ($data['is_active'] ?? false),
         ];
         if (Schema::hasColumn('exchange_rates', 'spread_ngn')) {
             $payload['spread_ngn'] = $spread;
         }
         if (Schema::hasColumn('exchange_rates', 'allowed_network_ids')) {
             $payload['allowed_network_ids'] = $data['allowed_network_ids'];
+        }
+        if (Schema::hasColumn('exchange_rates', 'preferred_network_id')) {
+            $payload['preferred_network_id'] = $data['preferred_network_id'] ?? null;
         }
 
         $exchangeRate->update($payload);
@@ -224,13 +232,18 @@ class CatalogMetaAdminController extends Controller
         $symbol = strtoupper((string) ($rate?->asset ?? ''));
         $coinUsd = $symbol !== '' ? $this->safeCoinUsd($symbol) : 0.0;
 
-        $networkIdsByCoin = [];
-        foreach (config('crypto.network_ids_by_coin', []) as $coin => $ids) {
-            $networkIdsByCoin[$coin] = collect($ids)->map(fn ($id) => [
-                'id' => $id,
-                'label' => $this->allocation->displayLabelForNetworkId($id),
-            ])->values()->all();
+        $suggestByCoin = [];
+        foreach (config('crypto.suggest_network_ids_by_coin', []) as $coin => $ids) {
+            $suggestByCoin[strtoupper((string) $coin)] = array_values(array_map(
+                fn ($id) => $this->networks->resolveId((string) $id),
+                is_array($ids) ? $ids : []
+            ));
         }
+
+        // Soft suggests only for new coins; respect an explicitly saved empty list on edit.
+        $selectedIds = $rate
+            ? $rate->resolvedNetworkIds()
+            : ($suggestByCoin[$symbol] ?? []);
 
         return [
             'coins' => $prices->marketCatalog(),
@@ -240,8 +253,12 @@ class CatalogMetaAdminController extends Controller
             'calculatedBuyRate' => $usdNgn > 0 ? max(0, round($usdNgn - $coinSpread, 2)) : null,
             'initialCoinUsd' => $coinUsd,
             'initialCoinNgn' => ($coinUsd > 0 && $usdNgn > 0) ? round($coinUsd * $usdNgn, 2) : null,
-            'networkIdsByCoin' => $networkIdsByCoin,
-            'selectedNetworkIds' => $rate?->resolvedNetworkIds() ?? [],
+            'registryNetworks' => $this->networks->checkboxOptions(),
+            'suggestNetworkIdsByCoin' => $suggestByCoin,
+            'selectedNetworkIds' => $selectedIds,
+            'preferredNetworkId' => $rate?->preferred_network_id
+                ? $this->networks->resolveId((string) $rate->preferred_network_id)
+                : ($selectedIds[0] ?? null),
             'coinMarketUrl' => route('admin.exchange-rates.coin-market'),
             'otcSettingsUrl' => route('admin.otc-pricing'),
         ];
@@ -288,6 +305,7 @@ class CatalogMetaAdminController extends Controller
             'is_active' => ['sometimes', 'boolean'],
             'allowed_network_ids' => ['nullable', 'array'],
             'allowed_network_ids.*' => ['string', 'max:40'],
+            'preferred_network_id' => ['nullable', 'string', 'max:40'],
         ]);
 
         if ($market > 0 && (float) $validated['spread_ngn'] >= $market) {
@@ -297,21 +315,44 @@ class CatalogMetaAdminController extends Controller
         }
 
         $asset = strtoupper($validated['asset']);
-        $whitelist = $this->allocation->networkIdsForCoin($asset);
-        $requested = array_values(array_unique(array_map(
-            'strtolower',
-            array_filter($validated['allowed_network_ids'] ?? [], fn ($id) => is_string($id) && $id !== '')
-        )));
-
-        foreach ($requested as $id) {
-            if (! in_array($id, $whitelist, true)) {
+        $registryIds = $this->networks->ids();
+        $requested = [];
+        foreach ($validated['allowed_network_ids'] ?? [] as $id) {
+            if (! is_string($id) || $id === '') {
+                continue;
+            }
+            $resolved = $this->networks->resolveId($id);
+            if (! in_array($resolved, $registryIds, true)) {
                 throw \Illuminate\Validation\ValidationException::withMessages([
-                    'allowed_network_ids' => "Network {$id} is not allowed for {$asset}.",
+                    'allowed_network_ids' => 'Unknown network selected.',
                 ]);
             }
+            $requested[] = $resolved;
+        }
+        $requested = array_values(array_unique($requested));
+
+        $preferred = isset($validated['preferred_network_id']) && $validated['preferred_network_id'] !== ''
+            ? $this->networks->resolveId((string) $validated['preferred_network_id'])
+            : null;
+        if ($preferred && ! in_array($preferred, $requested, true)) {
+            $preferred = $requested[0] ?? null;
+        }
+        if (! $preferred && $requested !== []) {
+            $preferred = $requested[0];
         }
 
-        $validated['allowed_network_ids'] = array_values(array_intersect($whitelist, $requested));
+        $monitorable = array_values(array_filter($requested, fn ($id) => $this->networks->isMonitorable($id)));
+        $wantsActive = $request->boolean('is_active', true);
+        if ($wantsActive && $monitorable === []) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'allowed_network_ids' => $asset.' cannot be enabled for OTC deposits. Select at least one network with a blockchain monitor (or leave the coin inactive).',
+                'is_active' => 'Activate requires at least one monitorable deposit network.',
+            ]);
+        }
+
+        $validated['allowed_network_ids'] = $requested;
+        $validated['preferred_network_id'] = $preferred;
+        $validated['is_active'] = $wantsActive && $monitorable !== [];
         $validated['asset'] = $asset;
 
         return $validated;

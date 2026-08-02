@@ -40,18 +40,18 @@ class MonitoredNetworkCatalog
         $map = config('crypto.network_client', []);
         foreach ($map as $label => $networkId) {
             if (strcasecmp((string) $label, $network) === 0) {
-                return strtolower((string) $networkId);
+                return $this->normalizeCanonicalId(strtolower((string) $networkId));
             }
         }
 
         $key = strtolower(trim($network));
         foreach ($this->all() as $id => $meta) {
             if (strcasecmp($id, $key) === 0) {
-                return $id;
+                return $this->normalizeCanonicalId($id);
             }
             foreach ($meta['aliases'] ?? [] as $alias) {
                 if (strcasecmp((string) $alias, $network) === 0 || strcasecmp((string) $alias, $key) === 0) {
-                    return $id;
+                    return $this->normalizeCanonicalId($id);
                 }
             }
         }
@@ -61,12 +61,24 @@ class MonitoredNetworkCatalog
             'eth' => 'ethereum',
             'erc20' => 'ethereum',
             'trc20' => 'tron',
+            'bep20' => 'bsc',
+            'bnb' => 'bsc',
             'sol' => 'solana',
             'matic' => 'polygon',
             'arb' => 'arbitrum',
         ];
 
-        return $legacy[$key] ?? $key;
+        return $this->normalizeCanonicalId($legacy[$key] ?? $key);
+    }
+
+    private function normalizeCanonicalId(string $id): string
+    {
+        $id = strtolower(trim($id));
+
+        return match ($id) {
+            'bep20', 'binance-smart-chain' => 'bsc',
+            default => $id,
+        };
     }
 
     public function definition(string $networkId): ?array

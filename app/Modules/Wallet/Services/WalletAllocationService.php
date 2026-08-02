@@ -12,6 +12,10 @@ use RuntimeException;
 
 class WalletAllocationService
 {
+    public function __construct(
+        private NetworkRegistry $networks,
+    ) {}
+
     /**
      * Allocate a deposit wallet and a unique crypto fingerprint for this quote.
      *
@@ -92,25 +96,30 @@ class WalletAllocationService
 
     public function activeWalletCount(string $coin, string $network): int
     {
-        return CryptoDepositWallet::query()
-            ->active()
-            ->whereRaw('UPPER(coin) = ?', [strtoupper($coin)])
-            ->whereRaw('LOWER(network) = ?', [strtolower($network)])
-            ->count();
+        return $this->walletsOnNetworkQuery($coin, $network)->active()->count();
     }
 
     public function canActivateAnother(string $coin, string $network, ?int $exceptWalletId = null): bool
     {
-        $q = CryptoDepositWallet::query()
-            ->active()
-            ->whereRaw('UPPER(coin) = ?', [strtoupper($coin)])
-            ->whereRaw('LOWER(network) = ?', [strtolower($network)])
-            ->lockForUpdate();
+        $q = $this->walletsOnNetworkQuery($coin, $network)->active()->lockForUpdate();
         if ($exceptWalletId) {
             $q->where('id', '!=', $exceptWalletId);
         }
 
         return $q->count() < $this->maxActiveWallets();
+    }
+
+    /**
+     * @return Builder<\App\Models\CryptoDepositWallet>
+     */
+    private function walletsOnNetworkQuery(string $coin, string $network): Builder
+    {
+        $variants = $this->networks->storageVariants($network);
+        $placeholders = implode(',', array_fill(0, count($variants), '?'));
+
+        return CryptoDepositWallet::query()
+            ->whereRaw('UPPER(coin) = ?', [strtoupper($coin)])
+            ->whereRaw('LOWER(network) IN ('.$placeholders.')', $variants);
     }
 
     /**
@@ -137,147 +146,66 @@ class WalletAllocationService
     }
 
     /**
-     * Whitelist of canonical network IDs for a coin (from config).
+     * Soft-suggested network IDs for a symbol (not a runtime ceiling).
      *
      * @return list<string>
      */
     public function networkIdsForCoin(string $coin): array
     {
-        $map = config('crypto.network_ids_by_coin', []);
-        $list = $map[strtoupper(trim($coin))] ?? [];
-
-        return array_values(array_filter($list, fn ($id) => is_string($id) && $id !== ''));
+        return $this->networks->suggestDefaultsForAsset($coin);
     }
 
     /**
-     * Wallet / order network labels for a coin (from catalog allowed IDs, else config).
+     * Canonical network IDs allowed for a coin (Coin Catalog SoT).
      *
      * @return list<string>
      */
     public function networksForCoin(string $coin): array
     {
-        $coin = strtoupper(trim($coin));
-        $ids = [];
-        $fromCatalog = false;
-
-        if (\Illuminate\Support\Facades\Schema::hasTable('exchange_rates')
-            && \Illuminate\Support\Facades\Schema::hasColumn('exchange_rates', 'allowed_network_ids')) {
-            $row = \App\Models\ExchangeRate::query()
-                ->whereRaw('UPPER(asset) = ?', [$coin])
-                ->first();
-            if ($row) {
-                $fromCatalog = is_array($row->allowed_network_ids);
-                $ids = $row->resolvedNetworkIds();
-            }
-        }
-
-        // Explicit empty catalog list means no deposit networks — do not revive via config.
-        if ($ids === [] && ! $fromCatalog) {
-            $ids = $this->networkIdsForCoin($coin);
-        }
-
-        if ($ids !== []) {
-            return array_values(array_unique(array_map(
-                fn (string $id) => $this->walletLabelForNetworkId($coin, $id),
-                $ids
-            )));
-        }
-
-        if ($fromCatalog) {
-            return [];
-        }
-
-        // Legacy label map fallback.
-        $map = config('crypto.networks_by_coin', []);
-        $list = $map[$coin] ?? [];
-
-        return array_values(array_filter($list, fn ($n) => is_string($n) && $n !== ''));
+        return $this->networks->monitorableIdsForCoin($coin);
     }
 
     /**
-     * Human wallet/order label for a monitored network ID (storage form used today).
+     * @deprecated Use NetworkRegistry::label(). Kept for callers during transition.
      */
     public function walletLabelForNetworkId(string $coin, string $networkId): string
     {
-        $coin = strtoupper(trim($coin));
-        $networkId = strtolower(trim($networkId));
-
-        return match ($networkId) {
-            'bitcoin' => 'Bitcoin',
-            'ethereum' => in_array($coin, ['ETH'], true) ? 'Ethereum' : 'ERC20',
-            'tron' => 'TRC20',
-            'bep20' => 'BEP20',
-            'polygon' => 'Polygon',
-            'base' => 'Base',
-            'arbitrum' => 'Arbitrum',
-            'solana' => 'Solana',
-            default => (string) (config('crypto.monitored_networks.'.$networkId.'.label') ?? $networkId),
-        };
+        return $this->displayLabelForNetworkId($networkId);
     }
 
     /**
-     * Display label for UI (from monitored_networks).
+     * Display label for UI (admins never see raw IDs).
      */
     public function displayLabelForNetworkId(string $networkId): string
     {
-        $networkId = strtolower(trim($networkId));
-        $label = config('crypto.monitored_networks.'.$networkId.'.label');
-
-        return is_string($label) && $label !== '' ? $label : $networkId;
+        return $this->networks->label($networkId);
     }
 
+    /**
+     * Resolve input to a canonical network ID allowed for the coin.
+     */
     public function canonicalizeNetwork(string $coin, string $network): string
     {
-        $allowed = $this->networksForCoin($coin);
-        foreach ($allowed as $label) {
-            if (strcasecmp($label, $network) === 0) {
-                return $label;
-            }
+        $resolvedId = $this->networks->resolveId($network);
+        $allowed = $this->networks->monitorableIdsForCoin($coin);
+
+        if (in_array($resolvedId, $allowed, true)) {
+            return $resolvedId;
         }
 
-        // Accept canonical IDs and map to wallet labels.
-        $ids = $this->networkIdsForCoin($coin);
-        $catalog = app(\App\Modules\Wallet\Services\Blockchain\MonitoredNetworkCatalog::class);
-        try {
-            $resolvedId = $catalog->resolveId($network);
-        } catch (\Throwable) {
-            $resolvedId = strtolower(trim($network));
+        $catalogIds = $this->networks->idsForCoin($coin);
+        if ($catalogIds === []) {
+            throw new RuntimeException(
+                "{$coin} has no deposit networks in Coin Catalog. Assign a monitorable network before taking OTC deposits."
+            );
         }
-        if (in_array($resolvedId, $ids, true) || ($ids === [] && $resolvedId !== '')) {
-            $label = $this->walletLabelForNetworkId($coin, $resolvedId);
-            if ($allowed === [] || in_array($label, $allowed, true)) {
-                return $label;
-            }
-            // If label differs but ID is whitelisted, still allow.
-            if (in_array($resolvedId, $ids, true)) {
-                return $label;
-            }
+        if (in_array($resolvedId, $catalogIds, true) && ! $this->networks->isMonitorable($resolvedId)) {
+            throw new RuntimeException(
+                "Network {$this->networks->label($resolvedId)} has no blockchain monitor configured."
+            );
         }
 
-        $aliases = [
-            'btc' => 'Bitcoin',
-            'bitcoin' => 'Bitcoin',
-            'eth' => 'Ethereum',
-            'ethereum' => 'Ethereum',
-            'trc20' => 'TRC20',
-            'tron' => 'TRC20',
-            'erc20' => 'ERC20',
-            'bep20' => 'BEP20',
-            'bsc' => 'BEP20',
-            'polygon' => 'Polygon',
-            'matic' => 'Polygon',
-            'sol' => 'Solana',
-            'solana' => 'Solana',
-            'base' => 'Base',
-            'arbitrum' => 'Arbitrum',
-            'arb' => 'Arbitrum',
-        ];
-        $key = strtolower(trim($network));
-        if (isset($aliases[$key]) && in_array($aliases[$key], $allowed, true)) {
-            return $aliases[$key];
-        }
-
-        throw new RuntimeException("Unsupported network {$network} for {$coin}.");
+        throw new RuntimeException("Unsupported network for {$coin}.");
     }
 
     public function precisionFor(string $coin): int
@@ -313,19 +241,7 @@ class WalletAllocationService
 
     public function tokenContract(string $coin, string $network): ?string
     {
-        $map = config('crypto.token_contracts.'.strtoupper($coin), []);
-        if (! is_array($map)) {
-            return null;
-        }
-        try {
-            $canonical = $this->canonicalizeNetwork($coin, $network);
-        } catch (\Throwable) {
-            $canonical = $network;
-        }
-
-        $contract = $map[$canonical] ?? null;
-
-        return is_string($contract) && $contract !== '' ? $contract : null;
+        return $this->networks->tokenContract($coin, $network);
     }
 
     /**
@@ -333,11 +249,7 @@ class WalletAllocationService
      */
     private function eligibleWallets(string $coin, string $network, int $maxPerWallet, bool $lock = false): Collection
     {
-        $q = CryptoDepositWallet::query()
-            ->active()
-            ->whereRaw('UPPER(coin) = ?', [$coin])
-            ->whereRaw('LOWER(network) = ?', [strtolower($network)])
-            ->orderBy('id');
+        $q = $this->walletsOnNetworkQuery($coin, $network)->active()->orderBy('id');
 
         if ($lock) {
             $q->lockForUpdate();
@@ -355,12 +267,7 @@ class WalletAllocationService
 
     private function occupyingCount(CryptoDepositWallet $wallet): int
     {
-        $q = CryptoSellRequest::query()
-            ->where('platform_address', $wallet->address)
-            ->whereRaw('UPPER(coin) = ?', [strtoupper($wallet->coin)])
-            ->whereRaw('LOWER(network) = ?', [strtolower((string) $wallet->network)]);
-
-        return $this->applyOccupyingOrdersFilter($q)->count();
+        return $this->applyOccupyingOrdersFilter($this->ordersOnWalletQuery($wallet))->count();
     }
 
     /**
@@ -369,24 +276,32 @@ class WalletAllocationService
     private function openAmountsOnWallet(CryptoDepositWallet $wallet, bool $lock = false): array
     {
         $precision = $this->precisionFor($wallet->coin);
-        $q = CryptoSellRequest::query()
-            ->where('platform_address', $wallet->address)
-            ->whereRaw('UPPER(coin) = ?', [strtoupper($wallet->coin)])
-            ->whereRaw('LOWER(network) = ?', [strtolower($wallet->network)]);
-
+        $q = $this->ordersOnWalletQuery($wallet);
         $this->applyOccupyingOrdersFilter($q);
 
         if ($lock) {
             $q->lockForUpdate();
         }
 
-        $rows = $q->pluck('amount_crypto');
-
         $taken = [];
-        foreach ($rows as $amt) {
+        foreach ($q->pluck('amount_crypto') as $amt) {
             $taken[$this->amountKey((float) $amt, $precision)] = true;
         }
 
         return $taken;
+    }
+
+    /**
+     * @return Builder<\App\Models\CryptoSellRequest>
+     */
+    private function ordersOnWalletQuery(CryptoDepositWallet $wallet): Builder
+    {
+        $variants = $this->networks->storageVariants((string) $wallet->network);
+        $placeholders = implode(',', array_fill(0, count($variants), '?'));
+
+        return CryptoSellRequest::query()
+            ->where('platform_address', $wallet->address)
+            ->whereRaw('UPPER(coin) = ?', [strtoupper($wallet->coin)])
+            ->whereRaw('LOWER(network) IN ('.$placeholders.')', $variants);
     }
 }

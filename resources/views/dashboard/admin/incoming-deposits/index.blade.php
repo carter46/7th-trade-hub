@@ -23,10 +23,11 @@
         @foreach ($deposits as $d)
             @php
                 $url = \App\Modules\Wallet\Services\CryptoExplorerUrl::forTx($d->network, $d->tx_hash);
+                $networkLabel = app(\App\Modules\Wallet\Services\NetworkRegistry::class)->label((string) $d->network);
             @endphp
             <tr>
                 <x-dashboard.td class="text-xs">{{ $d->detected_at }}</x-dashboard.td>
-                <x-dashboard.td>{{ $d->coin }} / {{ $d->network }}</x-dashboard.td>
+                <x-dashboard.td>{{ $d->coin }} / {{ $networkLabel }}</x-dashboard.td>
                 <x-dashboard.td>{{ $d->amount }}</x-dashboard.td>
                 <x-dashboard.td class="text-xs">
                     <span class="font-mono break-all">{{ \Illuminate\Support\Str::limit($d->tx_hash, 18) }}</span>

@@ -661,6 +661,11 @@ document.addEventListener('alpine:init', () => {
                 this.network = '';
                 return;
             }
+            const preferred = this.row?.preferred_network;
+            if (preferred && nets.find((n) => n.network === preferred)) {
+                this.network = preferred;
+                return;
+            }
             if (!nets.find((n) => n.network === this.network)) {
                 this.network = nets[0].network;
             }
