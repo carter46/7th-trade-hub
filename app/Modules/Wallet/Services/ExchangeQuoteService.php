@@ -122,7 +122,7 @@ class ExchangeQuoteService
                 ->where('is_active', true)
                 ->first();
             $coinRate = (float) ($row?->sell_rate_ngn ?? 0);
-            if ($coinRate > 0) {
+            if ($coinRate > 0 && $coinRate <= ExchangeRate::maxBuyRatePerUsd()) {
                 $market = $global['market'] > 0 ? $global['market'] : $coinRate;
 
                 return [

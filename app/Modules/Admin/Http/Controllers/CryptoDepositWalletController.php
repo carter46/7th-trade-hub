@@ -242,7 +242,6 @@ class CryptoDepositWalletController extends Controller
      */
     private function walletFormData(?CryptoDepositWallet $wallet = null): array
     {
-        $allNetworks = config('crypto.networks_by_coin', []);
         $catalog = \App\Models\ExchangeRate::query()
             ->active()
             ->orderBy('sort_order')
@@ -253,28 +252,35 @@ class CryptoDepositWalletController extends Controller
         $networksByCoin = [];
         foreach ($catalog as $rate) {
             $symbol = strtoupper((string) $rate->asset);
-            if ($symbol === '' || ! isset($allNetworks[$symbol])) {
+            if ($symbol === '') {
+                continue;
+            }
+            $labels = $this->allocation->networksForCoin($symbol);
+            if ($labels === []) {
                 continue;
             }
             $catalogCoins[] = [
                 'symbol' => $symbol,
                 'logo' => $rate->resolvedLogoUrl(),
             ];
-            $networksByCoin[$symbol] = $allNetworks[$symbol];
+            $networksByCoin[$symbol] = $labels;
         }
 
         // Keep the current wallet coin selectable even if it was deactivated in catalog.
         if ($wallet) {
             $symbol = strtoupper((string) $wallet->coin);
-            if ($symbol !== '' && isset($allNetworks[$symbol]) && ! isset($networksByCoin[$symbol])) {
-                $catalogCoins[] = [
-                    'symbol' => $symbol,
-                    'logo' => \App\Models\ExchangeRate::query()
-                        ->whereRaw('UPPER(asset) = ?', [$symbol])
-                        ->first()
-                        ?->resolvedLogoUrl(),
-                ];
-                $networksByCoin[$symbol] = $allNetworks[$symbol];
+            if ($symbol !== '' && ! isset($networksByCoin[$symbol])) {
+                $labels = $this->allocation->networksForCoin($symbol);
+                if ($labels !== []) {
+                    $catalogCoins[] = [
+                        'symbol' => $symbol,
+                        'logo' => \App\Models\ExchangeRate::query()
+                            ->whereRaw('UPPER(asset) = ?', [$symbol])
+                            ->first()
+                            ?->resolvedLogoUrl(),
+                    ];
+                    $networksByCoin[$symbol] = $labels;
+                }
             }
         }
 

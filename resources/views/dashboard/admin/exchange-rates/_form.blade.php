@@ -1,74 +1,92 @@
 @php
     $rate = $rate ?? null;
     $coins = $coins ?? [];
+    $usdNgnReference = (float) ($usdNgnReference ?? 0);
+    $initialCoinUsd = (float) ($initialCoinUsd ?? 0);
+    $initialCoinNgn = $initialCoinNgn ?? null;
+    $initialBuyRate = old('sell_rate_ngn', $initialBuyRate ?? null);
+    $networkIdsByCoin = $networkIdsByCoin ?? [];
+    $selectedNetworkIds = old('allowed_network_ids', $selectedNetworkIds ?? []);
+    if (! is_array($selectedNetworkIds)) {
+        $selectedNetworkIds = [];
+    }
+    $coinMarketUrl = $coinMarketUrl ?? route('admin.exchange-rates.coin-market');
+    $otcSettingsUrl = $otcSettingsUrl ?? route('admin.otc-pricing');
     $selected = [
         'id' => old('coingecko_id', $rate?->coingecko_id),
         'symbol' => old('asset', $rate?->asset),
         'name' => old('asset', $rate?->asset),
         'logo' => old('logo_url', $rate?->logo_url),
-        'price_ngn' => null,
     ];
-    // OTC / public quotes use sell_rate_ngn as the payout when customers sell crypto to you.
-    $initialCustomerRate = old('sell_rate_ngn', $rate?->sell_rate_ngn);
 @endphp
 
-{{--
-  Platform only buys crypto from customers (customers sell to you).
-  UI: market rate + your buy-from-customer rate.
-  DB: sell_rate_ngn is the live OTC payout field; buy_rate_ngn is kept in sync for legacy columns.
---}}
 <div
     class="space-y-4"
     x-data="{
         coins: @js($coins),
         selected: @js($selected),
-        customerRate: @js($initialCustomerRate),
-        marketRate: null,
-        spreadPercent: 0,
+        networkIdsByCoin: @js($networkIdsByCoin),
+        selectedNetworkIds: @js(array_values($selectedNetworkIds)),
+        usdNgn: @js($usdNgnReference),
+        coinUsd: @js($initialCoinUsd > 0 ? $initialCoinUsd : null),
+        coinNgn: @js($initialCoinNgn),
+        customerRate: @js($initialBuyRate !== null ? (float) $initialBuyRate : null),
+        spreadNgn: 25,
         linkSpread: true,
+        marketLoading: false,
         query: @js(($selected['symbol'] ?? null) ? (($selected['symbol'] ?? '').(isset($selected['name']) && $selected['name'] ? ' · '.$selected['name'] : '')) : ''),
         open: false,
+        coinMarketUrl: @js($coinMarketUrl),
         init() {
-            if (this.selected?.price_ngn != null) {
-                this.marketRate = this.roundRate(Number(this.selected.price_ngn));
-            }
             this.syncSpreadFromRates();
-            this.$watch('spreadPercent', () => { if (this.linkSpread) this.applyRateFromMarket(); });
-            this.$watch('marketRate', () => { if (this.linkSpread) this.applyRateFromMarket(); });
+            if (this.selected?.symbol) {
+                this.refreshCoinMarket(this.selected.symbol, false);
+                this.ensureNetworkSelection();
+            }
+            this.$watch('spreadNgn', () => { if (this.linkSpread) this.applyRateFromFx(); });
+            this.$watch('usdNgn', () => { if (this.linkSpread) this.applyRateFromFx(); });
             this.$watch('customerRate', () => {
                 if (! this.linkSpread) this.syncSpreadFromRates();
             });
             this.$watch('linkSpread', (on) => {
-                if (on) this.applyRateFromMarket();
+                if (on) this.applyRateFromFx();
             });
+            this.$watch('selected.symbol', () => this.ensureNetworkSelection());
         },
         roundRate(n) {
             return Math.round(Number(n) * 100) / 100;
         },
-        applyRateFromMarket() {
-            const market = Number(this.marketRate);
-            const pct = Number(this.spreadPercent);
-            if (! (market > 0) || Number.isNaN(pct)) return;
-            // Positive spread = you pay below market (your buy discount).
-            this.customerRate = this.roundRate(market * (1 - pct / 100));
+        get networkOptions() {
+            const sym = (this.selected?.symbol || '').toUpperCase();
+            return this.networkIdsByCoin[sym] || [];
+        },
+        ensureNetworkSelection() {
+            const opts = this.networkOptions.map((o) => o.id);
+            this.selectedNetworkIds = this.selectedNetworkIds.filter((id) => opts.includes(id));
+            if (this.selectedNetworkIds.length === 0 && opts.length > 0) {
+                this.selectedNetworkIds = [...opts];
+            }
+        },
+        toggleNetwork(id) {
+            if (this.selectedNetworkIds.includes(id)) {
+                this.selectedNetworkIds = this.selectedNetworkIds.filter((x) => x !== id);
+            } else {
+                this.selectedNetworkIds = [...this.selectedNetworkIds, id];
+            }
+        },
+        applyRateFromFx() {
+            const market = Number(this.usdNgn);
+            const spread = Number(this.spreadNgn);
+            if (! (market > 0) || Number.isNaN(spread)) return;
+            this.customerRate = this.roundRate(Math.max(0, market - spread));
         },
         syncSpreadFromRates() {
-            const market = Number(this.marketRate);
+            const market = Number(this.usdNgn);
             const rate = Number(this.customerRate);
             if (! (market > 0) || ! (rate > 0)) {
-                this.spreadPercent = 0;
                 return;
             }
-            this.spreadPercent = this.roundRate(((market - rate) / market) * 100);
-        },
-        get marketHint() {
-            if (this.marketRate == null || Number.isNaN(Number(this.marketRate))) return '';
-            return ' · Market ₦' + Number(this.marketRate).toLocaleString('en-NG');
-        },
-        get spreadDiff() {
-            const market = Number(this.marketRate) || 0;
-            const rate = Number(this.customerRate) || 0;
-            return this.roundRate(market - rate);
+            this.spreadNgn = this.roundRate(Math.max(0, market - rate));
         },
         filteredCoins() {
             const q = (this.query || '').trim().toLowerCase();
@@ -79,23 +97,39 @@
                 return hay.includes(q);
             }).slice(0, 40);
         },
+        async refreshCoinMarket(symbol, resetNetworks = true) {
+            if (! symbol) return;
+            this.marketLoading = true;
+            try {
+                const res = await fetch(this.coinMarketUrl + '?asset=' + encodeURIComponent(symbol), {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                });
+                const data = await res.json().catch(() => ({}));
+                if (data.ok) {
+                    this.coinUsd = data.coin_usd > 0 ? data.coin_usd : null;
+                    this.coinNgn = data.coin_ngn;
+                    if (data.usd_ngn > 0) this.usdNgn = data.usd_ngn;
+                    if (this.linkSpread) this.applyRateFromFx();
+                }
+            } catch (e) {
+                // keep previous
+            } finally {
+                this.marketLoading = false;
+                if (resetNetworks) this.ensureNetworkSelection();
+            }
+        },
         pick(coin) {
             this.selected = coin;
             this.query = `${coin.symbol} · ${coin.name}`;
             this.open = false;
-            if (coin.price_ngn != null && Number(coin.price_ngn) > 0) {
-                this.marketRate = this.roundRate(Number(coin.price_ngn));
-                if (this.linkSpread) this.applyRateFromMarket();
-                else if (! (Number(this.customerRate) > 0)) this.customerRate = this.marketRate;
-            } else {
-                this.marketRate = null;
-            }
+            this.selectedNetworkIds = [];
+            this.refreshCoinMarket(coin.symbol, true);
         },
     }"
 >
     <div class="space-y-2">
         <label class="block text-sm font-medium text-text-primary">Coin <span class="text-danger">*</span></label>
-        <p class="text-xs text-text-muted">You only buy crypto from customers. Set the NGN rate you pay them for this coin. OTC Settings control matching tolerance and quote lifetime.</p>
+        <p class="text-xs text-text-muted">You buy crypto from customers. Set Our Buy Rate as ₦ per $1 for this coin.</p>
 
         <div class="relative">
             <div class="flex items-center gap-2 rounded-xl border border-border-default bg-elevated px-3 py-2">
@@ -132,7 +166,7 @@
                         <img x-show="coin.logo" :src="coin.logo" alt="" class="h-7 w-7 rounded-full bg-white shrink-0" width="28" height="28" referrerpolicy="no-referrer">
                         <span class="min-w-0 flex-1">
                             <span class="block truncate text-sm font-medium text-text-primary" x-text="coin.symbol + ' · ' + coin.name"></span>
-                            <span class="block truncate text-[11px] text-text-muted" x-text="coin.price_ngn != null ? ('Market ₦' + Number(coin.price_ngn).toLocaleString('en-NG') + ' / $1') : coin.id"></span>
+                            <span class="block truncate text-[11px] text-text-muted" x-text="coin.id"></span>
                         </span>
                     </button>
                 </template>
@@ -145,7 +179,6 @@
 
         <p class="text-xs text-text-muted" x-show="selected?.symbol">
             Selected: <span class="font-medium text-text-primary" x-text="(selected?.symbol || '') + (selected?.name ? (' — ' + selected.name) : '')"></span>
-            <span x-show="marketHint" class="text-text-secondary" x-text="marketHint"></span>
         </p>
         @error('asset')
             <p class="text-xs text-danger">{{ $message }}</p>
@@ -156,61 +189,125 @@
         <x-dashboard.input label="Processing time" name="processing_time" :value="old('processing_time', $rate?->processing_time)" placeholder="5–15 minutes" hint="Shown to customers on the exchange page." />
         <x-dashboard.input label="Min USD" name="min_amount_usd" type="number" step="any" :value="old('min_amount_usd', $rate?->min_amount_usd)" />
         <x-dashboard.input label="Max USD" name="max_amount_usd" type="number" step="any" :value="old('max_amount_usd', $rate?->max_amount_usd)" />
+    </div>
 
-        <div class="sm:col-span-2 rounded-xl border border-border-subtle bg-muted/20 px-3 py-3 space-y-3">
+    {{-- 1. Current coin market (Bybit) --}}
+    <div class="rounded-xl border border-border-subtle bg-muted/20 px-4 py-3 space-y-1">
+        <p class="text-sm font-medium text-text-primary">
+            Current <span x-text="selected?.symbol || 'coin'"></span> Market
+        </p>
+        <p class="text-xs text-text-muted" x-show="marketLoading" x-cloak>Loading Bybit price…</p>
+        <template x-if="!marketLoading && coinUsd">
             <div>
-                <p class="text-sm font-medium text-text-primary">Current market rate (₦ per $1)</p>
-                <p class="mt-1 text-lg font-semibold text-text-primary" x-show="marketRate != null" x-cloak>
-                    ₦<span x-text="Number(marketRate).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })"></span>
-                    <span class="text-xs font-normal text-text-muted"> / $1 USD</span>
+                <p class="text-lg font-semibold text-text-primary">
+                    ≈ $<span x-text="Number(coinUsd).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })"></span>
                 </p>
-                <p class="mt-1 text-sm text-text-muted" x-show="marketRate == null" x-cloak>Pick a coin to load the live USD→NGN market rate.</p>
+                <p class="text-sm text-text-secondary" x-show="coinNgn">
+                    ≈ ₦<span x-text="Number(coinNgn).toLocaleString('en-NG', { maximumFractionDigits: 0 })"></span>
+                    per <span x-text="selected?.symbol"></span>
+                </p>
+                <p class="mt-1 text-[11px] uppercase tracking-wide text-text-muted">Source: Bybit Spot</p>
             </div>
+        </template>
+        <p class="text-sm text-text-muted" x-show="!marketLoading && !coinUsd" x-cloak>
+            Pick a coin to load the live coin price (not the ₦/$1 buy rate).
+        </p>
+    </div>
 
-            <label class="flex items-center gap-2 text-sm text-text-secondary">
-                <input type="checkbox" class="rounded border-border-default" x-model="linkSpread" :disabled="marketRate == null">
-                Set my buy rate from market with a spread %
-            </label>
-            <div class="max-w-xs">
-                <label class="mb-1.5 block text-sm font-medium text-text-primary">Spread below market %</label>
-                <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    x-model.number="spreadPercent"
-                    :disabled="! linkSpread || marketRate == null"
-                    class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2.5 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40 disabled:opacity-60"
-                >
-                <p class="mt-1 text-[11px] text-text-muted">
-                    Your buy rate = market × (1 − spread%). Example: market ₦1,500 with 2% → you pay ₦1,470.
-                </p>
-                <p class="mt-1 text-xs font-medium text-text-primary" x-show="linkSpread && marketRate != null" x-cloak>
-                    You pay
-                    <span x-text="Number(spreadDiff).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })"></span>
-                    NGN less per $1 than market
-                    <span class="font-normal text-text-muted" x-text="' (' + Number(spreadPercent || 0).toLocaleString('en-NG', { maximumFractionDigits: 2 }) + '%)'"></span>
-                </p>
-            </div>
+    {{-- 2. OTC USD→NGN --}}
+    <div class="rounded-xl border border-border-subtle bg-muted/20 px-4 py-3 space-y-1">
+        <p class="text-sm font-medium text-text-primary">Market USD→NGN</p>
+        <p class="text-lg font-semibold text-text-primary" x-show="usdNgn > 0" x-cloak>
+            ₦<span x-text="Number(usdNgn).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })"></span>
+            <span class="text-sm font-normal text-text-muted">/ $1</span>
+        </p>
+        <p class="text-sm text-text-muted" x-show="!(usdNgn > 0)" x-cloak>Set the OTC market reference in OTC Settings.</p>
+        <p class="text-[11px] text-text-muted">
+            Source: OTC Market Reference ·
+            <a href="{{ $otcSettingsUrl }}" class="text-primary underline-offset-2 hover:underline">OTC Settings</a>
+        </p>
+    </div>
+
+    {{-- 3. Our Buy Rate --}}
+    <div class="rounded-xl border border-border-default bg-elevated px-4 py-4 space-y-3">
+        <div>
+            <p class="text-sm font-medium text-text-primary">Our Buy Rate</p>
+            <p class="text-xs text-text-muted">What you pay the customer per $1 USD of this coin.</p>
         </div>
 
-        <div class="sm:col-span-2">
-            <label class="mb-1.5 block text-sm font-medium text-text-primary">Buy rate from customer (₦ per $1)</label>
-            {{-- Live OTC payout field (customers sell crypto to you). --}}
+        <label class="flex items-center gap-2 text-sm text-text-secondary">
+            <input type="checkbox" class="rounded border-border-default" x-model="linkSpread" :disabled="!(usdNgn > 0)">
+            Derive buy rate from OTC FX − spread ₦
+        </label>
+
+        <div class="max-w-xs" x-show="linkSpread" x-cloak>
+            <label class="mb-1.5 block text-sm font-medium text-text-primary">Our Spread (₦ below market)</label>
             <input
                 type="number"
                 step="0.01"
-                name="sell_rate_ngn"
-                x-model.number="customerRate"
-                :readonly="linkSpread && marketRate != null"
-                :class="(linkSpread && marketRate != null) ? 'opacity-80 cursor-not-allowed' : ''"
-                class="w-full max-w-md rounded-xl border border-border-default bg-elevated px-3 py-2.5 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+                min="0"
+                x-model.number="spreadNgn"
+                class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2.5 text-sm"
             >
-            {{-- Keep legacy buy column aligned; you do not sell crypto to customers. --}}
-            <input type="hidden" name="buy_rate_ngn" :value="customerRate" value="{{ $initialCustomerRate }}">
             <p class="mt-1 text-[11px] text-text-muted">
-                NGN you pay per $1 USD of this coin (not the price of 1 whole coin). Example: market ₦1,550 / $1 with 2% spread → you pay ₦1,519. Same scale for BTC, ETH, USDT.
+                Buy rate = USD→NGN − spread. Example: ₦1,420 − ₦25 → you pay ₦1,395 / $1.
             </p>
         </div>
+
+        <div class="max-w-md">
+            <label class="mb-1.5 block text-sm font-medium text-text-primary">Buy rate (₦ per $1) <span class="text-danger">*</span></label>
+            <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                max="{{ \App\Models\ExchangeRate::maxBuyRatePerUsd() }}"
+                name="sell_rate_ngn"
+                required
+                x-model.number="customerRate"
+                :readonly="linkSpread && usdNgn > 0"
+                :class="(linkSpread && usdNgn > 0) ? 'opacity-80 cursor-not-allowed' : ''"
+                class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2.5 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+            >
+            <input type="hidden" name="buy_rate_ngn" :value="customerRate" value="{{ $initialBuyRate }}">
+            @error('sell_rate_ngn')
+                <p class="mt-1 text-xs text-danger">{{ $message }}</p>
+            @enderror
+        </div>
+    </div>
+
+    {{-- Deposit networks (whitelist only) --}}
+    <div class="rounded-xl border border-border-subtle px-4 py-4 space-y-3">
+        <div>
+            <p class="text-sm font-medium text-text-primary">Deposit networks</p>
+            <p class="text-xs text-text-muted">Only networks this coin can use. Stored as canonical IDs for matching.</p>
+        </div>
+
+        <template x-if="networkOptions.length === 0">
+            <p class="text-sm text-text-muted">
+                No deposit networks configured for this asset. It can still have a buy rate, but it will not appear when creating deposit wallets.
+            </p>
+        </template>
+
+        <div class="space-y-2" x-show="networkOptions.length > 0" x-cloak>
+            <template x-for="opt in networkOptions" :key="opt.id">
+                <label class="flex items-center gap-2 text-sm text-text-primary">
+                    <input
+                        type="checkbox"
+                        class="rounded border-border-default"
+                        :value="opt.id"
+                        :checked="selectedNetworkIds.includes(opt.id)"
+                        @change="toggleNetwork(opt.id)"
+                    >
+                    <span x-text="opt.label"></span>
+                </label>
+            </template>
+            <template x-for="id in selectedNetworkIds" :key="'hid-'+id">
+                <input type="hidden" name="allowed_network_ids[]" :value="id">
+            </template>
+        </div>
+        @error('allowed_network_ids')
+            <p class="text-xs text-danger">{{ $message }}</p>
+        @enderror
     </div>
 
     <label class="flex items-center gap-2 text-sm text-text-secondary">

@@ -204,12 +204,22 @@
 
                             <p class="text-[10px] font-medium uppercase tracking-wider text-text-secondary">Our buy rate / $1</p>
                             <p class="font-display mt-0.5 break-all text-lg font-semibold leading-snug text-white">
-                                ₦{{ number_format($rate->sell_rate_ngn, 0) }}
+                                @if(($rate->sell_rate_ngn ?? 0) > 0)
+                                    ₦{{ number_format($rate->sell_rate_ngn, 0) }}
+                                @else
+                                    —
+                                @endif
                             </p>
 
-                            @if($rate->market_rate_ngn)
+                            @if(($rate->coin_usd ?? 0) > 0)
                                 <p class="mt-2 break-all text-[11px] text-text-muted">
-                                    Market <span class="text-text-secondary">₦{{ number_format($rate->market_rate_ngn, 0) }} / $1</span>
+                                    Market
+                                    <span class="text-text-secondary">
+                                        ≈ ${{ number_format((float) $rate->coin_usd, $rate->coin_usd >= 1 ? 2 : 4) }}
+                                        @if($rate->coin_ngn)
+                                            · ≈ ₦{{ number_format((float) $rate->coin_ngn, 0) }} per {{ $rate->asset }}
+                                        @endif
+                                    </span>
                                 </p>
                             @endif
                         </div>

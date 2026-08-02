@@ -5,7 +5,7 @@
 @section('content')
 <x-layout.page
     title="Exchange Rates"
-    subtitle="Buy rates are NGN per $1 USD for each coin — not the price of a whole coin."
+    subtitle="Our Buy Rate is ₦ per $1 (what you pay customers). Coin market price is supporting info from Bybit."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
@@ -18,15 +18,6 @@
         </x-dashboard.button>
     </x-slot:actions>
 
-    @php
-        $suspicious = $rates->getCollection()->filter(fn ($r) => (float) $r->sell_rate_ngn > 10000);
-    @endphp
-    @if ($suspicious->isNotEmpty())
-        <x-dashboard.alert variant="warning" class="mb-4" title="Some rates look like full-coin prices">
-            {{ $suspicious->pluck('asset')->join(', ') }} still have values above ₦10,000. Buy rate must be ₦ per $1 (usually around ₦1,000–₦2,000). Open each coin, refresh from market with a spread, and save.
-        </x-dashboard.alert>
-    @endif
-
     <x-dashboard.table
         :empty="$rates->isEmpty()"
         empty-title="No exchange rates"
@@ -37,13 +28,20 @@
     >
         <x-slot:head>
             <x-dashboard.th>Asset</x-dashboard.th>
-            <x-dashboard.th>Buy from customer (₦ / $1)</x-dashboard.th>
+            <x-dashboard.th>Our Buy Rate</x-dashboard.th>
+            <x-dashboard.th>Current Market</x-dashboard.th>
             <x-dashboard.th>Time</x-dashboard.th>
             <x-dashboard.th>Status</x-dashboard.th>
             <x-dashboard.th>Actions</x-dashboard.th>
         </x-slot:head>
         @foreach ($rates as $rate)
-            @php $looksWrong = (float) $rate->sell_rate_ngn > 10000; @endphp
+            @php
+                $m = $marketByAsset[$rate->id] ?? [];
+                $buyRate = $m['buy_rate'] ?? null;
+                $corrupt = (bool) ($m['buy_corrupt'] ?? false);
+                $coinUsd = $m['coin_usd'] ?? null;
+                $coinNgn = $m['coin_ngn'] ?? null;
+            @endphp
             <tr>
                 <x-dashboard.td class="font-medium">
                     <div class="flex items-center gap-2">
@@ -57,12 +55,22 @@
                     </div>
                 </x-dashboard.td>
                 <x-dashboard.td>
-                    <span @class(['text-danger font-medium' => $looksWrong])>
-                        ₦{{ number_format($rate->sell_rate_ngn, 2) }}
-                    </span>
-                    <span class="text-xs text-text-muted"> / $1</span>
-                    @if ($looksWrong)
-                        <p class="mt-0.5 text-[11px] text-danger">Looks like a full-coin price — re-save as ₦ per $1</p>
+                    @if ($buyRate !== null)
+                        <div class="text-sm font-semibold text-text-primary">₦{{ number_format($buyRate, 2) }} <span class="font-normal text-text-muted">/ $1</span></div>
+                    @else
+                        <div class="text-sm font-medium text-warning">Needs update</div>
+                        <p class="text-[11px] text-text-muted">Set Our Buy Rate as ₦ per $1</p>
+                    @endif
+                </x-dashboard.td>
+                <x-dashboard.td class="text-xs text-text-secondary">
+                    @if ($coinUsd && $coinUsd > 0)
+                        <div>≈ ${{ number_format($coinUsd, $coinUsd >= 1 ? 2 : 4) }}</div>
+                        @if ($coinNgn)
+                            <div class="text-text-muted">≈ ₦{{ number_format($coinNgn, 0) }} per {{ $rate->asset }}</div>
+                        @endif
+                        <div class="mt-0.5 text-[10px] uppercase tracking-wide text-text-muted">Bybit Spot</div>
+                    @else
+                        <span class="text-text-muted">—</span>
                     @endif
                 </x-dashboard.td>
                 <x-dashboard.td class="text-text-secondary">{{ $rate->processing_time ?: '—' }}</x-dashboard.td>

@@ -60,7 +60,7 @@
                     @endforeach
                 </select>
             </div>
-            <p class="mt-1 text-xs text-text-muted">From Coin Catalog. Max {{ $maxActive ?? 5 }} active wallets per coin + network.</p>
+            <p class="text-xs text-text-muted">From Coin Catalog (coins with deposit networks). Missing a coin? Add allowed networks on that coin in Coin Catalog. Max {{ $maxActive ?? 5 }} active wallets per coin + network.</p>
         </div>
         <div>
             <label class="block text-sm font-medium mb-1">Network</label>

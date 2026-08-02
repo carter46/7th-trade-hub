@@ -137,14 +137,93 @@ class WalletAllocationService
     }
 
     /**
+     * Whitelist of canonical network IDs for a coin (from config).
+     *
+     * @return list<string>
+     */
+    public function networkIdsForCoin(string $coin): array
+    {
+        $map = config('crypto.network_ids_by_coin', []);
+        $list = $map[strtoupper(trim($coin))] ?? [];
+
+        return array_values(array_filter($list, fn ($id) => is_string($id) && $id !== ''));
+    }
+
+    /**
+     * Wallet / order network labels for a coin (from catalog allowed IDs, else config).
+     *
      * @return list<string>
      */
     public function networksForCoin(string $coin): array
     {
+        $coin = strtoupper(trim($coin));
+        $ids = [];
+        $fromCatalog = false;
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('exchange_rates')
+            && \Illuminate\Support\Facades\Schema::hasColumn('exchange_rates', 'allowed_network_ids')) {
+            $row = \App\Models\ExchangeRate::query()
+                ->whereRaw('UPPER(asset) = ?', [$coin])
+                ->first();
+            if ($row) {
+                $fromCatalog = is_array($row->allowed_network_ids);
+                $ids = $row->resolvedNetworkIds();
+            }
+        }
+
+        // Explicit empty catalog list means no deposit networks — do not revive via config.
+        if ($ids === [] && ! $fromCatalog) {
+            $ids = $this->networkIdsForCoin($coin);
+        }
+
+        if ($ids !== []) {
+            return array_values(array_unique(array_map(
+                fn (string $id) => $this->walletLabelForNetworkId($coin, $id),
+                $ids
+            )));
+        }
+
+        if ($fromCatalog) {
+            return [];
+        }
+
+        // Legacy label map fallback.
         $map = config('crypto.networks_by_coin', []);
-        $list = $map[strtoupper($coin)] ?? [];
+        $list = $map[$coin] ?? [];
 
         return array_values(array_filter($list, fn ($n) => is_string($n) && $n !== ''));
+    }
+
+    /**
+     * Human wallet/order label for a monitored network ID (storage form used today).
+     */
+    public function walletLabelForNetworkId(string $coin, string $networkId): string
+    {
+        $coin = strtoupper(trim($coin));
+        $networkId = strtolower(trim($networkId));
+
+        return match ($networkId) {
+            'bitcoin' => 'Bitcoin',
+            'ethereum' => in_array($coin, ['ETH'], true) ? 'Ethereum' : 'ERC20',
+            'tron' => 'TRC20',
+            'bep20' => 'BEP20',
+            'polygon' => 'Polygon',
+            'base' => 'Base',
+            'arbitrum' => 'Arbitrum',
+            'solana' => 'Solana',
+            default => (string) (config('crypto.monitored_networks.'.$networkId.'.label') ?? $networkId),
+        };
+    }
+
+    /**
+     * Display label for UI (from monitored_networks).
+     */
+    public function displayLabelForNetworkId(string $networkId): string
+    {
+        $networkId = strtolower(trim($networkId));
+        $label = config('crypto.monitored_networks.'.$networkId.'.label');
+
+        return is_string($label) && $label !== '' ? $label : $networkId;
     }
 
     public function canonicalizeNetwork(string $coin, string $network): string
@@ -152,6 +231,25 @@ class WalletAllocationService
         $allowed = $this->networksForCoin($coin);
         foreach ($allowed as $label) {
             if (strcasecmp($label, $network) === 0) {
+                return $label;
+            }
+        }
+
+        // Accept canonical IDs and map to wallet labels.
+        $ids = $this->networkIdsForCoin($coin);
+        $catalog = app(\App\Modules\Wallet\Services\Blockchain\MonitoredNetworkCatalog::class);
+        try {
+            $resolvedId = $catalog->resolveId($network);
+        } catch (\Throwable) {
+            $resolvedId = strtolower(trim($network));
+        }
+        if (in_array($resolvedId, $ids, true) || ($ids === [] && $resolvedId !== '')) {
+            $label = $this->walletLabelForNetworkId($coin, $resolvedId);
+            if ($allowed === [] || in_array($label, $allowed, true)) {
+                return $label;
+            }
+            // If label differs but ID is whitelisted, still allow.
+            if (in_array($resolvedId, $ids, true)) {
                 return $label;
             }
         }

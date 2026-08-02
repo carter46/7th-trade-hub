@@ -48,12 +48,32 @@ return [
      */
     'networks_by_coin' => [
         'BTC' => ['Bitcoin'],
-        'ETH' => ['Ethereum'],
-        'USDT' => ['TRC20', 'ERC20', 'BEP20', 'Polygon', 'Solana'],
+        'ETH' => ['Ethereum', 'Base', 'Arbitrum'],
+        'USDT' => ['TRC20', 'ERC20', 'BEP20', 'Polygon', 'Base', 'Arbitrum', 'Solana'],
         'USDC' => ['ERC20', 'Polygon', 'Solana', 'Base', 'Arbitrum'],
         'SOL' => ['Solana'],
         'BNB' => ['BEP20'],
     ],
+
+    /**
+     * Canonical monitored_networks IDs allowed per coin (whitelist for catalog + wallets).
+     * UI never lets admins pick IDs outside this map for that asset.
+     *
+     * @var array<string, list<string>>
+     */
+    'network_ids_by_coin' => [
+        'BTC' => ['bitcoin'],
+        'ETH' => ['ethereum', 'base', 'arbitrum'],
+        'USDT' => ['ethereum', 'tron', 'bep20', 'polygon', 'base', 'arbitrum', 'solana'],
+        'USDC' => ['ethereum', 'polygon', 'solana', 'base', 'arbitrum'],
+        'SOL' => ['solana'],
+        'BNB' => ['bep20'],
+    ],
+
+    /**
+     * Max valid Our Buy Rate (₦ per $1). Values above this are treated as corrupt full-coin prices.
+     */
+    'max_buy_rate_ngn_per_usd' => 10000,
 
     /** Decimal places for fingerprint rounding */
     'amount_precision' => [
@@ -120,6 +140,8 @@ return [
             'BEP20' => '0x55d398326f99059ff775485246999027b3197955',
             'Polygon' => '0xc2132d05d31c914a87c6611c10748aeb04b58e8f',
             'Solana' => 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+            'Base' => '0xfde4c96c8593536e31f229ea8f37b2ada2699bb2',
+            'Arbitrum' => '0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9',
         ],
         'USDC' => [
             'ERC20' => '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',

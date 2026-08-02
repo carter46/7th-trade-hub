@@ -437,6 +437,7 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::post('/platform-categories/{platformCategory}/toggle', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'togglePlatformCategory'])->name('.platform-categories.toggle');
         Route::get('/exchange-rates', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'exchangeRates'])->name('.exchange-rates');
         Route::get('/exchange-rates/coins', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'coinCatalog'])->name('.exchange-rates.coins');
+        Route::get('/exchange-rates/coin-market', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'coinMarket'])->name('.exchange-rates.coin-market');
         Route::get('/exchange-rates/create', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'createExchangeRate'])->name('.exchange-rates.create');
         Route::post('/exchange-rates', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'storeExchangeRate'])->name('.exchange-rates.store');
         Route::get('/exchange-rates/{exchangeRate}/edit', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'editExchangeRate'])->name('.exchange-rates.edit');
