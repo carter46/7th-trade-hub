@@ -5,7 +5,7 @@
 @section('content')
 <x-layout.page
     title="Sell Crypto (OTC)"
-    subtitle="Quotes expire after 15 minutes — refresh if needed."
+    subtitle="Quotes lock when created and expire after the configured TTL."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
@@ -26,7 +26,7 @@
     >
         <x-slot:head>
             <x-dashboard.th>Coin</x-dashboard.th>
-            <x-dashboard.th>Amount</x-dashboard.th>
+            <x-dashboard.th>USD / Crypto</x-dashboard.th>
             <x-dashboard.th>Expected NGN</x-dashboard.th>
             <x-dashboard.th>Expires</x-dashboard.th>
             <x-dashboard.th>Status</x-dashboard.th>
@@ -35,21 +35,18 @@
         @foreach ($requests as $r)
             <tr class="hover:bg-muted/50">
                 <x-dashboard.td class="font-medium">{{ $r->coin }}</x-dashboard.td>
-                <x-dashboard.td>{{ $r->amount_crypto }}</x-dashboard.td>
+                <x-dashboard.td class="text-sm">${{ number_format((float) ($r->amount_usd ?? 0), 2) }} · {{ $r->amount_crypto }}</x-dashboard.td>
                 <x-dashboard.td>₦{{ number_format($r->expected_ngn, 2) }}</x-dashboard.td>
-                <x-dashboard.td class="text-text-secondary text-xs">{{ $r->expires_at->format('H:i') }}</x-dashboard.td>
+                <x-dashboard.td class="text-text-secondary text-xs">{{ $r->expires_at?->format('H:i') }}</x-dashboard.td>
                 <x-dashboard.td>
-                    @if ($r->status === 'pending' && $r->isQuoteExpired())
-                        <x-dashboard.badge status="warning">Expired</x-dashboard.badge>
-                    @else
-                        <x-dashboard.badge :status="$r->status" />
-                    @endif
+                    <x-dashboard.badge :status="$r->status" />
                 </x-dashboard.td>
-                <x-dashboard.td>
-                    @if ($r->status === 'pending' && $r->isQuoteExpired())
-                        <form method="POST" action="{{ route('dashboard.crypto-sell.refresh', $r) }}" x-data="{ submitting: false }" @submit="submitting = true">
+                <x-dashboard.td class="space-x-2">
+                    <x-dashboard.button :href="route('dashboard.crypto-sell.show', $r)" size="xs" variant="link">View</x-dashboard.button>
+                    @if (in_array($r->status, ['expired', 'waiting_deposit'], true) && $r->isQuoteExpired())
+                        <form method="POST" action="{{ route('dashboard.crypto-sell.refresh', $r) }}" class="inline" x-data="{ submitting: false }" @submit="submitting = true">
                             @csrf
-                            <x-dashboard.button type="submit" size="xs" variant="link" x-bind:disabled="submitting">Request New Quote</x-dashboard.button>
+                            <x-dashboard.button type="submit" size="xs" variant="link" x-bind:disabled="submitting">New Quote</x-dashboard.button>
                         </form>
                     @endif
                 </x-dashboard.td>

@@ -68,6 +68,7 @@ class SettingsController extends Controller
             'googleIdentityJsOrigin' => rtrim((string) config('app.url'), '/'),
             'monnify' => IntegrationProvider::forProvider(IntegrationProvider::MONNIFY),
             'monnifyWebhookUrl' => url('/webhooks/monnify'),
+            'blockchain' => IntegrationProvider::forProvider(IntegrationProvider::BLOCKCHAIN_MONITORING),
             'siteName' => $branding['site_name'],
         ]);
     }
@@ -694,6 +695,76 @@ class SettingsController extends Controller
             return back()->withInput()->withErrors([
                 'monnify_test' => $e->getMessage(),
             ]);
+        }
+    }
+
+    public function updateBlockchainMonitoring(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'blockchain_enabled' => ['nullable', 'boolean'],
+            'etherscan_api_key' => ['nullable', 'string', 'max:255'],
+            'trongrid_api_key' => ['nullable', 'string', 'max:255'],
+            'solana_rpc_url' => ['nullable', 'string', 'max:500'],
+            'poll_interval_minutes' => ['nullable', 'integer', 'in:1,2'],
+        ]);
+
+        $row = IntegrationProvider::forProvider(IntegrationProvider::BLOCKCHAIN_MONITORING);
+        $row->enabled = $request->boolean('blockchain_enabled');
+
+        $credentials = [];
+        foreach (['etherscan_api_key', 'trongrid_api_key', 'solana_rpc_url'] as $key) {
+            $value = trim((string) ($validated[$key] ?? ''));
+            if ($value !== '') {
+                $credentials[$key] = $value;
+            }
+        }
+        if ($credentials !== []) {
+            $row->mergeCredentials($credentials);
+        }
+
+        $row->meta = array_merge($row->meta ?? [], [
+            'poll_interval_minutes' => (int) ($validated['poll_interval_minutes'] ?? ($row->meta['poll_interval_minutes'] ?? 1)),
+        ]);
+        $row->status = $row->enabled ? ($row->status ?: 'idle') : 'idle';
+        $row->save();
+
+        $this->audit->log(auth()->id(), 'settings.blockchain.updated', $row, null, [
+            'enabled' => $row->enabled,
+        ], $request->ip());
+
+        return back()->with('status', __('Blockchain monitoring settings saved.'));
+    }
+
+    public function testBlockchainMonitoring(Request $request): RedirectResponse
+    {
+        $network = $request->validate([
+            'network' => ['required', 'in:bitcoin,ethereum,tron,solana'],
+        ])['network'];
+
+        $row = IntegrationProvider::forProvider(IntegrationProvider::BLOCKCHAIN_MONITORING);
+        $monitor = app(\App\Modules\Wallet\Services\Blockchain\DepositMonitorService::class);
+
+        try {
+            $client = $monitor->clientForNetwork($network);
+            $ok = $client->healthCheck();
+            if (! $ok) {
+                throw new \RuntimeException('Health check failed for '.$network);
+            }
+            $row->recordSuccess();
+            $this->audit->log(auth()->id(), 'settings.blockchain.connection_test', $row, null, [
+                'ok' => true,
+                'network' => $network,
+            ], $request->ip());
+
+            return back()->with('status', __('Connected to :network explorer.', ['network' => strtoupper($network)]));
+        } catch (Throwable $e) {
+            $row->recordFailure($e->getMessage());
+            $this->audit->log(auth()->id(), 'settings.blockchain.connection_test', $row, null, [
+                'ok' => false,
+                'network' => $network,
+            ], $request->ip());
+
+            return back()->withErrors(['blockchain_test' => $e->getMessage()]);
         }
     }
 

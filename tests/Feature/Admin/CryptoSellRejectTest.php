@@ -26,7 +26,7 @@ class CryptoSellRejectTest extends TestCase
             'expected_ngn' => 10000,
             'quoted_at' => now(),
             'expires_at' => now()->addMinutes(15),
-            'status' => 'pending',
+            'status' => CryptoSellRequest::STATUS_WAITING_DEPOSIT,
         ]);
 
         $admin = User::factory()->create(['email_verified_at' => now()]);

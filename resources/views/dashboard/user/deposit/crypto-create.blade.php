@@ -5,7 +5,7 @@
 @section('content')
 <x-layout.page
     title="Sell Crypto"
-    subtitle="Quotes use the platform sell rates set by admin. Valid for 15 minutes."
+    subtitle="Enter a USD amount. Your Naira quote locks for a limited time."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
@@ -13,9 +13,15 @@
         ['New quote', null],
     ]"
 >
+    @unless($pricingAvailable ?? true)
+        <x-dashboard.card>
+            <p class="text-sm text-warning">Pricing is unavailable. Ask admin to set the market reference or manual customer rate.</p>
+        </x-dashboard.card>
+    @endunless
+
     @if(empty($coins))
         <x-dashboard.card>
-            <p class="text-sm text-text-muted">No active exchange rates are available right now. Please check back later.</p>
+            <p class="text-sm text-text-muted">No active coins or deposit wallets are available right now.</p>
         </x-dashboard.card>
     @else
         <x-dashboard.card>
@@ -38,6 +44,7 @@
                             id="coin"
                             name="coin"
                             x-model="asset"
+                            @change="syncNetwork()"
                             required
                             class="min-w-0 flex-1 border-0 bg-transparent text-sm font-semibold text-text-primary focus:outline-none focus:ring-0"
                         >
@@ -47,18 +54,31 @@
                         </select>
                     </div>
                     <p class="text-xs text-text-muted" x-show="row">
-                        Platform sell rate:
-                        <span class="font-medium text-text-primary" x-text="row ? ('₦' + Number(row.sell).toLocaleString('en-NG') + ' / ' + asset) : ''"></span>
+                        Our rate:
+                        <span class="font-medium text-text-primary" x-text="row ? ('₦' + Number(row.customer_rate).toLocaleString('en-NG') + ' /$') : ''"></span>
                     </p>
                 </div>
 
-                <x-dashboard.input label="Network" name="network" placeholder="e.g. TRC20" :value="old('network')" />
                 <div>
-                    <x-dashboard.input label="Amount" type="number" step="any" name="amount_crypto" required :value="old('amount_crypto')" x-model="amount" />
-                    <p class="mt-1 text-xs text-text-muted" x-show="row?.min || row?.max">
-                        <span x-show="row?.min" x-text="'Min ' + row.min"></span>
-                        <span x-show="row?.min && row?.max"> · </span>
-                        <span x-show="row?.max" x-text="'Max ' + row.max"></span>
+                    <label for="network" class="block text-sm font-medium text-text-primary mb-1">Network</label>
+                    <select
+                        id="network"
+                        name="network"
+                        x-model="network"
+                        required
+                        class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2.5 text-sm text-text-primary"
+                    >
+                        <template x-for="n in networks" :key="n.network">
+                            <option :value="n.network" x-text="n.network + ' · ' + n.confirmations + ' conf'"></option>
+                        </template>
+                    </select>
+                    @error('network')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
+                </div>
+
+                <div>
+                    <x-dashboard.input label="USD amount" type="number" step="any" name="amount_usd" required :value="old('amount_usd')" x-model="amountUsd" />
+                    <p class="mt-1 text-xs text-text-muted" x-show="approxCrypto > 0">
+                        ≈ <span x-text="approxCrypto.toFixed(8)"></span> <span x-text="asset"></span>
                     </p>
                 </div>
 
@@ -69,7 +89,7 @@
                     </p>
                 </div>
 
-                <x-dashboard.button type="submit" icon="bitcoin" x-bind:disabled="submitting">Get Quote</x-dashboard.button>
+                <x-dashboard.button type="submit" icon="bitcoin" x-bind:disabled="submitting || !network">Lock Quote</x-dashboard.button>
             </form>
         </x-dashboard.card>
     @endif

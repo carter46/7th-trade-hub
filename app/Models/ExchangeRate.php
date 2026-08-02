@@ -9,11 +9,14 @@ class ExchangeRate extends Model
     protected $fillable = [
         'asset',
         'coingecko_id',
+        'bybit_symbol',
         'logo_url',
         'buy_rate_ngn',
         'sell_rate_ngn',
         'minimum_amount',
         'maximum_amount',
+        'min_amount_usd',
+        'max_amount_usd',
         'processing_time',
         'is_featured',
         'is_active',
@@ -27,6 +30,8 @@ class ExchangeRate extends Model
             'sell_rate_ngn' => 'decimal:2',
             'minimum_amount' => 'decimal:8',
             'maximum_amount' => 'decimal:8',
+            'min_amount_usd' => 'decimal:2',
+            'max_amount_usd' => 'decimal:2',
             'is_featured' => 'boolean',
             'is_active' => 'boolean',
         ];

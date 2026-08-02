@@ -73,6 +73,7 @@ class AppServiceProvider extends ServiceProvider
             \App\Modules\Wallet\Payments\Monnify\MonnifyPaymentRail::class
         );
         $this->app->singleton(CryptoPriceService::class);
+        $this->app->singleton(\App\Modules\Wallet\Services\ExchangeQuoteService::class);
         $this->app->singleton(WalletProvisioningService::class);
         $this->app->singleton(CheckoutService::class);
         $this->app->singleton(AuditLogService::class);

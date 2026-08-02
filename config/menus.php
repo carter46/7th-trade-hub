@@ -141,7 +141,11 @@ return [
             'sort' => 40,
             'children' => [
                 ['route' => 'admin.crypto-sells', 'match' => ['admin.crypto-sells', 'admin.crypto-sells.*'], 'label' => 'Sell Requests', 'icon' => 'bitcoin', 'keywords' => ['otc', 'crypto'], 'permission' => 'finance.manage', 'sort' => 10],
-                ['route' => 'admin.exchange-rates', 'match' => ['admin.exchange-rates', 'admin.exchange-rates.*'], 'label' => 'Exchange Rates', 'icon' => 'bitcoin', 'keywords' => ['rates', 'fx', 'crypto'], 'permission' => 'catalog.manage', 'sort' => 20],
+                ['route' => 'admin.incoming-deposits', 'match' => ['admin.incoming-deposits', 'admin.incoming-deposits.*'], 'label' => 'Incoming Deposits', 'icon' => 'deposit', 'keywords' => ['blockchain', 'monitor', 'tx'], 'permission' => 'finance.manage', 'sort' => 15],
+                ['route' => 'admin.crypto-wallets', 'match' => ['admin.crypto-wallets', 'admin.crypto-wallets.*'], 'label' => 'Deposit Wallets', 'icon' => 'wallet', 'keywords' => ['address', 'qr', 'treasury'], 'permission' => 'finance.manage', 'sort' => 18],
+                ['route' => 'admin.crypto-wallets.treasury', 'match' => ['admin.crypto-wallets.treasury'], 'label' => 'Treasury Inventory', 'icon' => 'wallet', 'keywords' => ['holdings', 'inventory'], 'permission' => 'finance.manage', 'sort' => 19],
+                ['route' => 'admin.otc-pricing', 'match' => ['admin.otc-pricing', 'admin.otc-pricing.*'], 'label' => 'OTC Pricing', 'icon' => 'bitcoin', 'keywords' => ['spread', 'market', 'rate'], 'permission' => 'finance.manage', 'sort' => 22],
+                ['route' => 'admin.exchange-rates', 'match' => ['admin.exchange-rates', 'admin.exchange-rates.*'], 'label' => 'Coin Catalog', 'icon' => 'bitcoin', 'keywords' => ['rates', 'fx', 'crypto', 'coins'], 'permission' => 'catalog.manage', 'sort' => 30],
             ],
         ],
         [

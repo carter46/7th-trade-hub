@@ -21,7 +21,7 @@
 >
     <div class="space-y-2">
         <label class="block text-sm font-medium text-text-primary">Coin <span class="text-danger">*</span></label>
-        <p class="text-xs text-text-muted">Pick from CoinGecko. Market price is suggested — set your platform buy/sell rates below.</p>
+        <p class="text-xs text-text-muted">Pick from CoinGecko. OTC NGN rates are set under Admin → OTC Pricing.</p>
 
         <div class="relative">
             <div class="flex items-center gap-2 rounded-xl border border-border-default bg-elevated px-3 py-2">
@@ -79,40 +79,21 @@
     </div>
 
     <div class="grid gap-4 sm:grid-cols-2">
+        <x-dashboard.input label="Bybit spot symbol" name="bybit_symbol" :value="old('bybit_symbol', $rate?->bybit_symbol)" placeholder="BTCUSDT" hint="Optional override for USD price lookup." />
+        <x-dashboard.input label="Processing time" name="processing_time" :value="old('processing_time', $rate?->processing_time)" placeholder="5–15 minutes" />
+        <x-dashboard.input label="Min USD" name="min_amount_usd" type="number" step="any" :value="old('min_amount_usd', $rate?->min_amount_usd)" />
+        <x-dashboard.input label="Max USD" name="max_amount_usd" type="number" step="any" :value="old('max_amount_usd', $rate?->max_amount_usd)" />
         <div>
-            <label class="mb-1.5 block text-sm font-medium text-text-primary">Buy rate (NGN) <span class="text-danger">*</span></label>
-            <input
-                type="number"
-                step="0.01"
-                name="buy_rate_ngn"
-                x-model="buy"
-                required
-                class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2.5 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
-            >
-            @error('buy_rate_ngn')
-                <p class="mt-1 text-xs text-danger">{{ $message }}</p>
-            @enderror
+            <label class="mb-1.5 block text-sm font-medium text-text-primary">Legacy buy rate (NGN)</label>
+            <input type="number" step="0.01" name="buy_rate_ngn" x-model="buy" class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2.5 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40">
         </div>
         <div>
-            <label class="mb-1.5 block text-sm font-medium text-text-primary">Sell rate (NGN) <span class="text-danger">*</span></label>
-            <input
-                type="number"
-                step="0.01"
-                name="sell_rate_ngn"
-                x-model="sell"
-                required
-                class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2.5 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
-            >
-            <p class="mt-1 text-[11px] text-text-muted">This is what public &amp; users see for payouts.</p>
-            @error('sell_rate_ngn')
-                <p class="mt-1 text-xs text-danger">{{ $message }}</p>
-            @enderror
+            <label class="mb-1.5 block text-sm font-medium text-text-primary">Legacy sell rate (NGN)</label>
+            <input type="number" step="0.01" name="sell_rate_ngn" x-model="sell" class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2.5 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40">
+            <p class="mt-1 text-[11px] text-text-muted">Prefer OTC Pricing for live customer rates.</p>
         </div>
     </div>
 
-    <x-dashboard.input label="Minimum amount" name="minimum_amount" type="number" step="any" :value="old('minimum_amount', $rate?->minimum_amount)" />
-    <x-dashboard.input label="Maximum amount" name="maximum_amount" type="number" step="any" :value="old('maximum_amount', $rate?->maximum_amount)" />
-    <x-dashboard.input label="Processing time" name="processing_time" :value="old('processing_time', $rate?->processing_time)" placeholder="5–15 minutes" />
     <x-dashboard.input label="Sort order" name="sort_order" type="number" min="0" :value="old('sort_order', $rate?->sort_order ?? 0)" />
     <label class="flex items-center gap-2 text-sm text-text-secondary">
         <input type="checkbox" name="is_featured" value="1" class="rounded border-border-default" @checked(old('is_featured', $rate?->is_featured))>

@@ -5,8 +5,14 @@
 @section('content')
 @php
     $rateMap = $rates->mapWithKeys(fn ($r) => [$r->asset => [
-        'sell' => (float) $r->sell_rate_ngn,
+        'sell' => (float) ($r->customer_rate ?: $r->sell_rate_ngn),
+        'customer_rate' => (float) ($r->customer_rate ?: $r->sell_rate_ngn),
+        'market_rate' => (float) ($r->otc_market_rate ?? 0),
+        'spread' => (float) ($r->spread ?? 0),
+        'coin_usd' => (float) ($r->coin_usd ?? 0),
         'buy' => (float) $r->buy_rate_ngn,
+        'min_usd' => (float) ($r->min_amount_usd ?? 0),
+        'max_usd' => (float) ($r->max_amount_usd ?? 0),
         'min' => (float) ($r->minimum_amount ?? 0),
         'max' => (float) ($r->maximum_amount ?? 0),
         'time' => $r->processing_time,
@@ -37,13 +43,13 @@
     <div class="relative z-10 mx-auto max-w-3xl">
         <div class="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-accent">
             <x-ui.icon name="verified" class="h-4 w-4" />
-            <span class="text-[11px] font-medium uppercase tracking-wider">Platform sell rates</span>
+            <span class="text-[11px] font-medium uppercase tracking-wider">OTC sell rates</span>
         </div>
         <h1 class="font-display mb-3 text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl">
             Secure <span class="text-accent">Crypto-to-Cash</span> Exchange
         </h1>
         <p class="mx-auto max-w-xl text-sm leading-relaxed text-text-secondary sm:text-base">
-            Convert crypto to Naira at our published sell rates. Market rates are shown for reference — your payout uses the platform rate.
+            Enter a USD value to estimate your Naira payout. Quotes lock when you start a sell order.
         </p>
     </div>
 </section>
@@ -65,7 +71,7 @@
 
                 <div class="space-y-5">
                     <div class="space-y-2">
-                        <label for="exchange-asset" class="block text-[11px] font-medium uppercase tracking-wider text-text-secondary">You Sell</label>
+                        <label for="exchange-asset" class="block text-[11px] font-medium uppercase tracking-wider text-text-secondary">USD value to sell</label>
                         <div class="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,9rem)_minmax(0,1fr)]">
                             <div class="flex min-w-0 items-center gap-2 rounded-lg border border-border-default bg-surface px-2.5 py-2">
                                 <template x-if="rates[asset]?.logo">
@@ -91,14 +97,18 @@
                             </div>
                             <input
                                 id="exchange-amount"
-                                x-model.number="amount"
+                                x-model.number="amountUsd"
                                 type="number"
                                 step="any"
                                 min="0"
-                                placeholder="0.00"
+                                placeholder="100.00"
                                 class="min-w-0 w-full rounded-lg border border-border-default bg-surface px-3 py-2.5 text-sm font-semibold text-white placeholder:text-text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                             >
                         </div>
+                        <p class="text-xs text-text-muted" x-text="hint"></p>
+                        <p class="text-xs text-text-muted" x-show="approxCrypto > 0">
+                            ≈ <span x-text="approxCrypto.toFixed(8)"></span> <span x-text="asset"></span>
+                        </p>
                     </div>
 
                     <div class="flex justify-center">
@@ -118,8 +128,8 @@
                             </div>
                         </div>
                         <p class="text-[11px] leading-relaxed text-text-muted">
-                            Platform sell rate:
-                            <span class="text-text-secondary" x-text="'₦' + Number(rates[asset]?.sell || 0).toLocaleString('en-NG') + ' / ' + asset"></span>
+                            Our rate:
+                            <span class="text-text-secondary" x-text="'₦' + Number(rates[asset]?.customer_rate || rates[asset]?.sell || 0).toLocaleString('en-NG') + ' /$'"></span>
                         </p>
                         <p class="text-[11px] leading-relaxed text-text-muted" x-show="hint" x-text="hint"></p>
                     </div>

@@ -14,9 +14,12 @@ class ExpireCryptoSellQuotes extends Command
     public function handle(): int
     {
         $count = CryptoSellRequest::query()
-            ->where('status', 'pending')
+            ->whereIn('status', [
+                CryptoSellRequest::STATUS_WAITING_DEPOSIT,
+                'pending',
+            ])
             ->where('expires_at', '<', now())
-            ->update(['status' => 'expired']);
+            ->update(['status' => CryptoSellRequest::STATUS_EXPIRED]);
 
         $this->info("Expired {$count} crypto sell quote(s).");
 

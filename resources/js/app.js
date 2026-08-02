@@ -497,23 +497,40 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('exchangeCalc', (rates = {}) => ({
         rates,
         asset: Object.keys(rates)[0] || 'USDT',
-        amount: 1,
+        amountUsd: 100,
+        get row() {
+            return this.rates[this.asset] || null;
+        },
+        get customerRate() {
+            return Number(this.row?.customer_rate || this.row?.sell || 0);
+        },
         get receive() {
-            const row = this.rates[this.asset];
-            if (!row) return 0;
-            return (Number(this.amount) || 0) * Number(row.sell || 0);
+            return (Number(this.amountUsd) || 0) * this.customerRate;
+        },
+        get approxCrypto() {
+            const usd = Number(this.row?.coin_usd || 0);
+            if (usd <= 0) return 0;
+            return (Number(this.amountUsd) || 0) / usd;
         },
         get receiveFormatted() {
             return new Intl.NumberFormat('en-NG', { maximumFractionDigits: 2 }).format(this.receive);
         },
         get hint() {
-            const row = this.rates[this.asset];
+            const row = this.row;
             if (!row) return '';
             const parts = [];
-            if (row.min) parts.push('Min ' + row.min);
-            if (row.max) parts.push('Max ' + row.max);
+            if (row.customer_rate) parts.push('Our rate ₦' + Number(row.customer_rate).toLocaleString('en-NG') + '/$');
+            if (row.min_usd) parts.push('Min $' + row.min_usd);
+            if (row.max_usd) parts.push('Max $' + row.max_usd);
             if (row.time) parts.push(row.time);
             return parts.join(' · ');
+        },
+        // Back-compat for older templates still binding `amount`
+        get amount() {
+            return this.amountUsd;
+        },
+        set amount(v) {
+            this.amountUsd = v;
         },
     }));
 
@@ -556,14 +573,36 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('cryptoSellForm', (rates = {}) => ({
         rates,
         asset: Object.keys(rates)[0] || '',
-        amount: '',
+        network: '',
+        amountUsd: '',
         submitting: false,
+        init() {
+            this.syncNetwork();
+        },
         get row() {
             return this.rates[this.asset] || null;
         },
+        get networks() {
+            return this.row?.networks || [];
+        },
+        syncNetwork() {
+            const nets = this.networks;
+            if (!nets.length) {
+                this.network = '';
+                return;
+            }
+            if (!nets.find((n) => n.network === this.network)) {
+                this.network = nets[0].network;
+            }
+        },
         get estimate() {
             if (!this.row) return 0;
-            return (Number(this.amount) || 0) * Number(this.row.sell || 0);
+            return (Number(this.amountUsd) || 0) * Number(this.row.customer_rate || 0);
+        },
+        get approxCrypto() {
+            const usd = Number(this.row?.coin_usd || 0);
+            if (usd <= 0) return 0;
+            return (Number(this.amountUsd) || 0) / usd;
         },
         get estimateFormatted() {
             return new Intl.NumberFormat('en-NG', { maximumFractionDigits: 2 }).format(this.estimate);
