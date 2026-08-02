@@ -5,6 +5,10 @@
 
     RewriteEngine On
 
+    # Always route robots.txt through Laravel so Sitemap uses an absolute APP_URL
+    # (a leftover public/robots.txt would otherwise win and break Search Console).
+    RewriteRule ^robots\.txt$ index.php [L]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
