@@ -5,7 +5,7 @@
 @section('content')
 <x-layout.page
     title="Sell Crypto (OTC)"
-    subtitle="Quotes lock when created and expire after the configured TTL."
+    subtitle="Quotes lock when created. Resume any active order from here."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
@@ -16,6 +16,18 @@
         <x-dashboard.button :href="route('dashboard.crypto-sell.create')" icon="plus">New Sell Request</x-dashboard.button>
     </x-slot:actions>
 
+    @if($openOrder ?? null)
+        <div class="mb-4 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <p class="text-sm font-medium text-text-primary">Active order {{ $openOrder->tracking_code }}</p>
+                    <p class="text-xs text-text-muted">{{ $openOrder->coin }} · {{ str_replace('_', ' ', $openOrder->status) }}</p>
+                </div>
+                <x-dashboard.button :href="route('dashboard.crypto-sell.show', $openOrder)" size="sm">Resume order</x-dashboard.button>
+            </div>
+        </div>
+    @endif
+
     <x-dashboard.table
         :empty="$requests->isEmpty()"
         empty-title="No sell requests yet"
@@ -25,6 +37,7 @@
         striped
     >
         <x-slot:head>
+            <x-dashboard.th>Tracking</x-dashboard.th>
             <x-dashboard.th>Coin</x-dashboard.th>
             <x-dashboard.th>USD / Crypto</x-dashboard.th>
             <x-dashboard.th>Expected NGN</x-dashboard.th>
@@ -34,6 +47,7 @@
         </x-slot:head>
         @foreach ($requests as $r)
             <tr class="hover:bg-muted/50">
+                <x-dashboard.td class="font-mono text-xs">{{ $r->tracking_code ?: '—' }}</x-dashboard.td>
                 <x-dashboard.td class="font-medium">{{ $r->coin }}</x-dashboard.td>
                 <x-dashboard.td class="text-sm">${{ number_format((float) ($r->amount_usd ?? 0), 2) }} · {{ $r->amount_crypto }}</x-dashboard.td>
                 <x-dashboard.td>₦{{ number_format($r->expected_ngn, 2) }}</x-dashboard.td>

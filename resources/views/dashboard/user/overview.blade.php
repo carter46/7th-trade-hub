@@ -12,6 +12,25 @@
         ['Overview', null],
     ]"
 >
+    <x-slot:actions>
+        <x-dashboard.button :href="route('dashboard.deposit.index')" icon="deposit" size="sm">Deposit</x-dashboard.button>
+        <x-dashboard.button :href="route('dashboard.withdrawal.create')" variant="secondary" icon="withdraw" size="sm">Withdraw</x-dashboard.button>
+    </x-slot:actions>
+
+    @if($openCryptoSell ?? null)
+        <div class="rounded-xl border border-primary/30 bg-primary/5 px-4 py-3">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <p class="text-sm font-medium text-text-primary">Continue your crypto sell</p>
+                    <p class="text-xs text-text-muted">
+                        {{ $openCryptoSell->tracking_code }} · {{ $openCryptoSell->coin }} · {{ str_replace('_', ' ', $openCryptoSell->status) }}
+                    </p>
+                </div>
+                <x-dashboard.button :href="route('dashboard.crypto-sell.show', $openCryptoSell)" size="sm">Continue tracking</x-dashboard.button>
+            </div>
+        </div>
+    @endif
+
     <x-dashboard.stat-grid>
         <x-dashboard.stats-card
             label="Total Balance"

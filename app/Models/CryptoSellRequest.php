@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class CryptoSellRequest extends Model
 {
@@ -47,7 +48,15 @@ class CryptoSellRequest extends Model
         'pending', // legacy
     ];
 
+    public const TERMINAL_STATUSES = [
+        self::STATUS_APPROVED,
+        self::STATUS_REJECTED,
+        self::STATUS_EXPIRED,
+        self::STATUS_CANCELLED,
+    ];
+
     protected $fillable = [
+        'tracking_code',
         'user_id',
         'wallet_id',
         'crypto_deposit_wallet_id',
@@ -96,6 +105,30 @@ class CryptoSellRequest extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::creating(function (self $model) {
+            if (! filled($model->tracking_code)) {
+                $model->tracking_code = self::generateTrackingCode();
+            }
+        });
+    }
+
+    public static function generateTrackingCode(?\DateTimeInterface $when = null): string
+    {
+        $when ??= now();
+        $date = $when->format('Ymd');
+
+        for ($i = 0; $i < 12; $i++) {
+            $code = 'OTC-'.$date.'-'.strtoupper(Str::random(6));
+            if (! self::query()->where('tracking_code', $code)->exists()) {
+                return $code;
+            }
+        }
+
+        return 'OTC-'.$date.'-'.strtoupper(Str::random(8));
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -141,8 +174,68 @@ class CryptoSellRequest extends Model
             || $this->status === 'pending';
     }
 
+    public function isTerminal(): bool
+    {
+        return in_array($this->status, self::TERMINAL_STATUSES, true);
+    }
+
     public function isApprovable(): bool
     {
         return in_array($this->status, self::APPROVABLE_STATUSES, true);
+    }
+
+    /**
+     * UX stage for the live tracking page.
+     */
+    public function trackingStage(): string
+    {
+        if ($this->status === self::STATUS_WAITING_DEPOSIT && $this->isQuoteExpired()) {
+            return 'expired';
+        }
+
+        return match ($this->status) {
+            self::STATUS_WAITING_DEPOSIT, 'pending' => 'waiting_deposit',
+            self::STATUS_UNDERPAID => 'underpaid',
+            self::STATUS_OVERPAID => 'overpaid',
+            self::STATUS_APPROVED => 'approved',
+            self::STATUS_REJECTED => 'rejected',
+            self::STATUS_EXPIRED => 'expired',
+            self::STATUS_CANCELLED => 'cancelled',
+            self::STATUS_VERIFYING => 'awaiting_admin',
+            self::STATUS_SUBMITTED => $this->confirmationsMet() ? 'awaiting_admin' : 'deposit_detected',
+            default => 'waiting_deposit',
+        };
+    }
+
+    public function confirmationsMet(): bool
+    {
+        $required = max(1, (int) ($this->required_confirmations ?? 1));
+        $observed = (int) ($this->confirmations_observed ?? 0);
+
+        return $observed >= $required;
+    }
+
+    public function pollIntervalMs(): int
+    {
+        return match ($this->trackingStage()) {
+            'waiting_deposit' => 4000,
+            'deposit_detected', 'underpaid' => 6000,
+            'awaiting_admin', 'overpaid' => 10000,
+            default => 0,
+        };
+    }
+
+    public function expireIfNeeded(): bool
+    {
+        if ($this->status !== self::STATUS_WAITING_DEPOSIT && $this->status !== 'pending') {
+            return false;
+        }
+        if (! $this->isQuoteExpired()) {
+            return false;
+        }
+
+        $this->update(['status' => self::STATUS_EXPIRED]);
+
+        return true;
     }
 }

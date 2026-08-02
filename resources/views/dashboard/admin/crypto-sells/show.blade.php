@@ -1,6 +1,6 @@
 @extends('layouts.dashboard-admin')
 
-@section('title', 'Verify Crypto Sell #'.$request->id)
+@section('title', 'Verify '.($request->tracking_code ?: '#'.$request->id))
 
 @section('content')
 @php
@@ -12,13 +12,13 @@
         : null;
 @endphp
 <x-layout.page
-    title="Verify order #{{ $request->id }}"
+    title="{{ $request->tracking_code ?: 'Order #'.$request->id }}"
     subtitle="Checklist must pass before Approve & credit. Credit uses the locked quote."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
         ['Crypto sells', route('admin.crypto-sells')],
-        ['#'.$request->id, null],
+        [$request->tracking_code ?: '#'.$request->id, null],
     ]"
 >
     <div class="space-y-4" x-data="{
@@ -31,6 +31,10 @@
     }">
         <x-dashboard.card>
             <div class="flex flex-wrap gap-4 justify-between">
+                <div>
+                    <p class="text-sm text-text-muted">Tracking</p>
+                    <p class="font-mono text-sm font-semibold">{{ $request->tracking_code ?: '—' }}</p>
+                </div>
                 <div>
                     <p class="text-sm text-text-muted">Customer</p>
                     <p class="font-semibold">{{ \App\Models\User::labelFor($request->user) }}</p>

@@ -43,7 +43,7 @@ return [
             'id' => 'wallet',
             'label' => 'Wallet',
             'icon' => 'wallet',
-            'sort' => 40,
+            'sort' => 15,
             'children' => [
                 ['route' => 'dashboard.wallet', 'match' => ['dashboard.wallet', 'dashboard.wallet.*'], 'label' => 'Wallet', 'icon' => 'wallet', 'keywords' => ['balance', 'funds'], 'sort' => 10],
                 ['route' => 'dashboard.deposit.index', 'match' => ['dashboard.deposit.*'], 'label' => 'Deposit', 'icon' => 'deposit', 'keywords' => ['fund', 'bank'], 'sort' => 20],
@@ -54,11 +54,11 @@ return [
         [
             'type' => 'link',
             'id' => 'exchange',
-            'label' => 'Exchange',
+            'label' => 'Sell Crypto',
             'route' => 'dashboard.exchange',
             'match' => ['dashboard.exchange', 'dashboard.crypto-sell.*'],
             'icon' => 'bitcoin',
-            'keywords' => ['crypto', 'sell', 'otc'],
+            'keywords' => ['crypto', 'sell', 'otc', 'exchange'],
             'sort' => 50,
         ],
         [

@@ -6,7 +6,7 @@ use App\Events\CryptoSold;
 use App\Http\Controllers\Controller;
 use App\Models\CryptoSellRequest;
 use App\Models\IncomingCryptoTransaction;
-use App\Models\Transaction;
+use App\Models\User;
 use App\Models\WalletFunding;
 use App\Modules\Admin\Services\AuditLogService;
 use App\Modules\Admin\Services\FinancialAuditLog;
@@ -15,7 +15,6 @@ use App\Modules\Wallet\Services\WalletService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class CryptoSellController extends Controller
@@ -26,13 +25,96 @@ class CryptoSellController extends Controller
         private FinancialAuditLog $financialAudit,
     ) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
-        $requests = CryptoSellRequest::with(['user', 'incomingTransactions'])
-            ->orderByDesc('created_at')
-            ->paginate(20);
+        $q = trim((string) $request->query('q', ''));
+        $userId = $request->query('user_id');
+        $status = trim((string) $request->query('status', ''));
+        $coin = strtoupper(trim((string) $request->query('coin', '')));
+        $dateFrom = $request->query('date_from');
+        $dateTo = $request->query('date_to');
 
-        return view('dashboard.admin.crypto-sells.index', compact('requests'));
+        $query = CryptoSellRequest::query()
+            ->with(['user', 'incomingTransactions'])
+            ->orderByDesc('created_at');
+
+        if ($q !== '') {
+            $query->where(function ($builder) use ($q) {
+                $builder->where('tracking_code', 'like', '%'.$q.'%')
+                    ->orWhere('tx_hash', 'like', '%'.$q.'%')
+                    ->orWhere('platform_address', 'like', '%'.$q.'%');
+                if (ctype_digit($q)) {
+                    $builder->orWhere('id', (int) $q);
+                }
+                $builder->orWhereHas('user', function ($userQuery) use ($q) {
+                    $userQuery->where('email', 'like', '%'.$q.'%')
+                        ->orWhere('name', 'like', '%'.$q.'%')
+                        ->orWhere('phone', 'like', '%'.$q.'%');
+                });
+            });
+        }
+
+        if ($userId !== null && $userId !== '') {
+            $query->where('user_id', (int) $userId);
+        }
+
+        if ($status !== '' && $status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        if ($coin !== '') {
+            $query->whereRaw('UPPER(coin) = ?', [$coin]);
+        }
+
+        if (is_string($dateFrom) && $dateFrom !== '') {
+            $query->whereDate('created_at', '>=', $dateFrom);
+        }
+        if (is_string($dateTo) && $dateTo !== '') {
+            $query->whereDate('created_at', '<=', $dateTo);
+        }
+
+        $requests = $query->paginate(20)->withQueryString();
+
+        $coins = CryptoSellRequest::query()
+            ->select('coin')
+            ->distinct()
+            ->orderBy('coin')
+            ->pluck('coin')
+            ->filter()
+            ->values();
+
+        $statuses = [
+            CryptoSellRequest::STATUS_WAITING_DEPOSIT,
+            CryptoSellRequest::STATUS_SUBMITTED,
+            CryptoSellRequest::STATUS_VERIFYING,
+            CryptoSellRequest::STATUS_UNDERPAID,
+            CryptoSellRequest::STATUS_OVERPAID,
+            CryptoSellRequest::STATUS_APPROVED,
+            CryptoSellRequest::STATUS_REJECTED,
+            CryptoSellRequest::STATUS_EXPIRED,
+            CryptoSellRequest::STATUS_CANCELLED,
+        ];
+
+        $filterUsers = User::query()
+            ->whereIn('id', CryptoSellRequest::query()->select('user_id')->distinct())
+            ->orderBy('name')
+            ->limit(200)
+            ->get(['id', 'name', 'email']);
+
+        return view('dashboard.admin.crypto-sells.index', [
+            'requests' => $requests,
+            'coins' => $coins,
+            'statuses' => $statuses,
+            'filterUsers' => $filterUsers,
+            'filters' => [
+                'q' => $q,
+                'user_id' => $userId,
+                'status' => $status,
+                'coin' => $coin,
+                'date_from' => $dateFrom,
+                'date_to' => $dateTo,
+            ],
+        ]);
     }
 
     public function show(CryptoSellRequest $cryptoSellRequest): View
@@ -69,171 +151,114 @@ class CryptoSellController extends Controller
             return back()->with('error', __('Request cannot be approved in its current status.'));
         }
 
-        // Do not reprice: credit snapshotted expected_ngn (or documented override for under/overpay).
         $validated = $request->validate([
-            'tx_hash' => ['nullable', 'string', 'max:255'],
+            'tx_hash' => ['required', 'string', 'max:255'],
             'credit_ngn_override' => ['nullable', 'numeric', 'min:0'],
             'checklist_network' => ['accepted'],
             'checklist_destination' => ['accepted'],
             'checklist_amount' => ['accepted'],
             'checklist_confirmations' => ['accepted'],
             'checklist_valid' => ['accepted'],
-            'admin_notes' => ['nullable', 'string', 'max:1000'],
-            'reason' => ['nullable', 'string', 'max:255'],
+            'admin_notes' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $txHash = $validated['tx_hash'] ?? $cryptoSellRequest->tx_hash;
-        if (! filled($txHash)) {
-            return back()->with('error', __('Transaction hash is required.'));
-        }
-
+        $txHash = trim($validated['tx_hash']);
         $duplicate = CryptoSellRequest::query()
             ->where('tx_hash', $txHash)
             ->where('id', '!=', $cryptoSellRequest->id)
+            ->where('status', CryptoSellRequest::STATUS_APPROVED)
             ->exists();
         if ($duplicate) {
-            return back()->with('error', __('This transaction hash is already used on another order.'));
+            return back()->with('error', __('This transaction hash was already used on an approved sell.'));
         }
 
-        $walletBefore = $cryptoSellRequest->wallet?->replicate();
-        $creditAmount = isset($validated['credit_ngn_override']) && $validated['credit_ngn_override'] !== null
+        $credit = array_key_exists('credit_ngn_override', $validated) && $validated['credit_ngn_override'] !== null
             ? (float) $validated['credit_ngn_override']
             : $cryptoSellRequest->creditAmountNgn();
 
-        DB::transaction(function () use ($cryptoSellRequest, $request, $validated, $txHash, $creditAmount) {
-            $cryptoSellRequest = CryptoSellRequest::where('id', $cryptoSellRequest->id)
-                ->lockForUpdate()
-                ->firstOrFail();
-
-            if ($cryptoSellRequest->status === CryptoSellRequest::STATUS_APPROVED) {
-                return;
-            }
-
-            $checklist = [
-                'network' => true,
-                'destination' => true,
-                'amount' => true,
-                'confirmations' => true,
-                'valid' => true,
-                'approved_by' => auth()->id(),
-                'approved_at' => now()->toIso8601String(),
-            ];
-
-            if ($cryptoSellRequest->wallet_funding_id) {
-                $funding = WalletFunding::find($cryptoSellRequest->wallet_funding_id);
-                if ($funding) {
-                    $this->walletService->creditFromFunding(
-                        $funding,
-                        auth()->id(),
-                        $request->ip(),
-                        substr((string) $request->userAgent(), 0, 255),
-                        $request->input('reason', 'Crypto OTC verified'),
-                    );
-                    $cryptoSellRequest->update([
-                        'status' => CryptoSellRequest::STATUS_APPROVED,
-                        'tx_hash' => $txHash,
-                        'verification_checklist' => $checklist,
-                        'admin_notes' => $validated['admin_notes'] ?? $cryptoSellRequest->admin_notes,
-                        'credit_ngn_override' => $validated['credit_ngn_override'] ?? $cryptoSellRequest->credit_ngn_override,
-                    ]);
-
-                    return;
+        try {
+            DB::transaction(function () use ($cryptoSellRequest, $validated, $txHash, $credit, $request) {
+                $cryptoSellRequest->tx_hash = $txHash;
+                if (array_key_exists('credit_ngn_override', $validated) && $validated['credit_ngn_override'] !== null) {
+                    $cryptoSellRequest->credit_ngn_override = $validated['credit_ngn_override'];
                 }
-            }
+                $cryptoSellRequest->admin_notes = $validated['admin_notes'] ?? $cryptoSellRequest->admin_notes;
+                $cryptoSellRequest->verification_checklist = [
+                    'network' => true,
+                    'destination' => true,
+                    'amount' => true,
+                    'confirmations' => true,
+                    'valid' => true,
+                    'approved_by' => auth()->id(),
+                    'approved_at' => now()->toIso8601String(),
+                ];
 
-            $funding = WalletFunding::create([
-                'user_id' => $cryptoSellRequest->user_id,
-                'wallet_id' => $cryptoSellRequest->wallet_id,
-                'method' => 'crypto',
-                'amount' => $creditAmount,
-                'currency' => 'NGN',
-                'status' => 'pending',
-                'reference' => 'DEP-'.strtoupper(Str::random(10)),
-                'metadata' => [
-                    'coin' => $cryptoSellRequest->coin,
-                    'network' => $cryptoSellRequest->network,
-                    'amount_crypto' => $cryptoSellRequest->amount_crypto,
-                    'amount_usd' => $cryptoSellRequest->amount_usd,
-                    'rate_ngn' => $cryptoSellRequest->quoted_rate_ngn,
-                    'market_rate_ngn' => $cryptoSellRequest->market_rate_ngn,
-                    'spread_ngn' => $cryptoSellRequest->spread_ngn,
-                    'tx_hash' => $txHash,
-                    'crypto_sell_request_id' => $cryptoSellRequest->id,
-                    'immutable_quote' => true,
-                ],
-            ]);
+                $funding = WalletFunding::create([
+                    'user_id' => $cryptoSellRequest->user_id,
+                    'wallet_id' => $cryptoSellRequest->wallet_id,
+                    'amount' => $credit,
+                    'currency' => 'NGN',
+                    'method' => 'crypto',
+                    'status' => 'pending',
+                    'internal_status' => 'pending',
+                    'reference' => $cryptoSellRequest->tracking_code ?: ('OTC-'.$cryptoSellRequest->id),
+                    'provider_payment_reference' => $txHash,
+                ]);
 
-            $this->walletService->creditFromFunding(
-                $funding,
-                auth()->id(),
-                $request->ip(),
-                substr((string) $request->userAgent(), 0, 255),
-                $request->input('reason', 'Crypto OTC verified'),
-            );
-
-            $cryptoSellRequest->update([
-                'status' => CryptoSellRequest::STATUS_APPROVED,
-                'tx_hash' => $txHash,
-                'wallet_funding_id' => $funding->id,
-                'verification_checklist' => $checklist,
-                'admin_notes' => $validated['admin_notes'] ?? $cryptoSellRequest->admin_notes,
-                'credit_ngn_override' => $validated['credit_ngn_override'] ?? $cryptoSellRequest->credit_ngn_override,
-            ]);
-
-            IncomingCryptoTransaction::query()
-                ->where('tx_hash', $txHash)
-                ->update(['status' => IncomingCryptoTransaction::STATUS_APPROVED, 'matched_order_id' => $cryptoSellRequest->id]);
-        });
-
-        $cryptoSellRequest->refresh();
-        $walletAfter = $cryptoSellRequest->wallet;
-
-        $fundingId = $cryptoSellRequest->wallet_funding_id;
-        if ($fundingId) {
-            $txn = Transaction::query()->where('wallet_funding_id', $fundingId)->latest('id')->first();
-            if ($txn) {
-                CryptoSold::dispatch(
-                    (int) $cryptoSellRequest->user_id,
-                    (int) $txn->id,
-                    (float) $cryptoSellRequest->creditAmountNgn(),
-                    'NGN'
+                $this->walletService->creditFromFunding(
+                    $funding,
+                    auth()->id(),
+                    $request->ip(),
+                    null,
+                    'Crypto OTC sell '.$cryptoSellRequest->tracking_code
                 );
-            }
-        }
 
-        $this->financialAudit->logMoneyAction(
-            auth()->id(),
-            'crypto_sell.approved',
-            $cryptoSellRequest,
-            $walletBefore,
-            $walletAfter,
-            $request->ip(),
-            $request->userAgent(),
-            $request->header('X-Request-Id'),
-        );
+                $cryptoSellRequest->wallet_funding_id = $funding->id;
+                $cryptoSellRequest->status = CryptoSellRequest::STATUS_APPROVED;
+                $cryptoSellRequest->save();
+
+                event(new CryptoSold($cryptoSellRequest));
+
+                $this->audit->log(auth()->id(), 'crypto_sell.approved', $cryptoSellRequest, null, [
+                    'credit_ngn' => $credit,
+                    'tracking_code' => $cryptoSellRequest->tracking_code,
+                    'tx_hash' => $txHash,
+                ], $request->ip());
+                $this->financialAudit->log('crypto_sell.approved', [
+                    'sell_id' => $cryptoSellRequest->id,
+                    'tracking_code' => $cryptoSellRequest->tracking_code,
+                    'credit_ngn' => $credit,
+                ]);
+            });
+        } catch (\Throwable $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return redirect()
             ->route('admin.crypto-sells.show', $cryptoSellRequest)
-            ->with('status', __('Crypto sell approved. Wallet credited ₦:amount (quoted amount).', [
-                'amount' => number_format($cryptoSellRequest->creditAmountNgn(), 2),
-            ]));
+            ->with('status', __('Sell approved and wallet credited.'));
     }
 
     public function reject(CryptoSellRequest $cryptoSellRequest, Request $request): RedirectResponse
     {
-        if (! $cryptoSellRequest->isApprovable() && $cryptoSellRequest->status !== 'pending') {
-            return back()->with('error', __('Request cannot be rejected in its current status.'));
-        }
-
-        $request->validate(['notes' => ['nullable', 'string', 'max:500']]);
-
-        $cryptoSellRequest->update([
-            'status' => CryptoSellRequest::STATUS_REJECTED,
-            'admin_notes' => $request->input('notes'),
+        $validated = $request->validate([
+            'notes' => ['required', 'string', 'max:2000'],
         ]);
 
-        $this->audit->log(auth()->id(), 'crypto_sell.rejected', $cryptoSellRequest, null, $cryptoSellRequest->toArray(), $request->ip());
+        if ($cryptoSellRequest->status === CryptoSellRequest::STATUS_APPROVED) {
+            return back()->with('error', __('Approved sells cannot be rejected.'));
+        }
 
-        return back()->with('status', __('Crypto sell request rejected.'));
+        $before = $cryptoSellRequest->toArray();
+        $cryptoSellRequest->update([
+            'status' => CryptoSellRequest::STATUS_REJECTED,
+            'admin_notes' => $validated['notes'],
+        ]);
+
+        $this->audit->log(auth()->id(), 'crypto_sell.rejected', $cryptoSellRequest, $before, $cryptoSellRequest->toArray(), $request->ip());
+
+        return redirect()
+            ->route('admin.crypto-sells.show', $cryptoSellRequest)
+            ->with('status', __('Sell request rejected.'));
     }
 }

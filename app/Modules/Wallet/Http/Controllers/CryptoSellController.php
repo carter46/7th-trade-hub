@@ -6,10 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\CryptoDepositWallet;
 use App\Models\CryptoSellRequest;
 use App\Models\ExchangeRate;
+use App\Modules\Wallet\Services\CryptoExplorerUrl;
 use App\Modules\Wallet\Services\ExchangeQuoteService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use RuntimeException;
@@ -23,18 +26,30 @@ class CryptoSellController extends Controller
 
     public function index(): View
     {
-        $requests = CryptoSellRequest::where('user_id', auth()->id())
+        $userId = auth()->id();
+        $openOrder = CryptoSellRequest::query()
+            ->where('user_id', $userId)
+            ->whereIn('status', CryptoSellRequest::OPEN_STATUSES)
+            ->orderByDesc('id')
+            ->first();
+
+        $requests = CryptoSellRequest::where('user_id', $userId)
             ->orderByDesc('created_at')
             ->paginate(15);
 
         return view('dashboard.user.deposit.crypto-index', [
             'requests' => $requests,
             'wallet' => auth()->user()->wallet,
+            'openOrder' => $openOrder,
         ]);
     }
 
-    public function create(): View
+    public function create(): View|RedirectResponse
     {
+        if ($redirect = $this->redirectIfOpenOrder()) {
+            return $redirect;
+        }
+
         $catalog = ExchangeRate::query()
             ->active()
             ->orderBy('sort_order')
@@ -48,7 +63,6 @@ class CryptoSellController extends Controller
 
         $coins = $catalog->pluck('asset')->map(fn ($a) => strtoupper((string) $a))->unique()->values();
 
-        // Prefer coins that have at least one active deposit wallet; fall back to catalog.
         $walletCoins = $wallets->keys();
         if ($walletCoins->isNotEmpty()) {
             $coins = $coins->filter(fn ($c) => $walletCoins->contains($c))->values();
@@ -118,6 +132,10 @@ class CryptoSellController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        if ($redirect = $this->redirectIfOpenOrder()) {
+            return $redirect;
+        }
+
         $user = $request->user();
         $wallet = $user->wallet;
 
@@ -218,11 +236,31 @@ class CryptoSellController extends Controller
     public function show(CryptoSellRequest $cryptoSellRequest): View
     {
         $this->authorizeRequest($cryptoSellRequest);
+        $cryptoSellRequest->expireIfNeeded();
+        $cryptoSellRequest->refresh();
+        $cryptoSellRequest->load(['incomingTransactions']);
+
+        $supportUrl = Route::has('dashboard.support.index')
+            ? route('dashboard.support.index')
+            : url('/dashboard/support');
 
         return view('dashboard.user.deposit.crypto-show', [
             'sell' => $cryptoSellRequest,
-            'qrUrl' => 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='.urlencode((string) $cryptoSellRequest->platform_address),
+            'qrUrl' => 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='.urlencode((string) $cryptoSellRequest->platform_address),
+            'statusUrl' => route('dashboard.crypto-sell.status', $cryptoSellRequest),
+            'supportUrl' => $supportUrl,
+            'initialPayload' => $this->statusPayload($cryptoSellRequest),
         ]);
+    }
+
+    public function status(CryptoSellRequest $cryptoSellRequest): JsonResponse
+    {
+        $this->authorizeRequest($cryptoSellRequest);
+        $cryptoSellRequest->expireIfNeeded();
+        $cryptoSellRequest->refresh();
+        $cryptoSellRequest->load(['incomingTransactions', 'wallet']);
+
+        return response()->json($this->statusPayload($cryptoSellRequest));
     }
 
     public function submitTx(Request $request, CryptoSellRequest $cryptoSellRequest): RedirectResponse
@@ -269,7 +307,6 @@ class CryptoSellController extends Controller
     {
         $this->authorizeRequest($cryptoSellRequest);
 
-        // Immutable quotes: refresh means create a new order, not rewrite this one.
         if (! in_array($cryptoSellRequest->status, [
             CryptoSellRequest::STATUS_EXPIRED,
             CryptoSellRequest::STATUS_WAITING_DEPOSIT,
@@ -291,6 +328,86 @@ class CryptoSellController extends Controller
                 'network' => $cryptoSellRequest->network,
                 'amount_usd' => $cryptoSellRequest->amount_usd,
             ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function statusPayload(CryptoSellRequest $sell): array
+    {
+        $incoming = $sell->incomingTransactions->sortByDesc('detected_at')->first();
+        $stage = $sell->trackingStage();
+        $required = max(1, (int) ($sell->required_confirmations ?? 1));
+        $observed = (int) ($sell->confirmations_observed ?? $incoming?->confirmations ?? 0);
+        $amountReceived = $incoming ? (float) $incoming->amount : null;
+        $expectedCrypto = (float) $sell->amount_crypto;
+        $shortfall = ($amountReceived !== null && $amountReceived < $expectedCrypto)
+            ? round($expectedCrypto - $amountReceived, 10)
+            : null;
+
+        $txHash = $sell->tx_hash ?: ($incoming?->tx_hash);
+        $secondsRemaining = 0;
+        if ($sell->expires_at && $stage === 'waiting_deposit') {
+            $secondsRemaining = max(0, $sell->expires_at->getTimestamp() - now()->getTimestamp());
+        }
+
+        $walletBalance = (float) (auth()->user()?->wallet?->balance ?? $sell->wallet?->balance ?? 0);
+
+        return [
+            'tracking_code' => $sell->tracking_code,
+            'status' => $sell->status,
+            'stage' => $stage,
+            'coin' => $sell->coin,
+            'network' => $sell->network,
+            'platform_address' => $sell->platform_address,
+            'amount_usd' => (float) $sell->amount_usd,
+            'amount_crypto' => $expectedCrypto,
+            'amount_received' => $amountReceived,
+            'shortfall' => $shortfall,
+            'expected_ngn' => (float) $sell->expected_ngn,
+            'credit_ngn' => $sell->creditAmountNgn(),
+            'quoted_rate_ngn' => (float) $sell->quoted_rate_ngn,
+            'wallet_available_ngn' => $walletBalance,
+            'expires_at' => optional($sell->expires_at)?->toIso8601String(),
+            'seconds_remaining' => (int) $secondsRemaining,
+            'confirmations_observed' => $observed,
+            'required_confirmations' => $required,
+            'conf_progress' => min(1, $observed / $required),
+            'tx_hash' => $txHash,
+            'detected_at' => optional($incoming?->detected_at ?? $incoming?->created_at)?->toIso8601String(),
+            'explorer_url' => CryptoExplorerUrl::forTx($sell->network, $txHash),
+            'admin_notes' => $sell->admin_notes,
+            'amount_match_status' => $sell->amount_match_status,
+            'poll_interval_ms' => $sell->pollIntervalMs(),
+            'show_countdown' => $stage === 'waiting_deposit',
+            'show_confirmation_panel' => in_array($stage, ['deposit_detected', 'awaiting_admin', 'underpaid', 'overpaid'], true),
+            'open' => $sell->isOpen() && $stage !== 'expired',
+            'is_terminal' => $sell->isTerminal() || $stage === 'expired',
+            'is_expired' => $stage === 'expired',
+        ];
+    }
+
+    private function redirectIfOpenOrder(): ?RedirectResponse
+    {
+        $open = CryptoSellRequest::query()
+            ->where('user_id', auth()->id())
+            ->whereIn('status', CryptoSellRequest::OPEN_STATUSES)
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $open) {
+            return null;
+        }
+
+        $open->expireIfNeeded();
+        $open->refresh();
+        if (! $open->isOpen()) {
+            return null;
+        }
+
+        return redirect()
+            ->route('dashboard.crypto-sell.show', $open)
+            ->with('status', __('You have an active sell order. Resume tracking below.'));
     }
 
     private function authorizeRequest(CryptoSellRequest $request): void

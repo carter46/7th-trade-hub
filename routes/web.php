@@ -205,6 +205,7 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
         Route::get('/crypto-sell/create', [CryptoSellController::class, 'create'])->name('.crypto-sell.create');
         Route::post('/crypto-sell', [CryptoSellController::class, 'store'])->name('.crypto-sell.store');
         Route::get('/crypto-sell/{cryptoSellRequest}', [CryptoSellController::class, 'show'])->name('.crypto-sell.show');
+        Route::get('/crypto-sell/{cryptoSellRequest}/status', [CryptoSellController::class, 'status'])->name('.crypto-sell.status');
         Route::post('/crypto-sell/{cryptoSellRequest}/tx', [CryptoSellController::class, 'submitTx'])->name('.crypto-sell.tx');
         Route::post('/crypto-sell/{cryptoSellRequest}/cancel', [CryptoSellController::class, 'cancel'])->name('.crypto-sell.cancel');
         Route::post('/crypto-sell/{cryptoSellRequest}/refresh', [CryptoSellController::class, 'refreshQuote'])->name('.crypto-sell.refresh');

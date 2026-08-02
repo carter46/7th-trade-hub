@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CryptoSellRequest;
 use App\Models\Listing;
 use App\Models\Message;
 use App\Models\Order;
@@ -35,6 +36,12 @@ class DashboardController extends Controller
         $messagesCount = Message::where('to_user_id', $user->id)->whereNull('read_at')->count();
         $myListingsCount = $user->listings()->count();
 
+        $openCryptoSell = CryptoSellRequest::query()
+            ->where('user_id', $user->id)
+            ->whereIn('status', CryptoSellRequest::OPEN_STATUSES)
+            ->orderByDesc('id')
+            ->first();
+
         return view('dashboard.user.overview', [
             'wallet' => $wallet,
             'balanceNgn' => $balanceNgn,
@@ -47,6 +54,7 @@ class DashboardController extends Controller
             'transactions' => $transactions,
             'recommendedListings' => $recommendedListings,
             'kycLevel' => $user->kyc_level,
+            'openCryptoSell' => $openCryptoSell,
         ]);
     }
 
