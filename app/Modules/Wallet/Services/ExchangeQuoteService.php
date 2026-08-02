@@ -45,9 +45,9 @@ class ExchangeQuoteService
             throw new RuntimeException('Unable to resolve coin USD price.');
         }
 
-        $customer = $this->resolveCustomerRate($settings);
+        $customer = $this->resolveCustomerRateForCoin($coin, $settings);
         if ($customer['rate'] <= 0) {
-            throw new RuntimeException('Unable to resolve customer NGN rate. Set market reference or manual rate in Admin Pricing.');
+            throw new RuntimeException('Unable to resolve customer NGN rate. Set the coin rate in Coin Catalog or OTC Pricing.');
         }
 
         $amountCrypto = $amountUsd / $coinUsd;
@@ -103,6 +103,38 @@ class ExchangeQuoteService
 
             return $this->coingeckoUsd($symbol);
         });
+    }
+
+    /**
+     * Per-coin customer NGN/$ rate from Coin Catalog, falling back to global OTC pricing.
+     *
+     * @return array{rate: float, market: float, spread: float, source: string}
+     */
+    public function resolveCustomerRateForCoin(string $coin, ?OtcPricingSetting $settings = null): array
+    {
+        $symbol = strtoupper(trim($coin));
+        $settings ??= OtcPricingSetting::current();
+        $global = $this->resolveCustomerRate($settings);
+
+        if ($symbol !== '' && Schema::hasTable('exchange_rates')) {
+            $row = ExchangeRate::query()
+                ->whereRaw('UPPER(asset) = ?', [$symbol])
+                ->where('is_active', true)
+                ->first();
+            $coinRate = (float) ($row?->sell_rate_ngn ?? 0);
+            if ($coinRate > 0) {
+                $market = $global['market'] > 0 ? $global['market'] : $coinRate;
+
+                return [
+                    'rate' => $coinRate,
+                    'market' => $market,
+                    'spread' => max(0, $market - $coinRate),
+                    'source' => 'exchange_rate_catalog',
+                ];
+            }
+        }
+
+        return $global;
     }
 
     /**

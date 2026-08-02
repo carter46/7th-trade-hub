@@ -5,8 +5,8 @@
 @section('content')
 @php
     $rateMap = $rates->mapWithKeys(fn ($r) => [$r->asset => [
-        'sell' => (float) ($r->customer_rate ?: $r->sell_rate_ngn),
-        'customer_rate' => (float) ($r->customer_rate ?: $r->sell_rate_ngn),
+        'sell' => (float) $r->sell_rate_ngn,
+        'customer_rate' => (float) $r->customer_rate,
         'market_rate' => (float) ($r->otc_market_rate ?? 0),
         'spread' => (float) ($r->spread ?? 0),
         'coin_usd' => (float) ($r->coin_usd ?? 0),

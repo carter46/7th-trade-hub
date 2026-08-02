@@ -95,7 +95,7 @@
 >
     <div class="space-y-2">
         <label class="block text-sm font-medium text-text-primary">Coin <span class="text-danger">*</span></label>
-        <p class="text-xs text-text-muted">You only buy crypto from customers. Set the NGN rate you pay them for this coin.</p>
+        <p class="text-xs text-text-muted">You only buy crypto from customers. Set the NGN rate you pay them for this coin. OTC Settings control matching tolerance and quote lifetime.</p>
 
         <div class="relative">
             <div class="flex items-center gap-2 rounded-xl border border-border-default bg-elevated px-3 py-2">
@@ -208,8 +208,8 @@
             {{-- Keep legacy buy column aligned; you do not sell crypto to customers. --}}
             <input type="hidden" name="buy_rate_ngn" :value="customerRate" value="{{ $initialCustomerRate }}">
             <p class="mt-1 text-[11px] text-text-muted">
-                What you pay the customer in NGN when they sell you this coin (per $1 USD). This is the rate shown on the exchange / OTC sell flow.
-                Live OTC Pricing can still override this when configured.
+                What you pay the customer in NGN when they sell you this coin (per $1 USD). Shown on the public exchange page and used for OTC quotes for this coin.
+                If this is empty, the legacy global fallback rate in the database may be used — always set a rate here for each active coin.
             </p>
         </div>
     </div>

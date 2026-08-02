@@ -58,10 +58,10 @@ class CryptoSellController extends Controller
         }
 
         $rateMap = [];
-        $customer = $this->quoteService->resolveCustomerRate();
         $allowedNetworks = config('crypto.networks_by_coin', []);
         foreach ($coins as $symbol) {
             $rate = $catalog->first(fn ($r) => strtoupper((string) $r->asset) === $symbol);
+            $customer = $this->quoteService->resolveCustomerRateForCoin($symbol);
             $coinWallets = $wallets[$symbol] ?? collect();
             $canonicalList = $allowedNetworks[$symbol] ?? [];
             $networks = $coinWallets
@@ -112,7 +112,7 @@ class CryptoSellController extends Controller
             'wallet' => auth()->user()->wallet,
             'rateMap' => $rateMap,
             'coins' => array_keys($rateMap),
-            'pricingAvailable' => $customer['rate'] > 0,
+            'pricingAvailable' => collect($rateMap)->contains(fn ($r) => (float) ($r['customer_rate'] ?? 0) > 0),
         ]);
     }
 

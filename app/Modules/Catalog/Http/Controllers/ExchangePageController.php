@@ -18,14 +18,14 @@ class ExchangePageController extends Controller
             ->orderBy('sort_order')
             ->get();
 
-        $customer = $quotes->resolveCustomerRate();
         $live = $prices->liveRatesForSymbols($catalog->pluck('asset')->all());
 
         /** @var Collection<int, object> $rates */
-        $rates = $catalog->map(function (ExchangeRate $rate) use ($live, $prices, $customer, $quotes) {
+        $rates = $catalog->map(function (ExchangeRate $rate) use ($live, $prices, $quotes) {
             $symbol = strtoupper((string) $rate->asset);
             $row = $live[$symbol] ?? null;
             $marketNgn = (float) ($row['ngn'] ?? 0);
+            $resolved = $quotes->resolveCustomerRateForCoin($symbol);
             try {
                 $coinUsd = $quotes->coinUsdPrice($symbol);
             } catch (\Throwable) {
@@ -34,11 +34,13 @@ class ExchangePageController extends Controller
 
             return (object) [
                 'asset' => $symbol,
-                'sell_rate_ngn' => $customer['rate'] > 0 ? $customer['rate'] : (float) $rate->sell_rate_ngn,
+                // Prefer the per-coin catalog rate admin sets (not the global OTC override).
+                'sell_rate_ngn' => $resolved['rate'],
                 'buy_rate_ngn' => (float) $rate->buy_rate_ngn,
-                'customer_rate' => $customer['rate'],
-                'otc_market_rate' => $customer['market'],
-                'spread' => $customer['spread'],
+                'customer_rate' => $resolved['rate'],
+                'otc_market_rate' => $resolved['market'],
+                'spread' => $resolved['spread'],
+                'pricing_source' => $resolved['source'],
                 'coin_usd' => $coinUsd,
                 'minimum_amount' => $rate->minimum_amount,
                 'maximum_amount' => $rate->maximum_amount,
@@ -54,7 +56,6 @@ class ExchangePageController extends Controller
 
         return view('pages.exchange', [
             'rates' => $rates,
-            'customerRate' => $customer,
             'pricesLive' => $rates->contains(fn ($r) => $r->is_live && $r->market_rate_ngn !== null),
         ]);
     }
