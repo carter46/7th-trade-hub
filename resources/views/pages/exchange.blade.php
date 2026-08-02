@@ -82,7 +82,7 @@
                                 <select
                                     id="exchange-asset"
                                     x-model="asset"
-                                    class="min-w-0 flex-1 border-0 bg-transparent py-1 text-sm font-semibold text-white focus:outline-none focus:ring-0"
+                                    class="exchange-asset-select min-w-0 flex-1 border-0 bg-transparent py-1 text-sm font-semibold text-white focus:outline-none focus:ring-0"
                                 >
                                     @foreach($rates as $rate)
                                         <option value="{{ $rate->asset }}">{{ $rate->asset }}</option>
@@ -196,4 +196,12 @@
         </div>
     @endif
 </section>
+
+<style>
+    /* Native <option> menus often force a white panel — keep readable on dark theme. */
+    .exchange-asset-select option {
+        background-color: #0f172a;
+        color: #f8fafc;
+    }
+</style>
 @endsection

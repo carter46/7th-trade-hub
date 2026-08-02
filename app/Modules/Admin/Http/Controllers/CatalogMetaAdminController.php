@@ -4,6 +4,8 @@ namespace App\Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\ExchangeRate;
+use App\Modules\Wallet\Services\CryptoPriceService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -48,9 +50,18 @@ class CatalogMetaAdminController extends Controller
         ]);
     }
 
-    public function createExchangeRate(): View
+    public function createExchangeRate(CryptoPriceService $prices): View
     {
-        return view('dashboard.admin.exchange-rates.create');
+        return view('dashboard.admin.exchange-rates.create', [
+            'coins' => $prices->marketCatalog(),
+        ]);
+    }
+
+    public function coinCatalog(CryptoPriceService $prices): JsonResponse
+    {
+        return response()->json([
+            'coins' => $prices->marketCatalog(),
+        ]);
     }
 
     public function storeExchangeRate(Request $request): RedirectResponse
@@ -59,6 +70,8 @@ class CatalogMetaAdminController extends Controller
 
         ExchangeRate::create([
             'asset' => strtoupper($data['asset']),
+            'coingecko_id' => $data['coingecko_id'] ?? null,
+            'logo_url' => $data['logo_url'] ?? null,
             'buy_rate_ngn' => $data['buy_rate_ngn'],
             'sell_rate_ngn' => $data['sell_rate_ngn'],
             'minimum_amount' => $data['minimum_amount'] ?? null,
@@ -74,10 +87,11 @@ class CatalogMetaAdminController extends Controller
             ->with('status', 'Exchange rate created.');
     }
 
-    public function editExchangeRate(ExchangeRate $exchangeRate): View
+    public function editExchangeRate(ExchangeRate $exchangeRate, CryptoPriceService $prices): View
     {
         return view('dashboard.admin.exchange-rates.edit', [
             'rate' => $exchangeRate,
+            'coins' => $prices->marketCatalog(),
         ]);
     }
 
@@ -87,6 +101,8 @@ class CatalogMetaAdminController extends Controller
 
         $exchangeRate->update([
             'asset' => strtoupper($data['asset']),
+            'coingecko_id' => $data['coingecko_id'] ?? null,
+            'logo_url' => $data['logo_url'] ?? null,
             'buy_rate_ngn' => $data['buy_rate_ngn'],
             'sell_rate_ngn' => $data['sell_rate_ngn'],
             'minimum_amount' => $data['minimum_amount'] ?? null,
@@ -123,6 +139,8 @@ class CatalogMetaAdminController extends Controller
                 'max:20',
                 Rule::unique('exchange_rates', 'asset')->ignore($exchangeRate?->id),
             ],
+            'coingecko_id' => ['nullable', 'string', 'max:80'],
+            'logo_url' => ['nullable', 'string', 'max:500'],
             'buy_rate_ngn' => ['required', 'numeric', 'min:0'],
             'sell_rate_ngn' => ['required', 'numeric', 'min:0'],
             'minimum_amount' => ['nullable', 'numeric', 'min:0'],

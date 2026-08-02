@@ -17,7 +17,7 @@
         <form method="POST" action="{{ route('admin.exchange-rates.update', $rate) }}" class="w-full space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
             @method('PUT')
-            @include('dashboard.admin.exchange-rates._form', ['rate' => $rate])
+            @include('dashboard.admin.exchange-rates._form', ['rate' => $rate, 'coins' => $coins ?? []])
             <div class="flex flex-wrap gap-2 pt-2">
                 <x-dashboard.button type="submit" variant="primary" x-bind:disabled="submitting">Save changes</x-dashboard.button>
                 <x-dashboard.button :href="route('admin.exchange-rates')" variant="secondary">Cancel</x-dashboard.button>

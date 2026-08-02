@@ -1,17 +1,126 @@
-@php $rate = $rate ?? null; @endphp
-<x-dashboard.input label="Asset" name="asset" :value="old('asset', $rate?->asset)" placeholder="BTC" required />
-<x-dashboard.input label="Buy rate (NGN)" name="buy_rate_ngn" type="number" step="0.01" :value="old('buy_rate_ngn', $rate?->buy_rate_ngn)" required />
-<x-dashboard.input label="Sell rate (NGN)" name="sell_rate_ngn" type="number" step="0.01" :value="old('sell_rate_ngn', $rate?->sell_rate_ngn)" required />
-<x-dashboard.input label="Minimum amount" name="minimum_amount" type="number" step="any" :value="old('minimum_amount', $rate?->minimum_amount)" />
-<x-dashboard.input label="Maximum amount" name="maximum_amount" type="number" step="any" :value="old('maximum_amount', $rate?->maximum_amount)" />
-<x-dashboard.input label="Processing time" name="processing_time" :value="old('processing_time', $rate?->processing_time)" placeholder="5–15 minutes" />
-<x-dashboard.input label="Sort order" name="sort_order" type="number" min="0" :value="old('sort_order', $rate?->sort_order ?? 0)" />
-<label class="flex items-center gap-2 text-sm text-text-secondary">
-    <input type="checkbox" name="is_featured" value="1" class="rounded border-border-default" @checked(old('is_featured', $rate?->is_featured))>
-    Featured
-</label>
-<label class="flex items-center gap-2 text-sm text-text-secondary">
-    <input type="hidden" name="is_active" value="0">
-    <input type="checkbox" name="is_active" value="1" class="rounded border-border-default" @checked(old('is_active', $rate?->is_active ?? true))>
-    Active
-</label>
+@php
+    $rate = $rate ?? null;
+    $coins = $coins ?? [];
+    $selected = [
+        'id' => old('coingecko_id', $rate?->coingecko_id),
+        'symbol' => old('asset', $rate?->asset),
+        'name' => old('asset', $rate?->asset),
+        'logo' => old('logo_url', $rate?->logo_url),
+        'price_ngn' => null,
+    ];
+@endphp
+
+<div
+    class="space-y-4"
+    x-data="exchangeRateForm({
+        coins: @js($coins),
+        selected: @js($selected),
+        buy: @js(old('buy_rate_ngn', $rate?->buy_rate_ngn)),
+        sell: @js(old('sell_rate_ngn', $rate?->sell_rate_ngn)),
+    })"
+>
+    <div class="space-y-2">
+        <label class="block text-sm font-medium text-text-primary">Coin <span class="text-danger">*</span></label>
+        <p class="text-xs text-text-muted">Pick from CoinGecko. Market price is suggested — set your platform buy/sell rates below.</p>
+
+        <div class="relative">
+            <div class="flex items-center gap-2 rounded-xl border border-border-default bg-elevated px-3 py-2">
+                <template x-if="selected?.logo">
+                    <img :src="selected.logo" alt="" class="h-7 w-7 rounded-full bg-white shrink-0" width="28" height="28" referrerpolicy="no-referrer">
+                </template>
+                <input
+                    type="search"
+                    x-model="query"
+                    @focus="open = true"
+                    @input="open = true"
+                    placeholder="Search Bitcoin, USDT, Solana…"
+                    class="min-w-0 flex-1 border-0 bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-0"
+                    autocomplete="off"
+                >
+                <button type="button" class="text-xs text-primary shrink-0" @click="open = !open" x-text="open ? 'Close' : 'Browse'"></button>
+            </div>
+
+            <div
+                x-show="open"
+                x-cloak
+                @click.outside="open = false"
+                class="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-border-default bg-elevated shadow-panel"
+            >
+                <template x-if="filteredCoins().length === 0">
+                    <p class="px-3 py-4 text-sm text-text-muted">No coins match.</p>
+                </template>
+                <template x-for="coin in filteredCoins()" :key="coin.id">
+                    <button
+                        type="button"
+                        class="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-muted/60"
+                        @click="pick(coin)"
+                    >
+                        <img x-show="coin.logo" :src="coin.logo" alt="" class="h-7 w-7 rounded-full bg-white shrink-0" width="28" height="28" referrerpolicy="no-referrer">
+                        <span class="min-w-0 flex-1">
+                            <span class="block truncate text-sm font-medium text-text-primary" x-text="coin.symbol + ' · ' + coin.name"></span>
+                            <span class="block truncate text-[11px] text-text-muted" x-text="coin.price_ngn != null ? ('Market ₦' + Number(coin.price_ngn).toLocaleString('en-NG')) : coin.id"></span>
+                        </span>
+                    </button>
+                </template>
+            </div>
+        </div>
+
+        <input type="hidden" name="asset" :value="selected?.symbol || ''" value="{{ old('asset', $rate?->asset) }}">
+        <input type="hidden" name="coingecko_id" :value="selected?.id || ''" value="{{ old('coingecko_id', $rate?->coingecko_id) }}">
+        <input type="hidden" name="logo_url" :value="selected?.logo || ''" value="{{ old('logo_url', $rate?->logo_url) }}">
+
+        <p class="text-xs text-text-muted" x-show="selected?.symbol">
+            Selected: <span class="font-medium text-text-primary" x-text="(selected?.symbol || '') + (selected?.name ? (' — ' + selected.name) : '')"></span>
+            <span x-show="marketHint" class="text-text-secondary" x-text="marketHint"></span>
+        </p>
+        @error('asset')
+            <p class="text-xs text-danger">{{ $message }}</p>
+        @enderror
+    </div>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+            <label class="mb-1.5 block text-sm font-medium text-text-primary">Buy rate (NGN) <span class="text-danger">*</span></label>
+            <input
+                type="number"
+                step="0.01"
+                name="buy_rate_ngn"
+                x-model="buy"
+                required
+                class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2.5 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+            >
+            @error('buy_rate_ngn')
+                <p class="mt-1 text-xs text-danger">{{ $message }}</p>
+            @enderror
+        </div>
+        <div>
+            <label class="mb-1.5 block text-sm font-medium text-text-primary">Sell rate (NGN) <span class="text-danger">*</span></label>
+            <input
+                type="number"
+                step="0.01"
+                name="sell_rate_ngn"
+                x-model="sell"
+                required
+                class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2.5 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+            >
+            <p class="mt-1 text-[11px] text-text-muted">This is what public &amp; users see for payouts.</p>
+            @error('sell_rate_ngn')
+                <p class="mt-1 text-xs text-danger">{{ $message }}</p>
+            @enderror
+        </div>
+    </div>
+
+    <x-dashboard.input label="Minimum amount" name="minimum_amount" type="number" step="any" :value="old('minimum_amount', $rate?->minimum_amount)" />
+    <x-dashboard.input label="Maximum amount" name="maximum_amount" type="number" step="any" :value="old('maximum_amount', $rate?->maximum_amount)" />
+    <x-dashboard.input label="Processing time" name="processing_time" :value="old('processing_time', $rate?->processing_time)" placeholder="5–15 minutes" />
+    <x-dashboard.input label="Sort order" name="sort_order" type="number" min="0" :value="old('sort_order', $rate?->sort_order ?? 0)" />
+    <label class="flex items-center gap-2 text-sm text-text-secondary">
+        <input type="checkbox" name="is_featured" value="1" class="rounded border-border-default" @checked(old('is_featured', $rate?->is_featured))>
+        Featured
+    </label>
+    <label class="flex items-center gap-2 text-sm text-text-secondary">
+        <input type="hidden" name="is_active" value="0">
+        <input type="checkbox" name="is_active" value="1" class="rounded border-border-default" @checked(old('is_active', $rate?->is_active ?? true))>
+        Active
+    </label>
+</div>

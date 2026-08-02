@@ -43,4 +43,29 @@ class CryptoPriceServiceTest extends TestCase
         $this->assertTrue($live['BTC']['is_live']);
         $this->assertStringContainsString('coingecko.com', (string) $live['BTC']['logo']);
     }
+
+    public function test_market_catalog_maps_coingecko_markets_payload(): void
+    {
+        Cache::flush();
+
+        Http::fake([
+            'api.coingecko.com/*/coins/markets*' => Http::response([
+                [
+                    'id' => 'bitcoin',
+                    'symbol' => 'btc',
+                    'name' => 'Bitcoin',
+                    'image' => 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
+                    'current_price' => 95000000,
+                    'price_change_percentage_24h' => 1.2,
+                ],
+            ], 200),
+        ]);
+
+        $catalog = app(CryptoPriceService::class)->marketCatalog();
+
+        $this->assertNotEmpty($catalog);
+        $this->assertSame('bitcoin', $catalog[0]['id']);
+        $this->assertSame('BTC', $catalog[0]['symbol']);
+        $this->assertSame(95000000.0, $catalog[0]['price_ngn']);
+    }
 }

@@ -8,6 +8,8 @@ class ExchangeRate extends Model
 {
     protected $fillable = [
         'asset',
+        'coingecko_id',
+        'logo_url',
         'buy_rate_ngn',
         'sell_rate_ngn',
         'minimum_amount',
@@ -33,5 +35,17 @@ class ExchangeRate extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function resolvedLogoUrl(): ?string
+    {
+        if (filled($this->logo_url)) {
+            return $this->logo_url;
+        }
+
+        $id = $this->coingecko_id ?: config('crypto.assets.'.strtoupper((string) $this->asset));
+        $logo = $id ? config('crypto.logos.'.$id) : null;
+
+        return is_string($logo) && $logo !== '' ? $logo : null;
     }
 }

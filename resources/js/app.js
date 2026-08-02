@@ -517,6 +517,59 @@ document.addEventListener('alpine:init', () => {
         },
     }));
 
+    Alpine.data('exchangeRateForm', (opts = {}) => ({
+        coins: Array.isArray(opts.coins) ? opts.coins : [],
+        selected: opts.selected || null,
+        buy: opts.buy ?? '',
+        sell: opts.sell ?? '',
+        query: opts.selected?.symbol || opts.selected?.name || '',
+        open: false,
+        get marketHint() {
+            const price = this.selected?.price_ngn;
+            if (price == null || Number.isNaN(Number(price))) return '';
+            return ' · Market ₦' + Number(price).toLocaleString('en-NG');
+        },
+        filteredCoins() {
+            const q = (this.query || '').trim().toLowerCase();
+            const list = this.coins || [];
+            if (!q) return list.slice(0, 40);
+            return list
+                .filter((c) => {
+                    const hay = `${c.symbol || ''} ${c.name || ''} ${c.id || ''}`.toLowerCase();
+                    return hay.includes(q);
+                })
+                .slice(0, 40);
+        },
+        pick(coin) {
+            this.selected = coin;
+            this.query = `${coin.symbol} · ${coin.name}`;
+            this.open = false;
+            if (coin.price_ngn != null && Number(coin.price_ngn) > 0) {
+                const market = Math.round(Number(coin.price_ngn) * 100) / 100;
+                // Prefill from live market; admin adjusts platform buy/sell before saving.
+                this.buy = market;
+                this.sell = market;
+            }
+        },
+    }));
+
+    Alpine.data('cryptoSellForm', (rates = {}) => ({
+        rates,
+        asset: Object.keys(rates)[0] || '',
+        amount: '',
+        submitting: false,
+        get row() {
+            return this.rates[this.asset] || null;
+        },
+        get estimate() {
+            if (!this.row) return 0;
+            return (Number(this.amount) || 0) * Number(this.row.sell || 0);
+        },
+        get estimateFormatted() {
+            return new Intl.NumberFormat('en-NG', { maximumFractionDigits: 2 }).format(this.estimate);
+        },
+    }));
+
     Alpine.data('platformCheckout', (variants = [], options = {}) => ({
         variants,
         variantId: options.defaultVariantId

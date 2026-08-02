@@ -36,7 +36,7 @@ class ExchangePageController extends Controller
                 // CoinGecko live market reference (not the platform payout rate).
                 'market_rate_ngn' => $marketNgn > 0 ? $marketNgn : null,
                 'change_24h' => $row['change_24h'] ?? null,
-                'logo' => $row['logo'] ?? $prices->logoUrl($symbol),
+                'logo' => $rate->resolvedLogoUrl() ?? ($row['logo'] ?? $prices->logoUrl($symbol)),
                 'is_live' => (bool) ($row['is_live'] ?? false),
             ];
         });

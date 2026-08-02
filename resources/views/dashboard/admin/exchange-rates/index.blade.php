@@ -37,10 +37,15 @@
         @foreach ($rates as $rate)
             <tr>
                 <x-dashboard.td class="font-medium">
-                    {{ $rate->asset }}
-                    @if ($rate->is_featured)
-                        <x-dashboard.badge status="warning">Featured</x-dashboard.badge>
-                    @endif
+                    <div class="flex items-center gap-2">
+                        @if ($rate->resolvedLogoUrl())
+                            <img src="{{ $rate->resolvedLogoUrl() }}" alt="" class="h-6 w-6 rounded-full bg-white" width="24" height="24" loading="lazy" referrerpolicy="no-referrer">
+                        @endif
+                        <span>{{ $rate->asset }}</span>
+                        @if ($rate->is_featured)
+                            <x-dashboard.badge status="warning">Featured</x-dashboard.badge>
+                        @endif
+                    </div>
                 </x-dashboard.td>
                 <x-dashboard.td>₦{{ number_format($rate->buy_rate_ngn, 2) }}</x-dashboard.td>
                 <x-dashboard.td>₦{{ number_format($rate->sell_rate_ngn, 2) }}</x-dashboard.td>
