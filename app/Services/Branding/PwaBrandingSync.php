@@ -178,6 +178,9 @@ class PwaBrandingSync
     }
 
     /**
+     * Resize onto a transparent square — do not paint the brand theme color behind uploads.
+     * ($bg is unused; kept so call sites stay stable. Fallback icons still use theme color.)
+     *
      * @param  array{0: int, 1: int, 2: int}  $bg
      */
     private function writeSquarePng(string $sourcePath, int $size, string $destination, array $bg): void
@@ -200,6 +203,9 @@ class PwaBrandingSync
             throw new \RuntimeException('Unable to open branding image for PWA icons.');
         }
 
+        imagealphablending($source, true);
+        imagesavealpha($source, true);
+
         $origW = imagesx($source);
         $origH = imagesy($source);
         $scale = min($size / max(1, $origW), $size / max(1, $origH));
@@ -209,12 +215,16 @@ class PwaBrandingSync
         $dstY = (int) max(0, ($size - $dstH) / 2);
 
         $canvas = imagecreatetruecolor($size, $size);
-        imagealphablending($canvas, true);
-        imagesavealpha($canvas, false);
-        $fill = imagecolorallocate($canvas, $bg[0], $bg[1], $bg[2]);
-        imagefilledrectangle($canvas, 0, 0, $size, $size, $fill);
+        imagealphablending($canvas, false);
+        imagesavealpha($canvas, true);
+        $transparent = imagecolorallocatealpha($canvas, 0, 0, 0, 127);
+        imagefilledrectangle($canvas, 0, 0, $size, $size, $transparent);
 
+        // Blend the source onto the transparent canvas (keeps PNG alpha from the upload).
+        imagealphablending($canvas, true);
         imagecopyresampled($canvas, $source, $dstX, $dstY, 0, 0, $dstW, $dstH, $origW, $origH);
+        imagealphablending($canvas, false);
+        imagesavealpha($canvas, true);
 
         if (! imagepng($canvas, $destination, 6)) {
             imagedestroy($source);
