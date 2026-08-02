@@ -23,6 +23,7 @@ use App\Modules\Admin\Http\Controllers\EscrowController as AdminEscrowController
 use App\Modules\Admin\Http\Controllers\KycController as AdminKycController;
 use App\Modules\Admin\Http\Controllers\ListingAdminController;
 use App\Modules\Admin\Http\Controllers\SettingsController as AdminSettingsController;
+use App\Modules\Admin\Http\Controllers\BlockchainMonitoringController;
 use App\Modules\Admin\Http\Controllers\TrackingSettingsController;
 use App\Modules\Admin\Http\Controllers\SupportTicketAdminController;
 use App\Modules\Admin\Http\Controllers\WalletAdjustmentController;
@@ -483,8 +484,9 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::post('/settings/google-identity/test', [AdminSettingsController::class, 'testGoogleIdentity'])->name('.settings.google-identity.test');
         Route::post('/settings/monnify', [AdminSettingsController::class, 'updateMonnify'])->name('.settings.monnify');
         Route::post('/settings/monnify/test', [AdminSettingsController::class, 'testMonnify'])->name('.settings.monnify.test');
-        Route::post('/settings/blockchain', [AdminSettingsController::class, 'updateBlockchainMonitoring'])->name('.settings.blockchain');
-        Route::post('/settings/blockchain/test', [AdminSettingsController::class, 'testBlockchainMonitoring'])->name('.settings.blockchain.test');
+        Route::get('/blockchain-monitoring', [BlockchainMonitoringController::class, 'index'])->name('.blockchain-monitoring');
+        Route::post('/blockchain-monitoring', [BlockchainMonitoringController::class, 'update'])->name('.blockchain-monitoring.update');
+        Route::post('/blockchain-monitoring/test', [BlockchainMonitoringController::class, 'test'])->name('.blockchain-monitoring.test');
         Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('.audit-logs');
     });
 

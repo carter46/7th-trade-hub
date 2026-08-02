@@ -515,71 +515,12 @@
             </form>
         </x-dashboard.card>
 
-        {{-- Blockchain monitoring --}}
-        @php
-            $blockchain = $blockchain ?? \App\Models\IntegrationProvider::forProvider(\App\Models\IntegrationProvider::BLOCKCHAIN_MONITORING);
-            $chainMeta = $blockchain->meta ?? [];
-            $health = $chainMeta['network_health'] ?? [];
-        @endphp
-        <x-dashboard.card variant="solid" id="blockchain-monitoring">
-            <h2 class="text-lg font-semibold text-text-primary mb-1">Blockchain Monitoring</h2>
-            <p class="text-sm text-text-secondary mb-4">Explorer API keys for deposit detection. Keys are stored here — not in .env.</p>
-            @error('blockchain_test')
-                <p class="mb-3 text-sm text-danger">{{ $message }}</p>
-            @enderror
-            <div class="mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
-                @foreach (['bitcoin' => 'BTC', 'ethereum' => 'ETH', 'tron' => 'TRON', 'solana' => 'SOL'] as $net => $label)
-                    @php $h = $health[$net] ?? []; @endphp
-                    <div class="rounded-xl border border-border-default px-3 py-2">
-                        <p class="font-semibold">{{ $label }}</p>
-                        <p class="text-xs {{ ($h['status'] ?? '') === 'healthy' ? 'text-success' : (($h['status'] ?? '') === 'error' ? 'text-danger' : 'text-text-muted') }}">
-                            {{ ucfirst($h['status'] ?? 'unknown') }}
-                        </p>
-                        <p class="text-[10px] text-text-muted mt-1">
-                            @if(!empty($h['last_success_at']))
-                                Last ok {{ \Illuminate\Support\Carbon::parse($h['last_success_at'])->diffForHumans() }}
-                            @elseif(!empty($h['last_error']))
-                                {{ \Illuminate\Support\Str::limit($h['last_error'], 60) }}
-                            @else
-                                Not polled yet
-                            @endif
-                        </p>
-                    </div>
-                @endforeach
-            </div>
-            <p class="text-xs text-text-muted mb-3">Last poll: {{ $chainMeta['last_poll_at'] ?? '—' }} · Provider status: {{ $blockchain->status ?: 'idle' }}</p>
-            <form method="POST" action="{{ route('admin.settings.blockchain') }}" class="space-y-4">
-                @csrf
-                <input type="hidden" name="blockchain_enabled" value="0">
-                <x-dashboard.toggle name="blockchain_enabled" label="Enable deposit monitoring" :checked="old('blockchain_enabled', $blockchain->enabled)" value="1" />
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <x-dashboard.input name="etherscan_api_key" type="password" label="Etherscan API key" value="" hint="Leave blank to keep.{{ filled($blockchain->credential('etherscan_api_key')) ? ' Key stored.' : '' }}" autocomplete="new-password" />
-                    <x-dashboard.input name="trongrid_api_key" type="password" label="TronGrid API key" value="" hint="Leave blank to keep.{{ filled($blockchain->credential('trongrid_api_key')) ? ' Key stored.' : '' }}" autocomplete="new-password" />
-                    <x-dashboard.input name="solana_rpc_url" label="Solana RPC URL (optional)" :value="old('solana_rpc_url', $blockchain->credential('solana_rpc_url'))" />
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Poll interval</label>
-                        <select name="poll_interval_minutes" class="w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm">
-                            <option value="1" @selected((int) old('poll_interval_minutes', $chainMeta['poll_interval_minutes'] ?? 1) === 1)>Every 1 minute</option>
-                            <option value="2" @selected((int) old('poll_interval_minutes', $chainMeta['poll_interval_minutes'] ?? 1) === 2)>Every 2 minutes</option>
-                        </select>
-                    </div>
-                </div>
-                <p class="text-xs text-text-muted">Bitcoin uses mempool.space (no key). Scheduler runs <code>crypto:poll-deposits</code> every minute.</p>
-                <x-dashboard.button type="submit" variant="primary">Save blockchain settings</x-dashboard.button>
-            </form>
-            <form method="POST" action="{{ route('admin.settings.blockchain.test') }}" class="mt-4 flex flex-wrap gap-2 items-end">
-                @csrf
-                <div>
-                    <label class="block text-xs mb-1">Test network</label>
-                    <select name="network" class="rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm">
-                        <option value="bitcoin">BTC</option>
-                        <option value="ethereum">ETH</option>
-                        <option value="tron">TRON</option>
-                        <option value="solana">SOL</option>
-                    </select>
-                </div>
-                <x-dashboard.button type="submit" variant="secondary">Test connection</x-dashboard.button>
-            </form>
+        <x-dashboard.card variant="solid">
+            <h2 class="text-lg font-semibold text-text-primary mb-1">Blockchain monitoring</h2>
+            <p class="text-sm text-text-secondary mb-4">
+                Explorer providers, API keys, and network health for crypto deposit detection have moved to a dedicated page.
+            </p>
+            <x-dashboard.button :href="route('admin.blockchain-monitoring')" variant="primary">Open Blockchain Monitoring</x-dashboard.button>
         </x-dashboard.card>
 
         <x-dashboard.card variant="solid">

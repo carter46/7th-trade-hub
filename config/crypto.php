@@ -115,7 +115,7 @@ return [
     ],
 
     /**
-     * Map canonical network label → explorer client key.
+     * Map canonical wallet/order network label → monitored network_id.
      *
      * @var array<string, string>
      */
@@ -124,11 +124,136 @@ return [
         'Ethereum' => 'ethereum',
         'ERC20' => 'ethereum',
         'TRC20' => 'tron',
-        'BEP20' => 'ethereum',
-        'Polygon' => 'ethereum',
-        'Base' => 'ethereum',
-        'Arbitrum' => 'ethereum',
+        'BEP20' => 'bep20',
+        'Polygon' => 'polygon',
+        'Base' => 'base',
+        'Arbitrum' => 'arbitrum',
         'Solana' => 'solana',
+    ],
+
+    /**
+     * Dynamic networks for Settings health UI and poller health keys.
+     * Adding a chain here (+ client mapping) is enough — no Blade rewrite.
+     *
+     * @var array<string, array{
+     *   label: string,
+     *   aliases: list<string>,
+     *   native_client: string,
+     *   chainid?: int,
+     *   ui_provider_native?: string,
+     *   blockchain_com?: bool
+     * }>
+     */
+    'monitored_networks' => [
+        'bitcoin' => [
+            'label' => 'Bitcoin',
+            'aliases' => ['Bitcoin', 'BTC'],
+            'native_client' => 'mempool',
+            'ui_provider_native' => 'Public explorer',
+            'blockchain_com' => true,
+        ],
+        'ethereum' => [
+            'label' => 'Ethereum (ERC20)',
+            'aliases' => ['Ethereum', 'ERC20', 'ETH'],
+            'native_client' => 'etherscan',
+            'chainid' => 1,
+            'ui_provider_native' => 'Native',
+            'blockchain_com' => true,
+        ],
+        'bep20' => [
+            'label' => 'BNB Smart Chain (BEP20)',
+            'aliases' => ['BEP20'],
+            'native_client' => 'etherscan',
+            'chainid' => 56,
+            'ui_provider_native' => 'Native',
+            'blockchain_com' => false,
+        ],
+        'polygon' => [
+            'label' => 'Polygon',
+            'aliases' => ['Polygon'],
+            'native_client' => 'etherscan',
+            'chainid' => 137,
+            'ui_provider_native' => 'Native',
+            'blockchain_com' => false,
+        ],
+        'base' => [
+            'label' => 'Base',
+            'aliases' => ['Base'],
+            'native_client' => 'etherscan',
+            'chainid' => 8453,
+            'ui_provider_native' => 'Native',
+            'blockchain_com' => false,
+        ],
+        'arbitrum' => [
+            'label' => 'Arbitrum',
+            'aliases' => ['Arbitrum'],
+            'native_client' => 'etherscan',
+            'chainid' => 42161,
+            'ui_provider_native' => 'Native',
+            'blockchain_com' => false,
+        ],
+        'tron' => [
+            'label' => 'TRON (TRC20)',
+            'aliases' => ['TRC20', 'TRON'],
+            'native_client' => 'trongrid',
+            'ui_provider_native' => 'Native',
+            'blockchain_com' => false,
+        ],
+        'solana' => [
+            'label' => 'Solana',
+            'aliases' => ['Solana', 'SOL'],
+            'native_client' => 'solana',
+            'ui_provider_native' => 'Native',
+            'blockchain_com' => true,
+        ],
+    ],
+
+    /**
+     * Monitor provider catalog for Admin Settings.
+     * enabled=false → Coming soon (no backend).
+     *
+     * @var array<string, array{label: string, enabled: bool, description: string}>
+     */
+    'monitor_providers' => [
+        'native' => [
+            'label' => 'Native',
+            'enabled' => true,
+            'description' => 'Public Bitcoin explorer, EVM explorer API, TRON API, Solana RPC.',
+        ],
+        'blockchain_com' => [
+            'label' => 'Blockchain.com',
+            'enabled' => true,
+            'description' => 'Explorer Gateway for Bitcoin, Ethereum, and Solana. TRON still uses Native TRON API.',
+        ],
+        'blockchair' => [
+            'label' => 'Blockchair',
+            'enabled' => false,
+            'description' => 'Coming soon.',
+        ],
+        'blockcypher' => [
+            'label' => 'BlockCypher',
+            'enabled' => false,
+            'description' => 'Coming soon.',
+        ],
+        'custom' => [
+            'label' => 'Custom',
+            'enabled' => false,
+            'description' => 'Coming soon.',
+        ],
+    ],
+
+    /**
+     * Credential keys stored in IntegrationProvider credentials bag.
+     * Adding Alchemy later = new key name + registry entry, not a migration.
+     *
+     * @var list<string>
+     */
+    'monitor_credential_keys' => [
+        'etherscan_api_key',
+        'trongrid_api_key',
+        'solana_rpc_url',
+        'blockchain_com_api_key',
+        'blockchain_com_base_url',
     ],
 
     /**
@@ -150,6 +275,13 @@ return [
     'etherscan_api_v1' => 'https://api.etherscan.io/api',
     'trongrid_api' => 'https://api.trongrid.io',
     'solana_rpc' => 'https://api.mainnet-beta.solana.com',
+
+    'blockchain_com' => [
+        'base_url' => env('BLOCKCHAIN_COM_EXPLORER_BASE', 'https://api.blockchain.info/explorer-gateway-kt'),
+        'auth_header' => 'X-Explorer-Auth-Key',
+        /** Networks the gateway covers natively (TRON/EVM L2s fall back). */
+        'supported_networks' => ['bitcoin', 'ethereum', 'solana'],
+    ],
 
     'monitor_poll_seconds' => 60,
     'monitor_max_retries' => 3,

@@ -13,10 +13,8 @@ class DepositMonitorService
 {
     public function __construct(
         private ExplorerHttp $http,
-        private MempoolBitcoinClient $bitcoin,
-        private EtherscanClient $etherscan,
-        private TronGridClient $tron,
-        private SolanaRpcClient $solana,
+        private ExplorerClientRegistry $registry,
+        private MonitoredNetworkCatalog $catalog,
         private DepositMatchingService $matcher,
         private NotificationDispatcher $notifications,
     ) {}
@@ -43,7 +41,6 @@ class DepositMonitorService
             })
             ->get();
 
-        // Also include addresses still on open orders even if wallet row disabled.
         $addressKeys = $wallets->map(fn ($w) => strtoupper($w->coin).'|'.strtolower($w->network).'|'.$w->address)->all();
         $orphanAddresses = CryptoSellRequest::query()
             ->whereIn('status', CryptoSellRequest::OPEN_STATUSES)
@@ -54,29 +51,76 @@ class DepositMonitorService
         $detected = 0;
         $errors = [];
         $health = $provider->meta['network_health'] ?? [];
+        $walletCounts = $this->walletCountsByNetwork();
 
+        // Group by network_id|address to avoid duplicate explorer calls when coins share an address.
+        $groups = [];
         foreach ($wallets as $wallet) {
-            try {
-                $client = $this->clientForNetwork($wallet->network);
-                $transfers = $client->fetchIncoming($wallet->address, $wallet->coin, $wallet->network);
-                $health[$client->networkKey()] = $this->healthyMeta();
-                foreach ($transfers as $transfer) {
-                    if ($this->persistTransfer($transfer, $wallet->network)) {
-                        $detected++;
+            $networkId = $this->catalog->resolveId($wallet->network);
+            $groupKey = $networkId.'|'.$wallet->address;
+            $groups[$groupKey] ??= [
+                'network_id' => $networkId,
+                'address' => $wallet->address,
+                'network_label' => $wallet->network,
+                'wallets' => [],
+            ];
+            $groups[$groupKey]['wallets'][] = $wallet;
+        }
+
+        foreach ($groups as $group) {
+            $networkId = $group['network_id'];
+            $seenHashes = [];
+            foreach ($group['wallets'] as $wallet) {
+                try {
+                    $started = microtime(true);
+                    $resolved = $this->registry->resolve($wallet->network);
+                    $client = $resolved['client'];
+                    $transfers = $client->fetchIncoming($wallet->address, $wallet->coin, $wallet->network);
+                    $latencyMs = (int) round((microtime(true) - $started) * 1000);
+
+                    $tip = null;
+                    try {
+                        $tip = $client->tipHeight($wallet->network);
+                    } catch (\Throwable) {
+                        $tip = null;
                     }
+
+                    $health[$networkId] = $this->healthyMeta($resolved, $walletCounts[$networkId] ?? null, $latencyMs, $tip);
+
+                    foreach ($transfers as $transfer) {
+                        $hash = (string) ($transfer['tx_hash'] ?? '');
+                        if ($hash !== '' && isset($seenHashes[$hash])) {
+                            continue;
+                        }
+                        if ($hash !== '') {
+                            $seenHashes[$hash] = true;
+                        }
+                        if ($this->persistTransfer($transfer, $wallet->network)) {
+                            $detected++;
+                        }
+                    }
+                    if ($wallet->is_active && $transfers !== []) {
+                        $wallet->forceFill(['last_deposit_at' => now()])->save();
+                    }
+                } catch (\Throwable $e) {
+                    $resolved = null;
+                    try {
+                        $resolved = $this->registry->resolve($wallet->network);
+                    } catch (\Throwable) {
+                        // ignore
+                    }
+                    $health[$networkId] = $this->errorMeta(
+                        $e->getMessage(),
+                        $resolved,
+                        $walletCounts[$networkId] ?? null
+                    );
+                    $errors[] = "{$wallet->coin}/{$wallet->network}: ".$e->getMessage();
+                    $this->notifyExplorerOffline($networkId, $e->getMessage());
+                    Log::channel('financial')->warning('Deposit poll failed', [
+                        'wallet_id' => $wallet->id,
+                        'error' => $e->getMessage(),
+                    ]);
                 }
-                if ($wallet->is_active && $transfers !== []) {
-                    $wallet->forceFill(['last_deposit_at' => now()])->save();
-                }
-            } catch (\Throwable $e) {
-                $key = $this->normalizeNetwork($wallet->network);
-                $health[$key] = $this->errorMeta($e->getMessage());
-                $errors[] = "{$wallet->coin}/{$wallet->network}: ".$e->getMessage();
-                $this->notifyExplorerOffline($key, $e->getMessage());
-                Log::channel('financial')->warning('Deposit poll failed', [
-                    'wallet_id' => $wallet->id,
-                    'error' => $e->getMessage(),
-                ]);
             }
         }
 
@@ -85,20 +129,66 @@ class DepositMonitorService
             if (in_array($key, $addressKeys, true)) {
                 continue;
             }
+            $networkId = $this->catalog->resolveId((string) $row->network);
             try {
-                $client = $this->clientForNetwork((string) $row->network);
+                $started = microtime(true);
+                $resolved = $this->registry->resolve((string) $row->network);
+                $client = $resolved['client'];
                 $transfers = $client->fetchIncoming($row->platform_address, $row->coin, (string) $row->network);
-                $health[$client->networkKey()] = $this->healthyMeta();
+                $latencyMs = (int) round((microtime(true) - $started) * 1000);
+                $tip = null;
+                try {
+                    $tip = $client->tipHeight((string) $row->network);
+                } catch (\Throwable) {
+                    $tip = null;
+                }
+                $health[$networkId] = $this->healthyMeta($resolved, $walletCounts[$networkId] ?? null, $latencyMs, $tip);
                 foreach ($transfers as $transfer) {
                     if ($this->persistTransfer($transfer, (string) $row->network)) {
                         $detected++;
                     }
                 }
             } catch (\Throwable $e) {
-                $n = $this->normalizeNetwork((string) $row->network);
-                $health[$n] = $this->errorMeta($e->getMessage());
+                $resolved = null;
+                try {
+                    $resolved = $this->registry->resolve((string) $row->network);
+                } catch (\Throwable) {
+                    // ignore
+                }
+                $health[$networkId] = $this->errorMeta($e->getMessage(), $resolved, $walletCounts[$networkId] ?? null);
                 $errors[] = "orphan {$row->coin}: ".$e->getMessage();
             }
+        }
+
+        // Seed idle rows for configured networks with wallet counts even if not polled.
+        foreach ($this->catalog->ids() as $networkId) {
+            if (isset($health[$networkId])) {
+                $counts = $walletCounts[$networkId] ?? ['active' => 0, 'disabled' => 0];
+                $health[$networkId]['wallets_active'] = $counts['active'];
+                $health[$networkId]['wallets_disabled'] = $counts['disabled'];
+                continue;
+            }
+            $counts = $walletCounts[$networkId] ?? ['active' => 0, 'disabled' => 0];
+            try {
+                $resolved = $this->registry->resolve($networkId);
+            } catch (\Throwable) {
+                $resolved = null;
+            }
+            $health[$networkId] = [
+                'status' => ($counts['active'] + $counts['disabled']) > 0 ? 'idle' : 'not_configured',
+                'provider' => $resolved['provider'] ?? 'native',
+                'client' => $resolved['client_key'] ?? null,
+                'endpoint' => $resolved['endpoint'] ?? null,
+                'auth_status' => $resolved['auth_status'] ?? 'unknown',
+                'last_poll_at' => null,
+                'last_success_at' => null,
+                'last_error' => null,
+                'last_error_at' => null,
+                'latency_ms' => null,
+                'tip_height' => null,
+                'wallets_active' => $counts['active'],
+                'wallets_disabled' => $counts['disabled'],
+            ];
         }
 
         $this->refreshConfirmations();
@@ -257,62 +347,96 @@ class DepositMonitorService
 
     public function clientForNetwork(string $network): ChainExplorerClient
     {
-        $n = $this->normalizeNetwork($network);
-
-        return match ($n) {
-            'bitcoin', 'btc' => $this->bitcoin,
-            'ethereum', 'eth', 'erc20', 'bep20', 'polygon', 'base', 'arbitrum' => $this->etherscan,
-            'tron', 'trc20' => $this->tron,
-            'solana', 'sol' => $this->solana,
-            default => throw new \InvalidArgumentException("Unsupported network: {$network}"),
-        };
+        return $this->registry->clientForNetwork($network);
     }
 
     public function normalizeNetwork(string $network): string
     {
-        $map = config('crypto.network_client', []);
-        foreach ($map as $label => $clientKey) {
-            if (strcasecmp((string) $label, $network) === 0) {
-                return strtolower((string) $clientKey);
-            }
-        }
-
-        $key = strtolower(trim($network));
-        $aliases = [
-            'btc' => 'bitcoin',
-            'eth' => 'ethereum',
-            'erc20' => 'ethereum',
-            'bep20' => 'ethereum',
-            'polygon' => 'ethereum',
-            'matic' => 'ethereum',
-            'base' => 'ethereum',
-            'arbitrum' => 'ethereum',
-            'arb' => 'ethereum',
-            'trc20' => 'tron',
-            'sol' => 'solana',
-        ];
-
-        return $aliases[$key] ?? $key;
+        return $this->catalog->resolveId($network);
     }
 
-    /** @return array<string, mixed> */
-    private function healthyMeta(): array
+    /**
+     * @return array<string, array{active: int, disabled: int}>
+     */
+    private function walletCountsByNetwork(): array
+    {
+        $counts = [];
+        foreach ($this->catalog->ids() as $id) {
+            $counts[$id] = ['active' => 0, 'disabled' => 0];
+        }
+
+        CryptoDepositWallet::query()
+            ->select(['network', 'is_active'])
+            ->get()
+            ->each(function (CryptoDepositWallet $wallet) use (&$counts) {
+                $id = $this->catalog->resolveId((string) $wallet->network);
+                if (! isset($counts[$id])) {
+                    $counts[$id] = ['active' => 0, 'disabled' => 0];
+                }
+                if ($wallet->is_active) {
+                    $counts[$id]['active']++;
+                } else {
+                    $counts[$id]['disabled']++;
+                }
+            });
+
+        return $counts;
+    }
+
+    /**
+     * @param  array{client: ChainExplorerClient, provider: string, client_key: string, network_id: string, endpoint: string, auth_status: string}  $resolved
+     * @param  array{active: int, disabled: int}|null  $counts
+     * @return array<string, mixed>
+     */
+    private function healthyMeta(array $resolved, ?array $counts, int $latencyMs, ?int $tip): array
     {
         return [
             'status' => 'healthy',
+            'provider' => $resolved['provider'],
+            'client' => $resolved['client_key'],
+            'endpoint' => $resolved['endpoint'],
+            'auth_status' => $resolved['auth_status'],
+            'last_poll_at' => now()->toIso8601String(),
             'last_success_at' => now()->toIso8601String(),
             'last_error' => null,
+            'last_error_at' => null,
+            'latency_ms' => $latencyMs,
+            'tip_height' => $tip,
+            'wallets_active' => $counts['active'] ?? 0,
+            'wallets_disabled' => $counts['disabled'] ?? 0,
             'consecutive_failures' => 0,
         ];
     }
 
-    /** @return array<string, mixed> */
-    private function errorMeta(string $error): array
+    /**
+     * @param  array{client: ChainExplorerClient, provider: string, client_key: string, network_id: string, endpoint: string, auth_status: string}|null  $resolved
+     * @param  array{active: int, disabled: int}|null  $counts
+     * @return array<string, mixed>
+     */
+    private function errorMeta(string $error, ?array $resolved, ?array $counts): array
     {
+        $auth = $resolved['auth_status'] ?? 'unknown';
+        $lower = strtolower($error);
+        if (str_contains($lower, 'missing') && str_contains($lower, 'key')) {
+            $auth = 'missing_key';
+        } elseif (str_contains($lower, 'auth')) {
+            $auth = 'unauthorized';
+        }
+
         return [
             'status' => 'error',
+            'provider' => $resolved['provider'] ?? 'native',
+            'client' => $resolved['client_key'] ?? null,
+            'endpoint' => $resolved['endpoint'] ?? null,
+            'auth_status' => $auth,
+            'last_poll_at' => now()->toIso8601String(),
+            'last_success_at' => null,
             'last_error_at' => now()->toIso8601String(),
             'last_error' => mb_substr($error, 0, 500),
+            'latency_ms' => null,
+            'tip_height' => null,
+            'wallets_active' => $counts['active'] ?? 0,
+            'wallets_disabled' => $counts['disabled'] ?? 0,
             'consecutive_failures' => 1,
         ];
     }
@@ -322,8 +446,8 @@ class DepositMonitorService
         $this->notifications->notifyAdmins(new NotificationMessage(
             type: 'crypto.explorer_offline',
             title: 'Explorer Offline',
-            body: strtoupper($network).': '.$error,
-            actionUrl: route('admin.settings').'#blockchain-monitoring',
+            body: $this->catalog->label($network).': '.$error,
+            actionUrl: route('admin.blockchain-monitoring'),
             meta: ['severity' => 'critical', 'network' => $network],
             priority: 'high',
             permission: 'finance.manage',
