@@ -190,15 +190,4 @@ class SettingsTest extends TestCase
             ->assertDontSee('mempool.space');
     }
 
-    public function test_settings_page_links_to_blockchain_monitoring(): void
-    {
-        $admin = User::factory()->create(['email_verified_at' => now()]);
-        $admin->assignRole('admin');
-
-        $this->actingAs($admin)
-            ->get(route('admin.settings'))
-            ->assertOk()
-            ->assertSee(route('admin.blockchain-monitoring'), false)
-            ->assertDontSee('EVM explorer API key');
-    }
 }

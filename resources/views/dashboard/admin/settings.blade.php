@@ -515,21 +515,6 @@
             </form>
         </x-dashboard.card>
 
-        <x-dashboard.card variant="solid">
-            <h2 class="text-lg font-semibold text-text-primary mb-1">Blockchain monitoring</h2>
-            <p class="text-sm text-text-secondary mb-4">
-                Explorer providers, API keys, and network health for crypto deposit detection have moved to a dedicated page.
-            </p>
-            <x-dashboard.button :href="route('admin.blockchain-monitoring')" variant="primary">Open Blockchain Monitoring</x-dashboard.button>
-        </x-dashboard.card>
-
-        <x-dashboard.card variant="solid">
-            <h2 class="text-lg font-semibold text-text-primary mb-1">Marketing & tracking</h2>
-            <p class="text-sm text-text-secondary mb-4">
-                Google Tag Manager, Analytics, Clarity, Meta Pixel, verification tags, and custom scripts have moved to a dedicated page.
-            </p>
-            <x-dashboard.button :href="route('admin.tracking')" variant="primary">Open Marketing & Tracking</x-dashboard.button>
-        </x-dashboard.card>
     </div>
 </x-layout.page>
 @endsection
