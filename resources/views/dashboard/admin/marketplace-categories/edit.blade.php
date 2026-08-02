@@ -37,10 +37,6 @@
                 :value="$cardId"
                 :preview-url="$cardPreview"
             />
-            <x-dashboard.input label="SEO title" name="seo_title" :value="old('seo_title', $category->seo_title)" />
-            <x-dashboard.input label="SEO description" name="seo_description" :value="old('seo_description', $category->seo_description)" />
-            <x-dashboard.input label="Open Graph title" name="og_title" :value="old('og_title', $category->og_title)" />
-            <x-dashboard.input label="Open Graph description" name="og_description" :value="old('og_description', $category->og_description)" />
             <x-dashboard.string-list-repeater name="benefits" label="Benefits" :items="old('benefits', $category->benefits ?? [])" />
             <x-dashboard.faq-repeater name="faq" label="FAQ" :items="old('faq', $category->faq ?? [])" />
             <x-dashboard.input label="Icon key (optional)" name="icon" :value="old('icon', $category->icon)" />

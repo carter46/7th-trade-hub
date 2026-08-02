@@ -6,6 +6,7 @@ use App\Enums\PlatformProductStatus;
 use App\Enums\PlatformProductType;
 use App\Http\Controllers\Controller;
 use App\Models\MediaAsset;
+use App\Models\MediaUsage;
 use App\Models\PlatformProduct;
 use App\Models\PlatformProductImage;
 use App\Models\PlatformProductVariant;

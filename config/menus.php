@@ -127,9 +127,9 @@ return [
             'icon' => 'inventory',
             'sort' => 30,
             'children' => [
-                ['route' => 'admin.marketplace-categories', 'match' => ['admin.marketplace-categories', 'admin.marketplace-categories.*'], 'label' => 'Marketplace Categories', 'icon' => 'grid', 'keywords' => ['categories', 'market'], 'permission' => 'catalog.manage', 'sort' => 10],
-                ['route' => 'admin.marketplace-products', 'match' => ['admin.marketplace-products', 'admin.marketplace-products.*'], 'label' => 'Marketplace Products', 'icon' => 'storefront', 'keywords' => ['products', 'market', 'types'], 'permission' => 'catalog.manage', 'sort' => 20],
-                ['route' => 'admin.listings', 'match' => ['admin.listings', 'admin.listings.*'], 'label' => 'Marketplace Listings', 'icon' => 'listings', 'keywords' => ['marketplace', 'listings', 'review', 'pending'], 'permission' => 'catalog.manage', 'sort' => 30],
+                ['route' => 'admin.listings', 'match' => ['admin.listings', 'admin.listings.*'], 'label' => 'Marketplace Listings', 'icon' => 'listings', 'keywords' => ['marketplace', 'listings', 'review', 'pending'], 'permission' => 'catalog.manage', 'sort' => 10],
+                ['route' => 'admin.marketplace-categories', 'match' => ['admin.marketplace-categories', 'admin.marketplace-categories.*'], 'label' => 'Marketplace Categories', 'icon' => 'grid', 'keywords' => ['categories', 'market'], 'permission' => 'catalog.manage', 'sort' => 20],
+                ['route' => 'admin.marketplace-products', 'match' => ['admin.marketplace-products', 'admin.marketplace-products.*'], 'label' => 'Marketplace Products', 'icon' => 'storefront', 'keywords' => ['products', 'market', 'types'], 'permission' => 'catalog.manage', 'sort' => 30],
                 ['route' => 'admin.escrows', 'match' => ['admin.escrows', 'admin.escrows.*'], 'label' => 'Escrows', 'icon' => 'lock', 'keywords' => ['release', 'refund'], 'permission' => 'finance.manage', 'sort' => 40],
             ],
         ],
