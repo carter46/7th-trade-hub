@@ -8,6 +8,7 @@ use App\Models\MarketplaceProduct;
 use App\Services\Media\MediaPathService;
 use App\Services\Media\MediaUsageService;
 use App\Support\FaqNormalizer;
+use App\Support\SortOrder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -61,6 +62,9 @@ class MarketplaceCategoryAdminController extends Controller
         $data['slug'] = $data['slug'] ?: Str::slug($data['name']);
         $data['type'] = 'marketplace';
         $data['parent_id'] = null;
+        $data['sort_order'] = SortOrder::next(
+            Category::query()->where('type', 'marketplace')->whereNull('parent_id')
+        );
 
         $category = Category::create($data);
         $this->syncMedia($category, $data);
@@ -140,7 +144,6 @@ class MarketplaceCategoryAdminController extends Controller
                 'max:255',
                 Rule::unique('categories', 'slug')->ignore($ignoreId),
             ],
-            'sort_order' => ['nullable', 'integer', 'min:0'],
             'short_description' => ['nullable', 'string', 'max:500'],
             'hero_title' => ['nullable', 'string', 'max:255'],
             'hero_subtitle' => ['nullable', 'string', 'max:500'],
@@ -160,7 +163,6 @@ class MarketplaceCategoryAdminController extends Controller
         return [
             'name' => $data['name'],
             'slug' => $data['slug'] ?? null,
-            'sort_order' => $data['sort_order'] ?? 0,
             'is_active' => $request->boolean('is_active', true),
             'short_description' => $data['short_description'] ?? null,
             'hero_title' => $data['hero_title'] ?? null,

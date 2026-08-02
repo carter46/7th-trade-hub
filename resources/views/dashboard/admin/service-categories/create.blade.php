@@ -30,7 +30,6 @@
                 <option value="marketplace_link" @selected(old('mode') === 'marketplace_link')>Marketplace link</option>
             </x-dashboard.select>
             <x-dashboard.input label="CTA label" name="cta_label" :value="old('cta_label')" placeholder="Open marketplace" />
-            <x-dashboard.input label="Sort order" name="sort_order" type="number" min="0" :value="old('sort_order', 0)" />
             <x-dashboard.input label="Short description" name="short_description" :value="old('short_description')" />
             <x-dashboard.input label="Hero title" name="hero_title" :value="old('hero_title')" />
             <x-dashboard.input label="Hero subtitle" name="hero_subtitle" :value="old('hero_subtitle')" />

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CryptoDepositWallet;
 use App\Modules\Admin\Services\AuditLogService;
 use App\Modules\Wallet\Services\WalletAllocationService;
+use App\Support\SortOrder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -64,6 +65,7 @@ class CryptoDepositWalletController extends Controller
         try {
             $wallet = DB::transaction(function () use ($request) {
                 $data = $this->validated($request);
+                $data['sort_order'] = SortOrder::next(CryptoDepositWallet::class);
                 $wallet = CryptoDepositWallet::query()->create($data);
                 $this->audit->log(auth()->id(), 'crypto_wallet.created', $wallet, null, $wallet->toArray(), $request->ip());
 
@@ -138,13 +140,11 @@ class CryptoDepositWalletController extends Controller
             'instructions' => ['nullable', 'string', 'max:2000'],
             'estimated_holdings' => ['nullable', 'numeric', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
-            'sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
 
         $validated['coin'] = strtoupper($validated['coin']);
         $validated['network'] = $this->allocation->canonicalizeNetwork($validated['coin'], $validated['network']);
         $validated['is_active'] = $request->boolean('is_active');
-        $validated['sort_order'] = (int) ($validated['sort_order'] ?? 0);
 
         if ($validated['is_active'] && ! $this->allocation->canActivateAnother($validated['coin'], $validated['network'], $exceptWalletId)) {
             $max = $this->allocation->maxActiveWallets();

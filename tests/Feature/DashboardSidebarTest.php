@@ -30,7 +30,7 @@ class DashboardSidebarTest extends TestCase
             ->assertDontSee('>Commerce<', false)
             ->assertDontSee('Platform Services')
             ->assertDontSee('Identity & Users')
-            ->assertSee('data-dashboard-nav-search', false)
+            ->assertDontSee('data-dashboard-nav-search', false)
             ->assertSee("7th.dashboard.nav.admin.{$admin->id}", false)
             ->assertSee('scrollbar-hide', false)
             ->assertSee('aria-expanded=', false)
@@ -50,7 +50,7 @@ class DashboardSidebarTest extends TestCase
             ->assertSee('Wallet')
             ->assertSee('Marketplace')
             ->assertSee('Communication')
-            ->assertSee('data-dashboard-nav-search', false)
+            ->assertDontSee('data-dashboard-nav-search', false)
             ->assertSee("7th.dashboard.nav.user.{$user->id}", false)
             ->assertSee('scrollbar-hide', false)
             ->assertSee('data-mobile-theme-switcher', false);

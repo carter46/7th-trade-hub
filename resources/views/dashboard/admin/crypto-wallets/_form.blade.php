@@ -41,7 +41,6 @@
         <x-dashboard.input name="address" label="Deposit address" :value="old('address', $wallet->address ?? '')" required />
     </div>
     <x-dashboard.input name="required_confirmations" type="number" label="Required confirmations" :value="old('required_confirmations', $wallet->required_confirmations ?? 2)" required />
-    <x-dashboard.input name="sort_order" type="number" label="Sort order" :value="old('sort_order', $wallet->sort_order ?? 0)" />
     <div>
         <label class="block text-sm font-medium mb-1">Purpose</label>
         <select name="purpose" class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2.5 text-sm">

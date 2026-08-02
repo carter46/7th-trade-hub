@@ -15,6 +15,7 @@ use App\Models\ServiceCategory;
 use App\Services\Media\MediaPathService;
 use App\Services\Media\MediaUsageService;
 use App\Support\FaqNormalizer;
+use App\Support\SortOrder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -98,6 +99,7 @@ class PlatformProductAdminController extends Controller
     {
         $data = $this->validated($request);
         $data['slug'] = $data['slug'] ?: Str::slug($data['title']);
+        $data['sort_order'] = SortOrder::next(PlatformProduct::class);
         $galleryIds = $data['gallery_media_ids'];
         unset($data['gallery_media_ids']);
 
@@ -183,7 +185,6 @@ class PlatformProductAdminController extends Controller
             'framework' => ['nullable', 'string', 'max:100'],
             'support_period' => ['nullable', 'string', 'max:100'],
             'support_text' => ['nullable', 'string'],
-            'sort_order' => ['nullable', 'integer'],
             'provider' => ['nullable', 'string', 'max:80'],
             'provider_product_id' => ['nullable', 'string', 'max:255'],
             'provider_sku' => ['nullable', 'string', 'max:255'],
@@ -246,7 +247,6 @@ class PlatformProductAdminController extends Controller
             'framework' => $data['framework'] ?? null,
             'support_period' => $data['support_period'] ?? null,
             'support_text' => $data['support_text'] ?? null,
-            'sort_order' => $data['sort_order'] ?? 0,
             'is_featured' => $request->boolean('is_featured'),
             'is_responsive' => $request->boolean('is_responsive', true),
             'is_seo_ready' => $request->boolean('is_seo_ready'),

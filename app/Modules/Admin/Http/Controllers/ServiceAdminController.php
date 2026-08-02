@@ -7,6 +7,7 @@ use App\Models\ProductType;
 use App\Models\ServiceCategory;
 use App\Services\Media\MediaPathService;
 use App\Services\Media\MediaUsageService;
+use App\Support\SortOrder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -55,6 +56,7 @@ class ServiceAdminController extends Controller
     {
         $data = $this->validated($request);
         $data['slug'] = $data['slug'] ?: Str::slug($data['name']);
+        $data['sort_order'] = SortOrder::next(ProductType::class);
 
         $service = ProductType::create($data);
         $this->syncMedia($service, $data);
@@ -117,7 +119,6 @@ class ServiceAdminController extends Controller
                 Rule::unique('product_types', 'slug')->ignore($ignoreId),
             ],
             'service_category_id' => ['required', 'exists:service_categories,id'],
-            'sort_order' => ['nullable', 'integer', 'min:0'],
             'short_description' => ['nullable', 'string', 'max:500'],
             'hero_title' => ['nullable', 'string', 'max:255'],
             'hero_subtitle' => ['nullable', 'string', 'max:500'],
@@ -131,7 +132,6 @@ class ServiceAdminController extends Controller
             'name' => $data['name'],
             'slug' => $data['slug'] ?? null,
             'service_category_id' => $data['service_category_id'],
-            'sort_order' => $data['sort_order'] ?? 0,
             'is_active' => $request->boolean('is_active', true),
             'short_description' => $data['short_description'] ?? null,
             'hero_title' => $data['hero_title'] ?? null,

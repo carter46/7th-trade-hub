@@ -31,16 +31,6 @@
             </div>
         </div>
         <div class="flex items-center gap-1">
-            @if ($role !== 'user')
-                <button
-                    type="button"
-                    class="inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg text-text-secondary hover:text-text-primary focus-ring"
-                    aria-label="Search navigation"
-                    @click="open = true; setTimeout(() => document.querySelector('[data-dashboard-nav-search]')?.focus(), 80)"
-                >
-                    <x-ui.icon name="search" class="w-5 h-5" />
-                </button>
-            @endif
             <x-dashboard.notification-menu />
             <x-dashboard.account-menu :prefix="$accountPrefix" compact />
         </div>

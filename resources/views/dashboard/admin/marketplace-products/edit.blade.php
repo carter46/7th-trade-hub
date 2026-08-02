@@ -30,7 +30,6 @@
             </x-dashboard.select>
             <x-dashboard.input label="Name" name="name" :value="old('name', $product->name)" required />
             <x-dashboard.input label="Slug" name="slug" :value="old('slug', $product->slug)" />
-            <x-dashboard.input label="Sort order" name="sort_order" type="number" min="0" :value="old('sort_order', $product->sort_order)" />
             <x-dashboard.input label="Short description" name="short_description" :value="old('short_description', $product->short_description)" />
             <x-dashboard.input label="Hero title" name="hero_title" :value="old('hero_title', $product->hero_title)" />
             <x-dashboard.input label="Hero subtitle" name="hero_subtitle" :value="old('hero_subtitle', $product->hero_subtitle)" />

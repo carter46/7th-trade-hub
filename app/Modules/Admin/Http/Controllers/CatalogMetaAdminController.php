@@ -5,6 +5,7 @@ namespace App\Modules\Admin\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\ExchangeRate;
 use App\Modules\Wallet\Services\CryptoPriceService;
+use App\Support\SortOrder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -67,11 +68,12 @@ class CatalogMetaAdminController extends Controller
     public function storeExchangeRate(Request $request): RedirectResponse
     {
         $data = $this->validatedExchangeRate($request);
+        $asset = strtoupper($data['asset']);
 
         ExchangeRate::create([
-            'asset' => strtoupper($data['asset']),
+            'asset' => $asset,
             'coingecko_id' => $data['coingecko_id'] ?? null,
-            'bybit_symbol' => $data['bybit_symbol'] ?? null,
+            'bybit_symbol' => $this->resolveBybitSymbol($asset),
             'logo_url' => $data['logo_url'] ?? null,
             'buy_rate_ngn' => $data['buy_rate_ngn'] ?? 0,
             'sell_rate_ngn' => $data['sell_rate_ngn'] ?? 0,
@@ -82,7 +84,7 @@ class CatalogMetaAdminController extends Controller
             'processing_time' => $data['processing_time'] ?? null,
             'is_featured' => $request->boolean('is_featured'),
             'is_active' => $request->boolean('is_active', true),
-            'sort_order' => $data['sort_order'] ?? 0,
+            'sort_order' => SortOrder::next(ExchangeRate::class),
         ]);
 
         return redirect()
@@ -101,11 +103,12 @@ class CatalogMetaAdminController extends Controller
     public function updateExchangeRate(Request $request, ExchangeRate $exchangeRate): RedirectResponse
     {
         $data = $this->validatedExchangeRate($request, $exchangeRate);
+        $asset = strtoupper($data['asset']);
 
         $exchangeRate->update([
-            'asset' => strtoupper($data['asset']),
+            'asset' => $asset,
             'coingecko_id' => $data['coingecko_id'] ?? null,
-            'bybit_symbol' => $data['bybit_symbol'] ?? null,
+            'bybit_symbol' => $this->resolveBybitSymbol($asset, $exchangeRate->bybit_symbol),
             'logo_url' => $data['logo_url'] ?? null,
             'buy_rate_ngn' => $data['buy_rate_ngn'] ?? $exchangeRate->buy_rate_ngn,
             'sell_rate_ngn' => $data['sell_rate_ngn'] ?? $exchangeRate->sell_rate_ngn,
@@ -116,7 +119,6 @@ class CatalogMetaAdminController extends Controller
             'processing_time' => $data['processing_time'] ?? null,
             'is_featured' => $request->boolean('is_featured'),
             'is_active' => $request->boolean('is_active', true),
-            'sort_order' => $data['sort_order'] ?? 0,
         ]);
 
         return redirect()
@@ -146,7 +148,6 @@ class CatalogMetaAdminController extends Controller
                 Rule::unique('exchange_rates', 'asset')->ignore($exchangeRate?->id),
             ],
             'coingecko_id' => ['nullable', 'string', 'max:80'],
-            'bybit_symbol' => ['nullable', 'string', 'max:40'],
             'logo_url' => ['nullable', 'string', 'max:500'],
             'buy_rate_ngn' => ['nullable', 'numeric', 'min:0'],
             'sell_rate_ngn' => ['nullable', 'numeric', 'min:0'],
@@ -157,7 +158,16 @@ class CatalogMetaAdminController extends Controller
             'processing_time' => ['nullable', 'string', 'max:100'],
             'is_featured' => ['sometimes', 'boolean'],
             'is_active' => ['sometimes', 'boolean'],
-            'sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
+    }
+
+    private function resolveBybitSymbol(string $asset, ?string $existing = null): ?string
+    {
+        $fromConfig = config('crypto.bybit_symbols.'.$asset);
+        if (is_string($fromConfig) && $fromConfig !== '') {
+            return $fromConfig;
+        }
+
+        return $existing;
     }
 }

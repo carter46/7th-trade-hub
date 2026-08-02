@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ServiceCategory;
 use App\Services\Media\MediaPathService;
 use App\Services\Media\MediaUsageService;
+use App\Support\SortOrder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -46,6 +47,7 @@ class ServiceCategoryAdminController extends Controller
     {
         $data = $this->validated($request);
         $data['slug'] = $data['slug'] ?: Str::slug($data['name']);
+        $data['sort_order'] = SortOrder::next(ServiceCategory::class);
 
         $category = ServiceCategory::create($data);
         $this->syncMedia($category, $data);
@@ -106,7 +108,6 @@ class ServiceCategoryAdminController extends Controller
                 'max:255',
                 Rule::unique('service_categories', 'slug')->ignore($ignoreId),
             ],
-            'sort_order' => ['nullable', 'integer', 'min:0'],
             'mode' => ['required', Rule::in(['catalog', 'marketplace_link'])],
             'cta_label' => ['nullable', 'string', 'max:255'],
             'short_description' => ['nullable', 'string', 'max:500'],
@@ -118,7 +119,6 @@ class ServiceCategoryAdminController extends Controller
         $result = [
             'name' => $data['name'],
             'slug' => $data['slug'] ?? null,
-            'sort_order' => $data['sort_order'] ?? 0,
             'is_active' => $request->boolean('is_active', true),
             'mode' => $data['mode'],
             'cta_label' => $data['cta_label'] ?? null,

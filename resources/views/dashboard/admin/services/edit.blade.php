@@ -30,7 +30,6 @@
                     <option value="{{ $category->id }}" @selected((string) old('service_category_id', $service->service_category_id) === (string) $category->id)>{{ $category->name }}</option>
                 @endforeach
             </x-dashboard.select>
-            <x-dashboard.input label="Sort order" name="sort_order" type="number" min="0" :value="old('sort_order', $service->sort_order)" />
             <x-dashboard.input label="Short description" name="short_description" :value="old('short_description', $service->short_description)" />
             <x-dashboard.input label="Hero title" name="hero_title" :value="old('hero_title', $service->hero_title)" />
             <x-dashboard.input label="Hero subtitle" name="hero_subtitle" :value="old('hero_subtitle', $service->hero_subtitle)" />

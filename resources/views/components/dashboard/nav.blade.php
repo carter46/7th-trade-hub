@@ -20,7 +20,7 @@
 @endphp
 
 @php
-    $showNavSearch = $role !== 'user';
+    $showNavSearch = false;
 @endphp
 
 <div

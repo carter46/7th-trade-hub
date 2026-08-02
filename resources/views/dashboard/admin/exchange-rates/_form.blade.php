@@ -79,8 +79,7 @@
     </div>
 
     <div class="grid gap-4 sm:grid-cols-2">
-        <x-dashboard.input label="Bybit spot symbol" name="bybit_symbol" :value="old('bybit_symbol', $rate?->bybit_symbol)" placeholder="BTCUSDT" hint="Optional override for USD price lookup." />
-        <x-dashboard.input label="Processing time" name="processing_time" :value="old('processing_time', $rate?->processing_time)" placeholder="5–15 minutes" />
+        <x-dashboard.input label="Processing time" name="processing_time" :value="old('processing_time', $rate?->processing_time)" placeholder="5–15 minutes" hint="Shown to customers on the exchange page." />
         <x-dashboard.input label="Min USD" name="min_amount_usd" type="number" step="any" :value="old('min_amount_usd', $rate?->min_amount_usd)" />
         <x-dashboard.input label="Max USD" name="max_amount_usd" type="number" step="any" :value="old('max_amount_usd', $rate?->max_amount_usd)" />
         <div>
@@ -94,7 +93,6 @@
         </div>
     </div>
 
-    <x-dashboard.input label="Sort order" name="sort_order" type="number" min="0" :value="old('sort_order', $rate?->sort_order ?? 0)" />
     <label class="flex items-center gap-2 text-sm text-text-secondary">
         <input type="checkbox" name="is_featured" value="1" class="rounded border-border-default" @checked(old('is_featured', $rate?->is_featured))>
         Featured
