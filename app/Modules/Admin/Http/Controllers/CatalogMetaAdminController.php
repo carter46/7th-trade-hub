@@ -69,14 +69,15 @@ class CatalogMetaAdminController extends Controller
     {
         $data = $this->validatedExchangeRate($request);
         $asset = strtoupper($data['asset']);
+        $customerBuyRate = (float) ($data['sell_rate_ngn'] ?? $data['buy_rate_ngn'] ?? 0);
 
         ExchangeRate::create([
             'asset' => $asset,
             'coingecko_id' => $data['coingecko_id'] ?? null,
             'bybit_symbol' => $this->resolveBybitSymbol($asset),
             'logo_url' => $data['logo_url'] ?? null,
-            'buy_rate_ngn' => $data['buy_rate_ngn'] ?? 0,
-            'sell_rate_ngn' => $data['sell_rate_ngn'] ?? 0,
+            'buy_rate_ngn' => $customerBuyRate,
+            'sell_rate_ngn' => $customerBuyRate,
             'minimum_amount' => $data['minimum_amount'] ?? null,
             'maximum_amount' => $data['maximum_amount'] ?? null,
             'min_amount_usd' => $data['min_amount_usd'] ?? null,
@@ -104,14 +105,15 @@ class CatalogMetaAdminController extends Controller
     {
         $data = $this->validatedExchangeRate($request, $exchangeRate);
         $asset = strtoupper($data['asset']);
+        $customerBuyRate = (float) ($data['sell_rate_ngn'] ?? $data['buy_rate_ngn'] ?? $exchangeRate->sell_rate_ngn);
 
         $exchangeRate->update([
             'asset' => $asset,
             'coingecko_id' => $data['coingecko_id'] ?? null,
             'bybit_symbol' => $this->resolveBybitSymbol($asset, $exchangeRate->bybit_symbol),
             'logo_url' => $data['logo_url'] ?? null,
-            'buy_rate_ngn' => $data['buy_rate_ngn'] ?? $exchangeRate->buy_rate_ngn,
-            'sell_rate_ngn' => $data['sell_rate_ngn'] ?? $exchangeRate->sell_rate_ngn,
+            'buy_rate_ngn' => $customerBuyRate,
+            'sell_rate_ngn' => $customerBuyRate,
             'minimum_amount' => $data['minimum_amount'] ?? null,
             'maximum_amount' => $data['maximum_amount'] ?? null,
             'min_amount_usd' => $data['min_amount_usd'] ?? null,

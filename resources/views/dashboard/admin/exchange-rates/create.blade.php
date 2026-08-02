@@ -5,7 +5,7 @@
 @section('content')
 <x-layout.page
     title="Add Exchange Rate"
-    subtitle="Select a coin from CoinGecko, then set your platform buy and sell rates."
+    subtitle="Select a coin, see the market rate, then set what you pay when buying from customers."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],

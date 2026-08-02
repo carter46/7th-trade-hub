@@ -5,7 +5,7 @@
 @section('content')
 <x-layout.page
     title="Edit Exchange Rate"
-    subtitle="Update buy and sell rates for {{ $rate->asset }}."
+    subtitle="Update the rate you pay customers when they sell {{ $rate->asset }} to you."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],

@@ -5,7 +5,7 @@
 @section('content')
 <x-layout.page
     title="Exchange Rates"
-    subtitle="Buy and sell rates for crypto exchange quotes."
+    subtitle="Coins you buy from customers — market reference and your payout rate."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
@@ -21,15 +21,14 @@
     <x-dashboard.table
         :empty="$rates->isEmpty()"
         empty-title="No exchange rates"
-        empty-description="Add buy and sell rates for each asset."
+        empty-description="Add a coin and the rate you pay when buying from customers."
         empty-icon="bitcoin"
         :empty-action="['href' => route('admin.exchange-rates.create'), 'label' => 'Add Rate']"
         striped
     >
         <x-slot:head>
             <x-dashboard.th>Asset</x-dashboard.th>
-            <x-dashboard.th>Buy</x-dashboard.th>
-            <x-dashboard.th>Sell</x-dashboard.th>
+            <x-dashboard.th>Buy from customer</x-dashboard.th>
             <x-dashboard.th>Time</x-dashboard.th>
             <x-dashboard.th>Status</x-dashboard.th>
             <x-dashboard.th>Actions</x-dashboard.th>
@@ -47,7 +46,6 @@
                         @endif
                     </div>
                 </x-dashboard.td>
-                <x-dashboard.td>₦{{ number_format($rate->buy_rate_ngn, 2) }}</x-dashboard.td>
                 <x-dashboard.td>₦{{ number_format($rate->sell_rate_ngn, 2) }}</x-dashboard.td>
                 <x-dashboard.td class="text-text-secondary">{{ $rate->processing_time ?: '—' }}</x-dashboard.td>
                 <x-dashboard.td>
