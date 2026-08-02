@@ -11,6 +11,7 @@ use App\Support\SortOrder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -113,11 +114,10 @@ class CatalogMetaAdminController extends Controller
         $asset = strtoupper($data['asset']);
         $customerBuyRate = (float) ($data['sell_rate_ngn'] ?? 0);
 
-        ExchangeRate::create([
+        $payload = [
             'asset' => $asset,
             'coingecko_id' => $data['coingecko_id'] ?? null,
             'bybit_symbol' => $this->resolveBybitSymbol($asset),
-            'allowed_network_ids' => $data['allowed_network_ids'],
             'logo_url' => $data['logo_url'] ?? null,
             'buy_rate_ngn' => $customerBuyRate,
             'sell_rate_ngn' => $customerBuyRate,
@@ -129,7 +129,12 @@ class CatalogMetaAdminController extends Controller
             'is_featured' => $request->boolean('is_featured'),
             'is_active' => $request->boolean('is_active', true),
             'sort_order' => SortOrder::next(ExchangeRate::class),
-        ]);
+        ];
+        if (Schema::hasColumn('exchange_rates', 'allowed_network_ids')) {
+            $payload['allowed_network_ids'] = $data['allowed_network_ids'];
+        }
+
+        ExchangeRate::create($payload);
 
         return redirect()
             ->route('admin.exchange-rates')
@@ -150,11 +155,10 @@ class CatalogMetaAdminController extends Controller
         $asset = strtoupper($data['asset']);
         $customerBuyRate = (float) ($data['sell_rate_ngn'] ?? 0);
 
-        $exchangeRate->update([
+        $payload = [
             'asset' => $asset,
             'coingecko_id' => $data['coingecko_id'] ?? null,
             'bybit_symbol' => $this->resolveBybitSymbol($asset, $exchangeRate->bybit_symbol),
-            'allowed_network_ids' => $data['allowed_network_ids'],
             'logo_url' => $data['logo_url'] ?? null,
             'buy_rate_ngn' => $customerBuyRate,
             'sell_rate_ngn' => $customerBuyRate,
@@ -165,7 +169,12 @@ class CatalogMetaAdminController extends Controller
             'processing_time' => $data['processing_time'] ?? null,
             'is_featured' => $request->boolean('is_featured'),
             'is_active' => $request->boolean('is_active', true),
-        ]);
+        ];
+        if (Schema::hasColumn('exchange_rates', 'allowed_network_ids')) {
+            $payload['allowed_network_ids'] = $data['allowed_network_ids'];
+        }
+
+        $exchangeRate->update($payload);
 
         return redirect()
             ->route('admin.exchange-rates')
