@@ -75,6 +75,9 @@ return [
      */
     'max_buy_rate_ngn_per_usd' => 10000,
 
+    /** Default per-coin spread (₦ below market) when a catalog coin has no spread set. */
+    'default_coin_spread_ngn' => 25,
+
     /** Decimal places for fingerprint rounding */
     'amount_precision' => [
         'BTC' => 8,

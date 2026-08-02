@@ -106,82 +106,110 @@ class ExchangeQuoteService
     }
 
     /**
-     * Per-coin customer NGN/$ rate from Coin Catalog, falling back to global OTC pricing.
+     * Customer NGN/$1 buy rate for a coin = Global Market − Coin Spread.
+     * Coin USD price (Bybit) only affects crypto quantity.
      *
      * @return array{rate: float, market: float, spread: float, source: string}
      */
     public function resolveCustomerRateForCoin(string $coin, ?OtcPricingSetting $settings = null): array
     {
-        $symbol = strtoupper(trim($coin));
         $settings ??= OtcPricingSetting::current();
-        $global = $this->resolveCustomerRate($settings);
+        $market = $this->resolveMarketRate($settings);
+        if ($market['rate'] <= 0) {
+            return ['rate' => 0, 'market' => 0, 'spread' => 0, 'source' => 'unavailable'];
+        }
+
+        $defaultSpread = max(0, (float) ($settings->spread_ngn ?? ExchangeRate::defaultSpreadNgn()));
+        $spread = $defaultSpread;
+        $symbol = strtoupper(trim($coin));
 
         if ($symbol !== '' && Schema::hasTable('exchange_rates')) {
             $row = ExchangeRate::query()
                 ->whereRaw('UPPER(asset) = ?', [$symbol])
                 ->where('is_active', true)
                 ->first();
-            $coinRate = (float) ($row?->sell_rate_ngn ?? 0);
-            if ($coinRate > 0 && $coinRate <= ExchangeRate::maxBuyRatePerUsd()) {
-                $market = $global['market'] > 0 ? $global['market'] : $coinRate;
-
-                return [
-                    'rate' => $coinRate,
-                    'market' => $market,
-                    'spread' => max(0, $market - $coinRate),
-                    'source' => 'exchange_rate_catalog',
-                ];
+            if ($row) {
+                $spread = $row->resolvedSpreadNgn($defaultSpread);
             }
         }
 
-        return $global;
-    }
-
-    /**
-     * @return array{rate: float, market: float, spread: float, source: string}
-     */
-    public function resolveCustomerRate(?OtcPricingSetting $settings = null): array
-    {
-        $settings ??= OtcPricingSetting::current();
-
-        if ($settings->mode === OtcPricingSetting::MODE_MANUAL_CUSTOMER_RATE) {
-            $rate = (float) ($settings->manual_customer_rate_ngn ?? 0);
-            if ($rate <= 0) {
-                return ['rate' => 0, 'market' => 0, 'spread' => 0, 'source' => 'manual_customer_rate'];
-            }
-
-            return [
-                'rate' => $rate,
-                'market' => $rate,
-                'spread' => 0,
-                'source' => 'manual_customer_rate',
-            ];
-        }
-
-        $market = $this->resolveMarketRate($settings);
-        if ($market['rate'] <= 0) {
-            $manual = (float) ($settings->manual_customer_rate_ngn ?? 0);
-            if ($manual > 0) {
-                return [
-                    'rate' => $manual,
-                    'market' => $manual,
-                    'spread' => 0,
-                    'source' => 'manual_customer_rate_fallback',
-                ];
-            }
-
-            return ['rate' => 0, 'market' => 0, 'spread' => 0, 'source' => 'unavailable'];
-        }
-
-        $spread = max(0, (float) $settings->spread_ngn);
         $customer = max(0, $market['rate'] - $spread);
 
         return [
             'rate' => $customer,
             'market' => $market['rate'],
             'spread' => $spread,
-            'source' => $market['source'].'-spread',
+            'source' => 'market_minus_coin_spread',
         ];
+    }
+
+    /**
+     * Fallback / display helper using OTC default spread (not per-coin).
+     *
+     * @return array{rate: float, market: float, spread: float, source: string}
+     */
+    public function resolveGlobalBuyRate(?OtcPricingSetting $settings = null): array
+    {
+        $settings ??= OtcPricingSetting::current();
+        $market = $this->resolveMarketRate($settings);
+        if ($market['rate'] <= 0) {
+            return ['rate' => 0, 'market' => 0, 'spread' => 0, 'source' => 'unavailable'];
+        }
+
+        $spread = max(0, (float) ($settings->spread_ngn ?? ExchangeRate::defaultSpreadNgn()));
+        $customer = max(0, $market['rate'] - $spread);
+
+        return [
+            'rate' => $customer,
+            'market' => $market['rate'],
+            'spread' => $spread,
+            'source' => 'manual_reference-default-spread',
+        ];
+    }
+
+    /**
+     * Default buy rate using OTC market − default spread (for new coins / history).
+     *
+     * @return array{rate: float, market: float, spread: float, source: string}
+     */
+    public function resolveCustomerRate(?OtcPricingSetting $settings = null): array
+    {
+        return $this->resolveGlobalBuyRate($settings);
+    }
+
+    /**
+     * Recalculate mirrored sell/buy rates on all catalog coins from market − each coin's spread.
+     */
+    public function syncCatalogBuyRatesFromMarket(?OtcPricingSetting $settings = null): void
+    {
+        if (! Schema::hasTable('exchange_rates')) {
+            return;
+        }
+
+        $settings ??= OtcPricingSetting::current();
+        $market = $this->resolveMarketRate($settings);
+        if ($market['rate'] <= 0) {
+            return;
+        }
+
+        $defaultSpread = max(0, (float) ($settings->spread_ngn ?? ExchangeRate::defaultSpreadNgn()));
+
+        ExchangeRate::query()->orderBy('id')->chunkById(100, function ($rows) use ($market, $defaultSpread) {
+            foreach ($rows as $row) {
+                $buy = $row->calculatedBuyRatePerUsd($market['rate'], $defaultSpread);
+                if ($buy === null) {
+                    continue;
+                }
+                $payload = [
+                    'sell_rate_ngn' => $buy,
+                    'buy_rate_ngn' => $buy,
+                ];
+                if (Schema::hasColumn('exchange_rates', 'spread_ngn') && $row->spread_ngn === null) {
+                    $payload['spread_ngn'] = $row->resolvedSpreadNgn($defaultSpread);
+                }
+                $row->update($payload);
+            }
+        });
     }
 
     /**

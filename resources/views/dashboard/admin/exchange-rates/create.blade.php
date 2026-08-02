@@ -5,11 +5,11 @@
 @section('content')
 <x-layout.page
     title="Add Exchange Rate"
-    subtitle="Set Our Buy Rate (₦ per $1) and optional deposit networks for this coin."
+    subtitle="Add a coin, set its spread, and deposit networks. Buy rate = OTC market − this coin’s spread."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
-        ['Exchange Rates', route('admin.exchange-rates')],
+        ['Coin Catalog', route('admin.exchange-rates')],
         ['Create', null],
     ]"
 >

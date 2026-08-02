@@ -54,18 +54,25 @@ class CatalogMetaAdminController extends Controller
 
     public function exchangeRates(): View
     {
-        $usdNgn = $this->usdNgnReference();
+        $marketInfo = $this->quotes->resolveMarketRate();
+        $usdNgn = (float) ($marketInfo['rate'] ?? 0);
+        if ($usdNgn <= 0) {
+            $usdNgn = $this->usdNgnReference();
+        }
+        $defaultSpread = (float) (\App\Models\OtcPricingSetting::current()->spread_ngn ?? ExchangeRate::defaultSpreadNgn());
+
         $paginator = ExchangeRate::query()->orderBy('sort_order')->orderBy('asset')->paginate(20);
 
         $marketByAsset = [];
         foreach ($paginator as $rate) {
             $symbol = strtoupper((string) $rate->asset);
             $coinUsd = $this->safeCoinUsd($symbol);
+            $spread = $rate->resolvedSpreadNgn($defaultSpread);
             $marketByAsset[$rate->id] = [
                 'coin_usd' => $coinUsd,
                 'coin_ngn' => ($coinUsd > 0 && $usdNgn > 0) ? round($coinUsd * $usdNgn, 2) : null,
-                'buy_rate' => $rate->effectiveBuyRatePerUsd(),
-                'buy_corrupt' => $rate->buyRateIsCorrupt(),
+                'spread' => $spread,
+                'buy_rate' => $rate->calculatedBuyRatePerUsd($usdNgn, $defaultSpread),
             ];
         }
 
@@ -73,6 +80,8 @@ class CatalogMetaAdminController extends Controller
             'rates' => $paginator,
             'marketByAsset' => $marketByAsset,
             'usdNgnReference' => $usdNgn,
+            'defaultSpread' => $defaultSpread,
+            'otcSettingsUrl' => route('admin.otc-pricing'),
         ]);
     }
 
@@ -112,15 +121,16 @@ class CatalogMetaAdminController extends Controller
     {
         $data = $this->validatedExchangeRate($request);
         $asset = strtoupper($data['asset']);
-        $customerBuyRate = (float) ($data['sell_rate_ngn'] ?? 0);
+        $spread = (float) $data['spread_ngn'];
+        $buyRate = $this->buyRateForSpread($spread);
 
         $payload = [
             'asset' => $asset,
             'coingecko_id' => $data['coingecko_id'] ?? null,
             'bybit_symbol' => $this->resolveBybitSymbol($asset),
             'logo_url' => $data['logo_url'] ?? null,
-            'buy_rate_ngn' => $customerBuyRate,
-            'sell_rate_ngn' => $customerBuyRate,
+            'buy_rate_ngn' => $buyRate,
+            'sell_rate_ngn' => $buyRate,
             'minimum_amount' => $data['minimum_amount'] ?? null,
             'maximum_amount' => $data['maximum_amount'] ?? null,
             'min_amount_usd' => $data['min_amount_usd'] ?? null,
@@ -130,6 +140,9 @@ class CatalogMetaAdminController extends Controller
             'is_active' => $request->boolean('is_active', true),
             'sort_order' => SortOrder::next(ExchangeRate::class),
         ];
+        if (Schema::hasColumn('exchange_rates', 'spread_ngn')) {
+            $payload['spread_ngn'] = $spread;
+        }
         if (Schema::hasColumn('exchange_rates', 'allowed_network_ids')) {
             $payload['allowed_network_ids'] = $data['allowed_network_ids'];
         }
@@ -153,15 +166,16 @@ class CatalogMetaAdminController extends Controller
     {
         $data = $this->validatedExchangeRate($request, $exchangeRate);
         $asset = strtoupper($data['asset']);
-        $customerBuyRate = (float) ($data['sell_rate_ngn'] ?? 0);
+        $spread = (float) $data['spread_ngn'];
+        $buyRate = $this->buyRateForSpread($spread);
 
         $payload = [
             'asset' => $asset,
             'coingecko_id' => $data['coingecko_id'] ?? null,
             'bybit_symbol' => $this->resolveBybitSymbol($asset, $exchangeRate->bybit_symbol),
             'logo_url' => $data['logo_url'] ?? null,
-            'buy_rate_ngn' => $customerBuyRate,
-            'sell_rate_ngn' => $customerBuyRate,
+            'buy_rate_ngn' => $buyRate,
+            'sell_rate_ngn' => $buyRate,
             'minimum_amount' => $data['minimum_amount'] ?? null,
             'maximum_amount' => $data['maximum_amount'] ?? null,
             'min_amount_usd' => $data['min_amount_usd'] ?? null,
@@ -170,6 +184,9 @@ class CatalogMetaAdminController extends Controller
             'is_featured' => $request->boolean('is_featured'),
             'is_active' => $request->boolean('is_active', true),
         ];
+        if (Schema::hasColumn('exchange_rates', 'spread_ngn')) {
+            $payload['spread_ngn'] = $spread;
+        }
         if (Schema::hasColumn('exchange_rates', 'allowed_network_ids')) {
             $payload['allowed_network_ids'] = $data['allowed_network_ids'];
         }
@@ -195,14 +212,17 @@ class CatalogMetaAdminController extends Controller
      */
     private function rateFormData(CryptoPriceService $prices, ?ExchangeRate $rate = null): array
     {
-        $usdNgn = $this->usdNgnReference();
+        $marketInfo = $this->quotes->resolveMarketRate();
+        $usdNgn = (float) ($marketInfo['rate'] ?? 0);
+        if ($usdNgn <= 0) {
+            $usdNgn = $this->usdNgnReference();
+        }
+        $defaultSpread = (float) (\App\Models\OtcPricingSetting::current()->spread_ngn ?? ExchangeRate::defaultSpreadNgn());
+        $coinSpread = $rate
+            ? $rate->resolvedSpreadNgn($defaultSpread)
+            : $defaultSpread;
         $symbol = strtoupper((string) ($rate?->asset ?? ''));
         $coinUsd = $symbol !== '' ? $this->safeCoinUsd($symbol) : 0.0;
-        $buyRate = $rate?->effectiveBuyRatePerUsd();
-        $defaultSpread = 25.0;
-        if ($buyRate === null && $usdNgn > 0) {
-            $buyRate = max(0, round($usdNgn - $defaultSpread, 2));
-        }
 
         $networkIdsByCoin = [];
         foreach (config('crypto.network_ids_by_coin', []) as $coin => $ids) {
@@ -215,9 +235,11 @@ class CatalogMetaAdminController extends Controller
         return [
             'coins' => $prices->marketCatalog(),
             'usdNgnReference' => $usdNgn,
+            'defaultSpread' => $defaultSpread,
+            'coinSpread' => $coinSpread,
+            'calculatedBuyRate' => $usdNgn > 0 ? max(0, round($usdNgn - $coinSpread, 2)) : null,
             'initialCoinUsd' => $coinUsd,
             'initialCoinNgn' => ($coinUsd > 0 && $usdNgn > 0) ? round($coinUsd * $usdNgn, 2) : null,
-            'initialBuyRate' => $buyRate,
             'networkIdsByCoin' => $networkIdsByCoin,
             'selectedNetworkIds' => $rate?->resolvedNetworkIds() ?? [],
             'coinMarketUrl' => route('admin.exchange-rates.coin-market'),
@@ -225,12 +247,27 @@ class CatalogMetaAdminController extends Controller
         ];
     }
 
+    private function buyRateForSpread(float $spread): float
+    {
+        $market = (float) ($this->quotes->resolveMarketRate()['rate'] ?? 0);
+        if ($market <= 0) {
+            return 0.0;
+        }
+
+        $rate = max(0, round($market - max(0, $spread), 2));
+        if ($rate > ExchangeRate::maxBuyRatePerUsd()) {
+            return 0.0;
+        }
+
+        return $rate;
+    }
+
     /**
      * @return array<string, mixed>
      */
     private function validatedExchangeRate(Request $request, ?ExchangeRate $exchangeRate = null): array
     {
-        $maxBuy = ExchangeRate::maxBuyRatePerUsd();
+        $market = (float) ($this->quotes->resolveMarketRate()['rate'] ?? 0);
 
         $validated = $request->validate([
             'asset' => [
@@ -241,8 +278,7 @@ class CatalogMetaAdminController extends Controller
             ],
             'coingecko_id' => ['nullable', 'string', 'max:80'],
             'logo_url' => ['nullable', 'string', 'max:500'],
-            'buy_rate_ngn' => ['nullable', 'numeric', 'min:0'],
-            'sell_rate_ngn' => ['required', 'numeric', 'min:0.01', 'max:'.$maxBuy],
+            'spread_ngn' => ['required', 'numeric', 'min:0', 'max:1000'],
             'minimum_amount' => ['nullable', 'numeric', 'min:0'],
             'maximum_amount' => ['nullable', 'numeric', 'min:0'],
             'min_amount_usd' => ['nullable', 'numeric', 'min:0'],
@@ -252,9 +288,13 @@ class CatalogMetaAdminController extends Controller
             'is_active' => ['sometimes', 'boolean'],
             'allowed_network_ids' => ['nullable', 'array'],
             'allowed_network_ids.*' => ['string', 'max:40'],
-        ], [
-            'sell_rate_ngn.max' => 'Our Buy Rate must be ₦ per $1 (max ₦'.number_format($maxBuy, 0).'). Full-coin prices are not allowed.',
         ]);
+
+        if ($market > 0 && (float) $validated['spread_ngn'] >= $market) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'spread_ngn' => 'Coin spread must be less than the OTC market USD→NGN rate (₦'.number_format($market, 2).').',
+            ]);
+        }
 
         $asset = strtoupper($validated['asset']);
         $whitelist = $this->allocation->networkIdsForCoin($asset);
@@ -271,7 +311,6 @@ class CatalogMetaAdminController extends Controller
             }
         }
 
-        // Only IDs on the coin whitelist; empty is OK (buy-rate-only catalog coin).
         $validated['allowed_network_ids'] = array_values(array_intersect($whitelist, $requested));
         $validated['asset'] = $asset;
 

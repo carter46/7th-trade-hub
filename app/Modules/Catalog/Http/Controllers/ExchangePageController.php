@@ -19,33 +19,34 @@ class ExchangePageController extends Controller
             ->get();
 
         $live = $prices->liveRatesForSymbols($catalog->pluck('asset')->all());
+        $fx = (float) ($quotes->resolveMarketRate()['rate'] ?? 0);
 
         /** @var Collection<int, object> $rates */
-        $rates = $catalog->map(function (ExchangeRate $rate) use ($live, $prices, $quotes) {
+        $rates = $catalog->map(function (ExchangeRate $rate) use ($live, $prices, $quotes, $fx) {
             $symbol = strtoupper((string) $rate->asset);
             $row = $live[$symbol] ?? null;
-            $fxNgn = (float) ($row['ngn'] ?? 0);
             $resolved = $quotes->resolveCustomerRateForCoin($symbol);
+            $buyRate = (($resolved['rate'] ?? 0) > 0 && (float) $resolved['rate'] <= ExchangeRate::maxBuyRatePerUsd())
+                ? (float) $resolved['rate']
+                : null;
+
             try {
                 $coinUsd = $quotes->coinUsdPrice($symbol);
             } catch (\Throwable) {
                 $coinUsd = 0.0;
             }
 
-            $buyRate = $rate->effectiveBuyRatePerUsd();
-            if ($buyRate === null && ($resolved['rate'] ?? 0) > 0 && (float) $resolved['rate'] <= ExchangeRate::maxBuyRatePerUsd()) {
-                $buyRate = (float) $resolved['rate'];
-            }
-
-            $fx = ($resolved['market'] ?? 0) > 0 ? (float) $resolved['market'] : $fxNgn;
-            $coinNgn = ($coinUsd > 0 && $fx > 0) ? round($coinUsd * $fx, 2) : (float) ($row['coin_ngn'] ?? 0);
+            $fxForCoin = ($resolved['market'] ?? 0) > 0
+                ? (float) $resolved['market']
+                : ($fx > 0 ? $fx : (float) ($row['ngn'] ?? 0));
+            $coinNgn = ($coinUsd > 0 && $fxForCoin > 0) ? round($coinUsd * $fxForCoin, 2) : (float) ($row['coin_ngn'] ?? 0);
 
             return (object) [
                 'asset' => $symbol,
                 'sell_rate_ngn' => $buyRate ?? 0,
-                'buy_rate_ngn' => (float) $rate->buy_rate_ngn,
-                'customer_rate' => $buyRate ?? (float) $resolved['rate'],
-                'otc_market_rate' => $fx,
+                'buy_rate_ngn' => $buyRate ?? 0,
+                'customer_rate' => $buyRate ?? 0,
+                'otc_market_rate' => $fxForCoin,
                 'spread' => $resolved['spread'],
                 'pricing_source' => $resolved['source'],
                 'coin_usd' => $coinUsd,
@@ -55,7 +56,7 @@ class ExchangePageController extends Controller
                 'min_amount_usd' => $rate->min_amount_usd,
                 'max_amount_usd' => $rate->max_amount_usd,
                 'processing_time' => $rate->processing_time,
-                'market_rate_ngn' => $fx > 0 ? $fx : null,
+                'market_rate_ngn' => $fxForCoin > 0 ? $fxForCoin : null,
                 'change_24h' => $row['change_24h'] ?? null,
                 'logo' => $rate->resolvedLogoUrl() ?? ($row['logo'] ?? $prices->logoUrl($symbol)),
                 'is_live' => (bool) ($row['is_live'] ?? false),

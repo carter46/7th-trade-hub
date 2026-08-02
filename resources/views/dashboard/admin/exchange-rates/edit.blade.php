@@ -5,11 +5,11 @@
 @section('content')
 <x-layout.page
     title="Edit Exchange Rate"
-    subtitle="Update the rate you pay customers when they sell {{ $rate->asset }} to you."
+    subtitle="Update {{ $rate->asset }} spread, networks, and limits. Buy rate = OTC market − this coin’s spread."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
-        ['Exchange Rates', route('admin.exchange-rates')],
+        ['Coin Catalog', route('admin.exchange-rates')],
         ['Edit', null],
     ]"
 >
