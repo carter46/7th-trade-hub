@@ -5,9 +5,10 @@
 @section('content')
 @php
     $cardId = old('card_media_id');
-    $cardPreview = $cardId
-        ? \App\Models\MediaAsset::query()->with('variants')->find((int) $cardId)?->url('medium')
+    $cardAsset = $cardId
+        ? \App\Models\MediaAsset::query()->with('variants')->find((int) $cardId)
         : null;
+    $cardPreview = $cardAsset?->url('medium') ?? $cardAsset?->thumbnailUrl();
 @endphp
 <x-layout.page
     title="Add Service Category"

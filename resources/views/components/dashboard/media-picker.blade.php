@@ -54,15 +54,29 @@
         <p class="text-xs text-text-muted">{{ $hint }}</p>
     @endif
 
-    <input type="hidden" :name="name" :value="selectedId ?? ''" @if ($required) data-media-required="true" @endif>
+    {{-- Static name so the field always posts even if Alpine is slow to bind. --}}
+    <input
+        type="hidden"
+        name="{{ $name }}"
+        value="{{ $selectedId ?: '' }}"
+        :value="selectedId ?? ''"
+        @if ($required) data-media-required="true" @endif
+    >
 
     <div class="flex flex-wrap items-center gap-3">
-        <template x-if="previewUrl">
-            <img :src="previewUrl" alt="" class="{{ $previewClass }}">
-        </template>
-        <template x-if="!previewUrl">
-            <div class="{{ $emptyClass }}">No image</div>
-        </template>
+        <img
+            x-show="previewUrl"
+            @unless ($resolvedPreview) x-cloak @endunless
+            :src="previewUrl"
+            @if ($resolvedPreview) src="{{ $resolvedPreview }}" @endif
+            alt=""
+            class="{{ $previewClass }}"
+        >
+        <div
+            x-show="!previewUrl"
+            @if ($resolvedPreview) style="display: none;" @endif
+            class="{{ $emptyClass }}"
+        >No image</div>
         <div class="flex flex-wrap gap-2">
             <x-dashboard.button type="button" variant="secondary" size="sm" @click="openLibrary()">Select</x-dashboard.button>
             <x-dashboard.button type="button" variant="ghost" size="sm" x-show="selectedId" @click="clear()">Clear</x-dashboard.button>

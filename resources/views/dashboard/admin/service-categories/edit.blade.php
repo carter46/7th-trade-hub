@@ -5,9 +5,12 @@
 @section('content')
 @php
     $cardId = old('card_media_id', $category->card_media_id ?: $category->banner_media_id);
-    $cardPreview = $cardId
-        ? \App\Models\MediaAsset::query()->with('variants')->find((int) $cardId)?->url('medium')
+    $cardAsset = $cardId
+        ? \App\Models\MediaAsset::query()->with('variants')->find((int) $cardId)
         : null;
+    $cardPreview = $cardAsset?->url('medium')
+        ?? $cardAsset?->thumbnailUrl()
+        ?? media_url(null, $category->card_image ?: $category->banner_image, 'medium');
 @endphp
 <x-layout.page
     title="Edit Service Category"

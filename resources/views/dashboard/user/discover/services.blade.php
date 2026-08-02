@@ -25,7 +25,7 @@
                 <div class="min-w-[16rem] flex-1">
                     <x-dashboard.input name="q" :value="$q" placeholder="Search services..." />
                 </div>
-                <x-dashboard.button type="submit" icon="search">Search</x-dashboard.button>
+                <x-dashboard.button type="submit" size="sm" icon="search">Search</x-dashboard.button>
             </form>
         </x-dashboard.card>
 
@@ -39,19 +39,10 @@
                             @if(filled($product->short_description))
                                 <p class="mt-1 text-sm text-text-secondary line-clamp-2">{{ $product->short_description }}</p>
                             @endif
-                            <a href="{{ route('dashboard.services.product', $product->slug) }}" class="text-sm text-primary mt-2 inline-block">View / reorder →</a>
+                            <div class="mt-3">
+                                <x-dashboard.button :href="route('dashboard.services.product', $product->slug)" size="xs">View / reorder</x-dashboard.button>
+                            </div>
                         </x-dashboard.card>
-                    @endforeach
-                </div>
-            </section>
-        @endif
-
-        @if($recentlyViewed->isNotEmpty())
-            <section>
-                <h2 class="text-sm font-semibold text-text-secondary uppercase tracking-wide mb-3">You've viewed</h2>
-                <div class="flex flex-wrap gap-2">
-                    @foreach($recentlyViewed as $product)
-                        <a href="{{ route('dashboard.services.product', $product->slug) }}" class="rounded-xl border border-border-default px-3 py-2 text-sm hover:bg-muted/50">{{ $product->title }}</a>
                     @endforeach
                 </div>
             </section>
@@ -67,7 +58,9 @@
                             @if(filled($product->short_description))
                                 <p class="mt-1 text-sm text-text-secondary line-clamp-2">{{ $product->short_description }}</p>
                             @endif
-                            <a href="{{ route('dashboard.services.product', $product->slug) }}" class="text-sm text-primary mt-2 inline-block">Open →</a>
+                            <div class="mt-3">
+                                <x-dashboard.button :href="route('dashboard.services.product', $product->slug)" size="xs">Open</x-dashboard.button>
+                            </div>
                         </x-dashboard.card>
                     @empty
                         <p class="text-text-muted">No services matched.</p>
@@ -82,14 +75,43 @@
                 <h2 class="text-sm font-semibold text-text-secondary uppercase tracking-wide mb-3">Categories</h2>
                 <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     @foreach($groups as $group)
-                        <x-dashboard.card>
-                            <div class="font-semibold">{{ $group['label'] ?? $group['name'] ?? 'Category' }}</div>
-                            @if(!empty($group['short_description']))
-                                <p class="mt-1 text-sm text-text-secondary line-clamp-2">{{ $group['short_description'] }}</p>
-                            @endif
-                            @if(!empty($group['href']))
-                                <a href="{{ $group['href'] }}" class="text-sm text-primary mt-2 inline-block">Browse →</a>
-                            @endif
+                        @php
+                            $image = $group['card_image'] ?? null;
+                            $imageSrc = null;
+                            if (is_string($image) && $image !== '') {
+                                $trimmed = trim($image);
+                                if (preg_match('#^(https?:)?//#i', $trimmed) || str_starts_with($trimmed, '/')) {
+                                    $imageSrc = $trimmed;
+                                } else {
+                                    $imageSrc = asset(ltrim(str_replace('\\', '/', $trimmed), '/'));
+                                }
+                            }
+                            $label = $group['label'] ?? $group['name'] ?? 'Category';
+                            $initials = strtoupper(mb_substr(preg_replace('/[^A-Za-z0-9]/', '', $label) ?: 'S', 0, 2));
+                        @endphp
+                        <x-dashboard.card :padding="false" class="overflow-hidden">
+                            <div class="relative aspect-[2/1] overflow-hidden bg-muted">
+                                @if($imageSrc)
+                                    <img src="{{ $imageSrc }}" alt="" class="h-full w-full object-cover">
+                                @else
+                                    <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/40 via-muted to-elevated">
+                                        <span class="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/15 text-xs font-bold text-white" aria-hidden="true">
+                                            {{ $initials }}
+                                        </span>
+                                    </div>
+                                @endif
+                            </div>
+                            <div class="space-y-2 p-4">
+                                <div class="font-semibold">{{ $label }}</div>
+                                @if(!empty($group['short_description']))
+                                    <p class="text-sm text-text-secondary line-clamp-2">{{ $group['short_description'] }}</p>
+                                @endif
+                                @if(!empty($group['href']))
+                                    <x-dashboard.button :href="$group['href']" size="xs">
+                                        {{ $group['cta'] ?? 'Browse' }}
+                                    </x-dashboard.button>
+                                @endif
+                            </div>
                         </x-dashboard.card>
                     @endforeach
                 </div>

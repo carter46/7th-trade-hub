@@ -222,7 +222,11 @@ class CatalogBrowseService
             return ServiceCategory::query()
                 ->active()
                 ->orderBy('sort_order')
-                ->with(['services' => fn ($q) => $q->active()->orderBy('sort_order')])
+                ->with([
+                    'cardMedia.variants',
+                    'bannerMedia.variants',
+                    'services' => fn ($q) => $q->active()->orderBy('sort_order'),
+                ])
                 ->get()
                 ->map(function (ServiceCategory $category) use ($content) {
                     $resolved = $content->forServiceCategory($category);

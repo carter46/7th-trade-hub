@@ -21,13 +21,13 @@
                 'icon' => 'listings',
                 'title' => 'Docs & Templates',
                 'body' => 'Ready-made business docs you can download and use.',
-                'href' => route('document-templates'),
+                'href' => route('services.segment', 'business-documents'),
             ],
             [
                 'icon' => 'inventory',
                 'title' => 'Website Listings',
                 'body' => 'Buy or sell websites with escrow to protect both sides.',
-                'href' => route('website-listings'),
+                'href' => route('services.segment', 'website-services'),
             ],
         ];
 

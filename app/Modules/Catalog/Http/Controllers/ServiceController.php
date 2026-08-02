@@ -15,11 +15,10 @@ use Illuminate\View\View;
 
 class ServiceController extends Controller
 {
-    /** @var array<string, string> legacy division slug → group slug */
+    /** @var array<string, string> legacy division slug → group slug (target must differ) */
     private const DIVISION_TO_GROUP = [
         'digital-services' => 'network-services',
         'web-solutions' => 'website-services',
-        'business-documents' => 'business-documents',
         'trust-protection' => 'trust-escrow',
     ];
 
@@ -96,11 +95,6 @@ class ServiceController extends Controller
             $typeKeys = $category->services()->active()->orderBy('sort_order')->pluck('slug')->all();
         }
 
-        // Single-type groups (e.g. social-media → social_service): skip the extra type card layer.
-        if (count($typeKeys) === 1) {
-            return $this->type($request, $typeKeys[0], $group);
-        }
-
         $typeFilter = $request->string('type')->toString();
         if ($typeFilter !== '' && ! in_array($typeFilter, $typeKeys, true)) {
             $typeFilter = '';
@@ -125,10 +119,13 @@ class ServiceController extends Controller
             $categoryId = null;
         }
 
-        // Multi-service category: prefer service cards over a flat product grid when no filters.
+        // Prefer service cards over a flat product grid when no filters (including single-service groups).
         if ($this->browse->usesDbHierarchy() && $typeFilter === '' && $q === '' && ! $categoryId) {
             $serviceCategory = $this->browse->findServiceCategory($group);
-            $typeCards = $this->browse->serviceCardsForCategory($serviceCategory->load('services'), $this->content);
+            $typeCards = $this->browse->serviceCardsForCategory(
+                $serviceCategory->load(['services.cardMedia.variants', 'services.bannerMedia.variants']),
+                $this->content,
+            );
 
             return view('pages.services-group', [
                 'groupSlug' => $group,
@@ -368,7 +365,10 @@ class ServiceController extends Controller
     public function segment(string $segment): View|RedirectResponse
     {
         if (isset(self::DIVISION_TO_GROUP[$segment])) {
-            return redirect()->route('services.segment', self::DIVISION_TO_GROUP[$segment], 301);
+            $target = self::DIVISION_TO_GROUP[$segment];
+            if ($target !== $segment) {
+                return redirect()->route('services.segment', $target, 301);
+            }
         }
 
         if ($this->browse->isGroup($segment)) {

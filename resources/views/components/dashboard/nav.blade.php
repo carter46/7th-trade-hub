@@ -19,17 +19,23 @@
     ]);
 @endphp
 
+@php
+    $showNavSearch = $role !== 'user';
+@endphp
+
 <div
     class="flex min-h-0 flex-1 flex-col gap-3"
     x-data="sidebarNav({{ $sidebarOptions }})"
     data-dashboard-nav="{{ $role }}"
 >
-    <x-dashboard.nav-search />
+    @if ($showNavSearch)
+        <x-dashboard.nav-search />
+    @endif
 
     <x-dashboard.sidebar
         :label="$label"
         class="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto overscroll-contain px-1 scrollbar-hide"
-        x-show="!query.trim()"
+        @if ($showNavSearch) x-show="!query.trim()" @endif
     >
         @foreach ($entries as $entry)
             @if (($entry['type'] ?? 'link') === 'group')
@@ -49,31 +55,33 @@
         @endforeach
     </x-dashboard.sidebar>
 
-    <div
-        class="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overscroll-contain px-1 scrollbar-hide"
-        x-show="query.trim()"
-        x-cloak
-        role="listbox"
-        :aria-label="'Search results'"
-    >
-        <template x-if="filteredDestinations().length === 0">
-            <p class="px-3 py-4 text-sm text-text-muted">No matching pages.</p>
-        </template>
-        <template x-for="(item, index) in filteredDestinations()" :key="item.id">
-            <a
-                :href="item.url"
-                class="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors focus-ring"
-                :class="index === activeResult ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:bg-muted/60 hover:text-text-primary'"
-                role="option"
-                :aria-selected="(index === activeResult).toString()"
-                @click="close()"
-                @mouseenter="activeResult = index"
-            >
-                <span class="min-w-0 flex-1">
-                    <span class="block truncate font-medium" x-text="item.label"></span>
-                    <span class="block truncate text-[11px] text-text-muted" x-text="item.group || ''" x-show="item.group"></span>
-                </span>
-            </a>
-        </template>
-    </div>
+    @if ($showNavSearch)
+        <div
+            class="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overscroll-contain px-1 scrollbar-hide"
+            x-show="query.trim()"
+            x-cloak
+            role="listbox"
+            :aria-label="'Search results'"
+        >
+            <template x-if="filteredDestinations().length === 0">
+                <p class="px-3 py-4 text-sm text-text-muted">No matching pages.</p>
+            </template>
+            <template x-for="(item, index) in filteredDestinations()" :key="item.id">
+                <a
+                    :href="item.url"
+                    class="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors focus-ring"
+                    :class="index === activeResult ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:bg-muted/60 hover:text-text-primary'"
+                    role="option"
+                    :aria-selected="(index === activeResult).toString()"
+                    @click="close()"
+                    @mouseenter="activeResult = index"
+                >
+                    <span class="min-w-0 flex-1">
+                        <span class="block truncate font-medium" x-text="item.label"></span>
+                        <span class="block truncate text-[11px] text-text-muted" x-text="item.group || ''" x-show="item.group"></span>
+                    </span>
+                </a>
+            </template>
+        </div>
+    @endif
 </div>

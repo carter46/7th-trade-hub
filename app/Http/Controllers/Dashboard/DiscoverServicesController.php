@@ -52,8 +52,6 @@ class DiscoverServicesController extends Controller
                 ->withQueryString();
         }
 
-        $recentlyViewed = $this->activity->recentSubjects($user->id, PlatformProduct::class, 6);
-
         $purchasedProductIds = collect();
         if (Schema::hasTable('order_items')) {
             $purchasedProductIds = OrderItem::query()
@@ -86,7 +84,6 @@ class DiscoverServicesController extends Controller
             'groups',
             'searchResults',
             'q',
-            'recentlyViewed',
             'recentlyPurchased',
             'wallet',
         ));
@@ -111,17 +108,16 @@ class DiscoverServicesController extends Controller
                 $typeKeys = $category->services()->active()->orderBy('sort_order')->pluck('slug')->all();
             }
 
-            if (count($typeKeys) === 1) {
-                return $this->browseType($request, $typeKeys[0], $segment, $resolved);
-            }
-
             $typeFilter = $request->string('type')->toString();
             if ($typeFilter !== '' && in_array($typeFilter, $typeKeys, true)) {
                 return $this->browseType($request, $typeFilter, $segment, $resolved);
             }
 
             if ($category && $typeFilter === '' && $request->string('q')->toString() === '') {
-                $typeCards = $this->browse->serviceCardsForCategory($category->load('services'), $this->content)
+                $typeCards = $this->browse->serviceCardsForCategory(
+                    $category->load(['services.cardMedia.variants', 'services.bannerMedia.variants']),
+                    $this->content,
+                )
                     ->map(function (array $card) use ($segment) {
                         $card['href'] = route('dashboard.services.browse', [
                             'segment' => $segment,

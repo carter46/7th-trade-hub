@@ -115,11 +115,7 @@ class ServiceCategoryAdminController extends Controller
             'card_media_id' => ['nullable', 'integer', $this->mediaPaths->existsRule()],
         ]);
 
-        // Card image is the source of truth; banner mirrors it for public headers.
-        $cardMediaId = isset($data['card_media_id']) ? (int) $data['card_media_id'] : null;
-        $path = $this->mediaPaths->legacyPathFromMediaId($cardMediaId);
-
-        return [
+        $result = [
             'name' => $data['name'],
             'slug' => $data['slug'] ?? null,
             'sort_order' => $data['sort_order'] ?? 0,
@@ -129,16 +125,31 @@ class ServiceCategoryAdminController extends Controller
             'short_description' => $data['short_description'] ?? null,
             'hero_title' => $data['hero_title'] ?? null,
             'hero_subtitle' => $data['hero_subtitle'] ?? null,
-            'card_media_id' => $cardMediaId,
-            'banner_media_id' => $cardMediaId,
-            'card_image' => $path,
-            'banner_image' => $path,
         ];
+
+        // Only touch media when the picker field was posted — missing input must not wipe images.
+        if ($request->exists('card_media_id')) {
+            $raw = $data['card_media_id'] ?? null;
+            $cardMediaId = filled($raw) ? (int) $raw : null;
+            $path = $this->mediaPaths->legacyPathFromMediaId($cardMediaId);
+
+            // Card image is the source of truth; banner mirrors it for public headers.
+            $result['card_media_id'] = $cardMediaId;
+            $result['banner_media_id'] = $cardMediaId;
+            $result['card_image'] = $path;
+            $result['banner_image'] = $path;
+        }
+
+        return $result;
     }
 
     private function syncMedia(ServiceCategory $category, array $data): void
     {
-        $mediaId = $data['card_media_id'] ?? null;
+        if (! array_key_exists('card_media_id', $data)) {
+            return;
+        }
+
+        $mediaId = $data['card_media_id'];
 
         $this->mediaUsages->syncUsages($category, [
             'card' => $mediaId,

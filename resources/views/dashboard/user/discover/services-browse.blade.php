@@ -23,15 +23,46 @@
         @if(!empty($typeCards) && $typeCards->isNotEmpty())
             <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 @foreach($typeCards as $card)
-                    <x-dashboard.card>
-                        <div class="font-semibold text-text-primary">{{ $card['label'] ?? $card['slug'] }}</div>
-                        @if(!empty($card['short_description']))
-                            <p class="mt-1 text-sm text-text-secondary line-clamp-2">{{ $card['short_description'] }}</p>
-                        @endif
-                        @if(!empty($card['meta']))
-                            <p class="mt-1 text-xs text-text-muted">{{ $card['meta'] }}</p>
-                        @endif
-                        <a href="{{ $card['href'] }}" class="text-sm text-primary mt-3 inline-block">{{ $card['cta'] ?? 'View products' }} →</a>
+                    @php
+                        $image = $card['card_image'] ?? null;
+                        $imageSrc = null;
+                        if (is_string($image) && $image !== '') {
+                            $trimmed = trim($image);
+                            if (preg_match('#^(https?:)?//#i', $trimmed) || str_starts_with($trimmed, '/')) {
+                                $imageSrc = $trimmed;
+                            } else {
+                                $imageSrc = asset(ltrim(str_replace('\\', '/', $trimmed), '/'));
+                            }
+                        }
+                        $label = $card['label'] ?? $card['slug'] ?? 'Service';
+                        $initials = strtoupper(mb_substr(preg_replace('/[^A-Za-z0-9]/', '', $label) ?: 'S', 0, 2));
+                    @endphp
+                    <x-dashboard.card :padding="false" class="overflow-hidden">
+                        <div class="relative aspect-[2/1] overflow-hidden bg-muted">
+                            @if($imageSrc)
+                                <img src="{{ $imageSrc }}" alt="" class="h-full w-full object-cover">
+                            @else
+                                <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/40 via-muted to-elevated">
+                                    <span class="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/15 text-xs font-bold text-white" aria-hidden="true">
+                                        {{ $initials }}
+                                    </span>
+                                </div>
+                            @endif
+                        </div>
+                        <div class="space-y-2 p-4">
+                            <div class="font-semibold text-text-primary">{{ $label }}</div>
+                            @if(!empty($card['short_description']))
+                                <p class="text-sm text-text-secondary line-clamp-2">{{ $card['short_description'] }}</p>
+                            @endif
+                            @if(!empty($card['meta']))
+                                <p class="text-xs text-text-muted">{{ $card['meta'] }}</p>
+                            @endif
+                            @if(!empty($card['href']))
+                                <x-dashboard.button :href="$card['href']" size="xs">
+                                    {{ $card['cta'] ?? 'View products' }}
+                                </x-dashboard.button>
+                            @endif
+                        </div>
                     </x-dashboard.card>
                 @endforeach
             </div>
@@ -44,7 +75,7 @@
                     <div class="min-w-[16rem] flex-1">
                         <x-dashboard.input name="q" :value="$filters['q'] ?? ''" placeholder="Search in {{ $title }}..." />
                     </div>
-                    <x-dashboard.button type="submit" icon="search">Search</x-dashboard.button>
+                    <x-dashboard.button type="submit" size="sm" icon="search">Search</x-dashboard.button>
                 </form>
             </x-dashboard.card>
 
@@ -60,7 +91,7 @@
                             @endif
                             <div class="mt-3 flex items-center justify-between gap-2">
                                 <span class="font-semibold text-primary">₦{{ number_format($product->displayPrice(), 0) }}</span>
-                                <a href="{{ route('dashboard.services.product', $product->slug) }}" class="text-sm text-primary">View →</a>
+                                <x-dashboard.button :href="route('dashboard.services.product', $product->slug)" size="xs">View</x-dashboard.button>
                             </div>
                         </x-dashboard.card>
                     @endforeach
