@@ -32,28 +32,30 @@
         <x-dashboard.nav-search />
     @endif
 
-    <x-dashboard.sidebar
-        :label="$label"
-        class="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto overscroll-contain px-1 scrollbar-hide"
-        @if ($showNavSearch) x-show="!query.trim()" @endif
-    >
-        @foreach ($entries as $entry)
-            @if (($entry['type'] ?? 'link') === 'group')
-                @php($groupActive = \App\Support\DashboardNavigation::groupIsActive($entry))
-                <x-dashboard.nav-group
-                    :group="$entry"
-                    :active="$groupActive"
-                    :expanded="in_array((string) $entry['id'], $initiallyOpen, true)"
-                    :id-prefix="$idPrefix"
-                />
-            @else
-                <x-dashboard.nav-item
-                    :item="$entry"
-                    :active="\App\Support\DashboardNavigation::isActive($entry)"
-                />
-            @endif
-        @endforeach
-    </x-dashboard.sidebar>
+    {{-- Always bind x-show: without search, query stays empty so the menu remains visible. --}}
+    <div class="flex min-h-0 flex-1 flex-col" @if ($showNavSearch) x-show="!query.trim()" @endif>
+        <x-dashboard.sidebar
+            :label="$label"
+            class="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto overscroll-contain px-1 scrollbar-hide"
+        >
+            @foreach ($entries as $entry)
+                @if (($entry['type'] ?? 'link') === 'group')
+                    @php($groupActive = \App\Support\DashboardNavigation::groupIsActive($entry))
+                    <x-dashboard.nav-group
+                        :group="$entry"
+                        :active="$groupActive"
+                        :expanded="in_array((string) $entry['id'], $initiallyOpen, true)"
+                        :id-prefix="$idPrefix"
+                    />
+                @else
+                    <x-dashboard.nav-item
+                        :item="$entry"
+                        :active="\App\Support\DashboardNavigation::isActive($entry)"
+                    />
+                @endif
+            @endforeach
+        </x-dashboard.sidebar>
+    </div>
 
     @if ($showNavSearch)
         <div

@@ -33,9 +33,11 @@
 @endphp
 
 <div
-    class="space-y-2"
+    @class(['space-y-2'])
     role="group"
-    @if ($label) aria-labelledby="{{ $labelId }}" @endif
+    @if ($label)
+        aria-labelledby="{{ $labelId }}"
+    @endif
     x-data="mediaPicker({
         name: @js($name),
         selectedId: @js($selectedId ? (int) $selectedId : null),
@@ -64,19 +66,25 @@
     >
 
     <div class="flex flex-wrap items-center gap-3">
-        <img
-            x-show="previewUrl"
-            @unless ($resolvedPreview) x-cloak @endunless
-            :src="previewUrl"
-            @if ($resolvedPreview) src="{{ $resolvedPreview }}" @endif
-            alt=""
-            class="{{ $previewClass }}"
-        >
-        <div
-            x-show="!previewUrl"
-            @if ($resolvedPreview) style="display: none;" @endif
-            class="{{ $emptyClass }}"
-        >No image</div>
+        @if ($resolvedPreview)
+            <img
+                x-show="previewUrl"
+                :src="previewUrl"
+                src="{{ $resolvedPreview }}"
+                alt=""
+                class="{{ $previewClass }}"
+            >
+            <div x-show="!previewUrl" style="display: none;" class="{{ $emptyClass }}">No image</div>
+        @else
+            <img
+                x-show="previewUrl"
+                x-cloak
+                :src="previewUrl"
+                alt=""
+                class="{{ $previewClass }}"
+            >
+            <div x-show="!previewUrl" class="{{ $emptyClass }}">No image</div>
+        @endif
         <div class="flex flex-wrap gap-2">
             <x-dashboard.button type="button" variant="secondary" size="sm" @click="openLibrary()">Select</x-dashboard.button>
             <x-dashboard.button type="button" variant="ghost" size="sm" x-show="selectedId" @click="clear()">Clear</x-dashboard.button>
