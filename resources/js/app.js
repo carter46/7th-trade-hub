@@ -539,12 +539,76 @@ document.addEventListener('alpine:init', () => {
         selected: opts.selected || null,
         buy: opts.buy ?? '',
         sell: opts.sell ?? '',
+        spreadPercent: opts.spreadPercent ?? '',
+        linkSpread: opts.linkSpread !== false,
         query: opts.selected?.symbol || opts.selected?.name || '',
         open: false,
+        init() {
+            if (this.spreadPercent === '' || this.spreadPercent == null) {
+                this.spreadPercent = this.computeSpreadFromRates();
+            }
+            if (this.linkSpread && this.sell !== '' && this.sell != null) {
+                this.applyBuyFromSell();
+            }
+        },
         get marketHint() {
             const price = this.selected?.price_ngn;
             if (price == null || Number.isNaN(Number(price))) return '';
             return ' · Market ₦' + Number(price).toLocaleString('en-NG');
+        },
+        roundRate(n) {
+            return Math.round(Number(n) * 100) / 100;
+        },
+        computeSpreadFromRates() {
+            const sell = Number(this.sell);
+            const buy = Number(this.buy);
+            if (!sell || sell <= 0 || !buy || buy <= 0) {
+                return 2;
+            }
+            return this.roundRate(((buy - sell) / sell) * 100);
+        },
+        applyBuyFromSell() {
+            const sell = Number(this.sell);
+            const pct = Number(this.spreadPercent);
+            if (!sell || sell <= 0 || Number.isNaN(pct)) {
+                return;
+            }
+            this.buy = this.roundRate(sell * (1 + pct / 100));
+        },
+        applySellFromBuy() {
+            const buy = Number(this.buy);
+            const pct = Number(this.spreadPercent);
+            if (!buy || buy <= 0 || Number.isNaN(pct) || pct <= -100) {
+                return;
+            }
+            this.sell = this.roundRate(buy / (1 + pct / 100));
+        },
+        onSellInput() {
+            if (this.linkSpread) {
+                this.applyBuyFromSell();
+            } else {
+                this.spreadPercent = this.computeSpreadFromRates();
+            }
+        },
+        onBuyInput() {
+            if (this.linkSpread) {
+                this.applySellFromBuy();
+            } else {
+                this.spreadPercent = this.computeSpreadFromRates();
+            }
+        },
+        onSpreadInput() {
+            if (this.linkSpread) {
+                this.applyBuyFromSell();
+            }
+        },
+        onLinkToggle() {
+            if (this.linkSpread) {
+                if (this.spreadPercent === '' || this.spreadPercent == null) {
+                    this.spreadPercent = this.computeSpreadFromRates();
+                }
+                this.applyBuyFromSell();
+            }
         },
         filteredCoins() {
             const q = (this.query || '').trim().toLowerCase();
@@ -562,10 +626,16 @@ document.addEventListener('alpine:init', () => {
             this.query = `${coin.symbol} · ${coin.name}`;
             this.open = false;
             if (coin.price_ngn != null && Number(coin.price_ngn) > 0) {
-                const market = Math.round(Number(coin.price_ngn) * 100) / 100;
-                // Prefill from live market; admin adjusts platform buy/sell before saving.
-                this.buy = market;
+                const market = this.roundRate(Number(coin.price_ngn));
                 this.sell = market;
+                if (this.linkSpread) {
+                    if (this.spreadPercent === '' || this.spreadPercent == null) {
+                        this.spreadPercent = 2;
+                    }
+                    this.applyBuyFromSell();
+                } else {
+                    this.buy = market;
+                }
             }
         },
     }));

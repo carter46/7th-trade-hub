@@ -17,6 +17,7 @@
         selected: @js($selected),
         buy: @js(old('buy_rate_ngn', $rate?->buy_rate_ngn)),
         sell: @js(old('sell_rate_ngn', $rate?->sell_rate_ngn)),
+        linkSpread: true,
     })"
 >
     <div class="space-y-2">
@@ -82,14 +83,56 @@
         <x-dashboard.input label="Processing time" name="processing_time" :value="old('processing_time', $rate?->processing_time)" placeholder="5–15 minutes" hint="Shown to customers on the exchange page." />
         <x-dashboard.input label="Min USD" name="min_amount_usd" type="number" step="any" :value="old('min_amount_usd', $rate?->min_amount_usd)" />
         <x-dashboard.input label="Max USD" name="max_amount_usd" type="number" step="any" :value="old('max_amount_usd', $rate?->max_amount_usd)" />
-        <div>
-            <label class="mb-1.5 block text-sm font-medium text-text-primary">Legacy buy rate (NGN)</label>
-            <input type="number" step="0.01" name="buy_rate_ngn" x-model="buy" class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2.5 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40">
+
+        <div class="sm:col-span-2 rounded-xl border border-border-subtle bg-muted/20 px-3 py-3 space-y-3">
+            <label class="flex items-center gap-2 text-sm text-text-secondary">
+                <input type="checkbox" class="rounded border-border-default" x-model="linkSpread" @change="onLinkToggle()">
+                Link buy &amp; sell with a spread %
+            </label>
+            <div class="max-w-xs">
+                <label class="mb-1.5 block text-sm font-medium text-text-primary">Spread %</label>
+                <input
+                    type="number"
+                    step="0.01"
+                    min="-99"
+                    x-model="spreadPercent"
+                    @input="onSpreadInput()"
+                    class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2.5 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+                >
+                <p class="mt-1 text-[11px] text-text-muted">
+                    Buy rate = sell rate × (1 + spread%). Example: sell ₦1,000 with 2% → buy ₦1,020.
+                </p>
+            </div>
         </div>
+
         <div>
             <label class="mb-1.5 block text-sm font-medium text-text-primary">Legacy sell rate (NGN)</label>
-            <input type="number" step="0.01" name="sell_rate_ngn" x-model="sell" class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2.5 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40">
-            <p class="mt-1 text-[11px] text-text-muted">Prefer OTC Pricing for live customer rates.</p>
+            <input
+                type="number"
+                step="0.01"
+                name="sell_rate_ngn"
+                x-model="sell"
+                @input="onSellInput()"
+                class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2.5 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+            >
+            <p class="mt-1 text-[11px] text-text-muted">What you pay customers in NGN when they sell crypto to you (OTC payout rate). Prefer OTC Pricing for live customer rates.</p>
+        </div>
+        <div>
+            <label class="mb-1.5 block text-sm font-medium text-text-primary">Legacy buy rate (NGN)</label>
+            <input
+                type="number"
+                step="0.01"
+                name="buy_rate_ngn"
+                x-model="buy"
+                @input="onBuyInput()"
+                :readonly="linkSpread"
+                :class="linkSpread ? 'opacity-80' : ''"
+                class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2.5 text-sm text-text-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+            >
+            <p class="mt-1 text-[11px] text-text-muted">
+                What customers pay in NGN when they buy crypto from you (platform sells crypto).
+                <span x-show="linkSpread" x-cloak> Auto-set from sell rate + spread.</span>
+            </p>
         </div>
     </div>
 
