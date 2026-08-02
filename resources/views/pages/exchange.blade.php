@@ -71,7 +71,7 @@
 
                 <div class="space-y-5">
                     <div class="space-y-2">
-                        <label for="exchange-asset" class="block text-[11px] font-medium uppercase tracking-wider text-text-secondary">USD value to sell</label>
+                        <label for="exchange-amount" class="block text-[11px] font-medium uppercase tracking-wider text-text-secondary">USD value to sell</label>
                         <div class="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,9rem)_minmax(0,1fr)]">
                             <div class="flex min-w-0 items-center gap-2 rounded-lg border border-border-default bg-surface px-2.5 py-2">
                                 <template x-if="rates[asset]?.logo">
@@ -95,20 +95,33 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <input
-                                id="exchange-amount"
-                                x-model.number="amountUsd"
-                                type="number"
-                                step="any"
-                                min="0"
-                                placeholder="100.00"
-                                class="min-w-0 w-full rounded-lg border border-border-default bg-surface px-3 py-2.5 text-sm font-semibold text-white placeholder:text-text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                            >
+                            <div class="flex min-w-0 items-center rounded-lg border border-border-default bg-surface focus-within:border-accent focus-within:ring-1 focus-within:ring-accent/40">
+                                <span class="pl-3 text-sm font-semibold text-text-muted select-none">$</span>
+                                <input
+                                    id="exchange-amount"
+                                    x-model.number="amountUsd"
+                                    type="number"
+                                    step="any"
+                                    min="0"
+                                    placeholder="100.00"
+                                    class="min-w-0 w-full border-0 bg-transparent px-2 py-2.5 text-sm font-semibold text-white placeholder:text-text-muted focus:outline-none focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                >
+                            </div>
                         </div>
                         <p class="text-xs text-text-muted" x-text="hint"></p>
-                        <p class="text-xs text-text-muted" x-show="approxCrypto > 0">
-                            ≈ <span x-text="approxCrypto.toFixed(8)"></span> <span x-text="asset"></span>
+                    </div>
+
+                    <div
+                        class="rounded-xl border border-accent/25 bg-accent/10 px-4 py-3.5"
+                        x-show="approxCrypto > 0"
+                        x-cloak
+                    >
+                        <p class="text-[11px] font-medium uppercase tracking-wider text-accent mb-1">You send</p>
+                        <p class="font-display text-xl sm:text-2xl font-bold text-white leading-snug">
+                            ≈ <span x-text="approxCrypto.toFixed(8)"></span>
+                            <span class="text-accent" x-text="asset"></span>
                         </p>
+                        <p class="mt-1 text-[11px] text-text-muted">Send this crypto amount to complete the exchange.</p>
                     </div>
 
                     <div class="flex justify-center">
@@ -118,7 +131,7 @@
                     </div>
 
                     <div class="space-y-2">
-                        <label class="block text-[11px] font-medium uppercase tracking-wider text-text-secondary">You Receive (Est. NGN)</label>
+                        <label class="block text-[11px] font-medium uppercase tracking-wider text-text-secondary">You receive (Est. NGN)</label>
                         <div class="rounded-lg border border-border-subtle bg-elevated/80 px-3.5 py-3.5">
                             <div class="flex items-baseline justify-between gap-3">
                                 <p class="font-display min-w-0 break-all text-xl font-bold leading-snug text-white sm:text-2xl">

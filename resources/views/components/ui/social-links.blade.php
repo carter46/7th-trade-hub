@@ -20,13 +20,14 @@
         'facebook' => '#1877F2',
         'instagram' => '#E4405F',
         'twitter' => '#1DA1F2',
-        'x' => '#000000',
+        // Near-black brand marks are unreadable on dark footers / contact — use light fills.
+        'x' => '#F8FAFC',
         'linkedin' => '#0A66C2',
         'youtube' => '#FF0000',
         'telegram' => '#26A5E4',
-        'tiktok' => '#000000',
+        'tiktok' => '#F8FAFC',
         'discord' => '#5865F2',
-        'github' => '#181717',
+        'github' => '#F8FAFC',
         'trustpilot' => '#00B67A',
         'whatsapp' => '#25D366',
     ];
@@ -37,7 +38,7 @@
         @foreach($items as $link)
             @php
                 $key = strtolower((string) ($link->icon ?: $link->platform));
-                $color = $brandColors[$key] ?? '#94A3B8';
+                $color = $brandColors[$key] ?? '#E2E8F0';
                 $label = ucfirst($link->platform);
                 $path = $paths[$key] ?? null;
                 $customLogo = ! empty($link->icon_media_id)
@@ -48,7 +49,7 @@
                 href="{{ $link->url }}"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/5 hover:bg-white/10 transition-colors overflow-hidden"
+                class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/10 hover:bg-white/15 hover:border-white/20 transition-colors overflow-hidden"
                 aria-label="{{ $label }}"
                 title="{{ $label }}"
             >
@@ -59,7 +60,7 @@
                         <path d="{{ $path }}"></path>
                     </svg>
                 @else
-                    <span class="text-xs font-bold" style="color: {{ $color }}">{{ mb_strtoupper(mb_substr($link->platform, 0, 1)) }}</span>
+                    <span class="text-xs font-bold text-white">{{ mb_strtoupper(mb_substr($link->platform, 0, 1)) }}</span>
                 @endif
             </a>
         @endforeach

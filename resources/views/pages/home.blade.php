@@ -212,29 +212,6 @@
         </div>
     </section>
 
-    <section class="py-16 sm:py-20 border-y border-white/5 bg-slate-900/50">
-        <div class="max-w-marketing mx-auto px-5 sm:px-6">
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
-                <div>
-                    <div class="text-4xl font-extrabold text-white mb-2 font-display">15k+</div>
-                    <div class="text-slate-500 text-sm uppercase tracking-widest font-semibold">Active Users</div>
-                </div>
-                <div>
-                    <div class="text-4xl font-extrabold text-white mb-2 font-display">50k+</div>
-                    <div class="text-slate-500 text-sm uppercase tracking-widest font-semibold">Orders Completed</div>
-                </div>
-                <div>
-                    <div class="text-4xl font-extrabold text-white mb-2 font-display">$4.2M</div>
-                    <div class="text-slate-500 text-sm uppercase tracking-widest font-semibold">Trade Volume</div>
-                </div>
-                <div>
-                    <div class="text-4xl font-extrabold text-white mb-2 font-display">99.9%</div>
-                    <div class="text-slate-500 text-sm uppercase tracking-widest font-semibold">Satisfaction</div>
-                </div>
-            </div>
-        </div>
-    </section>
-
     <section class="py-16 sm:py-20 lg:py-24">
         <div class="max-w-marketing mx-auto px-5 sm:px-6">
             <div class="mx-auto max-w-3xl">
