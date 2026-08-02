@@ -202,14 +202,14 @@
                                 </div>
                             </div>
 
-                            <p class="text-[10px] font-medium uppercase tracking-wider text-text-secondary">Our sell rate</p>
+                            <p class="text-[10px] font-medium uppercase tracking-wider text-text-secondary">Our buy rate / $1</p>
                             <p class="font-display mt-0.5 break-all text-lg font-semibold leading-snug text-white">
                                 ₦{{ number_format($rate->sell_rate_ngn, 0) }}
                             </p>
 
                             @if($rate->market_rate_ngn)
                                 <p class="mt-2 break-all text-[11px] text-text-muted">
-                                    Market <span class="text-text-secondary">₦{{ number_format($rate->market_rate_ngn, 0) }}</span>
+                                    Market <span class="text-text-secondary">₦{{ number_format($rate->market_rate_ngn, 0) }} / $1</span>
                                 </p>
                             @endif
                         </div>

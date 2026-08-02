@@ -132,7 +132,7 @@
                         <img x-show="coin.logo" :src="coin.logo" alt="" class="h-7 w-7 rounded-full bg-white shrink-0" width="28" height="28" referrerpolicy="no-referrer">
                         <span class="min-w-0 flex-1">
                             <span class="block truncate text-sm font-medium text-text-primary" x-text="coin.symbol + ' · ' + coin.name"></span>
-                            <span class="block truncate text-[11px] text-text-muted" x-text="coin.price_ngn != null ? ('Market ₦' + Number(coin.price_ngn).toLocaleString('en-NG')) : coin.id"></span>
+                            <span class="block truncate text-[11px] text-text-muted" x-text="coin.price_ngn != null ? ('Market ₦' + Number(coin.price_ngn).toLocaleString('en-NG') + ' / $1') : coin.id"></span>
                         </span>
                     </button>
                 </template>
@@ -159,12 +159,12 @@
 
         <div class="sm:col-span-2 rounded-xl border border-border-subtle bg-muted/20 px-3 py-3 space-y-3">
             <div>
-                <p class="text-sm font-medium text-text-primary">Current market rate (NGN)</p>
+                <p class="text-sm font-medium text-text-primary">Current market rate (₦ per $1)</p>
                 <p class="mt-1 text-lg font-semibold text-text-primary" x-show="marketRate != null" x-cloak>
                     ₦<span x-text="Number(marketRate).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })"></span>
-                    <span class="text-xs font-normal text-text-muted"> / USD (CoinGecko)</span>
+                    <span class="text-xs font-normal text-text-muted"> / $1 USD</span>
                 </p>
-                <p class="mt-1 text-sm text-text-muted" x-show="marketRate == null" x-cloak>Pick a coin to load the live market rate.</p>
+                <p class="mt-1 text-sm text-text-muted" x-show="marketRate == null" x-cloak>Pick a coin to load the live USD→NGN market rate.</p>
             </div>
 
             <label class="flex items-center gap-2 text-sm text-text-secondary">
@@ -194,7 +194,7 @@
         </div>
 
         <div class="sm:col-span-2">
-            <label class="mb-1.5 block text-sm font-medium text-text-primary">Buy rate from customer (NGN)</label>
+            <label class="mb-1.5 block text-sm font-medium text-text-primary">Buy rate from customer (₦ per $1)</label>
             {{-- Live OTC payout field (customers sell crypto to you). --}}
             <input
                 type="number"
@@ -208,8 +208,7 @@
             {{-- Keep legacy buy column aligned; you do not sell crypto to customers. --}}
             <input type="hidden" name="buy_rate_ngn" :value="customerRate" value="{{ $initialCustomerRate }}">
             <p class="mt-1 text-[11px] text-text-muted">
-                What you pay the customer in NGN when they sell you this coin (per $1 USD). Shown on the public exchange page and used for OTC quotes for this coin.
-                If this is empty, the legacy global fallback rate in the database may be used — always set a rate here for each active coin.
+                NGN you pay per $1 USD of this coin (not the price of 1 whole coin). Example: market ₦1,550 / $1 with 2% spread → you pay ₦1,519. Same scale for BTC, ETH, USDT.
             </p>
         </div>
     </div>

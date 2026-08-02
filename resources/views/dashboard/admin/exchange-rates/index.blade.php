@@ -5,7 +5,7 @@
 @section('content')
 <x-layout.page
     title="Exchange Rates"
-    subtitle="Coins you buy from customers — market reference and your payout rate."
+    subtitle="Buy rates are NGN per $1 USD for each coin — not the price of a whole coin."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
@@ -18,6 +18,15 @@
         </x-dashboard.button>
     </x-slot:actions>
 
+    @php
+        $suspicious = $rates->getCollection()->filter(fn ($r) => (float) $r->sell_rate_ngn > 10000);
+    @endphp
+    @if ($suspicious->isNotEmpty())
+        <x-dashboard.alert variant="warning" class="mb-4" title="Some rates look like full-coin prices">
+            {{ $suspicious->pluck('asset')->join(', ') }} still have values above ₦10,000. Buy rate must be ₦ per $1 (usually around ₦1,000–₦2,000). Open each coin, refresh from market with a spread, and save.
+        </x-dashboard.alert>
+    @endif
+
     <x-dashboard.table
         :empty="$rates->isEmpty()"
         empty-title="No exchange rates"
@@ -28,12 +37,13 @@
     >
         <x-slot:head>
             <x-dashboard.th>Asset</x-dashboard.th>
-            <x-dashboard.th>Buy from customer</x-dashboard.th>
+            <x-dashboard.th>Buy from customer (₦ / $1)</x-dashboard.th>
             <x-dashboard.th>Time</x-dashboard.th>
             <x-dashboard.th>Status</x-dashboard.th>
             <x-dashboard.th>Actions</x-dashboard.th>
         </x-slot:head>
         @foreach ($rates as $rate)
+            @php $looksWrong = (float) $rate->sell_rate_ngn > 10000; @endphp
             <tr>
                 <x-dashboard.td class="font-medium">
                     <div class="flex items-center gap-2">
@@ -46,7 +56,15 @@
                         @endif
                     </div>
                 </x-dashboard.td>
-                <x-dashboard.td>₦{{ number_format($rate->sell_rate_ngn, 2) }}</x-dashboard.td>
+                <x-dashboard.td>
+                    <span @class(['text-danger font-medium' => $looksWrong])>
+                        ₦{{ number_format($rate->sell_rate_ngn, 2) }}
+                    </span>
+                    <span class="text-xs text-text-muted"> / $1</span>
+                    @if ($looksWrong)
+                        <p class="mt-0.5 text-[11px] text-danger">Looks like a full-coin price — re-save as ₦ per $1</p>
+                    @endif
+                </x-dashboard.td>
                 <x-dashboard.td class="text-text-secondary">{{ $rate->processing_time ?: '—' }}</x-dashboard.td>
                 <x-dashboard.td>
                     <x-dashboard.badge :status="$rate->is_active ? 'active' : 'neutral'">

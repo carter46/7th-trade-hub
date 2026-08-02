@@ -23,14 +23,14 @@ class CryptoPriceServiceTest extends TestCase
         );
     }
 
-    public function test_live_rates_for_symbols_maps_ngn_and_logos(): void
+    public function test_live_rates_for_symbols_maps_ngn_per_usd(): void
     {
         Cache::flush();
 
         Http::fake([
             'api.coingecko.com/*' => Http::response([
-                'bitcoin' => ['ngn' => 95000000, 'ngn_24h_change' => 1.25],
-                'tether' => ['ngn' => 1550, 'ngn_24h_change' => -0.1],
+                'bitcoin' => ['usd' => 100000, 'ngn' => 155000000, 'ngn_24h_change' => 1.25],
+                'tether' => ['usd' => 1, 'ngn' => 1550, 'ngn_24h_change' => -0.1],
             ], 200),
         ]);
 
@@ -39,12 +39,13 @@ class CryptoPriceServiceTest extends TestCase
         $this->assertArrayHasKey('BTC', $live);
         $this->assertArrayHasKey('USDT', $live);
         $this->assertArrayNotHasKey('UNKNOWN', $live);
-        $this->assertSame(95000000.0, $live['BTC']['ngn']);
+        $this->assertEqualsWithDelta(1550.0, $live['BTC']['ngn'], 0.01);
+        $this->assertEqualsWithDelta(1550.0, $live['USDT']['ngn'], 0.01);
         $this->assertTrue($live['BTC']['is_live']);
         $this->assertStringContainsString('coingecko.com', (string) $live['BTC']['logo']);
     }
 
-    public function test_market_catalog_maps_coingecko_markets_payload(): void
+    public function test_market_catalog_uses_ngn_per_usd_not_full_coin_price(): void
     {
         Cache::flush();
 
@@ -55,9 +56,12 @@ class CryptoPriceServiceTest extends TestCase
                     'symbol' => 'btc',
                     'name' => 'Bitcoin',
                     'image' => 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
-                    'current_price' => 95000000,
+                    'current_price' => 100000,
                     'price_change_percentage_24h' => 1.2,
                 ],
+            ], 200),
+            'api.coingecko.com/*/simple/price*' => Http::response([
+                'tether' => ['ngn' => 1550],
             ], 200),
         ]);
 
@@ -66,6 +70,7 @@ class CryptoPriceServiceTest extends TestCase
         $this->assertNotEmpty($catalog);
         $this->assertSame('bitcoin', $catalog[0]['id']);
         $this->assertSame('BTC', $catalog[0]['symbol']);
-        $this->assertSame(95000000.0, $catalog[0]['price_ngn']);
+        $this->assertEqualsWithDelta(1550.0, (float) $catalog[0]['price_ngn'], 0.01);
+        $this->assertLessThan(10000, (float) $catalog[0]['price_ngn']);
     }
 }

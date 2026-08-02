@@ -25,7 +25,7 @@ class CryptoPriceService
         $coins ??= array_values(array_unique(array_filter($this->assetMap())));
         sort($coins);
         $ttl = (int) config('crypto.cache_ttl_seconds', 60);
-        $cacheKey = self::CACHE_KEY.':'.md5(implode(',', $coins));
+        $cacheKey = self::CACHE_KEY.':usd_ngn:'.md5(implode(',', $coins));
 
         return Cache::remember($cacheKey, $ttl, function () use ($coins) {
             try {
@@ -34,7 +34,7 @@ class CryptoPriceService
                     ->withHeaders(['User-Agent' => '7th-trade-hub'])
                     ->get(rtrim((string) config('crypto.api_base'), '/').'/simple/price', [
                         'ids' => implode(',', $coins),
-                        'vs_currencies' => 'ngn',
+                        'vs_currencies' => 'usd,ngn',
                         'include_24hr_change' => 'true',
                     ]);
 
@@ -62,20 +62,21 @@ class CryptoPriceService
 
     /**
      * Top CoinGecko markets for the admin coin picker (id, symbol, name, logo, price).
+     * price_ngn is NGN per $1 USD (not the full-coin NGN price).
      *
-     * @return list<array{id: string, symbol: string, name: string, logo: ?string, price_ngn: ?float, change_24h: ?float}>
+     * @return list<array{id: string, symbol: string, name: string, logo: ?string, price_ngn: ?float, price_usd: ?float, change_24h: ?float}>
      */
     public function marketCatalog(int $perPage = 100): array
     {
         $ttl = max(60, (int) config('crypto.cache_ttl_seconds', 60) * 5);
 
-        return Cache::remember(self::MARKETS_CACHE_KEY, $ttl, function () use ($perPage) {
+        return Cache::remember(self::MARKETS_CACHE_KEY.':per_usd_v2', $ttl, function () use ($perPage) {
             try {
                 $response = Http::timeout(12)
                     ->acceptJson()
                     ->withHeaders(['User-Agent' => '7th-trade-hub'])
                     ->get(rtrim((string) config('crypto.api_base'), '/').'/coins/markets', [
-                        'vs_currency' => 'ngn',
+                        'vs_currency' => 'usd',
                         'order' => 'market_cap_desc',
                         'per_page' => $perPage,
                         'page' => 1,
@@ -83,22 +84,28 @@ class CryptoPriceService
                         'price_change_percentage' => '24h',
                     ]);
 
-                if ($response->successful() && is_array($response->json())) {
-                    return collect($response->json())
-                        ->filter(fn ($row) => is_array($row) && ! empty($row['id']) && ! empty($row['symbol']))
-                        ->map(fn (array $row) => [
-                            'id' => (string) $row['id'],
-                            'symbol' => strtoupper((string) $row['symbol']),
-                            'name' => (string) ($row['name'] ?? $row['symbol']),
-                            'logo' => isset($row['image']) ? (string) $row['image'] : null,
-                            'price_ngn' => isset($row['current_price']) ? (float) $row['current_price'] : null,
-                            'change_24h' => isset($row['price_change_percentage_24h'])
-                                ? (float) $row['price_change_percentage_24h']
-                                : null,
-                        ])
-                        ->values()
-                        ->all();
+                if (! $response->successful() || ! is_array($response->json())) {
+                    return $this->fallbackMarketCatalog();
                 }
+
+                $usdNgn = $this->usdNgnMarketRate();
+
+                return collect($response->json())
+                    ->filter(fn ($row) => is_array($row) && ! empty($row['id']) && ! empty($row['symbol']))
+                    ->map(fn (array $row) => [
+                        'id' => (string) $row['id'],
+                        'symbol' => strtoupper((string) $row['symbol']),
+                        'name' => (string) ($row['name'] ?? $row['symbol']),
+                        'logo' => isset($row['image']) ? (string) $row['image'] : null,
+                        'price_usd' => isset($row['current_price']) ? (float) $row['current_price'] : null,
+                        // Admin buy rate is NGN per $1 — use live USD→NGN, not full-coin NGN.
+                        'price_ngn' => $usdNgn > 0 ? $usdNgn : null,
+                        'change_24h' => isset($row['price_change_percentage_24h'])
+                            ? (float) $row['price_change_percentage_24h']
+                            : null,
+                    ])
+                    ->values()
+                    ->all();
             } catch (\Throwable $e) {
                 Log::channel('financial')->warning('CoinGecko markets catalog failed', [
                     'error' => $e->getMessage(),
@@ -106,6 +113,39 @@ class CryptoPriceService
             }
 
             return $this->fallbackMarketCatalog();
+        });
+    }
+
+    /**
+     * Live USD→NGN reference (prefer USDT NGN price).
+     */
+    public function usdNgnMarketRate(): float
+    {
+        $ttl = (int) config('crypto.cache_ttl_seconds', 60);
+
+        return (float) Cache::remember('crypto_usd_ngn_fx', $ttl, function () {
+            try {
+                $response = Http::timeout(8)
+                    ->acceptJson()
+                    ->withHeaders(['User-Agent' => '7th-trade-hub'])
+                    ->get(rtrim((string) config('crypto.api_base'), '/').'/simple/price', [
+                        'ids' => 'tether',
+                        'vs_currencies' => 'ngn',
+                    ]);
+
+                if ($response->successful()) {
+                    $ngn = (float) data_get($response->json(), 'tether.ngn', 0);
+                    if ($ngn > 0) {
+                        return round($ngn, 4);
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::channel('financial')->warning('USD/NGN FX fetch failed', [
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            return 0.0;
         });
     }
 
@@ -168,7 +208,7 @@ class CryptoPriceService
 
     /**
      * @param  list<string>  $symbols
-     * @return array<string, array{ngn: float, change_24h: ?float, logo: ?string, coin_id: ?string, is_live: bool}>
+     * @return array<string, array{ngn: float, coin_ngn: float, change_24h: ?float, logo: ?string, coin_id: ?string, is_live: bool}>
      */
     public function liveRatesForSymbols(array $symbols): array
     {
@@ -187,18 +227,25 @@ class CryptoPriceService
 
         $prices = $this->getPrices(array_values(array_unique($wanted)));
         $usedFallback = (bool) Cache::get(self::FALLBACK_FLAG, false);
+        $usdNgnFx = $this->usdNgnMarketRate();
         $out = [];
 
         foreach ($wanted as $symbol => $id) {
-            $ngn = (float) ($prices[$id]['ngn'] ?? 0);
-            $change = $prices[$id]['ngn_24h_change'] ?? null;
+            $coinNgn = (float) ($prices[$id]['ngn'] ?? 0);
+            $coinUsd = (float) ($prices[$id]['usd'] ?? 0);
+            // Prefer implied FX from this coin; fall back to USDT NGN.
+            $ngnPerUsd = ($coinUsd > 0 && $coinNgn > 0)
+                ? round($coinNgn / $coinUsd, 4)
+                : ($usdNgnFx > 0 ? $usdNgnFx : 0.0);
+            $change = $prices[$id]['ngn_24h_change'] ?? $prices[$id]['usd_24h_change'] ?? null;
 
             $out[$symbol] = [
-                'ngn' => $ngn,
+                'ngn' => $ngnPerUsd,
+                'coin_ngn' => $coinNgn,
                 'change_24h' => is_numeric($change) ? (float) $change : null,
                 'logo' => $this->logoUrl($symbol),
                 'coin_id' => $id,
-                'is_live' => $ngn > 0 && ! $usedFallback,
+                'is_live' => ($ngnPerUsd > 0 || $coinNgn > 0) && ! $usedFallback,
             ];
         }
 
@@ -262,10 +309,11 @@ class CryptoPriceService
     }
 
     /**
-     * @return list<array{id: string, symbol: string, name: string, logo: ?string, price_ngn: ?float, change_24h: ?float}>
+     * @return list<array{id: string, symbol: string, name: string, logo: ?string, price_ngn: ?float, price_usd: ?float, change_24h: ?float}>
      */
     private function fallbackMarketCatalog(): array
     {
+        $fx = $this->usdNgnMarketRate();
         $out = [];
         foreach ($this->assetMap() as $symbol => $id) {
             $out[] = [
@@ -273,7 +321,8 @@ class CryptoPriceService
                 'symbol' => $symbol,
                 'name' => $symbol,
                 'logo' => config('crypto.logos.'.$id),
-                'price_ngn' => null,
+                'price_usd' => null,
+                'price_ngn' => $fx > 0 ? $fx : null,
                 'change_24h' => null,
             ];
         }
@@ -282,18 +331,19 @@ class CryptoPriceService
     }
 
     /**
-     * @return array<string, array{ngn: int}>
+     * @return array<string, array{ngn: int, usd?: int}>
      */
     private function fallbackPrices(): array
     {
         Cache::put(self::FALLBACK_FLAG, true, (int) config('crypto.cache_ttl_seconds', 60));
 
+        // Full-coin NGN kept for legacy quoteNgn fallback; liveRates divides by usd.
         return [
-            'bitcoin' => ['ngn' => 64231500],
-            'ethereum' => ['ngn' => 3452120],
-            'tether' => ['ngn' => 1500],
-            'solana' => ['ngn' => 142880],
-            'binancecoin' => ['ngn' => 582400],
+            'bitcoin' => ['usd' => 100000, 'ngn' => 155000000],
+            'ethereum' => ['usd' => 3500, 'ngn' => 5425000],
+            'tether' => ['usd' => 1, 'ngn' => 1550],
+            'solana' => ['usd' => 150, 'ngn' => 232500],
+            'binancecoin' => ['usd' => 600, 'ngn' => 930000],
         ];
     }
 }
