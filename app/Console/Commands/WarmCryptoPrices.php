@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Modules\Wallet\Services\CryptoPriceService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 
 class WarmCryptoPrices extends Command
 {
@@ -13,8 +14,10 @@ class WarmCryptoPrices extends Command
 
     public function handle(CryptoPriceService $prices): int
     {
-        $prices->getPrices();
-        $this->info('Crypto price cache warmed.');
+        Cache::forget('crypto_prices_ngn');
+        Cache::forget('crypto_prices_ngn_fallback');
+        $data = $prices->getPrices();
+        $this->info('Crypto price cache warmed ('.count($data).' coins).');
 
         return self::SUCCESS;
     }

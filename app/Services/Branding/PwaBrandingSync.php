@@ -70,6 +70,10 @@ class PwaBrandingSync
         }
 
         $bg = $this->backgroundRgb();
+        $mediaId = $branding['favicon_media_id']
+            ?? $branding['logo_light_media_id']
+            ?? $branding['logo_dark_media_id']
+            ?? null;
 
         if ($sourcePath) {
             $this->writeSquarePng($sourcePath, 512, $iconsDir.DIRECTORY_SEPARATOR.'icon-512x512.png', $bg);
@@ -77,6 +81,11 @@ class PwaBrandingSync
             $this->writeSquarePng($sourcePath, 180, public_path('apple-touch-icon.png'), $bg);
             $this->writeSquarePng($sourcePath, 32, public_path('favicon-32x32.png'), $bg);
             $this->writeSquarePng($sourcePath, 16, public_path('favicon-16x16.png'), $bg);
+        } elseif ($mediaId) {
+            // Prefer failing loudly over overwriting real icons with the green "7" fallback.
+            throw new \RuntimeException(
+                'Branding media #'.$mediaId.' could not be read for favicon/PWA icon sync.'
+            );
         } else {
             $this->writeFallbackSquare(512, $iconsDir.DIRECTORY_SEPARATOR.'icon-512x512.png', $bg);
             $this->writeFallbackSquare(192, $iconsDir.DIRECTORY_SEPARATOR.'icon-192x192.png', $bg);
@@ -121,21 +130,34 @@ class PwaBrandingSync
 
     private function absolutePath(MediaAsset $asset): ?string
     {
-        $relative = $asset->variantStoragePath('original')
-            ?? $asset->variantStoragePath('large')
-            ?? $asset->variantStoragePath('medium')
-            ?? $asset->variantStoragePath('thumbnail');
+        $asset->loadMissing('variants');
 
-        if (! $relative) {
-            return null;
+        // Use raw variant paths for disk I/O. variantStoragePath() prefixes "storage/"
+        // for public URLs, which breaks Storage::disk('public')->exists()/path().
+        foreach (['original', 'large', 'medium', 'small', 'thumbnail'] as $key) {
+            $relative = $asset->variants->firstWhere('key', $key)?->path;
+            if (! is_string($relative) || $relative === '') {
+                continue;
+            }
+
+            $relative = ltrim(str_replace('\\', '/', $relative), '/');
+            if (str_starts_with($relative, 'storage/')) {
+                $relative = substr($relative, strlen('storage/'));
+            }
+
+            $disk = Storage::disk($asset->disk);
+            if ($disk->exists($relative)) {
+                return $disk->path($relative);
+            }
+
+            // Fallback when the public disk symlink is used as the readable path.
+            $publicCopy = public_path('storage/'.$relative);
+            if (is_readable($publicCopy)) {
+                return $publicCopy;
+            }
         }
 
-        $disk = Storage::disk($asset->disk);
-        if (! $disk->exists($relative)) {
-            return null;
-        }
-
-        return $disk->path($relative);
+        return null;
     }
 
     /**

@@ -56,17 +56,6 @@
         </form>
     </div>
 
-    @if($featured->isNotEmpty() && empty($filters['q']) && empty($filters['category']))
-        <div>
-            <h3 class="text-lg font-bold font-display mb-4">Featured</h3>
-            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                @foreach($featured as $product)
-                    @include('partials.catalog.product-card', ['product' => $product])
-                @endforeach
-            </div>
-        </div>
-    @endif
-
     @if($products->isEmpty())
         <p class="text-slate-400">No services match your filters.</p>
     @else
