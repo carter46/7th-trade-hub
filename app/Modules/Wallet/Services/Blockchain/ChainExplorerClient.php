@@ -27,6 +27,11 @@ interface ChainExplorerClient
      */
     public function fetchIncoming(string $address, string $coin, ?string $network = null): array;
 
+    /**
+     * Current on-chain balance for the address (not lifetime received).
+     */
+    public function fetchBalance(string $address, string $coin, ?string $network = null): float;
+
     public function tipHeight(?string $network = null): ?int;
 
     public function healthCheck(): bool;

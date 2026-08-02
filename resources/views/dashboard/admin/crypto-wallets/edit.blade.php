@@ -15,7 +15,12 @@
         <form method="POST" action="{{ route('admin.crypto-wallets.update', $wallet) }}" class="space-y-4">
             @csrf
             @method('PUT')
-            @include('dashboard.admin.crypto-wallets._form', ['wallet' => $wallet, 'networksByCoin' => $networksByCoin, 'maxActive' => $maxActive])
+            @include('dashboard.admin.crypto-wallets._form', [
+                'wallet' => $wallet,
+                'networksByCoin' => $networksByCoin,
+                'catalogCoins' => $catalogCoins,
+                'maxActive' => $maxActive,
+            ])
             <x-dashboard.button type="submit" variant="primary">Update wallet</x-dashboard.button>
         </form>
         @if(($openOrders ?? 0) === 0)

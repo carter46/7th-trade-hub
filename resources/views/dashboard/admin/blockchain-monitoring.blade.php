@@ -142,33 +142,27 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div x-show="provider === 'blockchain_com'" x-cloak>
-                        <x-dashboard.input
+                        <x-dashboard.secret-input
                             name="blockchain_com_api_key"
-                            type="password"
                             label="Explorer API key"
-                            value=""
-                            hint="Leave blank to keep.{{ filled($blockchain->credential('blockchain_com_api_key')) ? ' Key stored.' : '' }} Header: X-Explorer-Auth-Key. Covers Bitcoin, Ethereum, Solana."
-                            autocomplete="new-password"
+                            :stored="$blockchain->credential('blockchain_com_api_key')"
+                            hint="Header: X-Explorer-Auth-Key. Covers Bitcoin, Ethereum, Solana. Leave blank to keep."
                         />
                     </div>
                     <div>
-                        <x-dashboard.input
+                        <x-dashboard.secret-input
                             name="etherscan_api_key"
-                            type="password"
                             label="EVM explorer API key"
-                            value=""
-                            hint="Leave blank to keep.{{ filled($blockchain->credential('etherscan_api_key')) ? ' Key stored.' : '' }} Ethereum / BNB / Polygon / Base / Arbitrum (and ERC-20 feeds)."
-                            autocomplete="new-password"
+                            :stored="$blockchain->credential('etherscan_api_key')"
+                            hint="Ethereum / BNB / Polygon / Base / Arbitrum (and ERC-20 feeds). Leave blank to keep."
                         />
                     </div>
                     <div>
-                        <x-dashboard.input
+                        <x-dashboard.secret-input
                             name="trongrid_api_key"
-                            type="password"
                             label="TRON API key"
-                            value=""
-                            hint="Leave blank to keep.{{ filled($blockchain->credential('trongrid_api_key')) ? ' Key stored.' : '' }} Always used for TRC20 (Blockchain.com has no TRON)."
-                            autocomplete="new-password"
+                            :stored="$blockchain->credential('trongrid_api_key')"
+                            hint="Always used for TRC20 (Blockchain.com has no TRON). Leave blank to keep."
                         />
                     </div>
                     <div x-show="provider === 'native'" x-cloak>
@@ -197,18 +191,69 @@
                 <p class="text-xs text-text-muted">Scheduler runs <code>crypto:poll-deposits</code> every minute.</p>
                 <x-dashboard.button type="submit" variant="primary">Save blockchain settings</x-dashboard.button>
             </form>
-            <form method="POST" action="{{ route('admin.blockchain-monitoring.test') }}" class="mt-4 flex flex-wrap gap-2 items-end">
-                @csrf
+            <div
+                class="mt-4 flex flex-wrap gap-2 items-end"
+                x-data="{
+                    testing: false,
+                    status: '',
+                    ok: null,
+                    network: @js(array_key_first($monitoredNetworks) ?: 'bitcoin'),
+                    async test() {
+                        if (this.testing) return;
+                        this.testing = true;
+                        this.status = '';
+                        this.ok = null;
+                        try {
+                            const body = new FormData();
+                            body.append('_token', @js(csrf_token()));
+                            body.append('network', this.network);
+                            const res = await fetch(@js(route('admin.blockchain-monitoring.test')), {
+                                method: 'POST',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'X-CSRF-TOKEN': @js(csrf_token()),
+                                },
+                                body,
+                            });
+                            const data = await res.json().catch(() => ({}));
+                            this.ok = !!data.ok;
+                            this.status = data.message || data.errors?.network?.[0] || data.errors?.blockchain_test?.[0] || (this.ok ? 'Connected.' : 'Connection failed.');
+                            if (this.ok && data.tip_height != null) {
+                                this.status += ' Tip #' + data.tip_height;
+                            }
+                            if (this.ok && data.latency_ms != null) {
+                                this.status += ' · ' + data.latency_ms + ' ms';
+                            }
+                        } catch (err) {
+                            this.ok = false;
+                            this.status = err?.message || 'Connection failed.';
+                        } finally {
+                            this.testing = false;
+                        }
+                    }
+                }"
+            >
                 <div>
                     <label class="block text-xs mb-1">Test network</label>
-                    <select name="network" class="rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm">
+                    <select x-model="network" class="rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm">
                         @foreach ($monitoredNetworks as $netId => $netDef)
                             <option value="{{ $netId }}">{{ $netDef['label'] ?? $netId }}</option>
                         @endforeach
                     </select>
                 </div>
-                <x-dashboard.button type="submit" variant="secondary">Test connection</x-dashboard.button>
-            </form>
+                <x-dashboard.button type="button" variant="secondary" @click="test()" x-bind:disabled="testing">
+                    <span x-show="!testing">Test connection</span>
+                    <span x-show="testing" x-cloak>Testing…</span>
+                </x-dashboard.button>
+                <p
+                    class="w-full text-sm break-words"
+                    x-show="status"
+                    x-text="status"
+                    x-cloak
+                    :class="ok === true ? 'text-success' : 'text-danger'"
+                ></p>
+            </div>
         </x-dashboard.card>
     </div>
 </x-layout.page>

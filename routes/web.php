@@ -356,6 +356,7 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::post('/incoming-deposits/{incomingCryptoTransaction}/rematch', [IncomingDepositController::class, 'rematch'])->name('.incoming-deposits.rematch');
         Route::get('/crypto-wallets', [CryptoDepositWalletController::class, 'index'])->name('.crypto-wallets');
         Route::get('/crypto-wallets/treasury', [CryptoDepositWalletController::class, 'treasury'])->name('.crypto-wallets.treasury');
+        Route::post('/crypto-wallets/treasury/refresh', [CryptoDepositWalletController::class, 'refreshTreasury'])->name('.crypto-wallets.treasury.refresh');
         Route::get('/crypto-wallets/create', [CryptoDepositWalletController::class, 'create'])->name('.crypto-wallets.create');
         Route::post('/crypto-wallets', [CryptoDepositWalletController::class, 'store'])->name('.crypto-wallets.store');
         Route::get('/crypto-wallets/{cryptoDepositWallet}/edit', [CryptoDepositWalletController::class, 'edit'])->name('.crypto-wallets.edit');

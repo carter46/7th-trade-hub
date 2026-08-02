@@ -80,6 +80,22 @@ class MempoolBitcoinClient implements ChainExplorerClient
         return $out;
     }
 
+    public function fetchBalance(string $address, string $coin, ?string $network = null): float
+    {
+        $base = rtrim((string) config('crypto.mempool_api'), '/');
+        $res = $this->http->get("{$base}/address/{$address}", [], [], $this->http->maxRetries());
+        if (! $res['ok'] || ! is_array($res['json'])) {
+            throw new RuntimeException($res['error'] ?? 'mempool.space balance failed');
+        }
+
+        $chain = $res['json']['chain_stats'] ?? [];
+        $mempool = $res['json']['mempool_stats'] ?? [];
+        $funded = (int) ($chain['funded_txo_sum'] ?? 0) + (int) ($mempool['funded_txo_sum'] ?? 0);
+        $spent = (int) ($chain['spent_txo_sum'] ?? 0) + (int) ($mempool['spent_txo_sum'] ?? 0);
+
+        return max(0, $funded - $spent) / 1e8;
+    }
+
     public function tipHeight(?string $network = null): ?int
     {
         $base = rtrim((string) config('crypto.mempool_api'), '/');

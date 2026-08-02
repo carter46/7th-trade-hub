@@ -576,10 +576,11 @@ class SettingsController extends Controller
         return back()->with('status', __('Google Identity settings saved.'));
     }
 
-    public function testGoogleIdentity(Request $request): RedirectResponse
+    public function testGoogleIdentity(Request $request): RedirectResponse|JsonResponse
     {
         $row = IntegrationProvider::forProvider(IntegrationProvider::GOOGLE_IDENTITY);
         $clientId = trim((string) $request->input('google_identity_client_id', $row->credential('client_id', '')));
+        $wantsJson = $request->expectsJson() || $request->ajax();
 
         $result = app(\App\Services\Auth\Identity\GoogleIdTokenVerifier::class)->testConfiguration($clientId);
 
@@ -594,8 +595,23 @@ class SettingsController extends Controller
         ], $request->ip());
 
         if (! $result['ok']) {
+            if ($wantsJson) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => $result['message'],
+                    'errors' => ['google_identity_test' => [$result['message']]],
+                ], 422);
+            }
+
             return back()->withInput()->withErrors([
                 'google_identity_test' => $result['message'],
+            ]);
+        }
+
+        if ($wantsJson) {
+            return response()->json([
+                'ok' => true,
+                'message' => $result['message'],
             ]);
         }
 
@@ -665,10 +681,11 @@ class SettingsController extends Controller
         return back()->with('status', __('Monnify settings saved.'));
     }
 
-    public function testMonnify(Request $request): RedirectResponse
+    public function testMonnify(Request $request): RedirectResponse|JsonResponse
     {
         $client = app(\App\Modules\Wallet\Payments\Monnify\MonnifyClient::class);
         $row = IntegrationProvider::forProvider(IntegrationProvider::MONNIFY);
+        $wantsJson = $request->expectsJson() || $request->ajax();
 
         try {
             $client->clearTokenCache();
@@ -686,10 +703,22 @@ class SettingsController extends Controller
             $row->recordSuccess();
             $this->audit->log(auth()->id(), 'settings.monnify.connection_test', $row, null, ['ok' => true], $request->ip());
 
+            if ($wantsJson) {
+                return response()->json(['ok' => true, 'message' => $message]);
+            }
+
             return back()->with('status', $message);
         } catch (Throwable $e) {
             $row->recordFailure($e->getMessage());
             $this->audit->log(auth()->id(), 'settings.monnify.connection_test', $row, null, ['ok' => false], $request->ip());
+
+            if ($wantsJson) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => $e->getMessage(),
+                    'errors' => ['monnify_test' => [$e->getMessage()]],
+                ], 422);
+            }
 
             return back()->withInput()->withErrors([
                 'monnify_test' => $e->getMessage(),

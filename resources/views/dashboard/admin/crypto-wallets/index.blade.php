@@ -22,11 +22,11 @@
         </div>
     @endif
 
-    <x-dashboard.table :empty="$wallets->isEmpty()" empty-title="No wallets" empty-description="Add a BTC, TRC20, or other deposit address." empty-icon="wallet" striped>
+    <x-dashboard.table :empty="$wallets->isEmpty()" empty-title="No wallets" empty-description="Add a deposit address for a coin from your Coin Catalog." empty-icon="wallet" striped>
         <x-slot:head>
             <x-dashboard.th>Coin / Network</x-dashboard.th>
             <x-dashboard.th>Address</x-dashboard.th>
-            <x-dashboard.th>Conf</x-dashboard.th>
+            <x-dashboard.th>Balance</x-dashboard.th>
             <x-dashboard.th>Open</x-dashboard.th>
             <x-dashboard.th>Capacity</x-dashboard.th>
             <x-dashboard.th>Active</x-dashboard.th>
@@ -36,11 +36,27 @@
             @php
                 $open = $w->openOrdersUsingAddress();
                 $cap = $w->capacityLabel($maxPerWallet);
+                $logo = $logos[strtoupper($w->coin)] ?? null;
+                $precision = (int) (config('crypto.amount_precision.'.strtoupper($w->coin)) ?? 8);
             @endphp
             <tr>
-                <x-dashboard.td>{{ $w->coin }} · {{ $w->network }}</x-dashboard.td>
+                <x-dashboard.td>
+                    <div class="flex items-center gap-2">
+                        @if ($logo)
+                            <img src="{{ $logo }}" alt="" class="h-6 w-6 rounded-full bg-white" width="24" height="24" loading="lazy" referrerpolicy="no-referrer">
+                        @endif
+                        <span>{{ $w->coin }} · {{ $w->network }}</span>
+                    </div>
+                </x-dashboard.td>
                 <x-dashboard.td class="font-mono text-xs break-all max-w-[14rem]">{{ $w->address }}</x-dashboard.td>
-                <x-dashboard.td>{{ $w->required_confirmations }}</x-dashboard.td>
+                <x-dashboard.td class="text-xs">
+                    @if ($w->live_balance !== null)
+                        <div>{{ rtrim(rtrim(number_format((float) $w->live_balance, $precision, '.', ''), '0'), '.') ?: '0' }}</div>
+                        <div class="text-text-muted">{{ $w->live_balance_updated_at?->diffForHumans() ?? '—' }}</div>
+                    @else
+                        <span class="text-text-muted">—</span>
+                    @endif
+                </x-dashboard.td>
                 <x-dashboard.td>{{ $open }}/{{ $maxPerWallet }}</x-dashboard.td>
                 <x-dashboard.td>
                     <span @class([

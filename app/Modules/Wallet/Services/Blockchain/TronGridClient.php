@@ -144,6 +144,56 @@ class TronGridClient implements ChainExplorerClient
         return $out;
     }
 
+    public function fetchBalance(string $address, string $coin, ?string $network = null): float
+    {
+        $base = rtrim((string) config('crypto.trongrid_api'), '/');
+        $res = $this->http->get(
+            "{$base}/v1/accounts/{$address}",
+            [],
+            $this->headers(),
+            $this->http->maxRetries()
+        );
+
+        if (! $res['ok']) {
+            throw new RuntimeException($res['error'] ?? 'TronGrid balance failed');
+        }
+
+        $data = data_get($res['json'], 'data.0', data_get($res['json'], 'data', null));
+        if (is_array($data) && array_is_list($data)) {
+            $data = $data[0] ?? null;
+        }
+        if (! is_array($data)) {
+            return 0.0;
+        }
+
+        $coin = strtoupper($coin);
+        if ($coin === 'TRX') {
+            return ((float) ($data['balance'] ?? 0)) / 1e6;
+        }
+
+        $allowedContract = $this->allowedContract($coin, $network ?: 'TRC20');
+        $trc20 = $data['trc20'] ?? [];
+        if (! is_array($trc20)) {
+            return 0.0;
+        }
+
+        foreach ($trc20 as $entry) {
+            if (! is_array($entry)) {
+                continue;
+            }
+            foreach ($entry as $contract => $raw) {
+                if ($allowedContract && strcasecmp((string) $contract, $allowedContract) !== 0) {
+                    continue;
+                }
+                $decimals = $coin === 'USDT' || $coin === 'USDC' ? 6 : 18;
+
+                return $this->scale((string) $raw, $decimals);
+            }
+        }
+
+        return 0.0;
+    }
+
     public function tipHeight(?string $network = null): ?int
     {
         $base = rtrim((string) config('crypto.trongrid_api'), '/');

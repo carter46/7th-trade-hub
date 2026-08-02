@@ -7,6 +7,7 @@ use App\Models\IntegrationProvider;
 use App\Modules\Admin\Services\AuditLogService;
 use App\Modules\Wallet\Services\Blockchain\ExplorerClientRegistry;
 use App\Modules\Wallet\Services\Blockchain\MonitoredNetworkCatalog;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -80,7 +81,7 @@ class BlockchainMonitoringController extends Controller
         return back()->with('status', __('Blockchain monitoring settings saved.'));
     }
 
-    public function test(Request $request): RedirectResponse
+    public function test(Request $request): RedirectResponse|JsonResponse
     {
         $networkIds = array_keys(config('crypto.monitored_networks', []));
         $network = $request->validate([
@@ -90,6 +91,7 @@ class BlockchainMonitoringController extends Controller
         $row = IntegrationProvider::forProvider(IntegrationProvider::BLOCKCHAIN_MONITORING);
         $catalog = app(MonitoredNetworkCatalog::class);
         $registry = app(ExplorerClientRegistry::class);
+        $wantsJson = $request->expectsJson() || $request->ajax();
 
         try {
             $started = microtime(true);
@@ -131,13 +133,34 @@ class BlockchainMonitoringController extends Controller
                 'provider' => $resolved['provider'],
             ], $request->ip());
 
-            return back()->with('status', __('Connected to :network.', ['network' => $catalog->label($network)]));
+            $message = __('Connected to :network.', ['network' => $catalog->label($network)]);
+
+            if ($wantsJson) {
+                return response()->json([
+                    'ok' => true,
+                    'message' => $message,
+                    'network' => $network,
+                    'provider' => $resolved['provider'],
+                    'tip_height' => $tip,
+                    'latency_ms' => $latencyMs,
+                ]);
+            }
+
+            return back()->with('status', $message);
         } catch (Throwable $e) {
             $row->recordFailure($e->getMessage());
             $this->audit->log(auth()->id(), 'settings.blockchain.connection_test', $row, null, [
                 'ok' => false,
                 'network' => $network,
             ], $request->ip());
+
+            if ($wantsJson) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => $e->getMessage(),
+                    'errors' => ['blockchain_test' => [$e->getMessage()]],
+                ], 422);
+            }
 
             return back()->withErrors(['blockchain_test' => $e->getMessage()]);
         }

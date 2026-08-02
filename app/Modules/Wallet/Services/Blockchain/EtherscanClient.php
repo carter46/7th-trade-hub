@@ -118,6 +118,70 @@ class EtherscanClient implements ChainExplorerClient
         return $out;
     }
 
+    public function fetchBalance(string $address, string $coin, ?string $network = null): float
+    {
+        $apiKey = (string) ($this->http->monitoringProvider()->credential('etherscan_api_key') ?? '');
+        if ($apiKey === '') {
+            throw new RuntimeException('Etherscan API key missing in Admin Settings.');
+        }
+
+        $coin = strtoupper($coin);
+        $chain = $this->resolveChain($network);
+        $isNative = $this->isNativeCoin($coin, $chain);
+
+        if ($isNative) {
+            $res = $this->http->get($this->apiBase(), [
+                'chainid' => $chain['chainid'],
+                'module' => 'account',
+                'action' => 'balance',
+                'address' => $address,
+                'tag' => 'latest',
+                'apikey' => $apiKey,
+            ], [], $this->http->maxRetries());
+
+            if (! $res['ok']) {
+                throw new RuntimeException($res['error'] ?? 'Etherscan balance failed');
+            }
+
+            $status = (string) data_get($res['json'], 'status', '0');
+            $result = data_get($res['json'], 'result', '0');
+            if ($status !== '1' && ! ctype_digit((string) $result)) {
+                throw new RuntimeException(is_string($result) ? $result : 'Etherscan balance error');
+            }
+
+            return $this->fromWei((string) $result, 18);
+        }
+
+        $contract = $this->allowedContract($coin, $network);
+        if ($contract === null || $contract === '') {
+            throw new RuntimeException("No token contract configured for {$coin} on ".($network ?: 'EVM'));
+        }
+
+        $res = $this->http->get($this->apiBase(), [
+            'chainid' => $chain['chainid'],
+            'module' => 'account',
+            'action' => 'tokenbalance',
+            'contractaddress' => $contract,
+            'address' => $address,
+            'tag' => 'latest',
+            'apikey' => $apiKey,
+        ], [], $this->http->maxRetries());
+
+        if (! $res['ok']) {
+            throw new RuntimeException($res['error'] ?? 'Etherscan token balance failed');
+        }
+
+        $status = (string) data_get($res['json'], 'status', '0');
+        $result = data_get($res['json'], 'result', '0');
+        if ($status !== '1' && ! ctype_digit((string) $result)) {
+            throw new RuntimeException(is_string($result) ? $result : 'Etherscan token balance error');
+        }
+
+        $decimals = $this->tokenDecimals($coin);
+
+        return $this->fromWei((string) $result, $decimals);
+    }
+
     public function tipHeight(?string $network = null): ?int
     {
         $apiKey = (string) ($this->http->monitoringProvider()->credential('etherscan_api_key') ?? '');
@@ -132,6 +196,14 @@ class EtherscanClient implements ChainExplorerClient
     public function healthCheck(): bool
     {
         return $this->tipHeight() !== null;
+    }
+
+    private function tokenDecimals(string $coin): int
+    {
+        return match (strtoupper($coin)) {
+            'USDT', 'USDC' => 6,
+            default => 18,
+        };
     }
 
     /**

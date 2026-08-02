@@ -17,11 +17,13 @@ class CryptoDepositWallet extends Model
         'notes',
         'label',
         'instructions',
-        'estimated_holdings',
-        'estimated_holdings_at',
+        'live_balance',
+        'live_balance_updated_at',
+        'live_balance_error',
         'last_deposit_at',
         'last_allocated_at',
         'is_active',
+        'is_exchange_managed',
         'sort_order',
     ];
 
@@ -29,11 +31,12 @@ class CryptoDepositWallet extends Model
     {
         return [
             'required_confirmations' => 'integer',
-            'estimated_holdings' => 'decimal:10',
-            'estimated_holdings_at' => 'datetime',
+            'live_balance' => 'decimal:10',
+            'live_balance_updated_at' => 'datetime',
             'last_deposit_at' => 'datetime',
             'last_allocated_at' => 'datetime',
             'is_active' => 'boolean',
+            'is_exchange_managed' => 'boolean',
             'sort_order' => 'integer',
         ];
     }
@@ -46,6 +49,11 @@ class CryptoDepositWallet extends Model
     public function sellRequests(): HasMany
     {
         return $this->hasMany(CryptoSellRequest::class, 'crypto_deposit_wallet_id');
+    }
+
+    public function balanceHistory(): HasMany
+    {
+        return $this->hasMany(WalletBalanceHistory::class, 'crypto_deposit_wallet_id');
     }
 
     public function openOrdersCount(): int
@@ -65,6 +73,28 @@ class CryptoDepositWallet extends Model
         return app(\App\Modules\Wallet\Services\WalletAllocationService::class)
             ->applyOccupyingOrdersFilter($q)
             ->count();
+    }
+
+    /**
+     * Crypto reserved by open OTC sell orders on this address.
+     */
+    public function reservedCrypto(): float
+    {
+        $sum = CryptoSellRequest::query()
+            ->where('platform_address', $this->address)
+            ->whereRaw('UPPER(coin) = ?', [strtoupper($this->coin)])
+            ->whereRaw('LOWER(network) = ?', [strtolower((string) $this->network)])
+            ->whereIn('status', CryptoSellRequest::OPEN_STATUSES)
+            ->sum('amount_crypto');
+
+        return (float) $sum;
+    }
+
+    public function availableCrypto(): float
+    {
+        $current = (float) ($this->live_balance ?? 0);
+
+        return max(0, $current - $this->reservedCrypto());
     }
 
     public function capacityLabel(int $maxPerWallet): string

@@ -108,6 +108,48 @@ class SolanaRpcClient implements ChainExplorerClient
         return $out;
     }
 
+    public function fetchBalance(string $address, string $coin, ?string $network = null): float
+    {
+        $rpc = $this->rpcUrl();
+        $coin = strtoupper($coin);
+        $mint = $this->allowedMint($coin, $network ?: 'Solana');
+
+        if ($mint === null) {
+            $res = $this->rpc($rpc, 'getBalance', [$address]);
+            if (! ($res['ok'] ?? false)) {
+                throw new RuntimeException($res['error'] ?? 'Solana getBalance failed');
+            }
+            $lamports = (int) data_get($res['json'], 'result.value', 0);
+
+            return $lamports / 1e9;
+        }
+
+        $res = $this->rpc($rpc, 'getTokenAccountsByOwner', [
+            $address,
+            ['mint' => $mint],
+            ['encoding' => 'jsonParsed'],
+        ]);
+
+        if (! ($res['ok'] ?? false)) {
+            throw new RuntimeException($res['error'] ?? 'Solana token balance failed');
+        }
+
+        $accounts = data_get($res['json'], 'result.value', []);
+        if (! is_array($accounts)) {
+            return 0.0;
+        }
+
+        $total = 0.0;
+        foreach ($accounts as $account) {
+            $ui = data_get($account, 'account.data.parsed.info.tokenAmount.uiAmount');
+            if ($ui !== null) {
+                $total += (float) $ui;
+            }
+        }
+
+        return $total;
+    }
+
     public function tipHeight(?string $network = null): ?int
     {
         $res = $this->rpc($this->rpcUrl(), 'getSlot', []);

@@ -71,8 +71,41 @@ return [
     /** Default max concurrent open sell orders per wallet (overridable in OTC settings). */
     'max_orders_per_wallet' => 8,
 
+    /**
+     * Default confirmations before a deposit is treated as ready (per network label).
+     * The chain reports how many confirmations a tx has; these values are your credit policy.
+     *
+     * @var array<string, int>
+     */
+    'default_confirmations' => [
+        'Bitcoin' => 2,
+        'Ethereum' => 12,
+        'ERC20' => 12,
+        'TRC20' => 20,
+        'BEP20' => 15,
+        'Polygon' => 64,
+        'Base' => 12,
+        'Arbitrum' => 12,
+        'Solana' => 32,
+    ],
+
     /** Fingerprint nudge attempts per wallet before trying the next. */
     'fingerprint_max_nudges' => 50,
+
+    /**
+     * Absolute dust for unexplained balance delta alerts (coin => amount).
+     * Falls back to 10^-precision from amount_precision.
+     *
+     * @var array<string, float>
+     */
+    'balance_dust' => [
+        'BTC' => 0.00001,
+        'ETH' => 0.0001,
+        'USDT' => 0.01,
+        'USDC' => 0.01,
+        'SOL' => 0.001,
+        'BNB' => 0.0001,
+    ],
 
     /**
      * Official token contracts (lowercase for EVM; Tron base58 as published).

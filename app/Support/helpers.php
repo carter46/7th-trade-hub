@@ -25,3 +25,38 @@ if (! function_exists('media_url_from_id')) {
         return app(MediaPathService::class)->resolveUrl($asset, $legacyPath, $variant);
     }
 }
+
+if (! function_exists('mask_secret')) {
+    /**
+     * Mask a stored secret for form placeholders (never put the real value in the input).
+     * Example: "expl_live_abc123xyz" → "expl********xyz"
+     */
+    function mask_secret(?string $value, int $prefix = 4, int $suffix = 4): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim($value);
+        if ($value === '') {
+            return null;
+        }
+
+        $length = mb_strlen($value);
+        if ($length <= 2) {
+            return str_repeat('*', max($length, 4));
+        }
+
+        if ($length <= 8) {
+            $prefix = 1;
+            $suffix = 1;
+        } elseif ($length < $prefix + $suffix + 2) {
+            $prefix = min(2, (int) floor($length / 3));
+            $suffix = min(2, (int) floor($length / 3));
+        }
+
+        $middle = max(4, $length - $prefix - $suffix);
+
+        return mb_substr($value, 0, $prefix).str_repeat('*', min($middle, 12)).mb_substr($value, -$suffix);
+    }
+}

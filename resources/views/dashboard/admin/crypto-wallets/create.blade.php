@@ -7,7 +7,11 @@
     <x-dashboard.card>
         <form method="POST" action="{{ route('admin.crypto-wallets.store') }}" class="space-y-4">
             @csrf
-            @include('dashboard.admin.crypto-wallets._form', ['networksByCoin' => $networksByCoin, 'maxActive' => $maxActive])
+            @include('dashboard.admin.crypto-wallets._form', [
+                'networksByCoin' => $networksByCoin,
+                'catalogCoins' => $catalogCoins,
+                'maxActive' => $maxActive,
+            ])
             <x-dashboard.button type="submit" variant="primary">Save wallet</x-dashboard.button>
         </form>
     </x-dashboard.card>

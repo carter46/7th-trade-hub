@@ -5,7 +5,7 @@
 @section('content')
 @php
     $chatProvider = old('live_chat_provider', $liveChat['provider'] ?? 'none');
-    $smartsuppKeySet = (bool) ($liveChat['key_set'] ?? false) && ($liveChat['provider'] ?? '') === 'smartsupp';
+    $smartsuppStoredKey = (string) (\App\Models\IntegrationProvider::forProvider(\App\Models\IntegrationProvider::SMARTSUPP)->credential('key') ?? '');
     $jivoId = old('jivo_widget_id', ($liveChat['provider'] ?? '') === 'jivo' ? ($liveChat['credentials']['widget_id'] ?? '') : '');
     $chatwayId = old('chatway_widget_id', ($liveChat['provider'] ?? '') === 'chatway' ? ($liveChat['credentials']['widget_id'] ?? '') : '');
 @endphp
@@ -94,7 +94,11 @@
                         </select>
                     </div>
                     <div x-show="provider === 'smartsupp'" x-cloak>
-                        <x-dashboard.input name="smartsupp_key" type="password" label="Smartsupp key" hint="Leave blank to keep the current key. {{ $smartsuppKeySet ? 'Key is set.' : 'No key set.' }}" autocomplete="new-password" />
+                        <x-dashboard.secret-input
+                            name="smartsupp_key"
+                            label="Smartsupp key"
+                            :stored="$smartsuppStoredKey"
+                        />
                     </div>
                     <div x-show="provider === 'jivo'" x-cloak>
                         <x-dashboard.input name="jivo_widget_id" label="Jivo widget ID" :value="$jivoId" hint="Widget ID only, or paste the full Jivo script URL." />
@@ -257,7 +261,11 @@
                     <h3 class="font-semibold text-text-primary">Brevo (primary)</h3>
                     <input type="hidden" name="brevo_enabled" value="0">
                     <x-dashboard.toggle name="brevo_enabled" label="Enable Brevo API" :checked="old('brevo_enabled', $brevo->enabled)" value="1" />
-                    <x-dashboard.input name="brevo_api_key" type="password" label="API key" hint="Leave blank to keep the current key. {{ filled($brevo->credential('api_key')) ? 'Key is set.' : 'No key set.' }}" />
+                    <x-dashboard.secret-input
+                        name="brevo_api_key"
+                        label="API key"
+                        :stored="$brevo->credential('api_key')"
+                    />
                 </div>
                 <div class="rounded-xl border border-border-subtle p-4 space-y-4">
                     <h3 class="font-semibold text-text-primary">Laravel Mail (fallback)</h3>
@@ -275,7 +283,11 @@
                         <x-dashboard.input name="smtp_port" type="number" label="Port" :value="old('smtp_port', $laravelMail->credential('port', config('mail.mailers.smtp.port')))" />
                         <x-dashboard.input name="smtp_encryption" label="Encryption" :value="old('smtp_encryption', $laravelMail->credential('encryption', config('mail.mailers.smtp.encryption')))" />
                         <x-dashboard.input name="smtp_username" label="Username" :value="old('smtp_username', $laravelMail->credential('username', config('mail.mailers.smtp.username')))" />
-                        <x-dashboard.input name="smtp_password" type="password" label="Password" hint="Leave blank to keep current password." />
+                        <x-dashboard.secret-input
+                            name="smtp_password"
+                            label="Password"
+                            :stored="$laravelMail->credential('password')"
+                        />
                         <x-dashboard.input name="sendmail_path" label="Sendmail path" :value="old('sendmail_path', $laravelMail->credential('sendmail_path'))" />
                     </div>
                 </div>
@@ -402,7 +414,12 @@
                     <input type="hidden" name="google_identity_enabled" value="0">
                     <x-dashboard.toggle name="google_identity_enabled" label="Enable Google Sign-In" :checked="old('google_identity_enabled', $googleIdentity->enabled)" value="1" />
                     <x-dashboard.input name="google_identity_client_id" label="Google Client ID" :value="old('google_identity_client_id', $googleIdentity->credential('client_id'))" hint="Required when Google Sign-In is enabled." />
-                    <x-dashboard.input name="google_identity_client_secret" type="password" label="Client Secret (optional)" value="" hint="Only required for future Google API integrations (Gmail, Calendar, Drive, offline access). Not needed for Sign-In / One Tap. Leave blank to keep the current value.{{ filled($googleIdentity->credential('client_secret')) ? ' A secret is already stored.' : '' }}" autocomplete="new-password" />
+                    <x-dashboard.secret-input
+                        name="google_identity_client_secret"
+                        label="Client Secret (optional)"
+                        :stored="$googleIdentity->credential('client_secret')"
+                        hint="Only needed for future Google API integrations (Gmail, Calendar, Drive). Not required for Sign-In / One Tap. Leave blank to keep."
+                    />
                     <div>
                         <label class="block text-sm font-medium text-text-primary mb-1">Authorized JavaScript Origin</label>
                         <input type="text" readonly value="{{ $googleIdentityJsOrigin }}" class="w-full rounded-lg border border-border-subtle bg-surface-muted px-3 py-2 text-sm text-text-secondary" />
@@ -442,10 +459,50 @@
                 <x-dashboard.button type="submit" variant="primary">Save Google Identity settings</x-dashboard.button>
             </form>
 
-            <form method="POST" action="{{ route('admin.settings.google-identity.test') }}" class="mt-4">
+            <form
+                method="POST"
+                action="{{ route('admin.settings.google-identity.test') }}"
+                class="mt-4 space-y-2"
+                x-data="{
+                    testing: false,
+                    status: '',
+                    ok: null,
+                    async submit(e) {
+                        e.preventDefault();
+                        if (this.testing) return;
+                        this.testing = true;
+                        this.status = '';
+                        this.ok = null;
+                        try {
+                            const res = await fetch(e.target.action, {
+                                method: 'POST',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'X-CSRF-TOKEN': e.target.querySelector('[name=_token]')?.value || '',
+                                },
+                                body: new FormData(e.target),
+                            });
+                            const data = await res.json().catch(() => ({}));
+                            this.ok = !!data.ok;
+                            this.status = data.message || data.errors?.google_identity_test?.[0] || (this.ok ? 'OK' : 'Failed');
+                        } catch (err) {
+                            this.ok = false;
+                            this.status = err?.message || 'Failed';
+                        } finally {
+                            this.testing = false;
+                        }
+                    }
+                }"
+                @submit="submit"
+            >
                 @csrf
                 <input type="hidden" name="google_identity_client_id" value="{{ old('google_identity_client_id', $googleIdentity->credential('client_id')) }}">
-                <x-dashboard.button type="submit" variant="secondary">Test configuration</x-dashboard.button>
+                <x-dashboard.button type="submit" variant="secondary" x-bind:disabled="testing">
+                    <span x-show="!testing">Test configuration</span>
+                    <span x-show="testing" x-cloak>Testing…</span>
+                </x-dashboard.button>
+                <p class="text-sm break-words" x-show="status" x-text="status" x-cloak :class="ok === true ? 'text-success' : 'text-danger'"></p>
             </form>
         </x-dashboard.card>
 
@@ -478,8 +535,16 @@
                 <input type="hidden" name="monnify_enabled" value="0">
                 <x-dashboard.toggle name="monnify_enabled" label="Enable Monnify" :checked="old('monnify_enabled', $monnify->enabled)" value="1" />
                 <div class="grid gap-4 sm:grid-cols-2">
-                    <x-dashboard.input name="monnify_api_key" type="password" label="API Key" value="" hint="Leave blank to keep the current key.{{ filled($monnify->credential('api_key')) ? ' A key is already stored.' : '' }}" autocomplete="new-password" />
-                    <x-dashboard.input name="monnify_secret_key" type="password" label="Secret Key" value="" hint="Leave blank to keep the current secret.{{ filled($monnify->credential('secret_key')) ? ' A secret is already stored.' : '' }}" autocomplete="new-password" />
+                    <x-dashboard.secret-input
+                        name="monnify_api_key"
+                        label="API Key"
+                        :stored="$monnify->credential('api_key')"
+                    />
+                    <x-dashboard.secret-input
+                        name="monnify_secret_key"
+                        label="Secret Key"
+                        :stored="$monnify->credential('secret_key')"
+                    />
                     <x-dashboard.input name="monnify_contract_code" label="Contract Code" :value="old('monnify_contract_code', $monnify->credential('contract_code'))" />
                     <x-dashboard.input name="monnify_wallet_account_number" label="Disbursement wallet account number" :value="old('monnify_wallet_account_number', $monnify->credential('wallet_account_number'))" />
                 </div>
@@ -509,9 +574,49 @@
                 <x-dashboard.toggle name="monnify_reserved_accounts_without_kyc" label="Allow reserved accounts when KYC is off" :checked="old('monnify_reserved_accounts_without_kyc', $monnifyMeta['reserved_accounts_without_kyc'] ?? false)" value="1" />
                 <x-dashboard.button type="submit" variant="primary">Save Monnify settings</x-dashboard.button>
             </form>
-            <form method="POST" action="{{ route('admin.settings.monnify.test') }}" class="mt-4">
+            <form
+                method="POST"
+                action="{{ route('admin.settings.monnify.test') }}"
+                class="mt-4 space-y-2"
+                x-data="{
+                    testing: false,
+                    status: '',
+                    ok: null,
+                    async submit(e) {
+                        e.preventDefault();
+                        if (this.testing) return;
+                        this.testing = true;
+                        this.status = '';
+                        this.ok = null;
+                        try {
+                            const res = await fetch(e.target.action, {
+                                method: 'POST',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'X-CSRF-TOKEN': e.target.querySelector('[name=_token]')?.value || '',
+                                },
+                                body: new FormData(e.target),
+                            });
+                            const data = await res.json().catch(() => ({}));
+                            this.ok = !!data.ok;
+                            this.status = data.message || data.errors?.monnify_test?.[0] || (this.ok ? 'OK' : 'Failed');
+                        } catch (err) {
+                            this.ok = false;
+                            this.status = err?.message || 'Failed';
+                        } finally {
+                            this.testing = false;
+                        }
+                    }
+                }"
+                @submit="submit"
+            >
                 @csrf
-                <x-dashboard.button type="submit" variant="secondary">Test connection</x-dashboard.button>
+                <x-dashboard.button type="submit" variant="secondary" x-bind:disabled="testing">
+                    <span x-show="!testing">Test connection</span>
+                    <span x-show="testing" x-cloak>Testing…</span>
+                </x-dashboard.button>
+                <p class="text-sm break-words" x-show="status" x-text="status" x-cloak :class="ok === true ? 'text-success' : 'text-danger'"></p>
             </form>
         </x-dashboard.card>
 

@@ -12,6 +12,7 @@ Schedule::command('app:prune-notifications')->weekly()->sundays()->at('03:00');
 Schedule::command('support:prune-attachments')->hourly()->withoutOverlapping();
 Schedule::command('app:warm-crypto-prices')->everyFiveMinutes()->withoutOverlapping();
 Schedule::command('crypto:poll-deposits')->everyMinute()->withoutOverlapping();
+Schedule::command('crypto:poll-balances')->everyFiveMinutes()->withoutOverlapping();
 Schedule::command('cache:prune-stale-tags')->daily();
 
 Schedule::command('wallet:expire-listing-holds')->hourly()->withoutOverlapping();

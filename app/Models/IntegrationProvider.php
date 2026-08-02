@@ -85,6 +85,16 @@ class IntegrationProvider extends Model
         $this->credentials = array_merge($this->credentials ?? [], $values);
     }
 
+    /**
+     * Masked form of a stored credential for UI placeholders (not for submission).
+     */
+    public function maskedCredential(string $key): ?string
+    {
+        $value = $this->credential($key);
+
+        return is_string($value) ? mask_secret($value) : null;
+    }
+
     public function recordSuccess(?int $latencyMs = null): void
     {
         $this->success_count = (int) $this->success_count + 1;

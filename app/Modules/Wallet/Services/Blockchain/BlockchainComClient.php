@@ -37,6 +37,23 @@ class BlockchainComClient implements ChainExplorerClient
         };
     }
 
+    public function fetchBalance(string $address, string $coin, ?string $network = null): float
+    {
+        $networkId = $this->catalog->resolveId($network ?: 'Bitcoin');
+        $coin = strtoupper($coin);
+
+        return match ($networkId) {
+            'bitcoin' => $this->balanceBitcoin($address),
+            'ethereum' => $coin === 'ETH'
+                ? $this->balanceEthereum($address)
+                : $this->etherscan->fetchBalance($address, $coin, $network ?: 'Ethereum'),
+            'solana' => $coin === 'SOL'
+                ? $this->balanceSolana($address)
+                : $this->solana->fetchBalance($address, $coin, $network ?: 'Solana'),
+            default => throw new RuntimeException("Blockchain.com does not support network: {$networkId}"),
+        };
+    }
+
     public function tipHeight(?string $network = null): ?int
     {
         $networkId = $this->catalog->resolveId($network ?: 'Bitcoin');
@@ -53,6 +70,70 @@ class BlockchainComClient implements ChainExplorerClient
     {
         return $this->tipHeight('Bitcoin') !== null
             || $this->probeAddress('btc');
+    }
+
+    private function balanceBitcoin(string $address): float
+    {
+        try {
+            $json = $this->post('/btc/address', ['address' => $address]);
+            foreach (['balance', 'final_balance', 'confirmed'] as $key) {
+                if (isset($json[$key]) && is_numeric($json[$key])) {
+                    $val = (float) $json[$key];
+
+                    // Gateway may return sats or BTC.
+                    return $val > 1000 ? $val / 1e8 : $val;
+                }
+            }
+        } catch (\Throwable) {
+            // Fall through to mempool-style native path via address payload failure.
+        }
+
+        // Prefer native mempool client when gateway has no balance field.
+        return app(MempoolBitcoinClient::class)->fetchBalance($address, 'BTC', 'Bitcoin');
+    }
+
+    private function balanceEthereum(string $address): float
+    {
+        try {
+            $json = $this->post('/eth/address', [
+                'address' => $address,
+                'network' => 'mainnet',
+            ]);
+            if (isset($json['balance']) && is_numeric($json['balance'])) {
+                $raw = (string) $json['balance'];
+                if (str_starts_with($raw, '0x') || ctype_digit($raw)) {
+                    return $this->fromWei(str_starts_with($raw, '0x') ? (string) hexdec($raw) : $raw, 18);
+                }
+
+                return (float) $raw;
+            }
+        } catch (\Throwable) {
+            // Fall through.
+        }
+
+        return $this->etherscan->fetchBalance($address, 'ETH', 'Ethereum');
+    }
+
+    private function balanceSolana(string $address): float
+    {
+        try {
+            $json = $this->post('/sol/address', [
+                'address' => $address,
+                'network' => 'mainnet',
+            ]);
+            if (isset($json['balance']) && is_numeric($json['balance'])) {
+                $val = (float) $json['balance'];
+
+                return $val > 1000 ? $val / 1e9 : $val;
+            }
+            if (isset($json['lamports']) && is_numeric($json['lamports'])) {
+                return ((int) $json['lamports']) / 1e9;
+            }
+        } catch (\Throwable) {
+            // Fall through.
+        }
+
+        return $this->solana->fetchBalance($address, 'SOL', 'Solana');
     }
 
     /**
