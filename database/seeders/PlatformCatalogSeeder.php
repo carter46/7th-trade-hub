@@ -46,8 +46,7 @@ class PlatformCatalogSeeder extends Seeder
                 'Twitter Audience Pack', 'LinkedIn Lead Boost', 'Multi-Platform Starter',
             ],
             PlatformProductType::Domain->value => [
-                '.com Domain Registration', '.ng Domain Registration', '.io Domain Registration',
-                '.co Domain Registration', 'Domain Transfer Assist', 'Domain Privacy Pack',
+                '.com Domain Registration', '.io Domain Registration', '.co Domain Registration',
             ],
             PlatformProductType::EscrowService->value => [
                 'Standard Escrow Trade', 'High-Value Escrow', 'Website Sale Escrow',
@@ -58,8 +57,7 @@ class PlatformCatalogSeeder extends Seeder
                 'Restaurant Menu Theme', 'Medical Clinic Theme', 'Startup Launch Template',
             ],
             PlatformProductType::WebsitePackage->value => [
-                'Starter Business Site', 'Agency Showcase Site', 'Restaurant Booking Site',
-                'Law Practice Site', 'Clinic Booking Site', 'E-commerce Starter Site',
+                'Starter Business Site',
             ],
             PlatformProductType::DocumentTemplate->value => [
                 'Sales Contract Pack', 'NDA Bundle', 'Employment Agreement',
@@ -69,7 +67,7 @@ class PlatformCatalogSeeder extends Seeder
 
         $categoryMap = [
             PlatformProductType::WebsiteTemplate->value => ['wt-corporate', 'wt-agency', 'wt-law', 'wt-restaurant', 'wt-medical', 'wt-corporate'],
-            PlatformProductType::WebsitePackage->value => ['wp-starter', 'wp-business', 'wp-ecommerce', 'wp-starter', 'wp-business', 'wp-ecommerce'],
+            PlatformProductType::WebsitePackage->value => ['wp-starter'],
             PlatformProductType::DocumentTemplate->value => ['dt-legal', 'dt-legal', 'dt-hr', 'dt-business', 'dt-hr', 'dt-legal'],
             PlatformProductType::Vpn->value => ['vpn-residential', 'vpn-business', 'vpn-gaming', 'vpn-dedicated', 'vpn-residential', 'vpn-business'],
             PlatformProductType::VirtualPhone->value => ['phone-us', 'phone-uk', 'phone-ng', 'phone-us', 'phone-us', 'phone-uk'],
@@ -78,7 +76,7 @@ class PlatformCatalogSeeder extends Seeder
             PlatformProductType::Smtp->value => ['smtp-transactional', 'smtp-marketing', 'smtp-marketing', 'smtp-transactional', 'smtp-marketing', 'smtp-transactional'],
             PlatformProductType::Email->value => ['email-business', 'email-team', 'email-business', 'email-team', 'email-business', 'email-team'],
             PlatformProductType::SocialService->value => ['social-growth', 'social-engagement', 'social-growth', 'social-engagement', 'social-growth', 'social-growth'],
-            PlatformProductType::Domain->value => ['domain-registration', 'domain-registration', 'domain-registration', 'domain-registration', 'domain-transfer', 'domain-registration'],
+            PlatformProductType::Domain->value => ['domain-registration', 'domain-registration', 'domain-registration'],
             PlatformProductType::EscrowService->value => ['escrow-standard', 'escrow-high-value', 'escrow-high-value', 'escrow-standard', 'escrow-standard', 'escrow-standard'],
         ];
 

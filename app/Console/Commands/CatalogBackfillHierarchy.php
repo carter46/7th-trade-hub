@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Enums\PlatformProductType;
 use App\Models\ProductType;
 use App\Models\ServiceCategory;
+use App\Support\PlatformCatalogTrim;
 use App\Support\SortOrder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -28,12 +29,16 @@ class CatalogBackfillHierarchy extends Command
         $servicesCreated = $this->seedProductTypes();
         $productsLinked = $this->linkPlatformProducts();
         $providersSet = $this->setProviderDefaults();
+        $retired = PlatformCatalogTrim::retireDisallowedProducts();
         $normalized = $this->normalizeSortOrders();
 
         $this->info("Service categories upserted: {$categoriesCreated}");
         $this->info("Services (product_types) upserted: {$servicesCreated}");
         $this->info("Products linked to services: {$productsLinked}");
         $this->info("Provider defaults applied: {$providersSet}");
+        foreach ($retired as $type => $count) {
+            $this->info("Retired disallowed {$type} products: {$count}");
+        }
         $this->info("Sort groups normalized to 1..N: {$normalized}");
 
         return self::SUCCESS;
