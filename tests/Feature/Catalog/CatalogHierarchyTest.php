@@ -134,6 +134,7 @@ class CatalogHierarchyTest extends TestCase
             ->put(route('admin.service-categories.update', $category), [
                 'name' => 'Network Hub Renamed',
                 'is_active' => 1,
+                'sort_order' => $category->sort_order,
             ])
             ->assertRedirect(route('admin.service-categories'));
 

@@ -5,7 +5,7 @@
 @section('content')
 <x-layout.page
     title="Products"
-    subtitle="Fixed platform products. Edit title, description, price, image, and status — you cannot add or delete."
+    subtitle="Fixed platform products. Edit title, description, price, image, sort, and status — you cannot add or delete."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
@@ -64,6 +64,7 @@
         <x-slot:head>
             <x-dashboard.th>Title</x-dashboard.th>
             <x-dashboard.th>Service</x-dashboard.th>
+            <x-dashboard.th>Sort</x-dashboard.th>
             <x-dashboard.th>Status</x-dashboard.th>
             <x-dashboard.th>Price</x-dashboard.th>
             <x-dashboard.th>Actions</x-dashboard.th>
@@ -77,6 +78,7 @@
                     @endif
                 </x-dashboard.td>
                 <x-dashboard.td>{{ $product->productType?->name ?? ($product->product_type?->label() ?? '—') }}</x-dashboard.td>
+                <x-dashboard.td>{{ $product->sort_order }}</x-dashboard.td>
                 <x-dashboard.td>
                     <x-dashboard.badge :status="$product->status->value === 'published' ? 'success' : 'neutral'">
                         {{ $product->status->value }}

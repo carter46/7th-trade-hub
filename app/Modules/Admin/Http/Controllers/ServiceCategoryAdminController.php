@@ -4,6 +4,7 @@ namespace App\Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\ServiceCategory;
+use App\Support\SortOrder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -46,9 +47,11 @@ class ServiceCategoryAdminController extends Controller
         }
 
         $serviceCategory->load(['bannerMedia.variants', 'cardMedia.variants']);
+        $siblingMax = ServiceCategory::query()->system()->count();
 
         return view('dashboard.admin.service-categories.edit', [
             'category' => $serviceCategory,
+            'siblingMax' => $siblingMax,
         ]);
     }
 
@@ -60,14 +63,22 @@ class ServiceCategoryAdminController extends Controller
                 ->with('error', __('That category is not a fixed platform category.'));
         }
 
+        $siblingMax = ServiceCategory::query()->system()->count();
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'sort_order' => ['required', 'integer', 'min:1', 'max:'.$siblingMax],
         ]);
 
         $serviceCategory->update([
             'name' => $data['name'],
             'is_active' => $request->boolean('is_active'),
         ]);
+
+        SortOrder::move(
+            $serviceCategory,
+            (int) $data['sort_order'],
+            ServiceCategory::query()->system()
+        );
 
         return redirect()
             ->route('admin.service-categories')

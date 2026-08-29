@@ -107,6 +107,7 @@ class FixedPlatformCatalogLockTest extends TestCase
             ->put(route('admin.service-categories.update', $category), [
                 'name' => 'Network Hub',
                 'is_active' => '1',
+                'sort_order' => $category->sort_order,
             ])
             ->assertRedirect(route('admin.service-categories'));
 
@@ -133,6 +134,7 @@ class FixedPlatformCatalogLockTest extends TestCase
             ->put(route('admin.services.update', $service), [
                 'name' => 'VPN Renamed',
                 'is_active' => '1',
+                'sort_order' => $service->sort_order,
                 'slug' => 'hacked-slug',
                 'service_category_id' => 999,
             ])
@@ -197,6 +199,7 @@ class FixedPlatformCatalogLockTest extends TestCase
                 'description' => 'Updated long',
                 'status' => 'published',
                 'base_price' => 5500,
+                'sort_order' => $product->sort_order,
                 'variants' => [
                     ['id' => $variant->id, 'price' => 5500],
                 ],
@@ -226,6 +229,7 @@ class FixedPlatformCatalogLockTest extends TestCase
                 'description' => $product->description,
                 'status' => 'published',
                 'base_price' => $product->base_price,
+                'sort_order' => $product->sort_order,
                 'provider' => 'hacked-provider',
                 'provider_sku' => 'HACK',
                 'fulfillment_mode' => 'api',
@@ -261,6 +265,7 @@ class FixedPlatformCatalogLockTest extends TestCase
                 'title' => $product->title,
                 'status' => 'published',
                 'base_price' => $product->base_price,
+                'sort_order' => $product->sort_order,
                 'variants' => [
                     ['id' => $variant->id, 'price' => 5000],
                     ['id' => 999999, 'price' => 100],
@@ -418,5 +423,78 @@ class FixedPlatformCatalogLockTest extends TestCase
         $this->assertSame('residential-vpn-lock-test', $product->slug);
         $this->assertNotSame($email->id, $product->product_type_id);
         $this->assertSame('manual', $product->provider);
+    }
+
+    public function test_service_sort_shift_and_rejects_out_of_range(): void
+    {
+        Artisan::call('catalog:backfill-hierarchy');
+        $admin = $this->admin();
+
+        $vpn = ProductType::query()->where('slug', 'vpn')->firstOrFail();
+        $vps = ProductType::query()->where('slug', 'vps')->firstOrFail();
+        $categoryId = $vpn->service_category_id;
+
+        // Normalize so VPN is 1 and VPS is 2 within network.
+        \App\Support\SortOrder::normalize(
+            ProductType::query()->where('service_category_id', $categoryId)
+        );
+        $vpn->refresh();
+        $vps->refresh();
+
+        $this->assertSame(1, (int) $vpn->sort_order);
+        $this->assertSame(2, (int) $vps->sort_order);
+
+        $siblingMax = ProductType::query()->where('service_category_id', $categoryId)->count();
+
+        $this->actingAs($admin)
+            ->put(route('admin.services.update', $vpn), [
+                'name' => $vpn->name,
+                'is_active' => '1',
+                'sort_order' => 2,
+            ])
+            ->assertRedirect(route('admin.services'));
+
+        $this->assertSame(2, (int) $vpn->fresh()->sort_order);
+        $this->assertSame(1, (int) $vps->fresh()->sort_order);
+
+        $this->actingAs($admin)
+            ->from(route('admin.services.edit', $vpn))
+            ->put(route('admin.services.update', $vpn), [
+                'name' => $vpn->name,
+                'is_active' => '1',
+                'sort_order' => $siblingMax + 5,
+            ])
+            ->assertSessionHasErrors('sort_order');
+    }
+
+    public function test_category_sort_shift_updates_public_hub_order(): void
+    {
+        Artisan::call('catalog:backfill-hierarchy');
+        $admin = $this->admin();
+
+        \App\Support\SortOrder::normalize(ServiceCategory::query()->system());
+
+        $website = ServiceCategory::query()->where('key', 'website')->firstOrFail();
+        $max = ServiceCategory::query()->system()->count();
+
+        $this->actingAs($admin)
+            ->put(route('admin.service-categories.update', $website), [
+                'name' => $website->name,
+                'is_active' => '1',
+                'sort_order' => $max,
+            ])
+            ->assertRedirect(route('admin.service-categories'));
+
+        $ordered = ServiceCategory::query()->system()->orderBy('sort_order')->pluck('key')->all();
+        $this->assertSame('website', end($ordered));
+
+        $response = $this->get(route('services'));
+        $response->assertOk();
+        $html = $response->getContent();
+        $posNetwork = strpos($html, 'Network Services');
+        $posWebsite = strpos($html, 'Website Services');
+        $this->assertNotFalse($posNetwork);
+        $this->assertNotFalse($posWebsite);
+        $this->assertLessThan($posWebsite, $posNetwork);
     }
 }

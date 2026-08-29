@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Enums\PlatformProductType;
 use App\Models\ProductType;
 use App\Models\ServiceCategory;
+use App\Support\SortOrder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -27,11 +28,13 @@ class CatalogBackfillHierarchy extends Command
         $servicesCreated = $this->seedProductTypes();
         $productsLinked = $this->linkPlatformProducts();
         $providersSet = $this->setProviderDefaults();
+        $normalized = $this->normalizeSortOrders();
 
         $this->info("Service categories upserted: {$categoriesCreated}");
         $this->info("Services (product_types) upserted: {$servicesCreated}");
         $this->info("Products linked to services: {$productsLinked}");
         $this->info("Provider defaults applied: {$providersSet}");
+        $this->info("Sort groups normalized to 1..N: {$normalized}");
 
         return self::SUCCESS;
     }
@@ -39,7 +42,7 @@ class CatalogBackfillHierarchy extends Command
     private function seedServiceCategories(): int
     {
         $count = 0;
-        $sort = 0;
+        $sort = 1;
 
         // Registry owns which categories exist; insert by expected_id so fresh DBs match production ids.
         $registry = collect(config('platform_categories', []))
@@ -70,7 +73,7 @@ class CatalogBackfillHierarchy extends Command
             $category->forceFill([
                 'slug' => $slug,
                 'name' => $group['label'] ?? str_replace('-', ' ', ucfirst($slug)),
-                'sort_order' => $sort++,
+                'sort_order' => $sort,
                 'is_active' => true,
                 'banner_image' => $group['banner_image'] ?? null,
                 'card_image' => $group['card_image'] ?? null,
@@ -87,6 +90,7 @@ class CatalogBackfillHierarchy extends Command
             }
             $category->save();
             $count++;
+            $sort++;
         }
 
         return $count;
@@ -130,7 +134,7 @@ class CatalogBackfillHierarchy extends Command
             }
 
             $typeConfig = config('catalog.types.'.$slug, []);
-            $sortByCategory[$category->id] = ($sortByCategory[$category->id] ?? 0);
+            $sortByCategory[$category->id] = ($sortByCategory[$category->id] ?? 1);
 
             $existing = ProductType::query()->where('slug', $slug)->first();
             if ($existing) {
@@ -211,5 +215,34 @@ class CatalogBackfillHierarchy extends Command
                 'fulfillment_mode' => 'manual',
                 'auto_renew' => false,
             ]);
+    }
+
+    /** Renumber category / per-category services / per-service products to contiguous 1..N. */
+    private function normalizeSortOrders(): int
+    {
+        $groups = 0;
+
+        SortOrder::normalize(ServiceCategory::query()->system());
+        $groups++;
+
+        $categoryIds = ServiceCategory::query()->system()->pluck('id');
+        foreach ($categoryIds as $categoryId) {
+            SortOrder::normalize(
+                ProductType::query()->where('service_category_id', $categoryId)
+            );
+            $groups++;
+        }
+
+        $serviceIds = ProductType::query()
+            ->whereHas('serviceCategory', fn ($q) => $q->system())
+            ->pluck('id');
+        foreach ($serviceIds as $serviceId) {
+            SortOrder::normalize(
+                \App\Models\PlatformProduct::query()->where('product_type_id', $serviceId)
+            );
+            $groups++;
+        }
+
+        return $groups;
     }
 }

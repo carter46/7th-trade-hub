@@ -11,6 +11,7 @@ use App\Models\ProductType;
 use App\Models\ServiceCategory;
 use App\Services\Media\MediaPathService;
 use App\Services\Media\MediaUsageService;
+use App\Support\SortOrder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -51,7 +52,9 @@ class PlatformProductAdminController extends Controller
                     $q->where('is_featured', false);
                 }
             })
-            ->orderByDesc('updated_at')
+            ->orderBy('product_type_id')
+            ->orderBy('sort_order')
+            ->orderBy('title')
             ->paginate(20)
             ->withQueryString();
 
@@ -104,6 +107,9 @@ class PlatformProductAdminController extends Controller
         return view('dashboard.admin.platform-product-form', [
             'product' => $platformProduct,
             'lockedCatalog' => true,
+            'siblingMax' => PlatformProduct::query()
+                ->where('product_type_id', $platformProduct->product_type_id)
+                ->count(),
         ]);
     }
 
@@ -116,6 +122,10 @@ class PlatformProductAdminController extends Controller
                 ->with('error', __('That product is not under a fixed platform category.'));
         }
 
+        $siblingMax = max(1, PlatformProduct::query()
+            ->where('product_type_id', $platformProduct->product_type_id)
+            ->count());
+
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'short_description' => ['nullable', 'string', 'max:500'],
@@ -125,6 +135,7 @@ class PlatformProductAdminController extends Controller
                 PlatformProductStatus::Published->value,
             ])],
             'base_price' => ['required', 'numeric', 'min:0'],
+            'sort_order' => ['required', 'integer', 'min:1', 'max:'.$siblingMax],
             'hero_media_id' => ['nullable', 'integer', $this->mediaPaths->existsRule()],
             'variants' => ['nullable', 'array'],
             'variants.*.id' => ['required', 'integer'],
@@ -143,6 +154,12 @@ class PlatformProductAdminController extends Controller
             'hero_media_id' => $heroMediaId,
             'hero_image' => $heroPath,
         ]);
+
+        SortOrder::move(
+            $platformProduct,
+            (int) $data['sort_order'],
+            PlatformProduct::query()->where('product_type_id', $platformProduct->product_type_id)
+        );
 
         $this->updateExistingVariantPrices($platformProduct, $data['variants'] ?? []);
         $this->mediaUsages->syncUsages($platformProduct, [

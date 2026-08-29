@@ -5,6 +5,7 @@ namespace App\Modules\Admin\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\ProductType;
 use App\Models\ServiceCategory;
+use App\Support\SortOrder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -24,6 +25,7 @@ class ServiceAdminController extends Controller
                     $inner->where('name', 'like', $term)->orWhere('slug', 'like', $term);
                 });
             })
+            ->orderBy('service_category_id')
             ->orderBy('sort_order')
             ->orderBy('name')
             ->paginate(20)
@@ -58,8 +60,13 @@ class ServiceAdminController extends Controller
                 ->with('error', __('That service is not under a fixed platform category.'));
         }
 
+        $siblingMax = ProductType::query()
+            ->where('service_category_id', $service->service_category_id)
+            ->count();
+
         return view('dashboard.admin.services.edit', [
             'service' => $service,
+            'siblingMax' => $siblingMax,
         ]);
     }
 
@@ -72,14 +79,25 @@ class ServiceAdminController extends Controller
                 ->with('error', __('That service is not under a fixed platform category.'));
         }
 
+        $siblingMax = ProductType::query()
+            ->where('service_category_id', $service->service_category_id)
+            ->count();
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'sort_order' => ['required', 'integer', 'min:1', 'max:'.$siblingMax],
         ]);
 
         $service->update([
             'name' => $data['name'],
             'is_active' => $request->boolean('is_active'),
         ]);
+
+        SortOrder::move(
+            $service,
+            (int) $data['sort_order'],
+            ProductType::query()->where('service_category_id', $service->service_category_id)
+        );
 
         return redirect()
             ->route('admin.services')

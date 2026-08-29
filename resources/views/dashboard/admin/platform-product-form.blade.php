@@ -51,6 +51,17 @@
 
             <x-dashboard.input label="Base price (NGN)" name="base_price" type="number" step="0.01" min="0" :value="old('base_price', $product->base_price)" required />
 
+            <x-dashboard.input
+                label="Sort position"
+                name="sort_order"
+                type="number"
+                min="1"
+                :max="$siblingMax ?? 1"
+                :value="old('sort_order', $product->sort_order)"
+                required
+            />
+            <p class="text-xs text-text-muted">Position within this service (1–{{ $siblingMax ?? 1 }}). Neighbors under the same service shift automatically.</p>
+
             <x-dashboard.media-picker
                 name="hero_media_id"
                 label="Image"

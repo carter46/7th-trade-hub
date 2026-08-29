@@ -64,6 +64,7 @@ class MediaLifecycleTest extends TestCase
                 'description' => 'Long',
                 'status' => 'draft',
                 'base_price' => 10,
+                'sort_order' => max(1, (int) $product->sort_order),
                 'hero_media_id' => $asset->id,
             ])
             ->assertRedirect();
@@ -172,6 +173,7 @@ class MediaLifecycleTest extends TestCase
                 'title' => 'Blocked Attach',
                 'status' => 'draft',
                 'base_price' => 10,
+                'sort_order' => max(1, (int) $product->sort_order),
                 'hero_media_id' => $asset->id,
             ])
             ->assertSessionHasErrors('hero_media_id');
