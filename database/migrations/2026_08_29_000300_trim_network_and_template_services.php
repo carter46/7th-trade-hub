@@ -18,10 +18,16 @@ return new class extends Migration
                     ->whereHas('productType.serviceCategory', fn ($q) => $q->system())
             );
         }
+
+        if (Schema::hasTable('product_types')) {
+            SortOrder::normalize(
+                \App\Models\ProductType::query()->whereHas('serviceCategory', fn ($q) => $q->system())
+            );
+        }
     }
 
     public function down(): void
     {
-        // Retired products are intentionally not recreated.
+        // Retired products and services are intentionally not recreated.
     }
 };

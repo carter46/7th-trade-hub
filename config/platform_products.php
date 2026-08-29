@@ -2,9 +2,15 @@
 
 /**
  * Canonical platform product slugs per service type.
- * Products not listed here for a trimmed type are retired on migrate/backfill.
+ * Empty array = remove every product under that type.
+ * retired_services = entire service rows removed from catalog after products are deleted.
  */
 return [
+    'retired_services' => [
+        'website_template',
+        'vps',
+    ],
+
     'domain' => [
         'com-domain-registration',
         'io-domain-registration',
@@ -13,4 +19,15 @@ return [
     'website_package' => [
         'starter-business-site',
     ],
+    'vpn' => [
+        'dedicated-ip-vpn',
+    ],
+    'proxy' => [
+        'isp-proxy-bundle',
+    ],
+    'smtp' => [
+        'dedicated-smtp-ip',
+    ],
+    'website_template' => [],
+    'vps' => [],
 ];

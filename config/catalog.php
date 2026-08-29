@@ -213,18 +213,18 @@ return [
             'label' => 'Network Services',
             'banner_image' => 'assets/images/Network Services_1.jpg',
             'card_image' => 'assets/images/Network Services_1.jpg',
-            'short_description' => 'VPN, VPS, SMTP, and proxy plans for connectivity and infrastructure.',
+            'short_description' => 'VPN, SMTP, and proxy plans for connectivity and infrastructure.',
             'hero_title' => 'Network Services',
-            'hero_subtitle' => 'Secure connections, servers, mail relay, and proxies in one place.',
+            'hero_subtitle' => 'Secure connections, mail relay, and proxies in one place.',
             'benefits' => [
                 'Infrastructure and connectivity in one browse path',
                 'Compare plans by type before you buy',
                 'Transparent NGN pricing',
             ],
             'faq' => [
-                ['q' => 'Where do I start?', 'a' => 'Pick a type card below (VPN, VPS, SMTP, or Proxy), then filter plans on the type page.'],
+                ['q' => 'Where do I start?', 'a' => 'Pick a type card below (VPN, SMTP, or Proxy), then filter plans on the type page.'],
             ],
-            'types' => ['vpn', 'vps', 'smtp', 'proxy'],
+            'types' => ['vpn', 'smtp', 'proxy'],
         ],
         'communication' => [
             'label' => 'Communication',
@@ -256,16 +256,16 @@ return [
             'label' => 'Website Services',
             'banner_image' => 'assets/images/Website_Services.jpg',
             'card_image' => 'assets/images/Website_Services.jpg',
-            'short_description' => 'Templates, hosted packages, and domain services.',
+            'short_description' => 'Hosted packages and domain services.',
             'hero_title' => 'Website Services',
-            'hero_subtitle' => 'From design templates to domains — build your web presence.',
+            'hero_subtitle' => 'From hosted packages to domains — build your web presence.',
             'benefits' => [
-                'Templates, packages, and domains together',
+                'Packages and domains together',
                 'Demos on eligible packages',
                 'Straightforward next steps after purchase',
             ],
             'faq' => [],
-            'types' => ['website_template', 'website_package', 'domain'],
+            'types' => ['website_package', 'domain'],
         ],
         'business-documents' => [
             'label' => 'Documents & Receipts',
@@ -306,13 +306,13 @@ return [
     'divisions' => [
         'digital-services' => [
             'label' => 'Digital Services',
-            'description' => 'VPN, VPS, proxies, SMTP, phone numbers, email, and social growth.',
-            'types' => ['vpn', 'vps', 'proxy', 'smtp', 'virtual_phone', 'email', 'social_service'],
+            'description' => 'VPN, proxies, SMTP, phone numbers, email, and social growth.',
+            'types' => ['vpn', 'proxy', 'smtp', 'virtual_phone', 'email', 'social_service'],
         ],
         'web-solutions' => [
             'label' => 'Web Solutions',
-            'description' => 'Website templates, hosted packages, and domains.',
-            'types' => ['website_template', 'website_package', 'domain'],
+            'description' => 'Hosted packages and domains.',
+            'types' => ['website_package', 'domain'],
         ],
         'business-documents' => [
             'label' => 'Documents & Receipts',

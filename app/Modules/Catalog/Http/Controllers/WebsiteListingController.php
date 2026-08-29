@@ -27,15 +27,7 @@ class WebsiteListingController extends Controller
 
         $products = PlatformProduct::query()
             ->visibleToPublic()
-            ->where(function ($q) {
-                $q->whereIn('product_type', [
-                    PlatformProductType::WebsitePackage->value,
-                    PlatformProductType::WebsiteTemplate->value,
-                ])->orWhereHas('productType', fn ($inner) => $inner->whereIn('slug', [
-                    PlatformProductType::WebsitePackage->value,
-                    PlatformProductType::WebsiteTemplate->value,
-                ]));
-            })
+            ->ofType(PlatformProductType::WebsitePackage)
             ->with(['productType', 'activeVariants', 'images'])
             ->when($categoryId, fn ($builder) => $builder->where('platform_category_id', $categoryId))
             ->when($industry, fn ($builder) => $builder->where('industry', $industry))
@@ -53,10 +45,7 @@ class WebsiteListingController extends Controller
 
         $categories = $hasLegacyCategories
             ? PlatformCategory::query()
-                ->whereIn('product_type', [
-                    PlatformProductType::WebsitePackage->value,
-                    PlatformProductType::WebsiteTemplate->value,
-                ])
+                ->where('product_type', PlatformProductType::WebsitePackage->value)
                 ->where('is_active', true)
                 ->orderBy('sort_order')
                 ->get()
@@ -75,15 +64,7 @@ class WebsiteListingController extends Controller
     {
         $product = PlatformProduct::query()
             ->visibleToPublic()
-            ->where(function ($q) {
-                $q->whereIn('product_type', [
-                    PlatformProductType::WebsitePackage->value,
-                    PlatformProductType::WebsiteTemplate->value,
-                ])->orWhereHas('productType', fn ($inner) => $inner->whereIn('slug', [
-                    PlatformProductType::WebsitePackage->value,
-                    PlatformProductType::WebsiteTemplate->value,
-                ]));
-            })
+            ->ofType(PlatformProductType::WebsitePackage)
             ->where('slug', $slug)
             ->with(['productType', 'images', 'activeVariants', 'heroMedia.variants'])
             ->firstOrFail();

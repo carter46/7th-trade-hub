@@ -486,16 +486,17 @@ class FixedPlatformCatalogLockTest extends TestCase
         $admin = $this->admin();
 
         $vpn = ProductType::query()->where('slug', 'vpn')->firstOrFail();
-        $vps = ProductType::query()->where('slug', 'vps')->firstOrFail();
+        $proxy = ProductType::query()->where('slug', 'proxy')->firstOrFail();
 
         \App\Support\SortOrder::normalize(
             ProductType::query()->whereHas('serviceCategory', fn ($q) => $q->system())
         );
         $vpn->refresh();
-        $vps->refresh();
+        $proxy->refresh();
 
-        $this->assertSame(1, (int) $vpn->sort_order);
-        $this->assertSame(2, (int) $vps->sort_order);
+        $vpnOrder = (int) $vpn->sort_order;
+        $proxyOrder = (int) $proxy->sort_order;
+        $this->assertNotSame($vpnOrder, $proxyOrder);
 
         $siblingMax = ProductType::query()
             ->whereHas('serviceCategory', fn ($q) => $q->system())
@@ -514,12 +515,12 @@ class FixedPlatformCatalogLockTest extends TestCase
             ->put(route('admin.services.update', $vpn), [
                 'name' => $vpn->name,
                 'is_active' => '1',
-                'sort_order' => 2,
+                'sort_order' => $proxyOrder,
             ])
             ->assertRedirect(route('admin.services'));
 
-        $this->assertSame(2, (int) $vpn->fresh()->sort_order);
-        $this->assertSame(1, (int) $vps->fresh()->sort_order);
+        $this->assertSame($proxyOrder, (int) $vpn->fresh()->sort_order);
+        $this->assertSame($vpnOrder, (int) $proxy->fresh()->sort_order);
 
         $this->actingAs($admin)
             ->from(route('admin.services.edit', $vpn))

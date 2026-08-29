@@ -9,8 +9,19 @@ use Illuminate\Support\Facades\Schema;
 class PlatformCatalogTrim
 {
     /**
-     * Remove platform products whose slug is not in config/platform_products.php for their type.
+     * Apply product allow-list and retire whole services from config/platform_products.php.
      *
+     * @return array{products: array<string, int>, services: array<string, int>}
+     */
+    public static function apply(): array
+    {
+        return [
+            'products' => self::retireDisallowedProducts(),
+            'services' => self::retireServices(),
+        ];
+    }
+
+    /**
      * @return array<string, int> type slug => deleted count
      */
     public static function retireDisallowedProducts(): array
@@ -19,17 +30,19 @@ class PlatformCatalogTrim
             return [];
         }
 
-        $allowed = config('platform_products', []);
+        $config = config('platform_products', []);
         $removed = [];
 
-        foreach ($allowed as $typeSlug => $keepSlugs) {
-            if (! is_array($keepSlugs) || $keepSlugs === []) {
+        foreach ($config as $typeSlug => $keepSlugs) {
+            if ($typeSlug === 'retired_services' || ! is_array($keepSlugs)) {
                 continue;
             }
 
-            $query = DB::table('platform_products')
-                ->where('product_type', $typeSlug)
-                ->whereNotIn('slug', $keepSlugs);
+            $query = DB::table('platform_products')->where('product_type', $typeSlug);
+
+            if ($keepSlugs !== []) {
+                $query->whereNotIn('slug', $keepSlugs);
+            }
 
             $productIds = $query->pluck('id');
 
@@ -49,6 +62,41 @@ class PlatformCatalogTrim
             $removed[$typeSlug] = DB::table('platform_products')
                 ->whereIn('id', $productIds)
                 ->delete();
+        }
+
+        return $removed;
+    }
+
+    /**
+     * @return array<string, int> service slug => deleted count (0 or 1)
+     */
+    public static function retireServices(): array
+    {
+        $retired = config('platform_products.retired_services', []);
+        $removed = [];
+
+        foreach ($retired as $slug) {
+            if (! is_string($slug) || $slug === '') {
+                continue;
+            }
+
+            if (Schema::hasTable('platform_categories')) {
+                DB::table('platform_categories')->where('product_type', $slug)->delete();
+            }
+
+            if (Schema::hasTable('catalog_page_contents')) {
+                DB::table('catalog_page_contents')
+                    ->where('scope', 'type')
+                    ->where('key', $slug)
+                    ->delete();
+            }
+
+            $deleted = 0;
+            if (Schema::hasTable('product_types')) {
+                $deleted = DB::table('product_types')->where('slug', $slug)->delete();
+            }
+
+            $removed[$slug] = $deleted;
         }
 
         return $removed;

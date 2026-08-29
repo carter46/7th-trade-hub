@@ -18,20 +18,13 @@ class PlatformCatalogSeeder extends Seeder
     {
         $catalog = [
             PlatformProductType::Vpn->value => [
-                'Residential VPN Pro', 'Business VPN Shield', 'Gaming VPN Boost',
-                'Dedicated IP VPN', 'Family VPN Pack', 'Travel VPN Lite',
-            ],
-            PlatformProductType::Vps->value => [
-                'Starter VPS 1GB', 'Growth VPS 2GB', 'Pro VPS 4GB',
-                'Business VPS 8GB', 'High CPU VPS', 'Storage VPS 100GB',
+                'Dedicated IP VPN',
             ],
             PlatformProductType::Proxy->value => [
-                'Datacenter Proxy Pack', 'Residential Proxy 1GB', 'Mobile Proxy Pool',
-                'ISP Proxy Bundle', 'Sticky Session Proxy', 'Rotating Proxy Lite',
+                'ISP Proxy Bundle',
             ],
             PlatformProductType::Smtp->value => [
-                'SMTP Starter 10k', 'SMTP Growth 50k', 'SMTP Pro 200k',
-                'Transactional SMTP', 'Marketing SMTP', 'Dedicated SMTP IP',
+                'Dedicated SMTP IP',
             ],
             PlatformProductType::VirtualPhone->value => [
                 'US Virtual Number', 'UK Virtual Number', 'NG Virtual Number',
@@ -52,10 +45,6 @@ class PlatformCatalogSeeder extends Seeder
                 'Standard Escrow Trade', 'High-Value Escrow', 'Website Sale Escrow',
                 'Account Transfer Escrow', 'Milestone Escrow', 'Express Escrow',
             ],
-            PlatformProductType::WebsiteTemplate->value => [
-                'Corporate Landing Kit', 'Agency Portfolio Theme', 'Law Firm Site Kit',
-                'Restaurant Menu Theme', 'Medical Clinic Theme', 'Startup Launch Template',
-            ],
             PlatformProductType::WebsitePackage->value => [
                 'Starter Business Site',
             ],
@@ -66,14 +55,12 @@ class PlatformCatalogSeeder extends Seeder
         ];
 
         $categoryMap = [
-            PlatformProductType::WebsiteTemplate->value => ['wt-corporate', 'wt-agency', 'wt-law', 'wt-restaurant', 'wt-medical', 'wt-corporate'],
             PlatformProductType::WebsitePackage->value => ['wp-starter'],
             PlatformProductType::DocumentTemplate->value => ['dt-legal', 'dt-legal', 'dt-hr', 'dt-business', 'dt-hr', 'dt-legal'],
-            PlatformProductType::Vpn->value => ['vpn-residential', 'vpn-business', 'vpn-gaming', 'vpn-dedicated', 'vpn-residential', 'vpn-business'],
+            PlatformProductType::Vpn->value => ['vpn-dedicated'],
             PlatformProductType::VirtualPhone->value => ['phone-us', 'phone-uk', 'phone-ng', 'phone-us', 'phone-us', 'phone-uk'],
-            PlatformProductType::Vps->value => ['vps-shared', 'vps-shared', 'vps-dedicated', 'vps-dedicated', 'vps-dedicated', 'vps-shared'],
-            PlatformProductType::Proxy->value => ['proxy-datacenter', 'proxy-residential', 'proxy-mobile', 'proxy-residential', 'proxy-datacenter', 'proxy-mobile'],
-            PlatformProductType::Smtp->value => ['smtp-transactional', 'smtp-marketing', 'smtp-marketing', 'smtp-transactional', 'smtp-marketing', 'smtp-transactional'],
+            PlatformProductType::Proxy->value => ['proxy-residential'],
+            PlatformProductType::Smtp->value => ['smtp-transactional'],
             PlatformProductType::Email->value => ['email-business', 'email-team', 'email-business', 'email-team', 'email-business', 'email-team'],
             PlatformProductType::SocialService->value => ['social-growth', 'social-engagement', 'social-growth', 'social-engagement', 'social-growth', 'social-growth'],
             PlatformProductType::Domain->value => ['domain-registration', 'domain-registration', 'domain-registration'],

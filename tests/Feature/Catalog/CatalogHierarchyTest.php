@@ -107,7 +107,7 @@ class CatalogHierarchyTest extends TestCase
             ->assertOk()
             ->assertSee('Network Services')
             ->assertSee('VPN')
-            ->assertSee('VPS');
+            ->assertDontSee('VPS');
     }
 
     public function test_service_page_lists_products(): void

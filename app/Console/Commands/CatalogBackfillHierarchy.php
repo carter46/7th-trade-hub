@@ -29,7 +29,9 @@ class CatalogBackfillHierarchy extends Command
         $servicesCreated = $this->seedProductTypes();
         $productsLinked = $this->linkPlatformProducts();
         $providersSet = $this->setProviderDefaults();
-        $retired = PlatformCatalogTrim::retireDisallowedProducts();
+        $trimmed = PlatformCatalogTrim::apply();
+        $retired = $trimmed['products'];
+        $retiredServices = $trimmed['services'];
         $normalized = $this->normalizeSortOrders();
 
         $this->info("Service categories upserted: {$categoriesCreated}");
@@ -38,6 +40,9 @@ class CatalogBackfillHierarchy extends Command
         $this->info("Provider defaults applied: {$providersSet}");
         foreach ($retired as $type => $count) {
             $this->info("Retired disallowed {$type} products: {$count}");
+        }
+        foreach ($retiredServices as $type => $count) {
+            $this->info("Retired service {$type}: {$count}");
         }
         $this->info("Sort groups normalized to 1..N: {$normalized}");
 
@@ -106,8 +111,14 @@ class CatalogBackfillHierarchy extends Command
         $count = 0;
         $sortByCategory = [];
 
+        $retiredServices = config('platform_products.retired_services', []);
+
         foreach (PlatformProductType::cases() as $case) {
             if ($case === PlatformProductType::EscrowService) {
+                continue;
+            }
+
+            if (in_array($case->value, $retiredServices, true)) {
                 continue;
             }
 

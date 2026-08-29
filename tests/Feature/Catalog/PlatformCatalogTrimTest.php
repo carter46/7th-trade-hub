@@ -4,8 +4,11 @@ namespace Tests\Feature\Catalog;
 
 use App\Enums\PlatformProductType;
 use App\Models\PlatformProduct;
+use App\Models\ProductType;
+use App\Models\ServiceCategory;
 use App\Support\PlatformCatalogTrim;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
 class PlatformCatalogTrimTest extends TestCase
@@ -35,11 +38,7 @@ class PlatformCatalogTrimTest extends TestCase
             ])->save();
         }
 
-        $this->assertDatabaseHas('platform_products', ['slug' => 'com-domain-registration']);
-        $this->assertDatabaseHas('platform_products', ['slug' => 'ng-domain-registration']);
-        $this->assertDatabaseHas('platform_products', ['slug' => 'agency-showcase-site']);
-
-        PlatformCatalogTrim::retireDisallowedProducts();
+        PlatformCatalogTrim::apply();
 
         $this->assertDatabaseHas('platform_products', ['slug' => 'com-domain-registration']);
         $this->assertDatabaseHas('platform_products', ['slug' => 'io-domain-registration']);
@@ -47,15 +46,78 @@ class PlatformCatalogTrimTest extends TestCase
         $this->assertDatabaseHas('platform_products', ['slug' => 'starter-business-site']);
 
         $this->assertDatabaseMissing('platform_products', ['slug' => 'ng-domain-registration']);
-        $this->assertDatabaseMissing('platform_products', ['slug' => 'domain-transfer-assist']);
-        $this->assertDatabaseMissing('platform_products', ['slug' => 'domain-privacy-pack']);
         $this->assertDatabaseMissing('platform_products', ['slug' => 'agency-showcase-site']);
-        $this->assertDatabaseMissing('platform_products', ['slug' => 'restaurant-booking-site']);
-        $this->assertDatabaseMissing('platform_products', ['slug' => 'law-practice-site']);
-        $this->assertDatabaseMissing('platform_products', ['slug' => 'clinic-booking-site']);
-        $this->assertDatabaseMissing('platform_products', ['slug' => 'e-commerce-starter-site']);
 
         $this->assertSame(3, PlatformProduct::query()->ofType(PlatformProductType::Domain)->count());
         $this->assertSame(1, PlatformProduct::query()->ofType(PlatformProductType::WebsitePackage)->count());
+    }
+
+    public function test_retires_website_templates_vps_and_trims_network_products(): void
+    {
+        $this->seed(\Database\Seeders\PlatformCatalogSeeder::class);
+        Artisan::call('catalog:backfill-hierarchy');
+
+        foreach ([
+            ['slug' => 'corporate-landing-kit', 'title' => 'Corporate Landing Kit', 'type' => PlatformProductType::WebsiteTemplate],
+            ['slug' => 'starter-vps-1gb', 'title' => 'Starter VPS 1GB', 'type' => PlatformProductType::Vps],
+            ['slug' => 'residential-vpn-pro', 'title' => 'Residential VPN Pro', 'type' => PlatformProductType::Vpn],
+            ['slug' => 'datacenter-proxy-pack', 'title' => 'Datacenter Proxy Pack', 'type' => PlatformProductType::Proxy],
+            ['slug' => 'smtp-starter-10k', 'title' => 'SMTP Starter 10k', 'type' => PlatformProductType::Smtp],
+        ] as $row) {
+            $product = new PlatformProduct;
+            $product->forceFill([
+                'slug' => $row['slug'],
+                'title' => $row['title'],
+                'product_type' => $row['type'],
+                'short_description' => 'Test product',
+                'description' => 'Test product',
+                'status' => 'published',
+                'base_price' => 10000,
+                'provider' => 'manual',
+                'fulfillment_mode' => 'manual',
+            ])->save();
+        }
+
+        $network = ServiceCategory::query()->where('slug', 'network-services')->firstOrFail();
+        $website = ServiceCategory::query()->where('slug', 'website-services')->firstOrFail();
+
+        $retiredTemplate = new ProductType;
+        $retiredTemplate->forceFill([
+            'slug' => 'website_template',
+            'service_category_id' => $website->id,
+            'name' => 'Website Templates',
+            'sort_order' => 99,
+            'is_active' => true,
+        ])->save();
+
+        $retiredVps = new ProductType;
+        $retiredVps->forceFill([
+            'slug' => 'vps',
+            'service_category_id' => $network->id,
+            'name' => 'VPS',
+            'sort_order' => 99,
+            'is_active' => true,
+        ])->save();
+
+        PlatformCatalogTrim::apply();
+
+        $this->assertDatabaseHas('platform_products', ['slug' => 'dedicated-ip-vpn']);
+        $this->assertDatabaseHas('platform_products', ['slug' => 'isp-proxy-bundle']);
+        $this->assertDatabaseHas('platform_products', ['slug' => 'dedicated-smtp-ip']);
+
+        $this->assertDatabaseMissing('platform_products', ['slug' => 'corporate-landing-kit']);
+        $this->assertDatabaseMissing('platform_products', ['slug' => 'starter-vps-1gb']);
+        $this->assertDatabaseMissing('platform_products', ['slug' => 'residential-vpn-pro']);
+        $this->assertDatabaseMissing('platform_products', ['slug' => 'datacenter-proxy-pack']);
+        $this->assertDatabaseMissing('platform_products', ['slug' => 'smtp-starter-10k']);
+
+        $this->assertDatabaseMissing('product_types', ['slug' => 'website_template']);
+        $this->assertDatabaseMissing('product_types', ['slug' => 'vps']);
+
+        $this->assertSame(1, PlatformProduct::query()->ofType(PlatformProductType::Vpn)->count());
+        $this->assertSame(1, PlatformProduct::query()->ofType(PlatformProductType::Proxy)->count());
+        $this->assertSame(1, PlatformProduct::query()->ofType(PlatformProductType::Smtp)->count());
+        $this->assertSame(0, PlatformProduct::query()->ofType(PlatformProductType::WebsiteTemplate)->count());
+        $this->assertSame(0, PlatformProduct::query()->ofType(PlatformProductType::Vps)->count());
     }
 }
