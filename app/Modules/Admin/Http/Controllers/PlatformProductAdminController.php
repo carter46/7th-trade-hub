@@ -52,7 +52,6 @@ class PlatformProductAdminController extends Controller
                     $q->where('is_featured', false);
                 }
             })
-            ->orderBy('product_type_id')
             ->orderBy('sort_order')
             ->orderBy('title')
             ->paginate(20)
@@ -104,12 +103,14 @@ class PlatformProductAdminController extends Controller
                 ->with('error', __('That product is not under a fixed platform category.'));
         }
 
+        $siblings = PlatformProduct::query()
+            ->whereHas('productType.serviceCategory', fn ($q) => $q->system());
+        $siblingMax = max(1, (clone $siblings)->count());
+
         return view('dashboard.admin.platform-product-form', [
             'product' => $platformProduct,
             'lockedCatalog' => true,
-            'siblingMax' => PlatformProduct::query()
-                ->where('product_type_id', $platformProduct->product_type_id)
-                ->count(),
+            'siblingMax' => $siblingMax,
         ]);
     }
 
@@ -122,9 +123,9 @@ class PlatformProductAdminController extends Controller
                 ->with('error', __('That product is not under a fixed platform category.'));
         }
 
-        $siblingMax = max(1, PlatformProduct::query()
-            ->where('product_type_id', $platformProduct->product_type_id)
-            ->count());
+        $siblings = PlatformProduct::query()
+            ->whereHas('productType.serviceCategory', fn ($q) => $q->system());
+        $siblingMax = max(1, (clone $siblings)->count());
 
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -155,11 +156,7 @@ class PlatformProductAdminController extends Controller
             'hero_image' => $heroPath,
         ]);
 
-        SortOrder::move(
-            $platformProduct,
-            (int) $data['sort_order'],
-            PlatformProduct::query()->where('product_type_id', $platformProduct->product_type_id)
-        );
+        SortOrder::move($platformProduct, (int) $data['sort_order'], $siblings);
 
         $this->updateExistingVariantPrices($platformProduct, $data['variants'] ?? []);
         $this->mediaUsages->syncUsages($platformProduct, [

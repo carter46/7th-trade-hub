@@ -5,7 +5,7 @@
 @section('content')
 <x-layout.page
     title="Services"
-    subtitle="Fixed platform services under categories. Sort is position within each category. Rename, reorder, or activate/deactivate — you cannot add or delete."
+    subtitle="Fixed platform services under categories. Sort is a unique global position (1–N). Rename, reorder, or activate/deactivate — you cannot add or delete."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],

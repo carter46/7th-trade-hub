@@ -25,7 +25,6 @@ class ServiceAdminController extends Controller
                     $inner->where('name', 'like', $term)->orWhere('slug', 'like', $term);
                 });
             })
-            ->orderBy('service_category_id')
             ->orderBy('sort_order')
             ->orderBy('name')
             ->paginate(20)
@@ -61,7 +60,7 @@ class ServiceAdminController extends Controller
         }
 
         $siblingMax = ProductType::query()
-            ->where('service_category_id', $service->service_category_id)
+            ->whereHas('serviceCategory', fn ($q) => $q->system())
             ->count();
 
         return view('dashboard.admin.services.edit', [
@@ -79,9 +78,8 @@ class ServiceAdminController extends Controller
                 ->with('error', __('That service is not under a fixed platform category.'));
         }
 
-        $siblingMax = ProductType::query()
-            ->where('service_category_id', $service->service_category_id)
-            ->count();
+        $siblings = ProductType::query()->whereHas('serviceCategory', fn ($q) => $q->system());
+        $siblingMax = (clone $siblings)->count();
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -93,11 +91,7 @@ class ServiceAdminController extends Controller
             'is_active' => $request->boolean('is_active'),
         ]);
 
-        SortOrder::move(
-            $service,
-            (int) $data['sort_order'],
-            ProductType::query()->where('service_category_id', $service->service_category_id)
-        );
+        SortOrder::move($service, (int) $data['sort_order'], $siblings);
 
         return redirect()
             ->route('admin.services')

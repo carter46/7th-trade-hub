@@ -432,11 +432,9 @@ class FixedPlatformCatalogLockTest extends TestCase
 
         $vpn = ProductType::query()->where('slug', 'vpn')->firstOrFail();
         $vps = ProductType::query()->where('slug', 'vps')->firstOrFail();
-        $categoryId = $vpn->service_category_id;
 
-        // Normalize so VPN is 1 and VPS is 2 within network.
         \App\Support\SortOrder::normalize(
-            ProductType::query()->where('service_category_id', $categoryId)
+            ProductType::query()->whereHas('serviceCategory', fn ($q) => $q->system())
         );
         $vpn->refresh();
         $vps->refresh();
@@ -444,7 +442,18 @@ class FixedPlatformCatalogLockTest extends TestCase
         $this->assertSame(1, (int) $vpn->sort_order);
         $this->assertSame(2, (int) $vps->sort_order);
 
-        $siblingMax = ProductType::query()->where('service_category_id', $categoryId)->count();
+        $siblingMax = ProductType::query()
+            ->whereHas('serviceCategory', fn ($q) => $q->system())
+            ->count();
+
+        $orders = ProductType::query()
+            ->whereHas('serviceCategory', fn ($q) => $q->system())
+            ->pluck('sort_order')
+            ->map(fn ($v) => (int) $v)
+            ->sort()
+            ->values()
+            ->all();
+        $this->assertSame(range(1, $siblingMax), $orders);
 
         $this->actingAs($admin)
             ->put(route('admin.services.update', $vpn), [
@@ -465,6 +474,45 @@ class FixedPlatformCatalogLockTest extends TestCase
                 'sort_order' => $siblingMax + 5,
             ])
             ->assertSessionHasErrors('sort_order');
+    }
+
+    public function test_product_sort_is_globally_unique_after_normalize(): void
+    {
+        Artisan::call('catalog:backfill-hierarchy');
+        $vpn = ProductType::query()->where('slug', 'vpn')->firstOrFail();
+        $email = ProductType::query()->where('slug', 'email')->firstOrFail();
+
+        $this->forceCreatePlatformProduct([
+            'product_type_id' => $vpn->id,
+            'product_type' => PlatformProductType::Vpn,
+            'title' => 'VPN A',
+            'slug' => 'vpn-a-global-sort',
+            'status' => PlatformProductStatus::Published,
+            'base_price' => 1000,
+            'sort_order' => 0,
+        ]);
+        $this->forceCreatePlatformProduct([
+            'product_type_id' => $email->id,
+            'product_type' => PlatformProductType::Email,
+            'title' => 'Email A',
+            'slug' => 'email-a-global-sort',
+            'status' => PlatformProductStatus::Published,
+            'base_price' => 1000,
+            'sort_order' => 0,
+        ]);
+
+        Artisan::call('catalog:backfill-hierarchy');
+
+        $orders = PlatformProduct::query()
+            ->whereHas('productType.serviceCategory', fn ($q) => $q->system())
+            ->pluck('sort_order')
+            ->map(fn ($v) => (int) $v)
+            ->sort()
+            ->values()
+            ->all();
+
+        $this->assertSame(range(1, count($orders)), $orders);
+        $this->assertSame(count($orders), count(array_unique($orders)));
     }
 
     public function test_category_sort_shift_updates_public_hub_order(): void

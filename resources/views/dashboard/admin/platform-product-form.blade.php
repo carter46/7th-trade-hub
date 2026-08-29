@@ -60,7 +60,7 @@
                 :value="old('sort_order', $product->sort_order)"
                 required
             />
-            <p class="text-xs text-text-muted">Position within this service (1–{{ $siblingMax ?? 1 }}). Neighbors under the same service shift automatically.</p>
+            <p class="text-xs text-text-muted">Global position among all platform products (1–{{ $siblingMax ?? 1 }}). Each number is unique; neighbors shift automatically.</p>
 
             <x-dashboard.media-picker
                 name="hero_media_id"

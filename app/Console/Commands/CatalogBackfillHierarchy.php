@@ -217,7 +217,7 @@ class CatalogBackfillHierarchy extends Command
             ]);
     }
 
-    /** Renumber category / per-category services / per-service products to contiguous 1..N. */
+    /** Renumber categories, services, and products each to contiguous global 1..N. */
     private function normalizeSortOrders(): int
     {
         $groups = 0;
@@ -225,23 +225,16 @@ class CatalogBackfillHierarchy extends Command
         SortOrder::normalize(ServiceCategory::query()->system());
         $groups++;
 
-        $categoryIds = ServiceCategory::query()->system()->pluck('id');
-        foreach ($categoryIds as $categoryId) {
-            SortOrder::normalize(
-                ProductType::query()->where('service_category_id', $categoryId)
-            );
-            $groups++;
-        }
+        SortOrder::normalize(
+            ProductType::query()->whereHas('serviceCategory', fn ($q) => $q->system())
+        );
+        $groups++;
 
-        $serviceIds = ProductType::query()
-            ->whereHas('serviceCategory', fn ($q) => $q->system())
-            ->pluck('id');
-        foreach ($serviceIds as $serviceId) {
-            SortOrder::normalize(
-                \App\Models\PlatformProduct::query()->where('product_type_id', $serviceId)
-            );
-            $groups++;
-        }
+        SortOrder::normalize(
+            \App\Models\PlatformProduct::query()
+                ->whereHas('productType.serviceCategory', fn ($q) => $q->system())
+        );
+        $groups++;
 
         return $groups;
     }

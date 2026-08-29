@@ -15,7 +15,7 @@
    ```bash
    php artisan migrate --force
    ```
-4. Optional hierarchy repair (idempotent; **non-destructive** for existing category/service CMS names and images — keys only when missing; also renumbers `sort_order` to contiguous **1..N** within each sibling group):
+4. Optional hierarchy repair (idempotent; **non-destructive** for existing category/service CMS names and images — keys only when missing; also renumbers `sort_order` to contiguous **unique global 1..N** for categories, services, and products):
    ```bash
    php artisan catalog:backfill-hierarchy
    ```
@@ -33,7 +33,7 @@
 - Categories & services: edit public **name** + activate/deactivate; slugs frozen; permanent category `key` in code (`config/platform_categories.php`).
 - Products: edit title, short/long description, base price, hero image, status (published↔draft), sort position, and **existing variant prices only**.
 - Public + user browse hide products unless category **and** service are active and product is published.
-- **Sort:** categories are global 1..N; services are 1..N within each category; products are 1..N within each service. Changing a position shifts neighbors; values above the sibling count are rejected.
+- **Sort:** categories, services, and products each use a **unique global** 1..N position. Changing a position shifts neighbors; values above the list count are rejected. Run `catalog:backfill-hierarchy` after deploy to clear duplicate/zero ranks.
 - Marketplace and Crypto/OTC are unchanged.
 
 **Do not run `php artisan db:seed` or `ProductionSeeder` on Hostinger production.** Seeders are for fresh/local installs. Variant seeding is non-destructive (`firstOrCreate`), but production content should only change via admin + migrate/backfill.
