@@ -51,34 +51,48 @@
         </x-slot:filters>
 
         <x-slot:head>
-            <x-dashboard.th></x-dashboard.th>
             <x-dashboard.th>Time</x-dashboard.th>
             <x-dashboard.th>Admin</x-dashboard.th>
             <x-dashboard.th>Module</x-dashboard.th>
             <x-dashboard.th>Action</x-dashboard.th>
-            <x-dashboard.th>Model</x-dashboard.th>
-            <x-dashboard.th>Device</x-dashboard.th>
-            <x-dashboard.th>IP</x-dashboard.th>
         </x-slot:head>
 
         @foreach ($logs as $log)
             <tbody x-data="{ open: false }" class="border-b border-border-default">
-                <tr class="hover:bg-muted/50">
+                <tr class="hover:bg-muted/50 align-top">
                     <x-dashboard.td>
-                        <button type="button" class="text-xs text-primary" @click="open = !open" :aria-expanded="open">
-                            <span x-text="open ? 'Hide' : 'Details'"></span>
-                        </button>
+                        <div class="space-y-1">
+                            <div class="text-sm text-text-primary whitespace-nowrap">{{ $log->created_at->format('M j, Y') }}</div>
+                            <div class="text-xs text-text-muted">{{ $log->created_at->format('H:i:s') }}</div>
+                            @if ($log->model_type)
+                                <div class="text-xs text-text-muted">{{ class_basename($log->model_type) }} #{{ $log->model_id }}</div>
+                            @endif
+                            <button
+                                type="button"
+                                class="text-xs text-primary hover:underline"
+                                @click="open = !open"
+                                :aria-expanded="open"
+                            >
+                                <span x-text="open ? 'Hide details' : 'Details'"></span>
+                            </button>
+                        </div>
                     </x-dashboard.td>
-                    <x-dashboard.td class="text-text-muted text-xs">{{ $log->created_at->format('M j, Y H:i') }}</x-dashboard.td>
-                    <x-dashboard.td>{{ $log->admin?->email ?? '—' }}</x-dashboard.td>
-                    <x-dashboard.td class="text-xs text-text-muted">{{ $log->module ?? '—' }}</x-dashboard.td>
-                    <x-dashboard.td class="font-mono text-xs">{{ $log->action }}</x-dashboard.td>
-                    <x-dashboard.td class="text-xs text-text-muted">{{ $log->model_type ? class_basename($log->model_type).' #'.$log->model_id : '—' }}</x-dashboard.td>
-                    <x-dashboard.td class="text-xs text-text-muted">{{ $log->device ? $log->device . ' / ' . ($log->browser ?? '') : '—' }}</x-dashboard.td>
-                    <x-dashboard.td class="text-xs text-text-muted">{{ $log->ip ?? '—' }}</x-dashboard.td>
+                    <x-dashboard.td>
+                        <div class="text-sm break-all">{{ $log->admin?->email ?? '—' }}</div>
+                    </x-dashboard.td>
+                    <x-dashboard.td class="text-sm text-text-muted">{{ $log->module ?? '—' }}</x-dashboard.td>
+                    <x-dashboard.td>
+                        <div class="space-y-1">
+                            <div class="font-mono text-xs text-text-primary break-all">{{ $log->action }}</div>
+                            <div class="text-xs text-text-muted">
+                                {{ $log->device ? trim($log->device.($log->browser ? ' / '.$log->browser : '')) : '—' }}
+                            </div>
+                            <div class="text-xs text-text-muted font-mono">{{ $log->ip ?: '—' }}</div>
+                        </div>
+                    </x-dashboard.td>
                 </tr>
                 <tr x-show="open" x-cloak class="bg-muted/30">
-                    <td colspan="8" class="px-4 py-3 text-xs text-text-secondary">
+                    <td colspan="4" class="px-4 py-3 text-xs text-text-secondary">
                         <div class="grid gap-3 md:grid-cols-2">
                             <div>
                                 <div class="font-medium text-text-primary mb-1">Reason / correlation</div>
