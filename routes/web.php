@@ -107,22 +107,24 @@ Route::get('/legal', function (\Illuminate\Http\Request $request) {
 Route::redirect('/terms', '/legal?doc=terms')->name('terms');
 Route::redirect('/privacy', '/legal?doc=privacy')->name('privacy');
 
-Route::get('/marketplace', [MarketplaceController::class, 'index'])->name('marketplace');
-Route::get('/marketplace/suggestions', [MarketplaceController::class, 'suggestions'])
-    ->middleware('throttle:60,1')
-    ->name('marketplace.suggestions');
+Route::middleware('marketplace.public')->group(function (): void {
+    Route::get('/marketplace', [MarketplaceController::class, 'index'])->name('marketplace');
+    Route::get('/marketplace/suggestions', [MarketplaceController::class, 'suggestions'])
+        ->middleware('throttle:60,1')
+        ->name('marketplace.suggestions');
+    Route::get('/marketplace/{slug}/checkout', [MarketplaceController::class, 'checkout'])
+        ->middleware('auth')
+        ->where('slug', '[A-Za-z0-9\-_]+')
+        ->name('marketplace.checkout');
+    Route::get('/marketplace/{category}/{product}', [MarketplaceController::class, 'pair'])
+        ->where('category', '[a-z0-9\-_]+')
+        ->where('product', '[a-z0-9\-_]+')
+        ->name('marketplace.product');
+    Route::get('/marketplace/{segment}', [MarketplaceController::class, 'segment'])
+        ->where('segment', '[A-Za-z0-9\-_]+')
+        ->name('marketplace.show');
+});
 Route::redirect('/marketplace/web-services', '/services')->name('marketplace.web-services');
-Route::get('/marketplace/{slug}/checkout', [MarketplaceController::class, 'checkout'])
-    ->middleware('auth')
-    ->where('slug', '[A-Za-z0-9\-_]+')
-    ->name('marketplace.checkout');
-Route::get('/marketplace/{category}/{product}', [MarketplaceController::class, 'pair'])
-    ->where('category', '[a-z0-9\-_]+')
-    ->where('product', '[a-z0-9\-_]+')
-    ->name('marketplace.product');
-Route::get('/marketplace/{segment}', [MarketplaceController::class, 'segment'])
-    ->where('segment', '[A-Za-z0-9\-_]+')
-    ->name('marketplace.show');
 Route::get('/robots.txt', RobotsController::class)->name('robots');
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 

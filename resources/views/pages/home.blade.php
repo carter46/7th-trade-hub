@@ -8,64 +8,40 @@
         $brandName = $siteName ?? config('app.name', '7th Trade Hub');
         $faqs = [
             [
-                'q' => 'What can I do on '.$brandName.'?',
-                'a' => 'You can fund your NGN wallet, buy or sell digital services, swap crypto to cash, grow social accounts, download templates, and buy or sell websites — all in one place.',
+                'q' => 'What is '.$brandName.'?',
+                'a' => $brandName.' is a digital services hub. Browse VPN, domains, website packages, document templates, social tools, and more — plus a standalone crypto-to-cash exchange.',
             ],
             [
-                'q' => 'How does the NGN wallet work?',
-                'a' => 'Your wallet holds Naira balance for marketplace buys. Fund it by bank transfer or crypto sell, then pay for orders from your available balance.',
+                'q' => 'What services can I browse?',
+                'a' => 'Open Services to explore categories like Network, Communication, Website Services, Social Media, and Documents. Each card is a live service with its own products and pricing.',
             ],
             [
-                'q' => 'How do I deposit money?',
-                'a' => 'Go to Deposit, pick bank transfer or crypto sell, follow the steps, and wait for approval. Funds show in your wallet when confirmed.',
+                'q' => 'How do website packages work?',
+                'a' => 'Pick a package such as Online Banking website, review the demo and deliverables on the product page, then check out when you are ready. Support details are listed on each package.',
             ],
             [
-                'q' => 'How do withdrawals work?',
-                'a' => 'Request a withdrawal from your wallet, add your bank details, and submit. We review it and send the funds when approved.',
+                'q' => 'Can I buy domains and business documents here?',
+                'a' => 'Yes. Register .com, .io, and .co domains, and download ready-to-edit templates such as employment agreements and invoice sets from the Documents section.',
             ],
             [
-                'q' => 'What is escrow and why do I need it?',
-                'a' => 'Escrow holds the buyer’s money until the seller delivers. It protects both sides on marketplace deals.',
+                'q' => 'What is Crypto Cash Exchange?',
+                'a' => 'It is a separate tool on the platform for swapping crypto to cash. It is not part of the main services catalog — open Exchange from the home page or main menu.',
             ],
             [
-                'q' => 'How do I buy from the marketplace?',
-                'a' => 'Open a listing, click buy, and pay from your wallet. Funds go into escrow until you confirm delivery.',
+                'q' => 'Do you offer VPN, proxy, and email services?',
+                'a' => 'Yes. Network and Communication categories include plans like Dedicated IP VPN, ISP Proxy Bundle, Dedicated SMTP IP, business email, and virtual phone numbers.',
             ],
             [
-                'q' => 'How do I sell my own listing?',
-                'a' => 'Create a listing in your dashboard, wait for review if needed, then buyers can order. You get paid after delivery is confirmed.',
+                'q' => 'How do I find the right plan?',
+                'a' => 'Start from Services, open a category, then choose the service that matches your need. Each service page lists available products with descriptions and prices.',
             ],
             [
-                'q' => 'Do I need KYC to use the platform?',
-                'a' => 'Basic browsing is open. Wallet actions, higher limits, and some features need KYC. Submit ID from the KYC page in your dashboard.',
+                'q' => 'Is the marketplace open yet?',
+                'a' => 'The public marketplace for third-party listings is coming soon. Register or sign in if you want to get ready to sell when it launches.',
             ],
             [
-                'q' => 'How does crypto-to-cash work?',
-                'a' => 'Start a crypto sell request, send the amount we quote, and after confirmation we credit NGN to your wallet.',
-            ],
-            [
-                'q' => 'What social growth services do you offer?',
-                'a' => 'We offer tools and packages to grow reach and engagement on major social platforms. Check Services for what is available now.',
-            ],
-            [
-                'q' => 'Are document templates ready to use?',
-                'a' => 'Yes. Browse templates, buy if paid, then download. Most are ready right after purchase.',
-            ],
-            [
-                'q' => 'How do website listings work?',
-                'a' => 'Sellers list sites with details and price. Buyers pay through escrow. Ownership transfer completes after both sides finish their steps.',
-            ],
-            [
-                'q' => 'Are website listings verified?',
-                'a' => 'Listings go through review. We check ownership claims and key details before they go live when review is required.',
-            ],
-            [
-                'q' => 'How do fees work?',
-                'a' => 'Fees depend on the service — exchange, marketplace, or withdrawal. You will see the fee before you confirm any payment.',
-            ],
-            [
-                'q' => 'How do I contact support?',
-                'a' => 'Open a support ticket from your dashboard, or use the Contact / Help pages. We reply as soon as we can.',
+                'q' => 'How do I get help with an order or service?',
+                'a' => 'Use the Help and Contact pages, or open a support ticket from your dashboard after you sign in. Include your order or service name so we can assist faster.',
             ],
         ];
 
@@ -191,7 +167,7 @@
             <div class="mx-auto max-w-3xl">
                 <div class="text-center mb-12 sm:mb-16">
                     <h2 class="text-3xl sm:text-4xl font-bold mb-4 font-display">Common Questions</h2>
-                    <p class="text-slate-400">Quick answers about wallets, marketplace, crypto, social, docs, and more.</p>
+                    <p class="text-slate-400">Quick answers about our services, website packages, domains, and platform features.</p>
                 </div>
                 <div class="space-y-3">
                     @foreach ($faqs as $index => $faq)

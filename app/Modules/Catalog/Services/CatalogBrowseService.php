@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Schema;
 
 class CatalogBrowseService
 {
+    public const HOME_ECOSYSTEM_LIMIT = 8;
+
     public function usesDbHierarchy(): bool
     {
         if (! config('catalog.use_db_hierarchy', true)) {
@@ -393,7 +395,7 @@ class CatalogBrowseService
             ];
         }
 
-        return $items;
+        return array_slice($items, 0, self::HOME_ECOSYSTEM_LIMIT);
     }
 
     /**

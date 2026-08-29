@@ -24,7 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'has_wallet' => \App\Http\Middleware\EnsureHasWallet::class,
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
-            'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            'marketplace.public' => \App\Http\Middleware\MarketplaceComingSoon::class,
         ]);
         $middleware->appendToGroup('web', EnsureNotSuspended::class);
         $middleware->appendToGroup('api', EnsureNotSuspended::class);

@@ -26,12 +26,18 @@ class HomeHeroTest extends TestCase
         $this->seed(\Database\Seeders\PlatformCatalogSeeder::class);
         \Illuminate\Support\Facades\Artisan::call('catalog:backfill-hierarchy');
 
-        $this->get(route('home'))
-            ->assertOk()
+        $response = $this->get(route('home'));
+
+        $response->assertOk()
             ->assertSee('Crypto Cash Exchange', false)
             ->assertSee('Website Packages', false)
             ->assertSee('Hosted website packages with demos and support windows.', false)
             ->assertDontSee('Website Listings', false)
             ->assertDontSee('Buy or sell websites with escrow to protect both sides.', false);
+
+        $this->assertLessThanOrEqual(
+            \App\Modules\Catalog\Services\CatalogBrowseService::HOME_ECOSYSTEM_LIMIT,
+            substr_count($response->getContent(), 'Learn More')
+        );
     }
 }
