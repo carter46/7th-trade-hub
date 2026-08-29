@@ -53,10 +53,10 @@ if (app()->environment('local')) {
     Route::get('/dev/ui', [DevUiController::class, 'index'])->name('dev.ui');
 }
 
-Route::get('/', function (CryptoPriceService $prices, \App\Modules\Catalog\Services\CatalogBrowseService $browse) {
+Route::get('/', function (CryptoPriceService $prices, \App\Modules\Catalog\Services\CatalogBrowseService $browse, \App\Modules\Catalog\Services\CatalogContentResolver $catalogContent) {
     return view('pages.home', [
         'cryptoPrices' => $prices->getPrices(),
-        'activeCatalogGroups' => $browse->groupSlugs(),
+        'ecosystemItems' => $browse->homeEcosystemItems($catalogContent),
     ]);
 })->name('home');
 

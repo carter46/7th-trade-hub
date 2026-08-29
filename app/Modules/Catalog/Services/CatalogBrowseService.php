@@ -3,6 +3,7 @@
 namespace App\Modules\Catalog\Services;
 
 use App\Enums\PlatformProductStatus;
+use App\Enums\PlatformProductType;
 use App\Models\PlatformProduct;
 use App\Models\PlatformProductVariant;
 use App\Models\ProductType;
@@ -367,5 +368,82 @@ class CatalogBrowseService
         }
 
         return $meta;
+    }
+
+    /**
+     * Home page "What we do" cards: standalone crypto exchange + active catalog services.
+     *
+     * @return list<array{icon: string, title: string, body: string, href: string}>
+     */
+    public function homeEcosystemItems(CatalogContentResolver $content): array
+    {
+        $items = [[
+            'icon' => 'bitcoin',
+            'title' => 'Crypto Cash Exchange',
+            'body' => 'Turn crypto into cash fast. Safe swaps and quick payouts.',
+            'href' => route('exchange'),
+        ]];
+
+        foreach ($this->homeCatalogServiceCards($content) as $card) {
+            $items[] = [
+                'icon' => $card['icon'],
+                'title' => $card['title'],
+                'body' => $card['body'],
+                'href' => $card['href'],
+            ];
+        }
+
+        return $items;
+    }
+
+    /**
+     * Active internal-catalog services that have at least one public product.
+     *
+     * @return Collection<int, array{icon: string, title: string, body: string, href: string}>
+     */
+    public function homeCatalogServiceCards(CatalogContentResolver $content): Collection
+    {
+        if ($this->usesDbHierarchy()) {
+            return ProductType::query()
+                ->with('serviceCategory')
+                ->active()
+                ->whereHas('serviceCategory', fn ($q) => $q->system()->active()->where('mode', 'catalog'))
+                ->orderBy('sort_order')
+                ->get()
+                ->filter(fn (ProductType $service) => $this->statsForTypes([$service->slug])['count'] > 0)
+                ->map(fn (ProductType $service) => $this->mapHomeServiceCard($service, $content))
+                ->values();
+        }
+
+        return collect($this->allGroupTypeValues())
+            ->filter(fn (string $slug) => $this->statsForTypes([$slug])['count'] > 0)
+            ->map(function (string $slug) use ($content) {
+                $resolved = $content->forType($slug);
+                $enum = PlatformProductType::tryFrom($slug);
+
+                return [
+                    'icon' => $resolved['icon'] ?? $enum?->icon() ?? 'grid',
+                    'title' => $resolved['label'] ?? str_replace('_', ' ', ucfirst($slug)),
+                    'body' => $resolved['short_description'] ?? '',
+                    'href' => $this->serviceListingUrl($slug),
+                ];
+            })
+            ->values();
+    }
+
+    /**
+     * @return array{icon: string, title: string, body: string, href: string}
+     */
+    private function mapHomeServiceCard(ProductType $service, CatalogContentResolver $content): array
+    {
+        $resolved = $content->forService($service);
+        $enum = PlatformProductType::tryFrom($service->slug);
+
+        return [
+            'icon' => $resolved['icon'] ?? $enum?->icon() ?? 'grid',
+            'title' => $resolved['label'] ?? $service->name,
+            'body' => $resolved['short_description'] ?? $service->short_description ?? '',
+            'href' => $this->serviceListingUrl($service->slug, $service->serviceCategory?->slug),
+        ];
     }
 }

@@ -4,34 +4,7 @@
 
 @section('content')
     @php
-        $activeCatalogGroups = $activeCatalogGroups ?? [];
-        $ecosystemItems = array_values(array_filter([
-            [
-                'icon' => 'bitcoin',
-                'title' => 'Crypto Cash Exchange',
-                'body' => 'Turn crypto into cash fast. Safe swaps and quick payouts.',
-                'href' => route('exchange'),
-            ],
-            in_array('social-media', $activeCatalogGroups, true) ? [
-                'icon' => 'analytics',
-                'title' => 'Social Media Growth',
-                'body' => 'Grow followers and reach with real engagement tools.',
-                'href' => route('services.segment', 'social-media'),
-            ] : null,
-            in_array('business-documents', $activeCatalogGroups, true) ? [
-                'icon' => 'listings',
-                'title' => 'Docs & Templates',
-                'body' => 'Ready-made business docs you can download and use.',
-                'href' => route('services.segment', 'business-documents'),
-            ] : null,
-            in_array('website-services', $activeCatalogGroups, true) ? [
-                'icon' => 'inventory',
-                'title' => 'Website Listings',
-                'body' => 'Buy or sell websites with escrow to protect both sides.',
-                'href' => route('services.segment', 'website-services'),
-            ] : null,
-        ]));
-
+        $ecosystemItems = $ecosystemItems ?? [];
         $brandName = $siteName ?? config('app.name', '7th Trade Hub');
         $faqs = [
             [
@@ -165,7 +138,7 @@
         <div class="max-w-marketing mx-auto px-5 sm:px-6">
             <div class="text-center mb-10 sm:mb-14">
                 <h2 class="text-3xl sm:text-4xl font-bold mb-3 font-display">What we do</h2>
-                <p class="text-slate-400 text-base sm:text-lg max-w-xl mx-auto">Crypto, social growth, docs, and website deals — simple tools that help you trade and grow.</p>
+                <p class="text-slate-400 text-base sm:text-lg max-w-xl mx-auto">Swap crypto to cash, then browse each service in our catalog for plans, packages, and pricing.</p>
             </div>
 
             <div x-data="ecosystemSlider" class="relative">
