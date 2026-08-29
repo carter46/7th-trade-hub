@@ -69,18 +69,22 @@ class SitemapController extends Controller
             Log::warning('sitemap.help_failed', ['message' => $e->getMessage()]);
         }
 
-        foreach (array_keys(config('catalog.groups', [])) as $groupSlug) {
-            $this->push($urls, route('services.segment', $groupSlug), [
-                'priority' => '0.7',
-                'changefreq' => 'weekly',
-            ]);
-        }
+        try {
+            foreach ($this->browse->groupSlugs() as $groupSlug) {
+                $this->push($urls, route('services.segment', $groupSlug), [
+                    'priority' => '0.7',
+                    'changefreq' => 'weekly',
+                ]);
+            }
 
-        foreach (array_keys(config('catalog.types', [])) as $typeKey) {
-            $this->push($urls, route('services.segment', $typeKey), [
-                'priority' => '0.65',
-                'changefreq' => 'weekly',
-            ]);
+            foreach ($this->browse->typeKeys() as $typeKey) {
+                $this->push($urls, route('services.segment', $typeKey), [
+                    'priority' => '0.65',
+                    'changefreq' => 'weekly',
+                ]);
+            }
+        } catch (Throwable $e) {
+            Log::warning('sitemap.catalog_hierarchy_failed', ['message' => $e->getMessage()]);
         }
 
         try {
@@ -146,7 +150,8 @@ class SitemapController extends Controller
         }
 
         try {
-            PlatformProduct::published()
+            PlatformProduct::query()
+                ->visibleToPublic()
                 ->with(['productType.serviceCategory'])
                 ->select(['id', 'slug', 'product_type', 'product_type_id', 'updated_at'])
                 ->orderByDesc('updated_at')

@@ -28,7 +28,7 @@ class CatalogHierarchyTest extends TestCase
     {
         $service = $this->seedHierarchy();
 
-        $product = PlatformProduct::create([
+        $product = $this->forceCreatePlatformProduct([
             'product_type_id' => $service->id,
             'product_type' => PlatformProductType::Vpn,
             'title' => 'Residential VPN Demo',
@@ -60,7 +60,7 @@ class CatalogHierarchyTest extends TestCase
 
     public function test_backfill_is_idempotent_and_links_products(): void
     {
-        PlatformProduct::create([
+        $this->forceCreatePlatformProduct([
             'product_type' => PlatformProductType::Vpn,
             'title' => 'Legacy VPN',
             'slug' => 'legacy-vpn-link',
@@ -123,38 +123,29 @@ class CatalogHierarchyTest extends TestCase
             ->assertSee('Residential VPN Demo');
     }
 
-    public function test_service_category_crud_smoke(): void
+    public function test_service_category_rename_and_toggle_smoke(): void
     {
+        Artisan::call('catalog:backfill-hierarchy');
         $admin = User::factory()->admin()->create(['email_verified_at' => now()]);
-
-        $this->actingAs($admin)
-            ->post(route('admin.service-categories.store'), [
-                'name' => 'Custom Division',
-                'mode' => 'catalog',
-                'sort_order' => 9,
-                'is_active' => 1,
-            ])
-            ->assertRedirect(route('admin.service-categories'));
-
-        $category = ServiceCategory::where('slug', 'custom-division')->first();
-        $this->assertNotNull($category);
+        $category = ServiceCategory::query()->where('key', 'network')->firstOrFail();
+        $slug = $category->slug;
 
         $this->actingAs($admin)
             ->put(route('admin.service-categories.update', $category), [
-                'name' => 'Custom Division Renamed',
-                'slug' => 'custom-division',
-                'mode' => 'catalog',
-                'sort_order' => 1,
+                'name' => 'Network Hub Renamed',
                 'is_active' => 1,
             ])
             ->assertRedirect(route('admin.service-categories'));
 
-        $this->assertSame('Custom Division Renamed', $category->fresh()->name);
+        $category->refresh();
+        $this->assertSame('Network Hub Renamed', $category->name);
+        $this->assertSame($slug, $category->slug);
 
         $this->actingAs($admin)
             ->get(route('admin.service-categories'))
             ->assertOk()
-            ->assertSee('Custom Division Renamed');
+            ->assertSee('Network Hub Renamed')
+            ->assertDontSee('Add category');
     }
 
     public function test_product_filters_by_service_and_status(): void
@@ -163,7 +154,7 @@ class CatalogHierarchyTest extends TestCase
         $vpn = $this->seedVpnProduct('filter-vpn');
         $emailService = ProductType::query()->where('slug', 'email')->firstOrFail();
 
-        PlatformProduct::create([
+        $this->forceCreatePlatformProduct([
             'product_type_id' => $emailService->id,
             'product_type' => PlatformProductType::Email,
             'title' => 'Email Only Product',

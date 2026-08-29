@@ -10,9 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class ProductType extends Model
 {
     protected $fillable = [
-        'service_category_id',
         'name',
-        'slug',
         'sort_order',
         'is_active',
         'banner_image',
@@ -25,6 +23,8 @@ class ProductType extends Model
         'benefits',
         'faq',
     ];
+
+    /** Identity/parent (slug, service_category_id) are not mass-assignable — set via forceFill/backfill only. */
 
     protected function casts(): array
     {

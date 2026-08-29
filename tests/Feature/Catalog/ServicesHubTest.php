@@ -20,7 +20,7 @@ class ServicesHubTest extends TestCase
         Artisan::call('catalog:backfill-hierarchy');
         $service = ProductType::query()->where('slug', 'vpn')->firstOrFail();
 
-        $product = PlatformProduct::create([
+        $product = $this->forceCreatePlatformProduct([
             'product_type_id' => $service->id,
             'product_type' => PlatformProductType::Vpn,
             'title' => 'Residential VPN Demo',

@@ -11,7 +11,6 @@ class ServiceCategory extends Model
 {
     protected $fillable = [
         'name',
-        'slug',
         'sort_order',
         'is_active',
         'banner_image',
@@ -27,6 +26,8 @@ class ServiceCategory extends Model
         'cta_label',
     ];
 
+    /** Identity fields (key, slug) are not mass-assignable — set via forceFill/backfill only. */
+
     protected function casts(): array
     {
         return [
@@ -35,6 +36,34 @@ class ServiceCategory extends Model
             'faq' => 'array',
             'sort_order' => 'integer',
         ];
+    }
+
+    /** @return list<string> */
+    public static function registryKeys(): array
+    {
+        return array_keys(config('platform_categories', []));
+    }
+
+    public function isSystem(): bool
+    {
+        $key = (string) ($this->key ?? '');
+
+        return $key !== '' && array_key_exists($key, config('platform_categories', []));
+    }
+
+    public function scopeSystem(Builder $query): Builder
+    {
+        $keys = self::registryKeys();
+        if ($keys === []) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->whereIn('key', $keys);
+    }
+
+    public static function findByKey(string $key): ?self
+    {
+        return static::query()->where('key', $key)->first();
     }
 
     public function bannerMedia(): BelongsTo

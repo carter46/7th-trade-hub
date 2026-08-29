@@ -36,7 +36,7 @@ class ServiceController extends Controller
         if ($q !== '') {
             $types = $this->browse->allGroupTypeValues();
             $searchResults = PlatformProduct::query()
-                ->published()
+                ->visibleToPublic()
                 ->ofTypeMany($types)
                 ->with(['productType.serviceCategory', 'activeVariants'])
                 ->where(function ($inner) use ($q) {
@@ -54,7 +54,7 @@ class ServiceController extends Controller
         $groups = $this->browse->groupCards($this->content);
         $types = $this->browse->allGroupTypeValues();
         $serviceCount = PlatformProduct::query()
-            ->published()
+            ->visibleToPublic()
             ->ofTypeMany($types)
             ->count();
 
@@ -143,7 +143,7 @@ class ServiceController extends Controller
         }
 
         $products = PlatformProduct::query()
-            ->published()
+            ->visibleToPublic()
             ->ofTypeMany($activeTypes)
             ->with(['productType.serviceCategory', 'activeVariants'])
             ->when($categoryId, fn ($builder) => $builder->where('platform_category_id', $categoryId))
@@ -227,7 +227,7 @@ class ServiceController extends Controller
         }
 
         $products = PlatformProduct::query()
-            ->published()
+            ->visibleToPublic()
             ->ofType($type)
             ->with(['productType.serviceCategory', 'activeVariants'])
             ->when($categoryId && Schema::hasColumn('platform_products', 'platform_category_id'), fn ($builder) => $builder->where('platform_category_id', $categoryId))
@@ -244,7 +244,8 @@ class ServiceController extends Controller
             ->paginate(12)
             ->withQueryString();
 
-        $featuredQuery = PlatformProduct::published()
+        $featuredQuery = PlatformProduct::query()
+            ->visibleToPublic()
             ->featured()
             ->ofType($type)
             ->with(['productType.serviceCategory', 'activeVariants'])
@@ -312,7 +313,7 @@ class ServiceController extends Controller
     public function show(string $type, string $productSlug): View|RedirectResponse
     {
         $product = PlatformProduct::query()
-            ->published()
+            ->visibleToPublic()
             ->where('slug', $productSlug)
             ->with(['productType.serviceCategory', 'images', 'activeVariants', 'heroMedia.variants'])
             ->firstOrFail();
@@ -400,7 +401,7 @@ class ServiceController extends Controller
         }
 
         $product = PlatformProduct::query()
-            ->published()
+            ->visibleToPublic()
             ->where('slug', $segment)
             ->with(['productType.serviceCategory'])
             ->first();

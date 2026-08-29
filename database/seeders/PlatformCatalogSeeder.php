@@ -135,10 +135,11 @@ class PlatformCatalogSeeder extends Seeder
                     $attrs['platform_category_id'] = $categoryId;
                 }
 
-                $product = PlatformProduct::firstOrCreate(
-                    ['slug' => $slug],
-                    $attrs
-                );
+                $product = PlatformProduct::query()->where('slug', $slug)->first();
+                if (! $product) {
+                    $product = new PlatformProduct;
+                    $product->forceFill(array_merge(['slug' => $slug], $attrs))->save();
+                }
 
                 $this->seedVariants($product, $type, (float) $product->base_price);
                 $this->seedGallery($product);
@@ -159,7 +160,8 @@ class PlatformCatalogSeeder extends Seeder
         ], true);
 
         if (! $needsDuration) {
-            PlatformProductVariant::updateOrCreate(
+            // Non-destructive: never overwrite admin-edited prices/names on re-seed.
+            PlatformProductVariant::firstOrCreate(
                 ['sku' => $product->slug.'-std'],
                 [
                     'platform_product_id' => $product->id,
@@ -184,7 +186,7 @@ class PlatformCatalogSeeder extends Seeder
         ];
 
         foreach ($plans as $index => [$months, $label, $mult]) {
-            PlatformProductVariant::updateOrCreate(
+            PlatformProductVariant::firstOrCreate(
                 ['sku' => $product->slug.'-'.$months.'m'],
                 [
                     'platform_product_id' => $product->id,

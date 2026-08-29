@@ -2,7 +2,6 @@
 
 namespace App\Modules\Catalog\Http\Controllers;
 
-use App\Enums\PlatformProductStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Favorite;
 use App\Models\Listing;
@@ -24,7 +23,7 @@ class FavoriteController extends Controller
             $class = Listing::class;
         } else {
             $model = PlatformProduct::query()
-                ->where('status', PlatformProductStatus::Published)
+                ->visibleToPublic()
                 ->findOrFail($data['id']);
             $class = PlatformProduct::class;
         }

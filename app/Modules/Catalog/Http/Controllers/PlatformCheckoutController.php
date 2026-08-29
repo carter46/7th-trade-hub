@@ -26,7 +26,7 @@ class PlatformCheckoutController extends Controller
     {
         // Legacy public POST — keep fulfilling, then send users to service orders.
         $product = PlatformProduct::query()
-            ->published()
+            ->visibleToPublic()
             ->where('slug', $slug)
             ->firstOrFail();
 

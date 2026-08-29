@@ -39,7 +39,7 @@ class DiscoverServicesController extends Controller
         $searchResults = null;
         if ($q !== '') {
             $searchResults = PlatformProduct::query()
-                ->published()
+                ->visibleToPublic()
                 ->ofTypeMany($types)
                 ->with(['productType.serviceCategory', 'activeVariants'])
                 ->where(function ($inner) use ($q) {
@@ -75,7 +75,7 @@ class DiscoverServicesController extends Controller
         }
 
         $recentlyPurchased = $purchasedProductIds->isNotEmpty()
-            ? PlatformProduct::query()->published()->whereIn('id', $purchasedProductIds)->limit(6)->get()
+            ? PlatformProduct::query()->visibleToPublic()->whereIn('id', $purchasedProductIds)->limit(6)->get()
             : collect();
 
         $wallet = $user->wallet ?? null;
@@ -156,7 +156,7 @@ class DiscoverServicesController extends Controller
     public function product(Request $request, string $slug): View|RedirectResponse
     {
         $product = PlatformProduct::query()
-            ->published()
+            ->visibleToPublic()
             ->where('slug', $slug)
             ->with(['productType.serviceCategory', 'activeVariants', 'images', 'heroMedia.variants'])
             ->firstOrFail();
@@ -191,7 +191,7 @@ class DiscoverServicesController extends Controller
     public function checkout(Request $request, string $slug): View
     {
         $product = PlatformProduct::query()
-            ->published()
+            ->visibleToPublic()
             ->where('slug', $slug)
             ->with('activeVariants')
             ->firstOrFail();
@@ -226,7 +226,7 @@ class DiscoverServicesController extends Controller
     public function purchase(Request $request, string $slug): RedirectResponse
     {
         $product = PlatformProduct::query()
-            ->published()
+            ->visibleToPublic()
             ->where('slug', $slug)
             ->firstOrFail();
 
@@ -303,7 +303,7 @@ class DiscoverServicesController extends Controller
         $activeTypes = $typeFilter ? [$typeFilter] : $typeKeys;
 
         $products = PlatformProduct::query()
-            ->published()
+            ->visibleToPublic()
             ->ofTypeMany($activeTypes)
             ->with(['productType.serviceCategory', 'activeVariants'])
             ->when($q !== '', function ($builder) use ($q) {

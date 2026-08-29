@@ -5,27 +5,18 @@ namespace App\Modules\Admin\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\ProductType;
 use App\Models\ServiceCategory;
-use App\Services\Media\MediaPathService;
-use App\Services\Media\MediaUsageService;
-use App\Support\SortOrder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ServiceAdminController extends Controller
 {
-    public function __construct(
-        private MediaUsageService $mediaUsages,
-        private MediaPathService $mediaPaths,
-    ) {}
-
     public function index(Request $request): View
     {
         $services = ProductType::query()
             ->with(['serviceCategory', 'cardMedia.variants', 'bannerMedia.variants'])
             ->withCount('products')
+            ->whereHas('serviceCategory', fn ($q) => $q->system())
             ->when($request->filled('category'), fn ($q) => $q->where('service_category_id', $request->integer('category')))
             ->when($request->filled('q'), function ($q) use ($request) {
                 $term = '%'.$request->string('q')->toString().'%';
@@ -40,51 +31,55 @@ class ServiceAdminController extends Controller
 
         return view('dashboard.admin.services.index', [
             'services' => $services,
-            'categories' => ServiceCategory::query()->orderBy('sort_order')->orderBy('name')->get(),
+            'categories' => ServiceCategory::query()->system()->orderBy('sort_order')->orderBy('name')->get(),
         ]);
     }
 
-    public function create(): View
+    public function create(): RedirectResponse
     {
-        return view('dashboard.admin.services.create', [
-            'service' => new ProductType(['is_active' => true, 'sort_order' => 0]),
-            'categories' => ServiceCategory::query()->orderBy('sort_order')->orderBy('name')->get(),
-        ]);
-    }
-
-    public function store(Request $request): RedirectResponse
-    {
-        $data = $this->validated($request);
-        $data['slug'] = $data['slug'] ?: Str::slug($data['name']);
-        $data['sort_order'] = SortOrder::next(ProductType::class);
-
-        $service = ProductType::create($data);
-        $this->syncMedia($service, $data);
-
         return redirect()
             ->route('admin.services')
-            ->with('status', 'Service created.');
+            ->with('error', __('Platform services are fixed. You cannot add new ones.'));
     }
 
-    public function edit(ProductType $service): View
+    public function store(): RedirectResponse
     {
-        $service->load(['bannerMedia.variants', 'cardMedia.variants']);
+        return redirect()
+            ->route('admin.services')
+            ->with('error', __('Platform services are fixed. You cannot add new ones.'));
+    }
+
+    public function edit(ProductType $service): View|RedirectResponse
+    {
+        $service->load(['bannerMedia.variants', 'cardMedia.variants', 'serviceCategory']);
+        if (! $service->serviceCategory?->isSystem()) {
+            return redirect()
+                ->route('admin.services')
+                ->with('error', __('That service is not under a fixed platform category.'));
+        }
 
         return view('dashboard.admin.services.edit', [
             'service' => $service,
-            'categories' => ServiceCategory::query()->orderBy('sort_order')->orderBy('name')->get(),
         ]);
     }
 
     public function update(Request $request, ProductType $service): RedirectResponse
     {
-        $data = $this->validated($request, $service->id);
-        if (empty($data['slug'])) {
-            $data['slug'] = $service->slug ?: Str::slug($data['name']);
+        $service->loadMissing('serviceCategory');
+        if (! $service->serviceCategory?->isSystem()) {
+            return redirect()
+                ->route('admin.services')
+                ->with('error', __('That service is not under a fixed platform category.'));
         }
 
-        $service->update($data);
-        $this->syncMedia($service, $data);
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+        ]);
+
+        $service->update([
+            'name' => $data['name'],
+            'is_active' => $request->boolean('is_active'),
+        ]);
 
         return redirect()
             ->route('admin.services')
@@ -93,63 +88,20 @@ class ServiceAdminController extends Controller
 
     public function toggle(ProductType $service): RedirectResponse
     {
+        $service->loadMissing('serviceCategory');
+        if (! $service->serviceCategory?->isSystem()) {
+            return back()->with('error', __('That service is not under a fixed platform category.'));
+        }
+
         $service->update(['is_active' => ! $service->is_active]);
 
         return back()->with('status', 'Service '.($service->is_active ? 'activated' : 'deactivated').'.');
     }
 
-    public function destroy(ProductType $service): RedirectResponse
+    public function destroy(): RedirectResponse
     {
-        $this->mediaUsages->detachAllFor($service);
-        $service->delete();
-
         return redirect()
             ->route('admin.services')
-            ->with('status', 'Service deleted.');
-    }
-
-    private function validated(Request $request, ?int $ignoreId = null): array
-    {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'slug' => [
-                'nullable',
-                'string',
-                'max:255',
-                Rule::unique('product_types', 'slug')->ignore($ignoreId),
-            ],
-            'service_category_id' => ['required', 'exists:service_categories,id'],
-            'short_description' => ['nullable', 'string', 'max:500'],
-            'hero_title' => ['nullable', 'string', 'max:255'],
-            'hero_subtitle' => ['nullable', 'string', 'max:500'],
-            'card_media_id' => ['nullable', 'integer', $this->mediaPaths->existsRule()],
-        ]);
-
-        $cardMediaId = isset($data['card_media_id']) ? (int) $data['card_media_id'] : null;
-        $path = $this->mediaPaths->legacyPathFromMediaId($cardMediaId);
-
-        return [
-            'name' => $data['name'],
-            'slug' => $data['slug'] ?? null,
-            'service_category_id' => $data['service_category_id'],
-            'is_active' => $request->boolean('is_active', true),
-            'short_description' => $data['short_description'] ?? null,
-            'hero_title' => $data['hero_title'] ?? null,
-            'hero_subtitle' => $data['hero_subtitle'] ?? null,
-            'card_media_id' => $cardMediaId,
-            'banner_media_id' => $cardMediaId,
-            'card_image' => $path,
-            'banner_image' => $path,
-        ];
-    }
-
-    private function syncMedia(ProductType $service, array $data): void
-    {
-        $mediaId = $data['card_media_id'] ?? null;
-
-        $this->mediaUsages->syncUsages($service, [
-            'card' => $mediaId,
-            'banner' => $mediaId,
-        ]);
+            ->with('error', __('Platform services cannot be deleted.'));
     }
 }

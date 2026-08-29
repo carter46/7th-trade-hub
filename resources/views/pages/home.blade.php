@@ -4,32 +4,33 @@
 
 @section('content')
     @php
-        $ecosystemItems = [
+        $activeCatalogGroups = $activeCatalogGroups ?? [];
+        $ecosystemItems = array_values(array_filter([
             [
                 'icon' => 'bitcoin',
                 'title' => 'Crypto Cash Exchange',
                 'body' => 'Turn crypto into cash fast. Safe swaps and quick payouts.',
                 'href' => route('exchange'),
             ],
-            [
+            in_array('social-media', $activeCatalogGroups, true) ? [
                 'icon' => 'analytics',
                 'title' => 'Social Media Growth',
                 'body' => 'Grow followers and reach with real engagement tools.',
                 'href' => route('services.segment', 'social-media'),
-            ],
-            [
+            ] : null,
+            in_array('business-documents', $activeCatalogGroups, true) ? [
                 'icon' => 'listings',
                 'title' => 'Docs & Templates',
                 'body' => 'Ready-made business docs you can download and use.',
                 'href' => route('services.segment', 'business-documents'),
-            ],
-            [
+            ] : null,
+            in_array('website-services', $activeCatalogGroups, true) ? [
                 'icon' => 'inventory',
                 'title' => 'Website Listings',
                 'body' => 'Buy or sell websites with escrow to protect both sides.',
                 'href' => route('services.segment', 'website-services'),
-            ],
-        ];
+            ] : null,
+        ]));
 
         $brandName = $siteName ?? config('app.name', '7th Trade Hub');
         $faqs = [

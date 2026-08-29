@@ -438,9 +438,9 @@ class DashboardController extends Controller
 
         $actions = [
             [
-                'title' => 'Create Service',
-                'subtitle' => 'Add a platform service to the catalog.',
-                'href' => route('admin.services.create'),
+                'title' => 'Manage Products',
+                'subtitle' => 'Edit fixed platform product copy, prices, and status.',
+                'href' => route('admin.platform-products'),
                 'icon' => 'listings',
                 'accent' => 'emerald',
                 'permission' => 'catalog.manage',

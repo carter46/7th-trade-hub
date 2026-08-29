@@ -14,11 +14,7 @@ use Illuminate\Support\Facades\Schema;
 class PlatformProduct extends Model
 {
     protected $fillable = [
-        'platform_category_id',
-        'product_type_id',
-        'product_type',
         'title',
-        'slug',
         'short_description',
         'description',
         'status',
@@ -41,13 +37,13 @@ class PlatformProduct extends Model
         'support_text',
         'base_price',
         'meta',
-        'provider',
-        'provider_product_id',
-        'provider_sku',
-        'provider_meta',
-        'fulfillment_mode',
-        'auto_renew',
     ];
+
+    /**
+     * Locked identity / fulfillment fields are not mass-assignable:
+     * product_type_id, product_type, slug, provider*, fulfillment_mode, auto_renew, platform_category_id.
+     * Set via forceFill in seeders/backfill only.
+     */
 
     protected function casts(): array
     {
@@ -117,6 +113,38 @@ class PlatformProduct extends Model
     public function scopePublished(Builder $query): Builder
     {
         return $query->where('status', PlatformProductStatus::Published);
+    }
+
+    /**
+     * Published and reachable: parent service + category must be active.
+     */
+    public function scopeVisibleToPublic(Builder $query): Builder
+    {
+        return $query->published()->whereHas('productType', function (Builder $service) {
+            $service->where('is_active', true)
+                ->whereHas('serviceCategory', fn (Builder $cat) => $cat->where('is_active', true));
+        });
+    }
+
+    public function isVisibleToPublic(): bool
+    {
+        if ($this->status !== PlatformProductStatus::Published) {
+            return false;
+        }
+
+        $service = $this->relationLoaded('productType')
+            ? $this->productType
+            : $this->productType()->with('serviceCategory')->first();
+
+        if (! $service || ! $service->is_active) {
+            return false;
+        }
+
+        $category = $service->relationLoaded('serviceCategory')
+            ? $service->serviceCategory
+            : $service->serviceCategory()->first();
+
+        return (bool) ($category && $category->is_active);
     }
 
     public function scopeFeatured(Builder $query): Builder

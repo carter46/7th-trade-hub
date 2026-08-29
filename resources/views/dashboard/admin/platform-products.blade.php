@@ -5,21 +5,17 @@
 @section('content')
 <x-layout.page
     title="Products"
-    subtitle="Admin-owned catalog SKUs under Services."
+    subtitle="Fixed platform products. Edit title, description, price, image, and status — you cannot add or delete."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
         ['Products', null],
     ]"
 >
-    <x-slot:actions>
-        <x-dashboard.button :href="route('admin.platform-products.create')" icon="plus">New product</x-dashboard.button>
-    </x-slot:actions>
-
     <x-dashboard.table
         :empty="$products->isEmpty()"
         empty-title="No platform products"
-        empty-description="Create your first catalog product."
+        empty-description="Products are seeded with the platform catalog."
         empty-icon="storefront"
         striped
     >
@@ -90,18 +86,7 @@
                 <x-dashboard.td>
                     <x-dashboard.row-actions>
                         <x-dashboard.menu-item :href="route('admin.platform-products.edit', $product)">Edit</x-dashboard.menu-item>
-                        <x-dashboard.menu-item type="button" variant="danger" @click="$dispatch('open-modal', 'delete-product-{{ $product->id }}')">Delete</x-dashboard.menu-item>
                     </x-dashboard.row-actions>
-                    <x-dashboard.modal
-                        name="delete-product-{{ $product->id }}"
-                        title="Delete product?"
-                        variant="danger"
-                        confirm-label="Delete"
-                        :form-action="route('admin.platform-products.destroy', $product)"
-                        method="DELETE"
-                    >
-                        Delete “{{ $product->title }}”? This cannot be undone.
-                    </x-dashboard.modal>
                 </x-dashboard.td>
             </tr>
         @endforeach

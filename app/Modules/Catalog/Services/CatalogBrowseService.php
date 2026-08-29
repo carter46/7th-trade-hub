@@ -22,6 +22,10 @@ class CatalogBrowseService
             return false;
         }
 
+        if (Schema::hasColumn('service_categories', 'key')) {
+            return ServiceCategory::query()->system()->exists();
+        }
+
         return ServiceCategory::query()->exists();
     }
 
@@ -30,6 +34,8 @@ class CatalogBrowseService
     {
         if ($this->usesDbHierarchy()) {
             return ServiceCategory::query()
+                ->system()
+                ->active()
                 ->orderBy('sort_order')
                 ->pluck('slug')
                 ->all();
@@ -43,6 +49,8 @@ class CatalogBrowseService
     {
         if ($this->usesDbHierarchy()) {
             return ProductType::query()
+                ->active()
+                ->whereHas('serviceCategory', fn ($q) => $q->system()->active())
                 ->orderBy('sort_order')
                 ->pluck('slug')
                 ->all();
@@ -56,7 +64,7 @@ class CatalogBrowseService
     {
         if ($this->usesDbHierarchy()) {
             return ProductType::query()
-                ->whereHas('serviceCategory', fn ($q) => $q->where('mode', 'catalog')->active())
+                ->whereHas('serviceCategory', fn ($q) => $q->system()->where('mode', 'catalog')->active())
                 ->active()
                 ->pluck('slug')
                 ->unique()
@@ -74,7 +82,11 @@ class CatalogBrowseService
     public function isGroup(string $slug): bool
     {
         if ($this->usesDbHierarchy()) {
-            return ServiceCategory::query()->where('slug', $slug)->exists();
+            return ServiceCategory::query()
+                ->system()
+                ->where('slug', $slug)
+                ->where('is_active', true)
+                ->exists();
         }
 
         return isset(config('catalog.groups')[$slug]);
@@ -83,7 +95,11 @@ class CatalogBrowseService
     public function isType(string $key): bool
     {
         if ($this->usesDbHierarchy()) {
-            return ProductType::query()->where('slug', $key)->exists();
+            return ProductType::query()
+                ->active()
+                ->where('slug', $key)
+                ->whereHas('serviceCategory', fn ($q) => $q->system()->active())
+                ->exists();
         }
 
         return isset(config('catalog.types')[$key]);
@@ -150,12 +166,21 @@ class CatalogBrowseService
 
     public function findServiceCategory(string $slug): ?ServiceCategory
     {
-        return ServiceCategory::query()->where('slug', $slug)->first();
+        return ServiceCategory::query()
+            ->system()
+            ->active()
+            ->where('slug', $slug)
+            ->first();
     }
 
     public function findService(string $slug): ?ProductType
     {
-        return ProductType::query()->with('serviceCategory')->where('slug', $slug)->first();
+        return ProductType::query()
+            ->with('serviceCategory')
+            ->active()
+            ->where('slug', $slug)
+            ->whereHas('serviceCategory', fn ($q) => $q->system()->active())
+            ->first();
     }
 
     /**
@@ -169,7 +194,7 @@ class CatalogBrowseService
         }
 
         $count = PlatformProduct::query()
-            ->published()
+            ->visibleToPublic()
             ->where(function ($q) use ($types) {
                 $q->whereIn('product_type', $types);
                 if (Schema::hasColumn('platform_products', 'product_type_id')) {
@@ -179,7 +204,7 @@ class CatalogBrowseService
             ->count();
 
         $productMin = PlatformProduct::query()
-            ->published()
+            ->visibleToPublic()
             ->where(function ($q) use ($types) {
                 $q->whereIn('product_type', $types);
                 if (Schema::hasColumn('platform_products', 'product_type_id')) {
@@ -193,6 +218,10 @@ class CatalogBrowseService
             ->where('is_active', true)
             ->whereHas('product', function ($q) use ($types) {
                 $q->where('status', PlatformProductStatus::Published)
+                    ->whereHas('productType', function ($service) {
+                        $service->where('is_active', true)
+                            ->whereHas('serviceCategory', fn ($cat) => $cat->where('is_active', true));
+                    })
                     ->where(function ($inner) use ($types) {
                         $inner->whereIn('product_type', $types);
                         if (Schema::hasColumn('platform_products', 'product_type_id')) {
@@ -220,6 +249,7 @@ class CatalogBrowseService
     {
         if ($this->usesDbHierarchy()) {
             return ServiceCategory::query()
+                ->system()
                 ->active()
                 ->orderBy('sort_order')
                 ->with([
@@ -271,6 +301,7 @@ class CatalogBrowseService
             return ProductType::query()
                 ->active()
                 ->whereIn('slug', $types)
+                ->whereHas('serviceCategory', fn ($q) => $q->system()->active())
                 ->orderBy('sort_order')
                 ->get()
                 ->map(function (ProductType $service) use ($content) {

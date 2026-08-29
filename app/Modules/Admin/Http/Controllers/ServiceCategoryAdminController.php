@@ -4,25 +4,16 @@ namespace App\Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\ServiceCategory;
-use App\Services\Media\MediaPathService;
-use App\Services\Media\MediaUsageService;
-use App\Support\SortOrder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ServiceCategoryAdminController extends Controller
 {
-    public function __construct(
-        private MediaUsageService $mediaUsages,
-        private MediaPathService $mediaPaths,
-    ) {}
-
     public function index(): View
     {
         $categories = ServiceCategory::query()
+            ->system()
             ->with(['cardMedia.variants', 'bannerMedia.variants'])
             ->withCount('services')
             ->orderBy('sort_order')
@@ -32,33 +23,28 @@ class ServiceCategoryAdminController extends Controller
         return view('dashboard.admin.service-categories.index', compact('categories'));
     }
 
-    public function create(): View
+    public function create(): RedirectResponse
     {
-        return view('dashboard.admin.service-categories.create', [
-            'category' => new ServiceCategory([
-                'is_active' => true,
-                'mode' => 'catalog',
-                'sort_order' => 0,
-            ]),
-        ]);
-    }
-
-    public function store(Request $request): RedirectResponse
-    {
-        $data = $this->validated($request);
-        $data['slug'] = $data['slug'] ?: Str::slug($data['name']);
-        $data['sort_order'] = SortOrder::next(ServiceCategory::class);
-
-        $category = ServiceCategory::create($data);
-        $this->syncMedia($category, $data);
-
         return redirect()
             ->route('admin.service-categories')
-            ->with('status', 'Service category created.');
+            ->with('error', __('Platform categories are fixed. You cannot add new ones.'));
     }
 
-    public function edit(ServiceCategory $serviceCategory): View
+    public function store(): RedirectResponse
     {
+        return redirect()
+            ->route('admin.service-categories')
+            ->with('error', __('Platform categories are fixed. You cannot add new ones.'));
+    }
+
+    public function edit(ServiceCategory $serviceCategory): View|RedirectResponse
+    {
+        if (! $serviceCategory->isSystem()) {
+            return redirect()
+                ->route('admin.service-categories')
+                ->with('error', __('That category is not a fixed platform category.'));
+        }
+
         $serviceCategory->load(['bannerMedia.variants', 'cardMedia.variants']);
 
         return view('dashboard.admin.service-categories.edit', [
@@ -68,13 +54,20 @@ class ServiceCategoryAdminController extends Controller
 
     public function update(Request $request, ServiceCategory $serviceCategory): RedirectResponse
     {
-        $data = $this->validated($request, $serviceCategory->id);
-        if (empty($data['slug'])) {
-            $data['slug'] = $serviceCategory->slug ?: Str::slug($data['name']);
+        if (! $serviceCategory->isSystem()) {
+            return redirect()
+                ->route('admin.service-categories')
+                ->with('error', __('That category is not a fixed platform category.'));
         }
 
-        $serviceCategory->update($data);
-        $this->syncMedia($serviceCategory, $data);
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+        ]);
+
+        $serviceCategory->update([
+            'name' => $data['name'],
+            'is_active' => $request->boolean('is_active'),
+        ]);
 
         return redirect()
             ->route('admin.service-categories')
@@ -83,77 +76,19 @@ class ServiceCategoryAdminController extends Controller
 
     public function toggle(ServiceCategory $serviceCategory): RedirectResponse
     {
+        if (! $serviceCategory->isSystem()) {
+            return back()->with('error', __('That category is not a fixed platform category.'));
+        }
+
         $serviceCategory->update(['is_active' => ! $serviceCategory->is_active]);
 
         return back()->with('status', 'Category '.($serviceCategory->is_active ? 'activated' : 'deactivated').'.');
     }
 
-    public function destroy(ServiceCategory $serviceCategory): RedirectResponse
+    public function destroy(): RedirectResponse
     {
-        $this->mediaUsages->detachAllFor($serviceCategory);
-        $serviceCategory->delete();
-
         return redirect()
             ->route('admin.service-categories')
-            ->with('status', 'Service category deleted.');
-    }
-
-    private function validated(Request $request, ?int $ignoreId = null): array
-    {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'slug' => [
-                'nullable',
-                'string',
-                'max:255',
-                Rule::unique('service_categories', 'slug')->ignore($ignoreId),
-            ],
-            'mode' => ['required', Rule::in(['catalog', 'marketplace_link'])],
-            'cta_label' => ['nullable', 'string', 'max:255'],
-            'short_description' => ['nullable', 'string', 'max:500'],
-            'hero_title' => ['nullable', 'string', 'max:255'],
-            'hero_subtitle' => ['nullable', 'string', 'max:500'],
-            'card_media_id' => ['nullable', 'integer', $this->mediaPaths->existsRule()],
-        ]);
-
-        $result = [
-            'name' => $data['name'],
-            'slug' => $data['slug'] ?? null,
-            'is_active' => $request->boolean('is_active', true),
-            'mode' => $data['mode'],
-            'cta_label' => $data['cta_label'] ?? null,
-            'short_description' => $data['short_description'] ?? null,
-            'hero_title' => $data['hero_title'] ?? null,
-            'hero_subtitle' => $data['hero_subtitle'] ?? null,
-        ];
-
-        // Only touch media when the picker field was posted — missing input must not wipe images.
-        if ($request->exists('card_media_id')) {
-            $raw = $data['card_media_id'] ?? null;
-            $cardMediaId = filled($raw) ? (int) $raw : null;
-            $path = $this->mediaPaths->legacyPathFromMediaId($cardMediaId);
-
-            // Card image is the source of truth; banner mirrors it for public headers.
-            $result['card_media_id'] = $cardMediaId;
-            $result['banner_media_id'] = $cardMediaId;
-            $result['card_image'] = $path;
-            $result['banner_image'] = $path;
-        }
-
-        return $result;
-    }
-
-    private function syncMedia(ServiceCategory $category, array $data): void
-    {
-        if (! array_key_exists('card_media_id', $data)) {
-            return;
-        }
-
-        $mediaId = $data['card_media_id'];
-
-        $this->mediaUsages->syncUsages($category, [
-            'card' => $mediaId,
-            'banner' => $mediaId,
-        ]);
+            ->with('error', __('Platform categories cannot be deleted.'));
     }
 }

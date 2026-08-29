@@ -31,12 +31,16 @@ class CatalogMetaAdminController extends Controller
 
     public function createPlatformCategory(): RedirectResponse
     {
-        return redirect()->route('admin.service-categories.create');
+        return redirect()
+            ->route('admin.service-categories')
+            ->with('error', __('Platform categories are fixed. You cannot add new ones.'));
     }
 
     public function storePlatformCategory(Request $request): RedirectResponse
     {
-        return redirect()->route('admin.service-categories');
+        return redirect()
+            ->route('admin.service-categories')
+            ->with('error', __('Platform categories are fixed. You cannot add new ones.'));
     }
 
     public function editPlatformCategory($platformCategory = null): RedirectResponse

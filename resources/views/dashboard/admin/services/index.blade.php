@@ -5,25 +5,18 @@
 @section('content')
 <x-layout.page
     title="Services"
-    subtitle="Mid-level offer lines under service categories (product types)."
+    subtitle="Fixed platform services under categories. Rename or activate/deactivate — you cannot add or delete."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
         ['Services', null],
     ]"
 >
-    <x-slot:actions>
-        <x-dashboard.button :href="route('admin.services.create')" icon="plus" size="sm">
-            Add service
-        </x-dashboard.button>
-    </x-slot:actions>
-
     <x-dashboard.table
         :empty="$services->isEmpty()"
         empty-title="No services"
-        empty-description="Create services such as VPN or Email under a service category."
+        empty-description="Services are seeded with the platform catalog."
         empty-icon="storefront"
-        :empty-action="['href' => route('admin.services.create'), 'label' => 'Add service']"
         striped
     >
         <x-slot:filters>

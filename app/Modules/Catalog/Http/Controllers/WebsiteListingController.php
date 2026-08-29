@@ -26,7 +26,7 @@ class WebsiteListingController extends Controller
         }
 
         $products = PlatformProduct::query()
-            ->published()
+            ->visibleToPublic()
             ->where(function ($q) {
                 $q->whereIn('product_type', [
                     PlatformProductType::WebsitePackage->value,
@@ -74,7 +74,7 @@ class WebsiteListingController extends Controller
     public function show(string $slug): View
     {
         $product = PlatformProduct::query()
-            ->published()
+            ->visibleToPublic()
             ->where(function ($q) {
                 $q->whereIn('product_type', [
                     PlatformProductType::WebsitePackage->value,

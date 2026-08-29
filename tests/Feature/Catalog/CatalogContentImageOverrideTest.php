@@ -30,7 +30,7 @@ class CatalogContentImageOverrideTest extends TestCase
 
         $asset = MediaAsset::query()->latest('id')->firstOrFail();
 
-        $category = ServiceCategory::query()->create([
+        $category = $this->forceCreateServiceCategory([
             'name' => 'Network',
             'slug' => 'network-services',
             'sort_order' => 0,

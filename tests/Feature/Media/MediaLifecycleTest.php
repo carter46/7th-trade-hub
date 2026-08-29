@@ -40,27 +40,38 @@ class MediaLifecycleTest extends TestCase
         return MediaAsset::query()->latest('id')->firstOrFail();
     }
 
-    public function test_service_category_save_writes_legacy_public_path_not_absolute_url(): void
+    public function test_platform_product_save_writes_legacy_public_path_not_absolute_url(): void
     {
         Storage::fake('public');
         $admin = $this->admin();
         $asset = $this->makeAsset($admin, 'banner.png');
 
+        \Illuminate\Support\Facades\Artisan::call('catalog:backfill-hierarchy');
+        $vpn = ProductType::query()->where('slug', 'vpn')->firstOrFail();
+        $product = $this->forceCreatePlatformProduct([
+            'title' => 'Path Check Product',
+            'slug' => 'path-check-product',
+            'product_type_id' => $vpn->id,
+            'product_type' => 'vpn',
+            'status' => 'draft',
+            'base_price' => 10,
+        ]);
+
         $this->actingAs($admin)
-            ->post(route('admin.service-categories.store'), [
-                'name' => 'Digital Path Check',
-                'mode' => 'catalog',
-                'card_media_id' => $asset->id,
-                'is_active' => 1,
+            ->put(route('admin.platform-products.update', $product), [
+                'title' => 'Path Check Product',
+                'short_description' => 'Short',
+                'description' => 'Long',
+                'status' => 'draft',
+                'base_price' => 10,
+                'hero_media_id' => $asset->id,
             ])
             ->assertRedirect();
 
-        $category = ServiceCategory::query()->where('name', 'Digital Path Check')->first();
-        $this->assertNotNull($category);
-        $this->assertNotNull($category->card_image);
-        $this->assertSame($category->card_image, $category->banner_image);
-        $this->assertStringNotContainsString('http', $category->card_image);
-        $this->assertStringStartsWith('storage/', $category->card_image);
+        $product->refresh();
+        $this->assertNotNull($product->hero_image);
+        $this->assertStringNotContainsString('http', $product->hero_image);
+        $this->assertStringStartsWith('storage/', $product->hero_image);
     }
 
     public function test_replace_updates_usages_and_product_hero(): void
@@ -70,21 +81,21 @@ class MediaLifecycleTest extends TestCase
         $old = $this->makeAsset($admin, 'old.png', 400, 300);
         $new = $this->makeAsset($admin, 'new.png', 420, 310);
 
-        $category = ServiceCategory::query()->create([
+        $category = $this->forceCreateServiceCategory([
             'name' => 'Cat',
             'slug' => 'cat',
             'sort_order' => 0,
             'is_active' => true,
             'mode' => 'catalog',
         ]);
-        $service = ProductType::query()->create([
+        $service = $this->forceCreateProductType([
             'name' => 'Svc',
             'slug' => 'svc',
             'service_category_id' => $category->id,
             'sort_order' => 0,
             'is_active' => true,
         ]);
-        $product = PlatformProduct::query()->create([
+        $product = $this->forceCreatePlatformProduct([
             'title' => 'Prod',
             'slug' => 'prod',
             'product_type_id' => $service->id,
@@ -117,29 +128,25 @@ class MediaLifecycleTest extends TestCase
         ]);
     }
 
-    public function test_destroying_category_detaches_usages(): void
+    public function test_destroying_category_is_blocked_and_keeps_usages(): void
     {
         Storage::fake('public');
         $admin = $this->admin();
         $asset = $this->makeAsset($admin);
 
-        $category = ServiceCategory::query()->create([
-            'name' => 'To Delete',
-            'slug' => 'to-delete',
-            'sort_order' => 0,
-            'is_active' => true,
-            'mode' => 'catalog',
-            'banner_media_id' => $asset->id,
-        ]);
+        \Illuminate\Support\Facades\Artisan::call('catalog:backfill-hierarchy');
+        $category = ServiceCategory::query()->where('key', 'network')->firstOrFail();
+        $category->update(['banner_media_id' => $asset->id]);
         app(MediaUsageService::class)->syncUsages($category, ['banner' => $asset->id]);
 
         $this->assertSame(1, app(MediaUsageService::class)->usageCount($asset->id));
 
         $this->actingAs($admin)
-            ->delete(route('admin.service-categories.destroy', $category))
-            ->assertRedirect();
+            ->delete('/admin/service-categories/'.$category->id)
+            ->assertNotFound();
 
-        $this->assertSame(0, app(MediaUsageService::class)->usageCount($asset->id));
+        $this->assertDatabaseHas('service_categories', ['id' => $category->id]);
+        $this->assertSame(1, app(MediaUsageService::class)->usageCount($asset->id));
     }
 
     public function test_soft_deleted_media_cannot_be_attached(): void
@@ -149,13 +156,25 @@ class MediaLifecycleTest extends TestCase
         $asset = $this->makeAsset($admin);
         $asset->delete();
 
+        \Illuminate\Support\Facades\Artisan::call('catalog:backfill-hierarchy');
+        $vpn = ProductType::query()->where('slug', 'vpn')->firstOrFail();
+        $product = $this->forceCreatePlatformProduct([
+            'title' => 'Blocked Attach',
+            'slug' => 'blocked-attach',
+            'product_type_id' => $vpn->id,
+            'product_type' => 'vpn',
+            'status' => 'draft',
+            'base_price' => 10,
+        ]);
+
         $this->actingAs($admin)
-            ->post(route('admin.service-categories.store'), [
-                'name' => 'Blocked',
-                'mode' => 'catalog',
-                'card_media_id' => $asset->id,
+            ->put(route('admin.platform-products.update', $product), [
+                'title' => 'Blocked Attach',
+                'status' => 'draft',
+                'base_price' => 10,
+                'hero_media_id' => $asset->id,
             ])
-            ->assertSessionHasErrors('card_media_id');
+            ->assertSessionHasErrors('hero_media_id');
     }
 
     public function test_guest_cannot_upload_media(): void

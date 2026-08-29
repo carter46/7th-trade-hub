@@ -84,13 +84,13 @@ class AdminSearchController extends Controller
                         'id' => 'product-'.$row->id,
                         'label' => $row->title,
                         'subtitle' => $row->slug,
-                        'url' => route('admin.services.edit', $row),
-                        'group' => 'Services',
+                        'url' => route('admin.platform-products.edit', $row),
+                        'group' => 'Products',
                     ])
                     ->all();
 
                 if ($products !== []) {
-                    $groups[] = ['label' => 'Services', 'items' => $products];
+                    $groups[] = ['label' => 'Products', 'items' => $products];
                 }
             }
         }

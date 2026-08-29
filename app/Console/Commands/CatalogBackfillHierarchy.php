@@ -15,21 +15,6 @@ class CatalogBackfillHierarchy extends Command
 
     protected $description = 'Idempotently seed service_categories / product_types and reparent platform_products';
 
-    /** @var array<string, string> enum value → service category slug */
-    private const TYPE_TO_CATEGORY = [
-        'vpn' => 'network-services',
-        'vps' => 'network-services',
-        'smtp' => 'network-services',
-        'proxy' => 'network-services',
-        'email' => 'communication',
-        'virtual_phone' => 'communication',
-        'social_service' => 'social-media',
-        'website_template' => 'website-services',
-        'website_package' => 'website-services',
-        'domain' => 'website-services',
-        'document_template' => 'business-documents',
-    ];
-
     public function handle(): int
     {
         if (! Schema::hasTable('service_categories') || ! Schema::hasTable('product_types')) {
@@ -56,28 +41,51 @@ class CatalogBackfillHierarchy extends Command
         $count = 0;
         $sort = 0;
 
-        foreach (config('catalog.groups', []) as $slug => $group) {
+        // Registry owns which categories exist; insert by expected_id so fresh DBs match production ids.
+        $registry = collect(config('platform_categories', []))
+            ->filter(fn ($meta) => is_array($meta) && ! empty($meta['slug']))
+            ->sortBy(fn ($meta) => (int) ($meta['expected_id'] ?? 999));
+
+        foreach ($registry as $key => $meta) {
+            $slug = (string) $meta['slug'];
+            $group = config('catalog.groups.'.$slug, []);
+
+            $existing = ServiceCategory::query()->where('slug', $slug)->first();
+            if ($existing) {
+                // Non-destructive: only ensure permanent key is set; never overwrite CMS.
+                if (Schema::hasColumn('service_categories', 'key') && $existing->key !== $key) {
+                    $existing->forceFill(['key' => $key])->save();
+                }
+                $count++;
+                $sort++;
+
+                continue;
+            }
+
             $mode = ! empty($group['route']) || ($slug === 'trust-escrow')
                 ? 'marketplace_link'
                 : 'catalog';
 
-            ServiceCategory::query()->updateOrCreate(
-                ['slug' => $slug],
-                [
-                    'name' => $group['label'] ?? str_replace('-', ' ', ucfirst($slug)),
-                    'sort_order' => $sort++,
-                    'is_active' => true,
-                    'banner_image' => $group['banner_image'] ?? null,
-                    'card_image' => $group['card_image'] ?? null,
-                    'short_description' => $group['short_description'] ?? null,
-                    'hero_title' => $group['hero_title'] ?? ($group['label'] ?? null),
-                    'hero_subtitle' => $group['hero_subtitle'] ?? null,
-                    'benefits' => $group['benefits'] ?? [],
-                    'faq' => $group['faq'] ?? [],
-                    'mode' => $mode,
-                    'cta_label' => $group['cta'] ?? ($mode === 'marketplace_link' ? 'Open marketplace' : null),
-                ]
-            );
+            $category = new ServiceCategory;
+            $category->forceFill([
+                'slug' => $slug,
+                'name' => $group['label'] ?? str_replace('-', ' ', ucfirst($slug)),
+                'sort_order' => $sort++,
+                'is_active' => true,
+                'banner_image' => $group['banner_image'] ?? null,
+                'card_image' => $group['card_image'] ?? null,
+                'short_description' => $group['short_description'] ?? null,
+                'hero_title' => $group['hero_title'] ?? ($group['label'] ?? null),
+                'hero_subtitle' => $group['hero_subtitle'] ?? null,
+                'benefits' => $group['benefits'] ?? [],
+                'faq' => $group['faq'] ?? [],
+                'mode' => $mode,
+                'cta_label' => $group['cta'] ?? ($mode === 'marketplace_link' ? 'Open marketplace' : null),
+            ]);
+            if (Schema::hasColumn('service_categories', 'key')) {
+                $category->key = $key;
+            }
+            $category->save();
             $count++;
         }
 
@@ -95,11 +103,21 @@ class CatalogBackfillHierarchy extends Command
             }
 
             $slug = $case->value;
-            $categorySlug = self::TYPE_TO_CATEGORY[$slug]
-                ?? $this->categorySlugFromConfig($slug);
+            $categorySlug = $this->categorySlugFromConfig($slug);
 
             if (! $categorySlug) {
                 $this->warn("No service category mapping for type [{$slug}], skipped.");
+
+                continue;
+            }
+
+            // Only attach under registry categories.
+            $registrySlugs = collect(config('platform_categories', []))
+                ->map(fn ($meta) => is_array($meta) ? ($meta['slug'] ?? null) : null)
+                ->filter()
+                ->all();
+            if (! in_array($categorySlug, $registrySlugs, true)) {
+                $this->warn("Category [{$categorySlug}] for [{$slug}] is not in platform_categories registry, skipped.");
 
                 continue;
             }
@@ -114,22 +132,34 @@ class CatalogBackfillHierarchy extends Command
             $typeConfig = config('catalog.types.'.$slug, []);
             $sortByCategory[$category->id] = ($sortByCategory[$category->id] ?? 0);
 
-            ProductType::query()->updateOrCreate(
-                ['slug' => $slug],
-                [
-                    'service_category_id' => $category->id,
-                    'name' => $typeConfig['label'] ?? $case->label(),
-                    'sort_order' => $sortByCategory[$category->id]++,
-                    'is_active' => true,
-                    'banner_image' => $typeConfig['banner_image'] ?? null,
-                    'card_image' => $typeConfig['card_image'] ?? null,
-                    'short_description' => $typeConfig['short_description'] ?? null,
-                    'hero_title' => $typeConfig['hero_title'] ?? ($typeConfig['label'] ?? null),
-                    'hero_subtitle' => $typeConfig['hero_subtitle'] ?? null,
-                    'benefits' => $typeConfig['benefits'] ?? [],
-                    'faq' => $typeConfig['faq'] ?? [],
-                ]
-            );
+            $existing = ProductType::query()->where('slug', $slug)->first();
+            if ($existing) {
+                // Non-destructive: keep CMS; only ensure parent link if missing/wrong.
+                if ((int) $existing->service_category_id !== (int) $category->id) {
+                    $existing->forceFill(['service_category_id' => $category->id])->save();
+                }
+                $count++;
+                $sortByCategory[$category->id]++;
+
+                continue;
+            }
+
+            $service = new ProductType;
+            $service->forceFill([
+                'slug' => $slug,
+                'service_category_id' => $category->id,
+                'name' => $typeConfig['label'] ?? $case->label(),
+                'sort_order' => $sortByCategory[$category->id]++,
+                'is_active' => true,
+                'banner_image' => $typeConfig['banner_image'] ?? null,
+                'card_image' => $typeConfig['card_image'] ?? null,
+                'short_description' => $typeConfig['short_description'] ?? null,
+                'hero_title' => $typeConfig['hero_title'] ?? ($typeConfig['label'] ?? null),
+                'hero_subtitle' => $typeConfig['hero_subtitle'] ?? null,
+                'benefits' => $typeConfig['benefits'] ?? [],
+                'faq' => $typeConfig['faq'] ?? [],
+            ]);
+            $service->save();
             $count++;
         }
 

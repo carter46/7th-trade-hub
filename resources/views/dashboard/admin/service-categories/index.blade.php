@@ -5,25 +5,18 @@
 @section('content')
 <x-layout.page
     title="Service Categories"
-    subtitle="Top-level divisions for the platform catalog."
+    subtitle="Fixed platform categories. Rename or activate/deactivate — you cannot add or delete."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
         ['Service Categories', null],
     ]"
 >
-    <x-slot:actions>
-        <x-dashboard.button :href="route('admin.service-categories.create')" icon="plus" size="sm">
-            Add category
-        </x-dashboard.button>
-    </x-slot:actions>
-
     <x-dashboard.table
         :empty="$categories->isEmpty()"
         empty-title="No service categories"
-        empty-description="Create categories such as Network Services or Communication."
+        empty-description="Run the category key migration / catalog backfill on this environment."
         empty-icon="grid"
-        :empty-action="['href' => route('admin.service-categories.create'), 'label' => 'Add category']"
         striped
     >
         <x-slot:head>

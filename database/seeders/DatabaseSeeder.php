@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Artisan;
 
 class DatabaseSeeder extends Seeder
 {
@@ -20,6 +21,9 @@ class DatabaseSeeder extends Seeder
             ExchangeRateSeeder::class,
             PlatformWalletSeeder::class,
         ]);
+
+        // Link products to fixed hierarchy + set category keys (non-destructive).
+        Artisan::call('catalog:backfill-hierarchy');
 
         // Demo data when ALLOW_DEMO_DATA / SEED_DEMO_DATA is true (works with APP_ENV=production for pre-launch).
         if (\App\Support\Demo\DemoGate::allowDemoData()) {

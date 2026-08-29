@@ -24,7 +24,7 @@ class TemplateController extends Controller
         }
 
         $products = PlatformProduct::query()
-            ->published()
+            ->visibleToPublic()
             ->ofType(PlatformProductType::DocumentTemplate)
             ->with(['productType', 'activeVariants'])
             ->when($categoryId, fn ($builder) => $builder->where('platform_category_id', $categoryId))
@@ -57,7 +57,7 @@ class TemplateController extends Controller
     public function show(string $slug): View
     {
         $product = PlatformProduct::query()
-            ->published()
+            ->visibleToPublic()
             ->ofType(PlatformProductType::DocumentTemplate)
             ->where('slug', $slug)
             ->with(['productType', 'activeVariants', 'images', 'heroMedia.variants'])

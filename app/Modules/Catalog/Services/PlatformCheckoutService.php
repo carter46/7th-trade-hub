@@ -56,11 +56,12 @@ class PlatformCheckoutService
                 }
 
                 $product = PlatformProduct::query()
+                    ->with(['productType.serviceCategory'])
                     ->where('id', $product->id)
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                if ($product->status !== PlatformProductStatus::Published) {
+                if (! $product->isVisibleToPublic()) {
                     throw new InvalidArgumentException('This product is no longer available.');
                 }
 

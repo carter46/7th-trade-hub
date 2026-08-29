@@ -53,8 +53,11 @@ if (app()->environment('local')) {
     Route::get('/dev/ui', [DevUiController::class, 'index'])->name('dev.ui');
 }
 
-Route::get('/', function (CryptoPriceService $prices) {
-    return view('pages.home', ['cryptoPrices' => $prices->getPrices()]);
+Route::get('/', function (CryptoPriceService $prices, \App\Modules\Catalog\Services\CatalogBrowseService $browse) {
+    return view('pages.home', [
+        'cryptoPrices' => $prices->getPrices(),
+        'activeCatalogGroups' => $browse->groupSlugs(),
+    ]);
 })->name('home');
 
 Route::post('/webhooks/monnify', MonnifyWebhookController::class)->name('webhooks.monnify');
@@ -410,25 +413,16 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::delete('/marketplace-products/{marketplaceProduct}', [\App\Modules\Admin\Http\Controllers\MarketplaceProductAdminController::class, 'destroy'])->name('.marketplace-products.destroy');
 
         Route::get('/platform-products', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'index'])->name('.platform-products');
-        Route::get('/platform-products/create', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'create'])->name('.platform-products.create');
-        Route::post('/platform-products', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'store'])->name('.platform-products.store');
         Route::get('/platform-products/{platformProduct}/edit', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'edit'])->name('.platform-products.edit');
         Route::put('/platform-products/{platformProduct}', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'update'])->name('.platform-products.update');
-        Route::delete('/platform-products/{platformProduct}', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'destroy'])->name('.platform-products.destroy');
         Route::get('/service-categories', [\App\Modules\Admin\Http\Controllers\ServiceCategoryAdminController::class, 'index'])->name('.service-categories');
-        Route::get('/service-categories/create', [\App\Modules\Admin\Http\Controllers\ServiceCategoryAdminController::class, 'create'])->name('.service-categories.create');
-        Route::post('/service-categories', [\App\Modules\Admin\Http\Controllers\ServiceCategoryAdminController::class, 'store'])->name('.service-categories.store');
         Route::get('/service-categories/{serviceCategory}/edit', [\App\Modules\Admin\Http\Controllers\ServiceCategoryAdminController::class, 'edit'])->name('.service-categories.edit');
         Route::put('/service-categories/{serviceCategory}', [\App\Modules\Admin\Http\Controllers\ServiceCategoryAdminController::class, 'update'])->name('.service-categories.update');
         Route::post('/service-categories/{serviceCategory}/toggle', [\App\Modules\Admin\Http\Controllers\ServiceCategoryAdminController::class, 'toggle'])->name('.service-categories.toggle');
-        Route::delete('/service-categories/{serviceCategory}', [\App\Modules\Admin\Http\Controllers\ServiceCategoryAdminController::class, 'destroy'])->name('.service-categories.destroy');
         Route::get('/services', [\App\Modules\Admin\Http\Controllers\ServiceAdminController::class, 'index'])->name('.services');
-        Route::get('/services/create', [\App\Modules\Admin\Http\Controllers\ServiceAdminController::class, 'create'])->name('.services.create');
-        Route::post('/services', [\App\Modules\Admin\Http\Controllers\ServiceAdminController::class, 'store'])->name('.services.store');
         Route::get('/services/{service}/edit', [\App\Modules\Admin\Http\Controllers\ServiceAdminController::class, 'edit'])->name('.services.edit');
         Route::put('/services/{service}', [\App\Modules\Admin\Http\Controllers\ServiceAdminController::class, 'update'])->name('.services.update');
         Route::post('/services/{service}/toggle', [\App\Modules\Admin\Http\Controllers\ServiceAdminController::class, 'toggle'])->name('.services.toggle');
-        Route::delete('/services/{service}', [\App\Modules\Admin\Http\Controllers\ServiceAdminController::class, 'destroy'])->name('.services.destroy');
         // Legacy platform-categories → service-categories
         Route::get('/platform-categories', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'platformCategories'])->name('.platform-categories');
         Route::get('/platform-categories/create', [\App\Modules\Admin\Http\Controllers\CatalogMetaAdminController::class, 'createPlatformCategory'])->name('.platform-categories.create');
