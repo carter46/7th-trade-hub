@@ -69,6 +69,8 @@ class CatalogBrowseService
             return ProductType::query()
                 ->whereHas('serviceCategory', fn ($q) => $q->system()->where('mode', 'catalog')->active())
                 ->active()
+                ->orderBy('sort_order')
+                ->orderBy('name')
                 ->pluck('slug')
                 ->unique()
                 ->values()
@@ -399,20 +401,45 @@ class CatalogBrowseService
     }
 
     /**
+     * Active catalog services with ≥1 public product, in admin sort order.
+     *
+     * @return Collection<int, ProductType>
+     */
+    public function orderedCatalogServicesWithPublicProducts(): Collection
+    {
+        if (! Schema::hasTable('product_types')) {
+            return collect();
+        }
+
+        $query = ProductType::query()
+            ->with('serviceCategory')
+            ->active()
+            ->whereHas('products', fn ($q) => $q->visibleToPublic());
+
+        if ($this->usesDbHierarchy()) {
+            $query->whereHas('serviceCategory', fn ($q) => $q->system()->active()->where('mode', 'catalog'));
+        } else {
+            $query->whereIn('slug', $this->allGroupTypeValues());
+        }
+
+        return $query
+            ->reorder()
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+    }
+
+    /**
      * Active internal-catalog services that have at least one public product.
      *
      * @return Collection<int, array{icon: string, title: string, body: string, href: string}>
      */
     public function homeCatalogServiceCards(CatalogContentResolver $content): Collection
     {
-        if ($this->usesDbHierarchy()) {
-            return ProductType::query()
-                ->with('serviceCategory')
-                ->active()
-                ->whereHas('serviceCategory', fn ($q) => $q->system()->active()->where('mode', 'catalog'))
-                ->orderBy('sort_order')
-                ->get()
-                ->filter(fn (ProductType $service) => $this->statsForTypes([$service->slug])['count'] > 0)
+        $services = $this->orderedCatalogServicesWithPublicProducts();
+
+        if ($services->isNotEmpty()) {
+            return $services
                 ->map(fn (ProductType $service) => $this->mapHomeServiceCard($service, $content))
                 ->values();
         }

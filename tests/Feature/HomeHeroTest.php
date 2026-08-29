@@ -40,4 +40,25 @@ class HomeHeroTest extends TestCase
             substr_count($response->getContent(), 'Learn More')
         );
     }
+
+    public function test_home_ecosystem_catalog_services_follow_admin_sort_order(): void
+    {
+        \Illuminate\Support\Facades\Artisan::call('catalog:backfill-hierarchy');
+        $this->seed(\Database\Seeders\PlatformCatalogSeeder::class);
+        \Illuminate\Support\Facades\Artisan::call('catalog:backfill-hierarchy');
+
+        $vpn = \App\Models\ProductType::query()->where('slug', 'vpn')->firstOrFail();
+        $email = \App\Models\ProductType::query()->where('slug', 'email')->firstOrFail();
+
+        $vpn->forceFill(['sort_order' => 20])->save();
+        $email->forceFill(['sort_order' => 2])->save();
+
+        $html = $this->get(route('home'))->assertOk()->getContent();
+
+        $this->assertLessThan(
+            strpos($html, 'Email Services'),
+            strpos($html, 'VPN')
+        );
+        $this->assertStringContainsString('Crypto Cash Exchange', $html);
+    }
 }
