@@ -198,9 +198,9 @@ class AppServiceProvider extends ServiceProvider
                 ]);
             }
 
-            // Backfill PWA icons once when branding media exists but generated icons do not.
+            // Regenerate PWA/APK icons when missing or admin favicon is newer than generated files.
             $pwa = app(\App\Services\Branding\PwaBrandingSync::class);
-            if (! $pwa->iconsExist()) {
+            if ($pwa->shouldRegenerateIcons($branding)) {
                 $pwa->sync($branding);
             }
         } catch (\Throwable) {

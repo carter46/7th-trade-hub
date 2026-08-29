@@ -110,6 +110,64 @@ class BrandingPwaSyncTest extends TestCase
         $this->assertGreaterThan(150, $r);
     }
 
+    public function test_should_regenerate_icons_when_favicon_media_is_newer(): void
+    {
+        if (! function_exists('imagecreatetruecolor')) {
+            $this->markTestSkipped('GD extension required');
+        }
+
+        Storage::fake('public');
+
+        $img = imagecreatetruecolor(32, 32);
+        $blue = imagecolorallocate($img, 30, 90, 200);
+        imagefilledrectangle($img, 0, 0, 31, 31, $blue);
+        ob_start();
+        imagepng($img);
+        $bytes = ob_get_clean();
+        imagedestroy($img);
+
+        $path = 'media/branding/favicon-new.png';
+        Storage::disk('public')->put($path, $bytes);
+
+        $asset = MediaAsset::query()->create([
+            'type' => 'image',
+            'disk' => 'public',
+            'folder' => 'branding',
+            'original_name' => 'favicon-new.png',
+            'mime' => 'image/png',
+            'extension' => 'png',
+            'size_bytes' => strlen($bytes),
+            'width' => 32,
+            'height' => 32,
+            'keep_original' => true,
+        ]);
+
+        MediaVariant::query()->create([
+            'media_asset_id' => $asset->id,
+            'key' => 'original',
+            'path' => $path,
+            'width' => 32,
+            'height' => 32,
+            'size_bytes' => strlen($bytes),
+            'mime' => 'image/png',
+        ]);
+
+        $sync = app(PwaBrandingSync::class);
+        $branding = [
+            'site_name' => '7th Trade Hub',
+            'site_short_name' => '7thHub',
+            'meta_description' => 'Test',
+            'favicon_media_id' => $asset->id,
+            'logo_light_media_id' => null,
+            'logo_dark_media_id' => null,
+        ];
+
+        $this->assertTrue($sync->sync($branding));
+        touch(public_path('icons/icon-512x512.png'), time() - 3600);
+
+        $this->assertTrue($sync->shouldRegenerateIcons($branding));
+    }
+
     public function test_admin_branding_save_reports_sync_status(): void
     {
         $admin = User::factory()->create(['email_verified_at' => now()]);

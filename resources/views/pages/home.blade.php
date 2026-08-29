@@ -162,6 +162,51 @@
         </div>
     </section>
 
+    @if (config('pwa.apk.enabled', true))
+        @php
+            $apkUrl = config('pwa.apk.download_url');
+            $apkVersion = trim((string) config('pwa.apk.version', ''));
+            $tabletImage = asset('assets/images/tablet-black copy.png');
+        @endphp
+        <section class="py-16 sm:py-20 lg:py-24 bg-slate-900/20">
+            <div class="max-w-marketing mx-auto px-5 sm:px-6">
+                <div class="glassmorphism rounded-[2rem] border-white/10 overflow-hidden">
+                    <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center p-8 sm:p-10 lg:p-14">
+                        <div class="order-2 lg:order-1 text-center lg:text-left">
+                            <p class="text-accent text-xs sm:text-sm font-bold uppercase tracking-widest mb-3">Mobile app</p>
+                            <h2 class="text-3xl sm:text-4xl font-bold mb-4 font-display">Download our APK on your phone</h2>
+                            <p class="text-slate-400 text-sm sm:text-base leading-relaxed mb-6 max-w-lg mx-auto lg:mx-0">
+                                Install {{ $brandName }} on Android for quick access to services, wallet checkout, and your dashboard — right from your home screen.
+                            </p>
+                            @if ($apkVersion !== '')
+                                <p class="text-slate-500 text-xs mb-4">Version {{ $apkVersion }}</p>
+                            @endif
+                            @if (is_string($apkUrl) && $apkUrl !== '')
+                                <a
+                                    href="{{ $apkUrl }}"
+                                    class="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-primary hover:bg-accent text-white text-sm font-bold transition-colors shadow-lg"
+                                    download
+                                >
+                                    <x-ui.icon name="phone" class="w-5 h-5" />
+                                    Download APK
+                                </a>
+                            @endif
+                        </div>
+                        <div class="order-1 lg:order-2 flex justify-center lg:justify-end">
+                            <img
+                                src="{{ $tabletImage }}"
+                                alt="7th Trade Hub mobile app on a tablet"
+                                class="w-full max-w-md lg:max-w-lg h-auto drop-shadow-2xl"
+                                loading="lazy"
+                                decoding="async"
+                            >
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    @endif
+
     <section class="py-16 sm:py-20 lg:py-24">
         <div class="max-w-marketing mx-auto px-5 sm:px-6">
             <div class="mx-auto max-w-3xl">

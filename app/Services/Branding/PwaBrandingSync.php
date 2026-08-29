@@ -60,6 +60,34 @@ class PwaBrandingSync
     /**
      * @param  array<string, mixed>  $branding
      */
+    public function shouldRegenerateIcons(array $branding): bool
+    {
+        if (! $this->iconsExist()) {
+            return true;
+        }
+
+        $mediaId = (int) ($branding['favicon_media_id']
+            ?? $branding['logo_light_media_id']
+            ?? $branding['logo_dark_media_id']
+            ?? 0);
+
+        if ($mediaId <= 0) {
+            return false;
+        }
+
+        $iconMtime = @filemtime(public_path('icons/icon-512x512.png'));
+        if (! $iconMtime) {
+            return true;
+        }
+
+        $asset = MediaAsset::query()->find($mediaId);
+
+        return $asset?->updated_at?->getTimestamp() > $iconMtime;
+    }
+
+    /**
+     * @param  array<string, mixed>  $branding
+     */
     private function syncIcons(array $branding): void
     {
         $sourcePath = $this->resolveSourcePath($branding);
@@ -70,10 +98,6 @@ class PwaBrandingSync
         }
 
         $bg = $this->backgroundRgb();
-        $mediaId = $branding['favicon_media_id']
-            ?? $branding['logo_light_media_id']
-            ?? $branding['logo_dark_media_id']
-            ?? null;
 
         if ($sourcePath) {
             $this->writeSquarePng($sourcePath, 512, $iconsDir.DIRECTORY_SEPARATOR.'icon-512x512.png', $bg);
@@ -81,10 +105,9 @@ class PwaBrandingSync
             $this->writeSquarePng($sourcePath, 180, public_path('apple-touch-icon.png'), $bg);
             $this->writeSquarePng($sourcePath, 32, public_path('favicon-32x32.png'), $bg);
             $this->writeSquarePng($sourcePath, 16, public_path('favicon-16x16.png'), $bg);
-        } elseif ($mediaId) {
-            // Prefer failing loudly over overwriting real icons with the green "7" fallback.
+        } elseif ($this->brandingMediaIds($branding) !== []) {
             throw new \RuntimeException(
-                'Branding media #'.$mediaId.' could not be read for favicon/PWA icon sync.'
+                'Branding media could not be read for favicon/PWA icon sync.'
             );
         } else {
             $this->writeFallbackSquare(512, $iconsDir.DIRECTORY_SEPARATOR.'icon-512x512.png', $bg);
@@ -109,23 +132,110 @@ class PwaBrandingSync
      */
     private function resolveSourcePath(array $branding): ?string
     {
-        $mediaId = $branding['favicon_media_id']
-            ?? $branding['logo_light_media_id']
-            ?? $branding['logo_dark_media_id']
-            ?? null;
+        foreach ($this->brandingMediaIds($branding) as $mediaId) {
+            $asset = MediaAsset::query()->with('variants')->find($mediaId);
+            if (! $asset) {
+                continue;
+            }
 
-        if (! $mediaId) {
+            $sourcePath = $this->absolutePath($asset);
+            if ($sourcePath && is_readable($sourcePath)) {
+                return $sourcePath;
+            }
+
+            $fetched = $this->sourcePathFromMediaUrl($mediaId);
+            if ($fetched) {
+                return $fetched;
+            }
+        }
+
+        foreach (config('pwa.default_icon_paths', []) as $relative) {
+            $path = public_path(ltrim((string) $relative, '/'));
+            if (is_readable($path)) {
+                return $path;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $branding
+     * @return list<int>
+     */
+    private function brandingMediaIds(array $branding): array
+    {
+        $ids = [];
+
+        foreach (['favicon_media_id', 'logo_light_media_id', 'logo_dark_media_id'] as $key) {
+            $id = (int) ($branding[$key] ?? 0);
+            if ($id > 0) {
+                $ids[] = $id;
+            }
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    private function sourcePathFromMediaUrl(int $mediaId): ?string
+    {
+        $url = media_url_from_id($mediaId, null, 'original');
+        if (! is_string($url) || $url === '') {
             return null;
         }
 
-        $asset = MediaAsset::query()->with('variants')->find((int) $mediaId);
-        if (! $asset) {
+        $local = $this->localPathFromPublicUrl($url);
+        if ($local && is_readable($local)) {
+            return $local;
+        }
+
+        $absolute = str_starts_with($url, 'http') ? $url : url($url);
+        $bytes = @file_get_contents($absolute);
+        if ($bytes === false || $bytes === '') {
             return null;
         }
 
-        $sourcePath = $this->absolutePath($asset);
+        $destination = tempnam(sys_get_temp_dir(), 'pwa_icon_');
+        if ($destination === false) {
+            return null;
+        }
 
-        return ($sourcePath && is_readable($sourcePath)) ? $sourcePath : null;
+        $path = $destination.'.png';
+        @unlink($destination);
+
+        if (@file_put_contents($path, $bytes) === false) {
+            return null;
+        }
+
+        return is_readable($path) ? $path : null;
+    }
+
+    private function localPathFromPublicUrl(string $url): ?string
+    {
+        $path = parse_url($url, PHP_URL_PATH);
+        if (! is_string($path) || $path === '') {
+            return null;
+        }
+
+        if (str_starts_with($path, '/storage/')) {
+            $relative = ltrim(substr($path, strlen('/storage/')), '/');
+            $storagePath = Storage::disk('public')->path($relative);
+            if (is_readable($storagePath)) {
+                return $storagePath;
+            }
+
+            $publicCopy = public_path('storage/'.$relative);
+            if (is_readable($publicCopy)) {
+                return $publicCopy;
+            }
+        }
+
+        $publicPath = public_path(ltrim($path, '/'));
+        if (is_readable($publicPath)) {
+            return $publicPath;
+        }
+
+        return null;
     }
 
     private function absolutePath(MediaAsset $asset): ?string

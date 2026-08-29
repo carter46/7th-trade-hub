@@ -59,4 +59,27 @@ return [
     */
 
     'livewire-app' => false,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Static icon fallbacks (when admin media is not on disk yet)
+    |--------------------------------------------------------------------------
+    | Used by branding:sync-pwa before the green placeholder is written.
+    */
+    'default_icon_paths' => [
+        'assets/images/favicon.png',
+        'assets/images/favicon.ico',
+        'assets/images/white_originla_logo.png',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Android APK download (home page + optional direct link)
+    |--------------------------------------------------------------------------
+    */
+    'apk' => [
+        'enabled' => env('APK_DOWNLOAD_ENABLED', true),
+        'download_url' => env('APK_DOWNLOAD_URL', '/downloads/7th-trade-hub.apk'),
+        'version' => env('APK_VERSION', ''),
+    ],
 ];

@@ -9,6 +9,9 @@
 @if (! empty($faviconUrl))
     <link rel="icon" type="image/png" href="{{ $faviconUrl }}">
 @endif
+@if (! empty($faviconUrl))
+    <link rel="apple-touch-icon" href="{{ $faviconUrl }}">
+@endif
 <link rel="apple-touch-icon" sizes="180x180" href="{{ $icons['apple'] }}">
 <link rel="manifest" href="{{ $icons['manifest'] }}">
 <link rel="shortcut icon" href="{{ asset('favicon.ico') }}?v={{ $icons['version'] }}">

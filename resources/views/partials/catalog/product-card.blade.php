@@ -1,11 +1,10 @@
 @php
     $browse = app(\App\Modules\Catalog\Services\CatalogBrowseService::class);
-    // Public cards still open the public product page; purchase CTAs go to dashboard checkout.
+    // Listing cards open the public product page from both the card and the CTA.
     $href = match ($product->product_type?->defaultRoute()) {
         'website-listings' => route('website-listings.show', $product->slug),
         default => $browse->productUrl($product),
     };
-    $checkoutHref = route('dashboard.services.checkout', $product->slug);
     $typeLabel = $product->productType?->name
         ?? $product->product_type?->label()
         ?? 'Service';
@@ -30,8 +29,8 @@
         <a href="{{ $href }}" class="font-bold text-sm sm:text-base text-slate-900 leading-snug line-clamp-2 hover:text-primary">{{ $product->title }}</a>
         <div class="mt-auto flex flex-wrap items-center justify-between gap-2 pt-1">
             <span class="font-bold text-primary text-sm sm:text-base">₦{{ number_format($product->displayPrice(), 0) }}</span>
-            <a href="{{ $checkoutHref }}" class="inline-flex items-center justify-center rounded-lg bg-primary px-3 py-1.5 text-xs sm:text-sm font-semibold text-white hover:bg-accent transition-colors whitespace-nowrap">
-                {{ auth()->check() ? 'Buy now' : 'Log in to buy' }}
+            <a href="{{ $href }}" class="inline-flex items-center justify-center rounded-lg bg-primary px-3 py-1.5 text-xs sm:text-sm font-semibold text-white hover:bg-accent transition-colors whitespace-nowrap">
+                View now
             </a>
         </div>
     </div>
