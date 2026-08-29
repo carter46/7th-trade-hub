@@ -2,7 +2,7 @@
     $sidebarLinks = [
         ['label' => 'Our Services', 'href' => route('services'), 'desc' => 'Browse all platform categories'],
         ['label' => 'Website Templates', 'href' => route('website-listings'), 'desc' => 'Ready-to-launch designs'],
-        ['label' => 'Document Templates', 'href' => route('templates'), 'desc' => 'Contracts, HR & legal docs'],
+        ['label' => 'Documents & Receipts', 'href' => route('services.segment', 'business-documents'), 'desc' => 'Receipt templates & business docs'],
         ['label' => 'Website Packages', 'href' => route('services.segment', 'website_package'), 'desc' => 'Hosted packages with demos'],
         ['label' => 'Escrow Service', 'href' => route('services.segment', 'escrow_service'), 'desc' => 'Protected digital deals'],
         ['label' => 'VPN Services', 'href' => route('services.segment', 'vpn'), 'desc' => 'Residential & business plans'],

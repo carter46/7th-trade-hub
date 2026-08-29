@@ -308,9 +308,6 @@ class ServiceController extends Controller
             // custom DB service slug
         }
 
-        if ($enumType === PlatformProductType::DocumentTemplate) {
-            return redirect()->route('templates.show', $product->slug);
-        }
         if (in_array($enumType, [PlatformProductType::WebsitePackage, PlatformProductType::WebsiteTemplate], true)) {
             return redirect()->route('website-listings.show', $product->slug);
         }
@@ -401,9 +398,6 @@ class ServiceController extends Controller
             $enumType = null;
         }
 
-        if ($enumType === PlatformProductType::DocumentTemplate) {
-            return redirect()->route('templates.show', $product->slug, 301);
-        }
         if (in_array($enumType, [PlatformProductType::WebsitePackage, PlatformProductType::WebsiteTemplate], true)) {
             return redirect()->route('website-listings.show', $product->slug, 301);
         }

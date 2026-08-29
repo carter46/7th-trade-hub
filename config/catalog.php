@@ -42,16 +42,32 @@ return [
                 ['q' => 'How do demos work?', 'a' => 'Eligible packages include a demo URL and login so you can explore before checkout.'],
             ],
         ],
-        'document_template' => [
-            'label' => 'Document Templates',
+        'receipt' => [
+            'label' => 'Receipt',
             'icon' => 'listings',
-            'default_route' => 'templates',
-            'short_description' => 'Contracts, HR, and legal templates ready to customize.',
-            'hero_title' => 'Business Document Templates',
-            'hero_subtitle' => 'Filter by Contracts, HR, or Legal and download what you need.',
+            'default_route' => 'services',
+            'short_description' => 'Invoice and payment receipt templates ready to customize.',
+            'hero_title' => 'Receipt Templates',
+            'hero_subtitle' => 'Professional receipts and invoice sets for everyday business.',
+            'benefits' => [
+                'Invoice and payment receipt formats',
+                'Editable after purchase',
+                'Clear pricing before checkout',
+            ],
+            'faq' => [
+                ['q' => 'Can I customize fields?', 'a' => 'Yes. Templates are editable starting points for your business details.'],
+            ],
+        ],
+        'document' => [
+            'label' => 'Documents',
+            'icon' => 'listings',
+            'default_route' => 'services',
+            'short_description' => 'Contracts, HR, and legal document templates ready to customize.',
+            'hero_title' => 'Business Documents',
+            'hero_subtitle' => 'Agreements, contracts, and HR templates you can edit after purchase.',
             'benefits' => [
                 'Structured templates for common business needs',
-                'Clear category filters',
+                'Contracts, HR, and legal categories',
                 'Editable after purchase',
             ],
             'faq' => [
@@ -271,16 +287,16 @@ return [
             'label' => 'Documents & Receipts',
             'banner_image' => 'assets/images/Business_Documents.jpg',
             'card_image' => 'assets/images/Business_Documents.jpg',
-            'short_description' => 'Contracts, HR, and legal document templates.',
+            'short_description' => 'Receipt templates and editable business documents.',
             'hero_title' => 'Documents & Receipts',
-            'hero_subtitle' => 'Ready-to-edit templates for everyday business paperwork.',
+            'hero_subtitle' => 'Receipt templates and business documents ready to edit.',
             'benefits' => [
-                'Contracts, HR, and Legal categories',
-                'Quick filters on the type page',
+                'Separate receipt and document services',
+                'Quick filters on each service page',
                 'Editable after purchase',
             ],
             'faq' => [],
-            'types' => ['document_template'],
+            'types' => ['receipt', 'document'],
         ],
         'trust-escrow' => [
             'label' => 'Trust & Escrow',
@@ -316,8 +332,8 @@ return [
         ],
         'business-documents' => [
             'label' => 'Documents & Receipts',
-            'description' => 'Contracts, agreements, and ready-to-edit templates.',
-            'types' => ['document_template'],
+            'description' => 'Receipt templates and editable business documents.',
+            'types' => ['receipt', 'document'],
         ],
         'trust-protection' => [
             'label' => 'Trust & Protection',

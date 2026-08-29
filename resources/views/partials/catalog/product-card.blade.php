@@ -2,7 +2,6 @@
     $browse = app(\App\Modules\Catalog\Services\CatalogBrowseService::class);
     // Public cards still open the public product page; purchase CTAs go to dashboard checkout.
     $href = match ($product->product_type?->defaultRoute()) {
-        'templates' => route('templates.show', $product->slug),
         'website-listings' => route('website-listings.show', $product->slug),
         default => $browse->productUrl($product),
     };

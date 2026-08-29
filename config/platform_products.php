@@ -9,6 +9,7 @@ return [
     'retired_services' => [
         'website_template',
         'vps',
+        'document_template',
     ],
 
     'domain' => [
@@ -36,9 +37,16 @@ return [
         'uk-virtual-number',
         'sms-ready-number',
     ],
-    'document_template' => [
-        'employment-agreement',
+    'document_template' => [],
+    'receipt' => [
         'invoice-receipt-set',
+        'payment-receipt-template',
+        'sales-receipt-pack',
+    ],
+    'document' => [
+        'employment-agreement',
+        'nda-bundle',
+        'sales-contract-pack',
     ],
     'website_template' => [],
     'vps' => [],

@@ -23,11 +23,15 @@ class PlatformCategorySeeder extends Seeder
                 ['name' => 'Business Sites', 'slug' => 'wp-business'],
                 ['name' => 'E-commerce Sites', 'slug' => 'wp-ecommerce'],
             ],
-            PlatformProductType::DocumentTemplate->value => [
-                ['name' => 'Legal', 'slug' => 'dt-legal'],
-                ['name' => 'Business', 'slug' => 'dt-business'],
-                ['name' => 'Personal', 'slug' => 'dt-personal'],
-                ['name' => 'HR', 'slug' => 'dt-hr'],
+            PlatformProductType::Receipt->value => [
+                ['name' => 'Invoice', 'slug' => 'rc-invoice'],
+                ['name' => 'Payment', 'slug' => 'rc-payment'],
+                ['name' => 'Sales', 'slug' => 'rc-sales'],
+            ],
+            PlatformProductType::Document->value => [
+                ['name' => 'HR', 'slug' => 'doc-hr'],
+                ['name' => 'Legal', 'slug' => 'doc-legal'],
+                ['name' => 'Contracts', 'slug' => 'doc-contract'],
             ],
             PlatformProductType::Vpn->value => [
                 ['name' => 'Residential', 'slug' => 'vpn-residential'],

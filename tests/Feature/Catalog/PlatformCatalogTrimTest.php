@@ -121,14 +121,14 @@ class PlatformCatalogTrimTest extends TestCase
         $this->assertSame(0, PlatformProduct::query()->ofType(PlatformProductType::Vps)->count());
     }
 
-    public function test_retires_disallowed_email_virtual_phone_and_document_products(): void
+    public function test_retires_disallowed_email_virtual_phone_receipt_and_document_products(): void
     {
         $this->seed(\Database\Seeders\PlatformCatalogSeeder::class);
 
         foreach ([
             ['slug' => 'team-email-5-seats', 'title' => 'Team Email 5 Seats', 'type' => PlatformProductType::Email],
             ['slug' => 'ng-virtual-number', 'title' => 'NG Virtual Number', 'type' => PlatformProductType::VirtualPhone],
-            ['slug' => 'sales-contract-pack', 'title' => 'Sales Contract Pack', 'type' => PlatformProductType::DocumentTemplate],
+            ['slug' => 'hr-policy-pack', 'title' => 'HR Policy Pack', 'type' => PlatformProductType::Document],
         ] as $row) {
             $product = new PlatformProduct;
             $product->forceFill([
@@ -152,16 +152,17 @@ class PlatformCatalogTrimTest extends TestCase
         $this->assertDatabaseHas('platform_products', ['slug' => 'sms-ready-number']);
         $this->assertDatabaseHas('platform_products', ['slug' => 'employment-agreement']);
         $this->assertDatabaseHas('platform_products', ['slug' => 'invoice-receipt-set']);
+        $this->assertDatabaseHas('platform_products', ['slug' => 'payment-receipt-template']);
+        $this->assertDatabaseHas('platform_products', ['slug' => 'nda-bundle']);
+        $this->assertDatabaseHas('platform_products', ['slug' => 'sales-contract-pack']);
 
         $this->assertDatabaseMissing('platform_products', ['slug' => 'team-email-5-seats']);
-        $this->assertDatabaseMissing('platform_products', ['slug' => 'custom-domain-email']);
         $this->assertDatabaseMissing('platform_products', ['slug' => 'ng-virtual-number']);
-        $this->assertDatabaseMissing('platform_products', ['slug' => 'business-line-bundle']);
-        $this->assertDatabaseMissing('platform_products', ['slug' => 'sales-contract-pack']);
-        $this->assertDatabaseMissing('platform_products', ['slug' => 'nda-bundle']);
+        $this->assertDatabaseMissing('platform_products', ['slug' => 'hr-policy-pack']);
 
         $this->assertSame(1, PlatformProduct::query()->ofType(PlatformProductType::Email)->count());
         $this->assertSame(3, PlatformProduct::query()->ofType(PlatformProductType::VirtualPhone)->count());
-        $this->assertSame(2, PlatformProduct::query()->ofType(PlatformProductType::DocumentTemplate)->count());
+        $this->assertSame(3, PlatformProduct::query()->ofType(PlatformProductType::Receipt)->count());
+        $this->assertSame(3, PlatformProduct::query()->ofType(PlatformProductType::Document)->count());
     }
 }

@@ -6,7 +6,8 @@ enum PlatformProductType: string
 {
     case WebsiteTemplate = 'website_template';
     case WebsitePackage = 'website_package';
-    case DocumentTemplate = 'document_template';
+    case Receipt = 'receipt';
+    case Document = 'document';
     case VirtualPhone = 'virtual_phone';
     case Vpn = 'vpn';
     case Vps = 'vps';

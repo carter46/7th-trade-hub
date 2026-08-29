@@ -46,14 +46,18 @@ class PlatformCatalogSeeder extends Seeder
             PlatformProductType::WebsitePackage->value => [
                 'Online Banking website',
             ],
-            PlatformProductType::DocumentTemplate->value => [
-                'Employment Agreement', 'Invoice & Receipt Set',
+            PlatformProductType::Receipt->value => [
+                'Invoice & Receipt Set', 'Payment Receipt Template', 'Sales Receipt Pack',
+            ],
+            PlatformProductType::Document->value => [
+                'Employment Agreement', 'NDA Bundle', 'Sales Contract Pack',
             ],
         ];
 
         $categoryMap = [
             PlatformProductType::WebsitePackage->value => ['wp-starter'],
-            PlatformProductType::DocumentTemplate->value => ['dt-hr', 'dt-business'],
+            PlatformProductType::Receipt->value => ['rc-invoice', 'rc-payment', 'rc-sales'],
+            PlatformProductType::Document->value => ['doc-hr', 'doc-legal', 'doc-contract'],
             PlatformProductType::Vpn->value => ['vpn-dedicated'],
             PlatformProductType::VirtualPhone->value => ['phone-us', 'phone-uk', 'phone-us'],
             PlatformProductType::Proxy->value => ['proxy-residential'],
