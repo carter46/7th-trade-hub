@@ -28,6 +28,18 @@ return [
     'smtp' => [
         'dedicated-smtp-ip',
     ],
+    'email' => [
+        'business-email-starter',
+    ],
+    'virtual_phone' => [
+        'us-virtual-number',
+        'uk-virtual-number',
+        'sms-ready-number',
+    ],
+    'document_template' => [
+        'employment-agreement',
+        'invoice-receipt-set',
+    ],
     'website_template' => [],
     'vps' => [],
 ];

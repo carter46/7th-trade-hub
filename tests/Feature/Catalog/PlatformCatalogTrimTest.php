@@ -120,4 +120,48 @@ class PlatformCatalogTrimTest extends TestCase
         $this->assertSame(0, PlatformProduct::query()->ofType(PlatformProductType::WebsiteTemplate)->count());
         $this->assertSame(0, PlatformProduct::query()->ofType(PlatformProductType::Vps)->count());
     }
+
+    public function test_retires_disallowed_email_virtual_phone_and_document_products(): void
+    {
+        $this->seed(\Database\Seeders\PlatformCatalogSeeder::class);
+
+        foreach ([
+            ['slug' => 'team-email-5-seats', 'title' => 'Team Email 5 Seats', 'type' => PlatformProductType::Email],
+            ['slug' => 'ng-virtual-number', 'title' => 'NG Virtual Number', 'type' => PlatformProductType::VirtualPhone],
+            ['slug' => 'sales-contract-pack', 'title' => 'Sales Contract Pack', 'type' => PlatformProductType::DocumentTemplate],
+        ] as $row) {
+            $product = new PlatformProduct;
+            $product->forceFill([
+                'slug' => $row['slug'],
+                'title' => $row['title'],
+                'product_type' => $row['type'],
+                'short_description' => 'Test product',
+                'description' => 'Test product',
+                'status' => 'published',
+                'base_price' => 10000,
+                'provider' => 'manual',
+                'fulfillment_mode' => 'manual',
+            ])->save();
+        }
+
+        PlatformCatalogTrim::apply();
+
+        $this->assertDatabaseHas('platform_products', ['slug' => 'business-email-starter']);
+        $this->assertDatabaseHas('platform_products', ['slug' => 'us-virtual-number']);
+        $this->assertDatabaseHas('platform_products', ['slug' => 'uk-virtual-number']);
+        $this->assertDatabaseHas('platform_products', ['slug' => 'sms-ready-number']);
+        $this->assertDatabaseHas('platform_products', ['slug' => 'employment-agreement']);
+        $this->assertDatabaseHas('platform_products', ['slug' => 'invoice-receipt-set']);
+
+        $this->assertDatabaseMissing('platform_products', ['slug' => 'team-email-5-seats']);
+        $this->assertDatabaseMissing('platform_products', ['slug' => 'custom-domain-email']);
+        $this->assertDatabaseMissing('platform_products', ['slug' => 'ng-virtual-number']);
+        $this->assertDatabaseMissing('platform_products', ['slug' => 'business-line-bundle']);
+        $this->assertDatabaseMissing('platform_products', ['slug' => 'sales-contract-pack']);
+        $this->assertDatabaseMissing('platform_products', ['slug' => 'nda-bundle']);
+
+        $this->assertSame(1, PlatformProduct::query()->ofType(PlatformProductType::Email)->count());
+        $this->assertSame(3, PlatformProduct::query()->ofType(PlatformProductType::VirtualPhone)->count());
+        $this->assertSame(2, PlatformProduct::query()->ofType(PlatformProductType::DocumentTemplate)->count());
+    }
 }

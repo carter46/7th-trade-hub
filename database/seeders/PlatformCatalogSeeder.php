@@ -27,12 +27,10 @@ class PlatformCatalogSeeder extends Seeder
                 'Dedicated SMTP IP',
             ],
             PlatformProductType::VirtualPhone->value => [
-                'US Virtual Number', 'UK Virtual Number', 'NG Virtual Number',
-                'Business Line Bundle', 'SMS-Ready Number', 'Toll-Free Lite',
+                'US Virtual Number', 'UK Virtual Number', 'SMS-Ready Number',
             ],
             PlatformProductType::Email->value => [
-                'Business Email Starter', 'Team Email 5 Seats', 'Custom Domain Email',
-                'Secure Mail Pro', 'Catch-All Mailbox', 'Email Forwarding Pack',
+                'Business Email Starter',
             ],
             PlatformProductType::SocialService->value => [
                 'Instagram Growth Pack', 'TikTok Engagement Boost', 'YouTube Views Lite',
@@ -49,19 +47,18 @@ class PlatformCatalogSeeder extends Seeder
                 'Starter Business Site',
             ],
             PlatformProductType::DocumentTemplate->value => [
-                'Sales Contract Pack', 'NDA Bundle', 'Employment Agreement',
-                'Invoice & Receipt Set', 'HR Policy Pack', 'Service Level Agreement',
+                'Employment Agreement', 'Invoice & Receipt Set',
             ],
         ];
 
         $categoryMap = [
             PlatformProductType::WebsitePackage->value => ['wp-starter'],
-            PlatformProductType::DocumentTemplate->value => ['dt-legal', 'dt-legal', 'dt-hr', 'dt-business', 'dt-hr', 'dt-legal'],
+            PlatformProductType::DocumentTemplate->value => ['dt-hr', 'dt-business'],
             PlatformProductType::Vpn->value => ['vpn-dedicated'],
-            PlatformProductType::VirtualPhone->value => ['phone-us', 'phone-uk', 'phone-ng', 'phone-us', 'phone-us', 'phone-uk'],
+            PlatformProductType::VirtualPhone->value => ['phone-us', 'phone-uk', 'phone-us'],
             PlatformProductType::Proxy->value => ['proxy-residential'],
             PlatformProductType::Smtp->value => ['smtp-transactional'],
-            PlatformProductType::Email->value => ['email-business', 'email-team', 'email-business', 'email-team', 'email-business', 'email-team'],
+            PlatformProductType::Email->value => ['email-business'],
             PlatformProductType::SocialService->value => ['social-growth', 'social-engagement', 'social-growth', 'social-engagement', 'social-growth', 'social-growth'],
             PlatformProductType::Domain->value => ['domain-registration', 'domain-registration', 'domain-registration'],
             PlatformProductType::EscrowService->value => ['escrow-standard', 'escrow-high-value', 'escrow-high-value', 'escrow-standard', 'escrow-standard', 'escrow-standard'],
