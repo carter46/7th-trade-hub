@@ -49,4 +49,37 @@ class CatalogContentImageOverrideTest extends TestCase
         $this->assertNotNull($resolved['banner_image']);
         $this->assertStringContainsString('storage', $resolved['banner_image']);
     }
+
+    public function test_admin_can_set_service_category_image_via_edit_form(): void
+    {
+        Storage::fake('public');
+
+        \Illuminate\Support\Facades\Artisan::call('catalog:backfill-hierarchy');
+
+        $admin = User::factory()->create(['email_verified_at' => now()]);
+        $admin->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->postJson(route('admin.media.store'), [
+                'files' => [UploadedFile::fake()->image('category-card.png', 800, 500)],
+            ])
+            ->assertCreated();
+
+        $asset = MediaAsset::query()->latest('id')->firstOrFail();
+        $category = ServiceCategory::query()->where('slug', 'network-services')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->put(route('admin.service-categories.update', $category), [
+                'name' => $category->name,
+                'sort_order' => $category->sort_order,
+                'is_active' => '1',
+                'card_media_id' => $asset->id,
+                'short_description' => 'Network tools for teams',
+            ])
+            ->assertRedirect(route('admin.service-categories'));
+
+        $category->refresh();
+        $this->assertSame($asset->id, $category->card_media_id);
+        $this->assertSame('Network tools for teams', $category->short_description);
+    }
 }

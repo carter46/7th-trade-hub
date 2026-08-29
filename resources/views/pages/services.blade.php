@@ -21,7 +21,7 @@
             Secure Digital Services
         </h1>
         <p class="max-w-2xl mx-auto text-base sm:text-lg text-text-secondary mb-8 leading-relaxed">
-            Browse by category — network, communication, social, websites, documents, and escrow. Explore our enterprise-grade infrastructure built for the next generation of trade.
+            Browse by category — network, communication, social, websites, and documents. Explore digital services built for businesses and creators.
         </p>
 
         <form method="GET" action="{{ route('services') }}" class="max-w-xl mx-auto relative group">
@@ -86,19 +86,6 @@
                 @include('partials.catalog.explore-card', ['card' => $card])
             @endforeach
         </div>
-    </div>
-</section>
-
-{{-- Highlights (live catalog stats + platform benefits) --}}
-<section class="py-12 sm:py-14 bg-surface border-t border-border-subtle">
-    <div class="max-w-marketing mx-auto px-5 sm:px-6 grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 text-center">
-        @foreach($highlights as $item)
-            <div>
-                <div class="font-display text-2xl sm:text-3xl font-bold text-accent mb-1">{{ $item['value'] }}</div>
-                <div class="font-display text-sm sm:text-base font-semibold text-white">{{ $item['label'] }}</div>
-                <p class="text-text-secondary text-xs sm:text-sm mt-1.5 leading-relaxed">{{ $item['blurb'] }}</p>
-            </div>
-        @endforeach
     </div>
 </section>
 @endsection

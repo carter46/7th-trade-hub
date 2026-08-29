@@ -18,7 +18,7 @@
                         href="{{ route('register') }}"
                         class="w-full sm:w-auto px-8 py-4 rounded-xl bg-primary hover:bg-accent text-white font-bold text-sm sm:text-base transition-colors shadow-lg"
                     >
-                        Register to become a seller
+                        Become a seller
                     </a>
                     <a
                         href="{{ route('login') }}"

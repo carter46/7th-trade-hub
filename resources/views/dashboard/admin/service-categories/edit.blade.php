@@ -3,9 +3,15 @@
 @section('title', 'Edit Service Category')
 
 @section('content')
+@php
+    $cardId = old('card_media_id', $category->card_media_id ?: $category->banner_media_id);
+    $cardPreview = $cardId
+        ? \App\Models\MediaAsset::query()->with('variants')->find((int) $cardId)?->url('medium')
+        : null;
+@endphp
 <x-layout.page
     title="Edit Service Category"
-    subtitle="Fixed platform category — public name, position, and visibility."
+    subtitle="Public name, image, page copy, position, and visibility."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
@@ -19,6 +25,19 @@
             @method('PUT')
             <x-dashboard.input label="Public name" name="name" :value="old('name', $category->name)" required />
             <p class="text-xs text-text-muted">URL slug is frozen: <span class="font-mono">{{ $category->slug }}</span></p>
+            <x-dashboard.input label="Short description" name="short_description" :value="old('short_description', $category->short_description)" />
+            <x-dashboard.input label="Hero title" name="hero_title" :value="old('hero_title', $category->hero_title)" />
+            <x-dashboard.input label="Hero subtitle" name="hero_subtitle" :value="old('hero_subtitle', $category->hero_subtitle)" />
+            <x-dashboard.media-picker
+                name="card_media_id"
+                label="Image"
+                hint="Used for category banners, cards, and thumbnails on the public site."
+                preview="wide"
+                :value="$cardId"
+                :preview-url="$cardPreview"
+            />
+            <x-dashboard.string-list-repeater name="benefits" label="Benefits" :items="old('benefits', $category->benefits ?? [])" />
+            <x-dashboard.faq-repeater name="faq" label="FAQ" :items="old('faq', $category->faq ?? [])" />
             <x-dashboard.input
                 label="Sort position"
                 name="sort_order"

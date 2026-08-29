@@ -21,7 +21,7 @@ class MarketplaceComingSoonTest extends TestCase
         $this->get(route('marketplace'))
             ->assertOk()
             ->assertSee('Coming Soon', false)
-            ->assertSee('Register to become a seller', false)
+            ->assertSee('Become a seller', false)
             ->assertSee(route('login'), false)
             ->assertDontSee('Browse listings', false);
     }

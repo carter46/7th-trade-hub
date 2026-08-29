@@ -5,6 +5,9 @@ namespace App\Modules\Admin\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\ProductType;
 use App\Models\ServiceCategory;
+use App\Services\Media\MediaPathService;
+use App\Services\Media\MediaUsageService;
+use App\Support\FaqNormalizer;
 use App\Support\SortOrder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -12,6 +15,11 @@ use Illuminate\View\View;
 
 class ServiceAdminController extends Controller
 {
+    public function __construct(
+        private MediaUsageService $mediaUsages,
+        private MediaPathService $mediaPaths,
+    ) {}
+
     public function index(Request $request): View
     {
         $services = ProductType::query()
@@ -84,11 +92,38 @@ class ServiceAdminController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'sort_order' => ['required', 'integer', 'min:1', 'max:'.$siblingMax],
+            'short_description' => ['nullable', 'string', 'max:500'],
+            'hero_title' => ['nullable', 'string', 'max:255'],
+            'hero_subtitle' => ['nullable', 'string', 'max:500'],
+            'benefits' => ['nullable', 'array'],
+            'benefits.*' => ['nullable', 'string', 'max:500'],
+            'faq' => ['nullable', 'array'],
+            'faq.*.q' => ['nullable', 'string', 'max:500'],
+            'faq.*.a' => ['nullable', 'string', 'max:2000'],
+            'faq.*.open' => ['nullable', 'boolean'],
+            'card_media_id' => ['nullable', 'integer', $this->mediaPaths->existsRule()],
         ]);
+
+        $cardMediaId = isset($data['card_media_id']) ? (int) $data['card_media_id'] : null;
+        $path = $this->mediaPaths->legacyPathFromMediaId($cardMediaId);
 
         $service->update([
             'name' => $data['name'],
             'is_active' => $request->boolean('is_active'),
+            'short_description' => $data['short_description'] ?? null,
+            'hero_title' => $data['hero_title'] ?? null,
+            'hero_subtitle' => $data['hero_subtitle'] ?? null,
+            'benefits' => FaqNormalizer::stringList($data['benefits'] ?? null),
+            'faq' => FaqNormalizer::fromRequest($data['faq'] ?? null),
+            'card_media_id' => $cardMediaId,
+            'banner_media_id' => $cardMediaId,
+            'card_image' => $path,
+            'banner_image' => $path,
+        ]);
+
+        $this->mediaUsages->syncUsages($service, [
+            'card' => $cardMediaId,
+            'banner' => $cardMediaId,
         ]);
 
         SortOrder::move($service, (int) $data['sort_order'], $siblings);

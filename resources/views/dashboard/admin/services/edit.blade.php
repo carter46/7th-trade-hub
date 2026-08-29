@@ -3,9 +3,15 @@
 @section('title', 'Edit Service')
 
 @section('content')
+@php
+    $cardId = old('card_media_id', $service->card_media_id ?: $service->banner_media_id);
+    $cardPreview = $cardId
+        ? \App\Models\MediaAsset::query()->with('variants')->find((int) $cardId)?->url('medium')
+        : null;
+@endphp
 <x-layout.page
     title="Edit Service"
-    subtitle="Fixed platform service — public name, global sort position, and visibility."
+    subtitle="Public name, image, page copy, global sort position, and visibility."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
@@ -22,6 +28,19 @@
                 Category: {{ $service->serviceCategory?->name ?? '—' }}
                 · Slug frozen: <span class="font-mono">{{ $service->slug }}</span>
             </p>
+            <x-dashboard.input label="Short description" name="short_description" :value="old('short_description', $service->short_description)" />
+            <x-dashboard.input label="Hero title" name="hero_title" :value="old('hero_title', $service->hero_title)" />
+            <x-dashboard.input label="Hero subtitle" name="hero_subtitle" :value="old('hero_subtitle', $service->hero_subtitle)" />
+            <x-dashboard.media-picker
+                name="card_media_id"
+                label="Image"
+                hint="Used for service banners, cards, and thumbnails on the public site."
+                preview="wide"
+                :value="$cardId"
+                :preview-url="$cardPreview"
+            />
+            <x-dashboard.string-list-repeater name="benefits" label="Benefits" :items="old('benefits', $service->benefits ?? [])" />
+            <x-dashboard.faq-repeater name="faq" label="FAQ" :items="old('faq', $service->faq ?? [])" />
             <x-dashboard.input
                 label="Sort position"
                 name="sort_order"
