@@ -88,6 +88,12 @@
                 <x-dashboard.td>
                     <x-dashboard.row-actions>
                         <x-dashboard.menu-item :href="route('admin.platform-products.edit', $product)">Edit</x-dashboard.menu-item>
+                        <form method="POST" action="{{ route('admin.platform-products.toggle-featured', $product) }}">
+                            @csrf
+                            <x-dashboard.menu-item type="submit" :variant="$product->is_featured ? 'danger' : 'success'">
+                                {{ $product->is_featured ? 'Unfeature' : 'Feature' }}
+                            </x-dashboard.menu-item>
+                        </form>
                     </x-dashboard.row-actions>
                 </x-dashboard.td>
             </tr>

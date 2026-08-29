@@ -18,7 +18,7 @@
 @endphp
 <x-layout.page
     title="Edit Product"
-    subtitle="Fixed platform product — title, description, price, image, and status."
+    subtitle="Fixed platform product — title, description, price, image, featured, and status."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
@@ -48,6 +48,11 @@
                 <option value="published" @selected(old('status', $product->status?->value ?? $product->status) === 'published')>Published (active)</option>
                 <option value="draft" @selected(old('status', $product->status?->value ?? $product->status) === 'draft')>Draft (deactivated)</option>
             </x-dashboard.select>
+
+            <label class="flex items-center gap-2 text-sm">
+                <input type="checkbox" name="is_featured" value="1" @checked(old('is_featured', $product->is_featured))>
+                Featured (show in featured sections on public / user pages)
+            </label>
 
             <x-dashboard.input label="Base price (NGN)" name="base_price" type="number" step="0.01" min="0" :value="old('base_price', $product->base_price)" required />
 

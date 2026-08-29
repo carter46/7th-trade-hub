@@ -151,6 +151,7 @@ class PlatformProductAdminController extends Controller
             'short_description' => $data['short_description'] ?? null,
             'description' => $data['description'] ?? null,
             'status' => $data['status'],
+            'is_featured' => $request->boolean('is_featured'),
             'base_price' => $data['base_price'],
             'hero_media_id' => $heroMediaId,
             'hero_image' => $heroPath,
@@ -168,6 +169,21 @@ class PlatformProductAdminController extends Controller
         }
 
         return redirect()->route('admin.platform-products')->with('status', 'Product updated.');
+    }
+
+    public function toggleFeatured(PlatformProduct $platformProduct): RedirectResponse
+    {
+        $platformProduct->loadMissing('productType.serviceCategory');
+        if (! $platformProduct->productType?->serviceCategory?->isSystem()) {
+            return back()->with('error', __('That product is not under a fixed platform category.'));
+        }
+
+        $platformProduct->update(['is_featured' => ! $platformProduct->is_featured]);
+
+        return back()->with(
+            'status',
+            'Product '.($platformProduct->is_featured ? 'marked featured.' : 'unfeatured.')
+        );
     }
 
     public function destroy(): RedirectResponse

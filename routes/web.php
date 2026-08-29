@@ -415,6 +415,7 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::get('/platform-products', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'index'])->name('.platform-products');
         Route::get('/platform-products/{platformProduct}/edit', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'edit'])->name('.platform-products.edit');
         Route::put('/platform-products/{platformProduct}', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'update'])->name('.platform-products.update');
+        Route::post('/platform-products/{platformProduct}/toggle-featured', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'toggleFeatured'])->name('.platform-products.toggle-featured');
         Route::get('/service-categories', [\App\Modules\Admin\Http\Controllers\ServiceCategoryAdminController::class, 'index'])->name('.service-categories');
         Route::get('/service-categories/{serviceCategory}/edit', [\App\Modules\Admin\Http\Controllers\ServiceCategoryAdminController::class, 'edit'])->name('.service-categories.edit');
         Route::put('/service-categories/{serviceCategory}', [\App\Modules\Admin\Http\Controllers\ServiceCategoryAdminController::class, 'update'])->name('.service-categories.update');

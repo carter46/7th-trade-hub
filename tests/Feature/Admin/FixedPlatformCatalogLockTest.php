@@ -213,6 +213,37 @@ class FixedPlatformCatalogLockTest extends TestCase
         $this->assertSame('residential-vpn-lock-test', $product->slug);
     }
 
+    public function test_admin_can_toggle_product_featured(): void
+    {
+        $this->seedCatalog();
+        $admin = $this->admin();
+        $product = PlatformProduct::query()->where('slug', 'residential-vpn-lock-test')->firstOrFail();
+        $product->update(['is_featured' => true]);
+
+        $this->actingAs($admin)
+            ->put(route('admin.platform-products.update', $product), [
+                'title' => $product->title,
+                'short_description' => $product->short_description,
+                'description' => $product->description,
+                'status' => 'published',
+                'base_price' => $product->base_price,
+                'sort_order' => $product->sort_order,
+                // is_featured omitted = unchecked
+                'variants' => [
+                    ['id' => $product->variants()->firstOrFail()->id, 'price' => $product->variants()->firstOrFail()->price],
+                ],
+            ])
+            ->assertRedirect(route('admin.platform-products'));
+
+        $this->assertFalse($product->fresh()->is_featured);
+
+        $this->actingAs($admin)
+            ->post(route('admin.platform-products.toggle-featured', $product))
+            ->assertRedirect();
+
+        $this->assertTrue($product->fresh()->is_featured);
+    }
+
     public function test_admin_cannot_change_provider_or_reparent_product(): void
     {
         $this->seedCatalog();
