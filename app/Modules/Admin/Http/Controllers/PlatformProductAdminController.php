@@ -171,19 +171,23 @@ class PlatformProductAdminController extends Controller
         return redirect()->route('admin.platform-products')->with('status', 'Product updated.');
     }
 
-    public function toggleFeatured(PlatformProduct $platformProduct): RedirectResponse
+    public function toggle(PlatformProduct $platformProduct): RedirectResponse
     {
         $platformProduct->loadMissing('productType.serviceCategory');
         if (! $platformProduct->productType?->serviceCategory?->isSystem()) {
             return back()->with('error', __('That product is not under a fixed platform category.'));
         }
 
-        $platformProduct->update(['is_featured' => ! $platformProduct->is_featured]);
+        if ($platformProduct->status === PlatformProductStatus::Published) {
+            $platformProduct->update(['status' => PlatformProductStatus::Draft]);
+            $message = 'Product deactivated.';
+        } else {
+            $this->assertPublishable($platformProduct->fresh(['variants']));
+            $platformProduct->update(['status' => PlatformProductStatus::Published]);
+            $message = 'Product activated.';
+        }
 
-        return back()->with(
-            'status',
-            'Product '.($platformProduct->is_featured ? 'marked featured.' : 'unfeatured.')
-        );
+        return back()->with('status', $message);
     }
 
     public function destroy(): RedirectResponse

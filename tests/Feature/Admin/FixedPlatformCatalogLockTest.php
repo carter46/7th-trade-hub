@@ -213,12 +213,13 @@ class FixedPlatformCatalogLockTest extends TestCase
         $this->assertSame('residential-vpn-lock-test', $product->slug);
     }
 
-    public function test_admin_can_toggle_product_featured(): void
+    public function test_admin_can_toggle_product_featured_and_deactivate(): void
     {
         $this->seedCatalog();
         $admin = $this->admin();
         $product = PlatformProduct::query()->where('slug', 'residential-vpn-lock-test')->firstOrFail();
         $product->update(['is_featured' => true]);
+        $variant = $product->variants()->firstOrFail();
 
         $this->actingAs($admin)
             ->put(route('admin.platform-products.update', $product), [
@@ -228,9 +229,9 @@ class FixedPlatformCatalogLockTest extends TestCase
                 'status' => 'published',
                 'base_price' => $product->base_price,
                 'sort_order' => $product->sort_order,
-                // is_featured omitted = unchecked
+                // is_featured omitted = unchecked on edit form
                 'variants' => [
-                    ['id' => $product->variants()->firstOrFail()->id, 'price' => $product->variants()->firstOrFail()->price],
+                    ['id' => $variant->id, 'price' => $variant->price],
                 ],
             ])
             ->assertRedirect(route('admin.platform-products'));
@@ -238,10 +239,33 @@ class FixedPlatformCatalogLockTest extends TestCase
         $this->assertFalse($product->fresh()->is_featured);
 
         $this->actingAs($admin)
-            ->post(route('admin.platform-products.toggle-featured', $product))
-            ->assertRedirect();
+            ->put(route('admin.platform-products.update', $product->fresh()), [
+                'title' => $product->title,
+                'short_description' => $product->short_description,
+                'description' => $product->description,
+                'status' => 'published',
+                'base_price' => $product->base_price,
+                'sort_order' => $product->fresh()->sort_order,
+                'is_featured' => '1',
+                'variants' => [
+                    ['id' => $variant->id, 'price' => $variant->price],
+                ],
+            ])
+            ->assertRedirect(route('admin.platform-products'));
 
         $this->assertTrue($product->fresh()->is_featured);
+
+        $this->actingAs($admin)
+            ->post(route('admin.platform-products.toggle', $product))
+            ->assertRedirect();
+
+        $this->assertSame(PlatformProductStatus::Draft, $product->fresh()->status);
+
+        $this->actingAs($admin)
+            ->post(route('admin.platform-products.toggle', $product->fresh()))
+            ->assertRedirect();
+
+        $this->assertSame(PlatformProductStatus::Published, $product->fresh()->status);
     }
 
     public function test_admin_cannot_change_provider_or_reparent_product(): void
