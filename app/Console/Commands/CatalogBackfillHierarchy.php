@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Enums\PlatformProductType;
 use App\Models\ProductType;
 use App\Models\ServiceCategory;
+use App\Support\PlatformCatalogCms;
 use App\Support\PlatformCatalogTrim;
 use App\Support\SortOrder;
 use Illuminate\Console\Command;
@@ -32,6 +33,7 @@ class CatalogBackfillHierarchy extends Command
         $trimmed = PlatformCatalogTrim::apply();
         $retired = $trimmed['products'];
         $retiredServices = $trimmed['services'];
+        $cms = PlatformCatalogCms::normalizeHeroAndBenefits();
         $normalized = $this->normalizeSortOrders();
 
         $this->info("Service categories upserted: {$categoriesCreated}");
@@ -44,6 +46,7 @@ class CatalogBackfillHierarchy extends Command
         foreach ($retiredServices as $type => $count) {
             $this->info("Retired service {$type}: {$count}");
         }
+        $this->info("Platform CMS normalized: {$cms['categories']} categories, {$cms['services']} services");
         $this->info("Sort groups normalized to 1..N: {$normalized}");
 
         return self::SUCCESS;
@@ -80,17 +83,18 @@ class CatalogBackfillHierarchy extends Command
                 : 'catalog';
 
             $category = new ServiceCategory;
+            $label = $group['label'] ?? str_replace('-', ' ', ucfirst($slug));
             $category->forceFill([
                 'slug' => $slug,
-                'name' => $group['label'] ?? str_replace('-', ' ', ucfirst($slug)),
+                'name' => $label,
                 'sort_order' => $sort,
                 'is_active' => true,
                 'banner_image' => $group['banner_image'] ?? null,
                 'card_image' => $group['card_image'] ?? null,
                 'short_description' => $group['short_description'] ?? null,
-                'hero_title' => $group['hero_title'] ?? ($group['label'] ?? null),
-                'hero_subtitle' => $group['hero_subtitle'] ?? null,
-                'benefits' => $group['benefits'] ?? [],
+                'hero_title' => $label,
+                'hero_subtitle' => $group['short_description'] ?? null,
+                'benefits' => [],
                 'faq' => $group['faq'] ?? [],
                 'mode' => $mode,
                 'cta_label' => $group['cta'] ?? ($mode === 'marketplace_link' ? 'Open marketplace' : null),
@@ -165,18 +169,19 @@ class CatalogBackfillHierarchy extends Command
             }
 
             $service = new ProductType;
+            $label = $typeConfig['label'] ?? $case->label();
             $service->forceFill([
                 'slug' => $slug,
                 'service_category_id' => $category->id,
-                'name' => $typeConfig['label'] ?? $case->label(),
+                'name' => $label,
                 'sort_order' => $sortByCategory[$category->id]++,
                 'is_active' => true,
                 'banner_image' => $typeConfig['banner_image'] ?? null,
                 'card_image' => $typeConfig['card_image'] ?? null,
                 'short_description' => $typeConfig['short_description'] ?? null,
-                'hero_title' => $typeConfig['hero_title'] ?? ($typeConfig['label'] ?? null),
-                'hero_subtitle' => $typeConfig['hero_subtitle'] ?? null,
-                'benefits' => $typeConfig['benefits'] ?? [],
+                'hero_title' => $label,
+                'hero_subtitle' => $typeConfig['short_description'] ?? null,
+                'benefits' => [],
                 'faq' => $typeConfig['faq'] ?? [],
             ]);
             $service->save();

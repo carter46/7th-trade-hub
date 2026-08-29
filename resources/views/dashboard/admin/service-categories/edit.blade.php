@@ -24,10 +24,11 @@
             @csrf
             @method('PUT')
             <x-dashboard.input label="Public name" name="name" :value="old('name', $category->name)" required />
-            <p class="text-xs text-text-muted">URL slug is frozen: <span class="font-mono">{{ $category->slug }}</span></p>
-            <x-dashboard.input label="Short description" name="short_description" :value="old('short_description', $category->short_description)" />
-            <x-dashboard.input label="Hero title" name="hero_title" :value="old('hero_title', $category->hero_title)" />
-            <x-dashboard.input label="Hero subtitle" name="hero_subtitle" :value="old('hero_subtitle', $category->hero_subtitle)" />
+            <p class="text-xs text-text-muted">
+                URL slug is frozen: <span class="font-mono">{{ $category->slug }}</span>
+                · Hero title on the public page uses this name automatically.
+            </p>
+            <x-dashboard.input label="Short description" name="short_description" :value="old('short_description', $category->short_description)" hint="Shown on cards and used as the page hero subtitle." />
             <x-dashboard.media-picker
                 name="card_media_id"
                 label="Image"
@@ -36,7 +37,6 @@
                 :value="$cardId"
                 :preview-url="$cardPreview"
             />
-            <x-dashboard.string-list-repeater name="benefits" label="Benefits" :items="old('benefits', $category->benefits ?? [])" />
             <x-dashboard.faq-repeater name="faq" label="FAQ" :items="old('faq', $category->faq ?? [])" />
             <x-dashboard.input
                 label="Sort position"

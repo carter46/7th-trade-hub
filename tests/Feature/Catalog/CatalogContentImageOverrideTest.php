@@ -81,5 +81,8 @@ class CatalogContentImageOverrideTest extends TestCase
         $category->refresh();
         $this->assertSame($asset->id, $category->card_media_id);
         $this->assertSame('Network tools for teams', $category->short_description);
+        $this->assertSame($category->name, $category->hero_title);
+        $this->assertSame('Network tools for teams', $category->hero_subtitle);
+        $this->assertSame([], $category->benefits);
     }
 }

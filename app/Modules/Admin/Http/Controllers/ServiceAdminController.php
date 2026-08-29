@@ -93,10 +93,6 @@ class ServiceAdminController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'sort_order' => ['required', 'integer', 'min:1', 'max:'.$siblingMax],
             'short_description' => ['nullable', 'string', 'max:500'],
-            'hero_title' => ['nullable', 'string', 'max:255'],
-            'hero_subtitle' => ['nullable', 'string', 'max:500'],
-            'benefits' => ['nullable', 'array'],
-            'benefits.*' => ['nullable', 'string', 'max:500'],
             'faq' => ['nullable', 'array'],
             'faq.*.q' => ['nullable', 'string', 'max:500'],
             'faq.*.a' => ['nullable', 'string', 'max:2000'],
@@ -107,13 +103,15 @@ class ServiceAdminController extends Controller
         $cardMediaId = isset($data['card_media_id']) ? (int) $data['card_media_id'] : null;
         $path = $this->mediaPaths->legacyPathFromMediaId($cardMediaId);
 
+        $shortDescription = $data['short_description'] ?? null;
+
         $service->update([
             'name' => $data['name'],
             'is_active' => $request->boolean('is_active'),
-            'short_description' => $data['short_description'] ?? null,
-            'hero_title' => $data['hero_title'] ?? null,
-            'hero_subtitle' => $data['hero_subtitle'] ?? null,
-            'benefits' => FaqNormalizer::stringList($data['benefits'] ?? null),
+            'short_description' => $shortDescription,
+            'hero_title' => $data['name'],
+            'hero_subtitle' => $shortDescription,
+            'benefits' => [],
             'faq' => FaqNormalizer::fromRequest($data['faq'] ?? null),
             'card_media_id' => $cardMediaId,
             'banner_media_id' => $cardMediaId,
