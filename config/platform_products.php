@@ -17,7 +17,7 @@ return [
         'co-domain-registration',
     ],
     'website_package' => [
-        'starter-business-site',
+        'online-banking-website',
     ],
     'vpn' => [
         'dedicated-ip-vpn',

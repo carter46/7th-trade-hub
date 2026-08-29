@@ -43,7 +43,7 @@ class PlatformCatalogTrimTest extends TestCase
         $this->assertDatabaseHas('platform_products', ['slug' => 'com-domain-registration']);
         $this->assertDatabaseHas('platform_products', ['slug' => 'io-domain-registration']);
         $this->assertDatabaseHas('platform_products', ['slug' => 'co-domain-registration']);
-        $this->assertDatabaseHas('platform_products', ['slug' => 'starter-business-site']);
+        $this->assertDatabaseHas('platform_products', ['slug' => 'online-banking-website']);
 
         $this->assertDatabaseMissing('platform_products', ['slug' => 'ng-domain-registration']);
         $this->assertDatabaseMissing('platform_products', ['slug' => 'agency-showcase-site']);

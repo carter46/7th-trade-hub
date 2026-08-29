@@ -44,7 +44,7 @@ class PlatformCatalogSeeder extends Seeder
                 'Account Transfer Escrow', 'Milestone Escrow', 'Express Escrow',
             ],
             PlatformProductType::WebsitePackage->value => [
-                'Starter Business Site',
+                'Online Banking website',
             ],
             PlatformProductType::DocumentTemplate->value => [
                 'Employment Agreement', 'Invoice & Receipt Set',
@@ -93,7 +93,7 @@ class PlatformCatalogSeeder extends Seeder
                     'demo_url' => $type === PlatformProductType::WebsitePackage->value ? 'https://example.com/demo/'.$slug : null,
                     'demo_username' => $type === PlatformProductType::WebsitePackage->value ? 'demo@7thtrade.local' : null,
                     'demo_password' => $type === PlatformProductType::WebsitePackage->value ? 'DemoPass123!' : null,
-                    'industry' => $type === PlatformProductType::WebsitePackage->value ? ['Business', 'Agency', 'Food', 'Legal', 'Health', 'Retail'][$i] : null,
+                    'industry' => $type === PlatformProductType::WebsitePackage->value ? 'Finance' : null,
                     'framework' => $type === PlatformProductType::WebsitePackage->value ? ['Laravel', 'WordPress', 'Next.js', 'Laravel', 'WordPress', 'Shopify'][$i] : null,
                     'is_responsive' => true,
                     'is_seo_ready' => $type === PlatformProductType::WebsitePackage->value,
