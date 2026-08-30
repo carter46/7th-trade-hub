@@ -9,6 +9,7 @@
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
+        ['System', null],
         ['Demo Site Integrate', null],
     ]"
 >

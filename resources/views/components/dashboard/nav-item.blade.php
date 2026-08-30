@@ -6,9 +6,12 @@
 
 @php
     $routeName = $item['route'] ?? null;
-    $url = is_string($routeName) && \Illuminate\Support\Facades\Route::has($routeName)
-        ? route($routeName)
-        : '#';
+    $url = '#';
+    if (is_string($routeName) && $routeName !== '' && \Illuminate\Support\Facades\Route::has($routeName)) {
+        $url = route($routeName);
+    } elseif (! empty($item['url']) && is_string($item['url'])) {
+        $url = $item['url'];
+    }
     $base = $child
         ? 'group flex min-h-11 items-center gap-2.5 rounded-lg py-2 pl-9 pr-3 text-[13px] transition-colors focus-ring'
         : 'group flex min-h-12 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors focus-ring';

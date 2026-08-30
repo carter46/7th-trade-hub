@@ -2,7 +2,7 @@
 
 ## Demo Site Integrate
 
-Path: **Admin → Catalog → Demo Site Integrate**
+Path: **Admin → System → Demo Site Integrate**
 
 1. Click **Add integration**.
 2. **Select product** from existing Website Package products only.

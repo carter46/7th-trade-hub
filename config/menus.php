@@ -20,7 +20,7 @@ return [
             'sort' => 20,
             'children' => [
                 ['route' => 'dashboard.services', 'match' => ['dashboard.services', 'dashboard.services.*', 'dashboard.discover.services', 'dashboard.discover.services.*'], 'label' => 'Browse', 'icon' => 'listings', 'keywords' => ['catalog', 'platform', 'buy', 'services'], 'sort' => 10],
-                ['route' => 'dashboard.my-tools', 'match' => ['dashboard.my-tools', 'dashboard.my-tools.*'], 'label' => 'My Tools', 'icon' => 'listings', 'keywords' => ['websites', 'tools', 'owned'], 'sort' => 15],
+                ['route' => 'dashboard.my-tools', 'url' => '/dashboard/my-tools', 'match' => ['dashboard.my-tools', 'dashboard.my-tools.*'], 'label' => 'My Tools', 'icon' => 'listings', 'keywords' => ['websites', 'tools', 'owned'], 'sort' => 15],
                 ['route' => 'dashboard.service-orders', 'match' => ['dashboard.service-orders', 'dashboard.service-orders.*'], 'label' => 'Orders', 'icon' => 'orders', 'keywords' => ['purchases', 'platform'], 'sort' => 20],
             ],
         ],
@@ -119,7 +119,6 @@ return [
                 ['route' => 'admin.service-categories', 'match' => ['admin.service-categories', 'admin.service-categories.*'], 'label' => 'Service Categories', 'icon' => 'grid', 'keywords' => ['catalog', 'categories'], 'permission' => 'catalog.manage', 'sort' => 10],
                 ['route' => 'admin.services', 'match' => ['admin.services', 'admin.services.*'], 'label' => 'Services', 'icon' => 'listings', 'keywords' => ['catalog', 'services', 'types'], 'permission' => 'catalog.manage', 'sort' => 20],
                 ['route' => 'admin.platform-products', 'match' => ['admin.platform-products', 'admin.platform-products.*'], 'label' => 'Products', 'icon' => 'storefront', 'keywords' => ['prod', 'catalog', 'products'], 'permission' => 'catalog.manage', 'sort' => 30],
-                ['route' => 'admin.site-integrations', 'match' => ['admin.site-integrations', 'admin.site-integrations.*'], 'label' => 'Demo Site Integrate', 'icon' => 'listings', 'keywords' => ['demo', 'sso', 'integration', 'api'], 'permission' => 'catalog.manage', 'sort' => 40],
             ],
         ],
         [
@@ -175,8 +174,9 @@ return [
                 ['route' => 'admin.monitoring', 'match' => ['admin.monitoring', 'admin.monitoring.*'], 'label' => 'Monitoring', 'icon' => 'audit', 'keywords' => ['health', 'heartbeat', 'system'], 'permission' => 'system.manage', 'sort' => 12],
                 ['route' => 'admin.media', 'match' => ['admin.media', 'admin.media.*'], 'label' => 'Media Library', 'icon' => 'listings', 'keywords' => ['media', 'images', 'upload'], 'permission' => 'system.manage', 'sort' => 15],
                 ['route' => 'admin.settings', 'match' => ['admin.settings', 'admin.settings.*'], 'label' => 'Settings', 'icon' => 'settings', 'keywords' => ['platform', 'config'], 'permission' => 'system.manage', 'sort' => 20],
-                ['route' => 'admin.blockchain-monitoring', 'match' => ['admin.blockchain-monitoring', 'admin.blockchain-monitoring.*'], 'label' => 'Blockchain Monitoring', 'icon' => 'bitcoin', 'keywords' => ['crypto', 'explorer', 'deposit', 'etherscan', 'tron', 'blockchain'], 'permission' => 'system.manage', 'sort' => 21],
-                ['route' => 'admin.tracking', 'match' => ['admin.tracking', 'admin.tracking.*'], 'label' => 'Marketing & Tracking', 'icon' => 'analytics', 'keywords' => ['gtm', 'pixel', 'scripts', 'clarity', 'ga'], 'permission' => 'system.manage', 'sort' => 22],
+                ['route' => 'admin.site-integrations', 'url' => '/admin/site-integrations', 'match' => ['admin.site-integrations', 'admin.site-integrations.*'], 'label' => 'Demo Site Integrate', 'icon' => 'listings', 'keywords' => ['demo', 'sso', 'integration', 'api', 'merchant'], 'permission' => 'catalog.manage', 'sort' => 21],
+                ['route' => 'admin.blockchain-monitoring', 'match' => ['admin.blockchain-monitoring', 'admin.blockchain-monitoring.*'], 'label' => 'Blockchain Monitoring', 'icon' => 'bitcoin', 'keywords' => ['crypto', 'explorer', 'deposit', 'etherscan', 'tron', 'blockchain'], 'permission' => 'system.manage', 'sort' => 22],
+                ['route' => 'admin.tracking', 'match' => ['admin.tracking', 'admin.tracking.*'], 'label' => 'Marketing & Tracking', 'icon' => 'analytics', 'keywords' => ['gtm', 'pixel', 'scripts', 'clarity', 'ga'], 'permission' => 'system.manage', 'sort' => 23],
             ],
         ],
     ],

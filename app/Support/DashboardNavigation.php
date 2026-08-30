@@ -167,7 +167,16 @@ class DashboardNavigation
     private static function destinationFromItem(array $item, ?string $groupLabel): ?array
     {
         $routeName = $item['route'] ?? null;
-        if (! is_string($routeName) || $routeName === '' || ! Route::has($routeName)) {
+        $fallbackUrl = is_string($item['url'] ?? null) ? $item['url'] : null;
+        $url = null;
+
+        if (is_string($routeName) && $routeName !== '' && Route::has($routeName)) {
+            $url = route($routeName);
+        } elseif (is_string($fallbackUrl) && $fallbackUrl !== '') {
+            $url = $fallbackUrl;
+        }
+
+        if ($url === null) {
             return null;
         }
 
@@ -181,10 +190,10 @@ class DashboardNavigation
         )));
 
         return [
-            'id' => (string) ($item['id'] ?? $routeName),
+            'id' => (string) ($item['id'] ?? $routeName ?? $fallbackUrl),
             'label' => $label,
             'group' => $groupLabel,
-            'url' => route($routeName),
+            'url' => $url,
             'icon' => $item['icon'] ?? null,
             'keywords' => $keywords,
         ];
