@@ -38,6 +38,13 @@ class PlatformCheckoutController extends Controller
             'idempotency_key' => ['required', 'string', 'uuid', 'max:64'],
         ]);
 
+        if ($product->product_type === \App\Enums\PlatformProductType::WebsitePackage && (int) $data['quantity'] !== 1) {
+            return redirect()
+                ->route('dashboard.services.checkout', $slug)
+                ->withInput()
+                ->with('error', 'Website packages must be purchased with quantity 1.');
+        }
+
         try {
             $order = $this->checkoutService->purchase($request->user(), $product, $data);
         } catch (InvalidArgumentException $e) {

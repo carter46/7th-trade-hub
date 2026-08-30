@@ -234,6 +234,7 @@
                     <x-ui.button :href="$checkoutUrl" variant="primary" size="lg" class="!px-8 hover:!bg-accent">
                         {{ auth()->check() ? 'Buy Now' : 'Log in to buy' }}
                     </x-ui.button>
+                    @include('partials.catalog.view-demo-modal', ['product' => $product])
                     @auth
                         <form method="POST" action="{{ route('favorites.toggle') }}">
                             @csrf

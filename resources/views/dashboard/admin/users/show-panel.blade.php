@@ -78,6 +78,105 @@
             @endforeach
         </x-dashboard.table>
         <x-dashboard.pagination :paginator="$orders" />
+    @elseif ($activeTab === 'tools')
+        @if (session('fresh_tool_credentials'))
+            @php $creds = session('fresh_tool_credentials'); @endphp
+            <x-dashboard.card class="border-primary/40 bg-primary/5">
+                <h3 class="text-sm font-semibold text-text-primary">Provisioning credentials (copy now)</h3>
+                <p class="mt-1 text-xs text-text-muted">These secrets are shown once. Give them to the site developer for config.php / .env.</p>
+                <dl class="mt-3 space-y-2 font-mono text-xs">
+                    <div><dt class="text-text-muted">Integration ID</dt><dd>{{ $creds['integration_id'] }}</dd></div>
+                    <div><dt class="text-text-muted">Client ID</dt><dd>{{ $creds['client_id'] }}</dd></div>
+                    <div><dt class="text-text-muted">Client Secret</dt><dd>{{ $creds['client_secret'] }}</dd></div>
+                    <div><dt class="text-text-muted">Webhook Secret</dt><dd>{{ $creds['webhook_secret'] }}</dd></div>
+                    <div><dt class="text-text-muted">Webhook URL</dt><dd>{{ $creds['webhook_url'] }}</dd></div>
+                </dl>
+                @if (isset($creds['connection_message']))
+                    <p class="mt-3 text-sm {{ ($creds['connection_ok'] ?? false) ? 'text-emerald-600' : 'text-red-600' }}">{{ $creds['connection_message'] }}</p>
+                @endif
+            </x-dashboard.card>
+        @endif
+        <x-dashboard.table :empty="($tools ?? collect())->isEmpty()" empty-title="No tools" empty-description="Purchased website packages appear here after checkout." striped>
+            <x-slot:head>
+                <x-dashboard.th>Tool</x-dashboard.th>
+                <x-dashboard.th>Status</x-dashboard.th>
+                <x-dashboard.th>Expires</x-dashboard.th>
+                <x-dashboard.th>Actions</x-dashboard.th>
+            </x-slot:head>
+            @foreach (($tools ?? collect()) as $tool)
+                <tr>
+                    <x-dashboard.td>
+                        <div class="font-medium text-text-primary">{{ $tool->resolvedDisplayName() }}</div>
+                        <div class="text-xs text-text-muted">#{{ $tool->id }} · {{ $tool->public_id }}</div>
+                    </x-dashboard.td>
+                    <x-dashboard.td>
+                        <x-dashboard.badge :status="$tool->status->value" />
+                        @if ($tool->isExpiringSoon())
+                            <span class="ml-1 text-xs text-amber-600">Expiring soon</span>
+                        @endif
+                    </x-dashboard.td>
+                    <x-dashboard.td class="text-xs text-text-muted">{{ $tool->expires_at?->format('j M Y') ?? '—' }}</x-dashboard.td>
+                    <x-dashboard.td class="space-x-2">
+                        @php $isPendingSetup = $tool->status->value === 'pending_setup'; @endphp
+                        <x-dashboard.button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            x-on:click="$dispatch('open-modal', 'setup-tool-{{ $tool->id }}')"
+                        >
+                            {{ $isPendingSetup ? 'Setup' : 'Reconfigure' }}
+                        </x-dashboard.button>
+                        @if ($tool->site_url)
+                            <form method="POST" action="{{ route('admin.users.tools.check', [$user, $tool]) }}" class="inline">
+                                @csrf
+                                <x-dashboard.button type="submit" size="sm" variant="secondary">Check connection</x-dashboard.button>
+                            </form>
+                        @endif
+                        <x-dashboard.modal name="setup-tool-{{ $tool->id }}" :show="false" maxWidth="lg">
+                            @php
+                                $toolFormAction = $isPendingSetup
+                                    ? route('admin.users.tools.setup', [$user, $tool])
+                                    : route('admin.users.tools.reconfigure', [$user, $tool]);
+                            @endphp
+                            <form method="POST" action="{{ $toolFormAction }}" class="space-y-4 p-1">
+                                @csrf
+                                <h3 class="text-lg font-semibold text-text-primary">
+                                    {{ $isPendingSetup ? 'Setup' : 'Reconfigure' }} {{ $tool->resolvedDisplayName() }}
+                                </h3>
+                                <x-dashboard.input name="site_url" label="Website URL" type="url" :value="old('site_url', $tool->site_url)" required />
+                                <x-dashboard.input name="admin_login_url" label="Admin login URL" type="url" :value="old('admin_login_url', $tool->admin_login_url)" required />
+                                <x-dashboard.input name="admin_email" label="Admin email" type="email" :value="old('admin_email', $tool->admin_email)" required />
+                                <x-dashboard.input
+                                    name="admin_password"
+                                    label="Admin password"
+                                    type="text"
+                                    :required="$isPendingSetup"
+                                    autocomplete="off"
+                                />
+                                @if ($isPendingSetup)
+                                    <p class="text-xs text-text-muted">Saving starts the subscription clock and generates unique provisioning API keys for this customer site (never demo credentials).</p>
+                                @else
+                                    <p class="text-xs text-text-muted">Reconfigure updates URLs and admin identity. It does <strong>not</strong> extend the paid subscription. Leave password blank to keep the current one.</p>
+                                @endif
+                                <div class="flex justify-end gap-2">
+                                    <x-dashboard.button type="button" variant="secondary" x-on:click="$dispatch('close-modal', 'setup-tool-{{ $tool->id }}')">Cancel</x-dashboard.button>
+                                    <x-dashboard.button type="submit">{{ $isPendingSetup ? 'Save & generate keys' : 'Save reconfiguration' }}</x-dashboard.button>
+                                </div>
+                            </form>
+                        </x-dashboard.modal>
+                        @if (! $isPendingSetup && $tool->integration)
+                            <form method="POST" action="{{ route('admin.users.tools.rotate', [$user, $tool]) }}" class="inline" onsubmit="return confirm('Rotate API credentials? The merchant site env must be updated.');">
+                                @csrf
+                                <x-dashboard.button type="submit" size="sm" variant="secondary">Rotate keys</x-dashboard.button>
+                            </form>
+                        @endif
+                    </x-dashboard.td>
+                </tr>
+            @endforeach
+        </x-dashboard.table>
+        @if (($tools ?? null) instanceof \Illuminate\Contracts\Pagination\Paginator)
+            <x-dashboard.pagination :paginator="$tools" />
+        @endif
     @elseif ($activeTab === 'listings')
         <x-dashboard.table :empty="($listings ?? collect())->isEmpty()" empty-title="No listings" striped>
             <x-slot:head>

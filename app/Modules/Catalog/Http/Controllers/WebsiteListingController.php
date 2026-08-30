@@ -66,7 +66,7 @@ class WebsiteListingController extends Controller
             ->visibleToPublic()
             ->ofType(PlatformProductType::WebsitePackage)
             ->where('slug', $slug)
-            ->with(['productType', 'images', 'activeVariants', 'heroMedia.variants'])
+            ->with(['productType', 'images', 'activeVariants', 'heroMedia.variants', 'siteIntegration'])
             ->firstOrFail();
 
         return view('pages.website-listings-show', [

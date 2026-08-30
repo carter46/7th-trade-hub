@@ -1,0 +1,144 @@
+openapi: 3.0.3
+info:
+  title: 7th Trade Hub Site Integration Protocol
+  version: "1"
+  description: >
+    Hub APIs for one-time launch token validation and subscription polling,
+    plus optional merchant→Hub webhook. Each integration has its own client_secret.
+    Merchants also implement health, consume, and subscription/sync on their sites
+    (see docs/integrations/MERCHANT-GUIDE.md).
+paths:
+  /api/site-integrations/v1/demo/tokens/validate:
+    post:
+      summary: Validate and consume a one-time launch token
+      parameters:
+        - in: header
+          name: X-7TH-Client-Id
+          required: true
+          schema: { type: string }
+        - in: header
+          name: X-7TH-Client-Secret
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        "200":
+          description: Token valid and consumed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid: { type: boolean }
+                  protocol: { type: string, example: 7th-tradehub }
+                  version: { type: integer, example: 1 }
+                  context: { type: string, enum: [demo, owned_tool] }
+                  role: { type: string, enum: [user, admin] }
+                  identity:
+                    type: object
+                    properties:
+                      email: { type: string, format: email }
+                  integration_id: { type: string, format: uuid }
+                  expires_at: { type: string, format: date-time }
+        "401": { description: Invalid client credentials }
+        "422": { description: Invalid, expired, or used token }
+  /api/site-integrations/v1/subscription:
+    get:
+      summary: Poll owned-tool subscription status (defense in depth)
+      parameters:
+        - in: header
+          name: X-7TH-Client-Id
+          required: true
+          schema: { type: string }
+        - in: header
+          name: X-7TH-Client-Secret
+          required: true
+          schema: { type: string }
+        - in: header
+          name: X-7TH-Integration-Id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Current subscription snapshot (status derived from live expires_at)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  protocol: { type: string }
+                  version: { type: integer }
+                  tool_id: { type: integer }
+                  public_id: { type: string, format: uuid }
+                  status: { type: string, enum: [pending_setup, active, suspended, expired] }
+                  expires_at: { type: string, format: date-time, nullable: true }
+                  updated_at: { type: string, format: date-time, nullable: true }
+        "401": { description: Invalid credentials }
+        "404": { description: Unknown integration }
+  /webhooks/site-integrations/{integrationId}:
+    post:
+      summary: Optional site-to-Hub webhook / health ping (CSRF exempt; secret required)
+      parameters:
+        - in: path
+          name: integrationId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: header
+          name: X-7TH-Webhook-Secret
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                event: { type: string, example: ping }
+      responses:
+        "200":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+        "401": { description: Invalid webhook secret }
+        "404": { description: Unknown integration }
+components:
+  schemas:
+    ProtocolAssertion:
+      type: object
+      required: [protocol, version, integration_id, context, role, identity, request_id, nonce, issued_at, expires_at, signature]
+      properties:
+        protocol: { type: string, example: 7th-tradehub }
+        version: { type: integer, example: 1 }
+        integration_id: { type: string, format: uuid }
+        context: { type: string, enum: [demo, owned_tool] }
+        role: { type: string }
+        identity:
+          type: object
+          properties:
+            email: { type: string }
+        request_id: { type: string }
+        nonce: { type: string }
+        issued_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        signature: { type: string }
+        subscription:
+          type: object
+          description: Present on subscription sync pushes
+          properties:
+            tool_id: { type: integer }
+            public_id: { type: string, format: uuid }
+            status: { type: string }
+            expires_at: { type: string, format: date-time, nullable: true }
+            updated_at: { type: string, format: date-time }

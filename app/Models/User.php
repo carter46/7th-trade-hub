@@ -94,6 +94,11 @@ class User extends Authenticatable
         return $this->hasMany(Order::class);
     }
 
+    public function tools(): HasMany
+    {
+        return $this->hasMany(UserTool::class);
+    }
+
     public function listings(): HasMany
     {
         return $this->hasMany(Listing::class);

@@ -61,6 +61,9 @@ Route::get('/', function (CryptoPriceService $prices, \App\Modules\Catalog\Servi
 })->name('home');
 
 Route::post('/webhooks/monnify', MonnifyWebhookController::class)->name('webhooks.monnify');
+Route::post('/webhooks/site-integrations/{integrationId}', \App\Http\Controllers\Webhooks\SiteIntegrationWebhookController::class)
+    ->middleware('throttle:60,1')
+    ->name('webhooks.site-integrations');
 
 Route::view('/about', 'pages.about')->name('about');
 Route::get('/help', function () {
@@ -238,6 +241,19 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
     Route::redirect('/discover/services', '/dashboard/services', 301)->name('.discover.services');
     Route::get('/service-orders', [DashboardController::class, 'serviceOrders'])->name('.service-orders');
 
+    Route::get('/my-tools', [\App\Http\Controllers\Dashboard\MyToolsController::class, 'index'])->name('.my-tools');
+    Route::get('/my-tools/{tool}', [\App\Http\Controllers\Dashboard\MyToolsController::class, 'show'])->name('.my-tools.show');
+    Route::post('/my-tools/{tool}/launch/admin', [\App\Http\Controllers\Dashboard\MyToolsController::class, 'launchAdmin'])
+        ->middleware('throttle:10,1')
+        ->name('.my-tools.launch-admin');
+    Route::post('/my-tools/{tool}/credentials/password', [\App\Http\Controllers\Dashboard\MyToolsController::class, 'copyPassword'])
+        ->middleware('throttle:10,1')
+        ->name('.my-tools.password');
+    Route::post('/services/product/{product:slug}/demo/{role}', \App\Http\Controllers\Dashboard\DemoLaunchController::class)
+        ->whereIn('role', ['user', 'admin'])
+        ->middleware('throttle:10,1')
+        ->name('.services.demo-launch');
+
     // Marketplace (primary section; discover paths redirect)
     Route::get('/marketplace', [\App\Http\Controllers\Dashboard\DiscoverMarketplaceController::class, 'index'])->name('.marketplace');
     Route::get('/marketplace/{slug}/checkout', [\App\Http\Controllers\Dashboard\DiscoverMarketplaceController::class, 'checkout'])->name('.marketplace.checkout');
@@ -307,6 +323,11 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::get('/users/{user}/wallet', [UserManagementController::class, 'wallet'])->name('.users.wallet');
         Route::get('/users/{user}/transactions', [UserManagementController::class, 'transactions'])->name('.users.transactions');
         Route::get('/users/{user}/orders', [UserManagementController::class, 'orders'])->name('.users.orders');
+        Route::get('/users/{user}/tools', [UserManagementController::class, 'tools'])->name('.users.tools');
+        Route::post('/users/{user}/tools/{tool}/setup', [UserManagementController::class, 'setupTool'])->name('.users.tools.setup');
+        Route::post('/users/{user}/tools/{tool}/reconfigure', [UserManagementController::class, 'reconfigureTool'])->name('.users.tools.reconfigure');
+        Route::post('/users/{user}/tools/{tool}/rotate', [UserManagementController::class, 'rotateToolCredentials'])->name('.users.tools.rotate');
+        Route::post('/users/{user}/tools/{tool}/check', [UserManagementController::class, 'checkTool'])->name('.users.tools.check');
         Route::get('/users/{user}/listings', [UserManagementController::class, 'listings'])->name('.users.listings');
         Route::get('/users/{user}/escrows', [UserManagementController::class, 'escrows'])->name('.users.escrows');
         Route::get('/users/{user}/tickets', [UserManagementController::class, 'tickets'])->name('.users.tickets');
@@ -418,6 +439,15 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::get('/platform-products/{platformProduct}/edit', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'edit'])->name('.platform-products.edit');
         Route::put('/platform-products/{platformProduct}', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'update'])->name('.platform-products.update');
         Route::post('/platform-products/{platformProduct}/toggle', [\App\Modules\Admin\Http\Controllers\PlatformProductAdminController::class, 'toggle'])->name('.platform-products.toggle');
+
+        Route::get('/site-integrations', [\App\Http\Controllers\Admin\SiteIntegrationAdminController::class, 'index'])->name('.site-integrations');
+        Route::get('/site-integrations/create', [\App\Http\Controllers\Admin\SiteIntegrationAdminController::class, 'create'])->name('.site-integrations.create');
+        Route::post('/site-integrations', [\App\Http\Controllers\Admin\SiteIntegrationAdminController::class, 'store'])->name('.site-integrations.store');
+        Route::get('/site-integrations/{siteIntegration}', [\App\Http\Controllers\Admin\SiteIntegrationAdminController::class, 'show'])->name('.site-integrations.show');
+        Route::put('/site-integrations/{siteIntegration}', [\App\Http\Controllers\Admin\SiteIntegrationAdminController::class, 'update'])->name('.site-integrations.update');
+        Route::post('/site-integrations/{siteIntegration}/rotate', [\App\Http\Controllers\Admin\SiteIntegrationAdminController::class, 'rotate'])->name('.site-integrations.rotate');
+        Route::post('/site-integrations/{siteIntegration}/check', [\App\Http\Controllers\Admin\SiteIntegrationAdminController::class, 'check'])->name('.site-integrations.check');
+
         Route::get('/service-categories', [\App\Modules\Admin\Http\Controllers\ServiceCategoryAdminController::class, 'index'])->name('.service-categories');
         Route::get('/service-categories/{serviceCategory}/edit', [\App\Modules\Admin\Http\Controllers\ServiceCategoryAdminController::class, 'edit'])->name('.service-categories.edit');
         Route::put('/service-categories/{serviceCategory}', [\App\Modules\Admin\Http\Controllers\ServiceCategoryAdminController::class, 'update'])->name('.service-categories.update');

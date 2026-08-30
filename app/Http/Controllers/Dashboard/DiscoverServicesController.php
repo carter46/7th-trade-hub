@@ -158,7 +158,7 @@ class DiscoverServicesController extends Controller
         $product = PlatformProduct::query()
             ->visibleToPublic()
             ->where('slug', $slug)
-            ->with(['productType.serviceCategory', 'activeVariants', 'images', 'heroMedia.variants'])
+            ->with(['productType.serviceCategory', 'activeVariants', 'images', 'heroMedia.variants', 'siteIntegration'])
             ->firstOrFail();
 
         $typeSlug = $product->typeSlug();
@@ -203,6 +203,15 @@ class DiscoverServicesController extends Controller
 
         $this->activity->record($request->user()->id, 'viewed', $product, 'service.checkout');
 
+        $renewTool = null;
+        if ($request->filled('renew')) {
+            $renewTool = \App\Models\UserTool::query()
+                ->where('public_id', $request->string('renew')->toString())
+                ->where('user_id', $request->user()->id)
+                ->where('platform_product_id', $product->id)
+                ->first();
+        }
+
         return view('dashboard.user.discover.services-checkout', [
             'product' => $product,
             'variants' => $variants,
@@ -217,6 +226,7 @@ class DiscoverServicesController extends Controller
             ),
             'idempotencyKey' => (string) Str::uuid(),
             'wallet' => $request->user()->wallet,
+            'renewTool' => $renewTool,
         ]);
     }
 
@@ -233,7 +243,15 @@ class DiscoverServicesController extends Controller
             'domain_mode' => ['nullable', 'in:none,buy,connect'],
             'domain_name' => ['nullable', 'string', 'max:255'],
             'idempotency_key' => ['required', 'string', 'uuid', 'max:64'],
+            'renew_user_tool_id' => ['nullable', 'integer', 'exists:user_tools,id'],
         ]);
+
+        if ($product->product_type === PlatformProductType::WebsitePackage) {
+            $data['quantity'] = 1;
+            if ((int) $request->input('quantity', 1) !== 1) {
+                return back()->withInput()->with('error', 'Website packages must be purchased with quantity 1.');
+            }
+        }
 
         try {
             $order = $this->checkoutService->purchase($request->user(), $product, $data);
@@ -247,6 +265,25 @@ class DiscoverServicesController extends Controller
             ]);
 
             return back()->withInput()->with('error', 'Checkout failed. Please try again or contact support.');
+        }
+
+        if (! empty($data['renew_user_tool_id'])) {
+            $tool = \App\Models\UserTool::query()->find($data['renew_user_tool_id']);
+
+            return redirect()
+                ->route('dashboard.my-tools.show', $tool)
+                ->with('success', 'Subscription renewed. Order '.$order->reference.'.');
+        }
+
+        $tool = \App\Models\UserTool::query()
+            ->where('order_id', $order->id)
+            ->where('user_id', $request->user()->id)
+            ->first();
+
+        if ($tool) {
+            return redirect()
+                ->route('dashboard.my-tools.show', $tool)
+                ->with('success', 'Order '.$order->reference.' placed. Your tool is pending setup.');
         }
 
         return redirect()

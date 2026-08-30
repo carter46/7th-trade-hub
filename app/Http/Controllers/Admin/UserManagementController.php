@@ -168,6 +168,98 @@ class UserManagementController extends Controller
         ]);
     }
 
+    public function tools(User $user, Request $request): View
+    {
+        $this->ensureMember($user);
+
+        return $this->userTabView($request, $user, 'tools', [
+            'tools' => \App\Models\UserTool::query()
+                ->where('user_id', $user->id)
+                ->with(['product', 'variant', 'integration'])
+                ->orderByDesc('purchased_at')
+                ->paginate(20),
+        ]);
+    }
+
+    public function setupTool(Request $request, User $user, \App\Models\UserTool $tool): RedirectResponse
+    {
+        $this->ensureMember($user);
+        abort_unless($tool->user_id === $user->id, 404);
+
+        $data = $request->validate([
+            'site_url' => ['required', 'url', 'max:500'],
+            'admin_login_url' => ['required', 'url', 'max:500'],
+            'admin_email' => ['required', 'email', 'max:255'],
+            'admin_password' => ['required', 'string', 'min:6', 'max:255'],
+        ]);
+
+        try {
+            $result = app(\App\Services\SiteIntegrations\UserToolProvisioningService::class)
+                ->setup($tool, $data, $request->user(), $request->ip());
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return redirect()
+            ->route('admin.users.tools', $user)
+            ->with('status', 'Tool configured.')
+            ->with('fresh_tool_credentials', $result['credentials'])
+            ->with('configured_tool_id', $tool->id);
+    }
+
+    public function reconfigureTool(Request $request, User $user, \App\Models\UserTool $tool): RedirectResponse
+    {
+        $this->ensureMember($user);
+        abort_unless($tool->user_id === $user->id, 404);
+
+        $data = $request->validate([
+            'site_url' => ['required', 'url', 'max:500'],
+            'admin_login_url' => ['required', 'url', 'max:500'],
+            'admin_email' => ['required', 'email', 'max:255'],
+            'admin_password' => ['nullable', 'string', 'min:6', 'max:255'],
+        ]);
+
+        try {
+            app(\App\Services\SiteIntegrations\UserToolProvisioningService::class)
+                ->reconfigure($tool, $data, $request->user(), $request->ip());
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return redirect()
+            ->route('admin.users.tools', $user)
+            ->with('status', 'Tool reconfigured. Subscription expiry was not changed.');
+    }
+
+    public function rotateToolCredentials(Request $request, User $user, \App\Models\UserTool $tool): RedirectResponse
+    {
+        $this->ensureMember($user);
+        abort_unless($tool->user_id === $user->id, 404);
+
+        try {
+            $result = app(\App\Services\SiteIntegrations\UserToolProvisioningService::class)
+                ->rotateCredentials($tool, $request->user(), $request->ip());
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return redirect()
+            ->route('admin.users.tools', $user)
+            ->with('status', 'Integration credentials rotated. Update the merchant site env.')
+            ->with('fresh_tool_credentials', $result['credentials'])
+            ->with('configured_tool_id', $tool->id);
+    }
+
+    public function checkTool(Request $request, User $user, \App\Models\UserTool $tool): RedirectResponse
+    {
+        $this->ensureMember($user);
+        abort_unless($tool->user_id === $user->id, 404);
+
+        $result = app(\App\Services\SiteIntegrations\ConnectionCheckService::class)->checkOwned($tool->load('integration'));
+
+        return back()->with($result['ok'] ? 'status' : 'error', $result['message']);
+    }
+
     public function listings(User $user, Request $request): View
     {
         $this->ensureMember($user);

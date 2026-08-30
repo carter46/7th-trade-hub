@@ -23,6 +23,7 @@ Schedule::command('analytics:prune-activity')->daily()->at('04:00');
 Schedule::command('analytics:sync-ga')->daily()->at('05:00');
 Schedule::command('monitoring:heartbeat')->everyFiveMinutes()->withoutOverlapping();
 Schedule::command('users:purge-anonymized')->hourly()->withoutOverlapping();
+Schedule::command('site-integrations:expire-user-tools')->everyFiveMinutes()->withoutOverlapping();
 
 Schedule::call(function () {
     \Illuminate\Support\Facades\Cache::forget('sitemap.xml.v2');

@@ -18,6 +18,7 @@ use App\Events\UserRegistered;
 use App\Events\UserVerified;
 use App\Events\WalletFunded;
 use App\Events\WalletWithdrawalCompleted;
+use App\Listeners\CreateUserToolsFromOrder;
 use App\Listeners\DispatchMarketingAnalytics;
 use App\Listeners\NotifyAdmins;
 use App\Listeners\NotifyUsersFromEvent;
@@ -106,6 +107,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->registerAnalyticsListeners();
+        Event::listen(OrderCompleted::class, CreateUserToolsFromOrder::class);
         $this->applySiteBrandingConfig();
 
         View::composer(['layouts.dashboard-user', 'layouts.dashboard-admin'], function ($view) {

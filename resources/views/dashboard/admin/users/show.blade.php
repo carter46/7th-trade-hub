@@ -9,6 +9,7 @@
         ['id' => 'wallet', 'label' => 'Wallet', 'href' => route('admin.users.wallet', $user)],
         ['id' => 'transactions', 'label' => 'Transactions', 'href' => route('admin.users.transactions', $user)],
         ['id' => 'orders', 'label' => 'Orders', 'href' => route('admin.users.orders', $user)],
+        ['id' => 'tools', 'label' => 'Tools', 'href' => route('admin.users.tools', $user)],
         ['id' => 'listings', 'label' => 'Listings', 'href' => route('admin.users.listings', $user)],
         ['id' => 'escrows', 'label' => 'Escrows', 'href' => route('admin.users.escrows', $user)],
         ['id' => 'tickets', 'label' => 'Support', 'href' => route('admin.users.tickets', $user)],

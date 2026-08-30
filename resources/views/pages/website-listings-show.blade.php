@@ -39,8 +39,44 @@
                 </div>
                 <p class="text-2xl font-bold mb-6">From ₦{{ number_format($product->displayPrice(), 2) }}</p>
                 <div class="flex flex-wrap gap-3">
-                    @if($product->demo_url)
-                        <a href="{{ $product->demo_url }}" target="_blank" rel="noopener" class="px-5 py-3 rounded-xl border border-white/15 font-bold hover:bg-white/5">Test site</a>
+                    @php
+                        $demoIntegration = $product->siteIntegration;
+                        $canDemoUser = $demoIntegration?->isActive()
+                            && $demoIntegration->hasCapability(\App\Models\SiteIntegration::CAP_DEMO_USER_LOGIN)
+                            && filled($demoIntegration->demo_user_email);
+                        $canDemoAdmin = $demoIntegration?->isActive()
+                            && $demoIntegration->hasCapability(\App\Models\SiteIntegration::CAP_DEMO_ADMIN_LOGIN)
+                            && filled($demoIntegration->demo_admin_email);
+                        $showDemo = $canDemoUser || $canDemoAdmin;
+                    @endphp
+                    @if ($showDemo)
+                        <div x-data="{ open: false }" class="relative">
+                            @auth
+                                <button type="button" @click="open = true" class="px-5 py-3 rounded-xl border border-white/15 font-bold hover:bg-white/5">View Demo</button>
+                                <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" @keydown.escape.window="open = false">
+                                    <div class="absolute inset-0 bg-black/60" @click="open = false"></div>
+                                    <div class="relative z-10 w-full max-w-md rounded-2xl bg-slate-900 border border-white/10 p-6 space-y-4">
+                                        <h3 class="text-lg font-bold">View demo</h3>
+                                        <p class="text-sm text-slate-400">Open the independent demo site as a fixed demo account. No password required.</p>
+                                        @if ($canDemoUser)
+                                            <form method="POST" action="{{ route('dashboard.services.demo-launch', [$product, 'user']) }}">
+                                                @csrf
+                                                <button type="submit" class="w-full px-4 py-3 rounded-xl border border-white/15 font-semibold hover:bg-white/5">Login as User</button>
+                                            </form>
+                                        @endif
+                                        @if ($canDemoAdmin)
+                                            <form method="POST" action="{{ route('dashboard.services.demo-launch', [$product, 'admin']) }}">
+                                                @csrf
+                                                <button type="submit" class="w-full px-4 py-3 rounded-xl bg-primary hover:bg-accent font-bold">Login as Admin</button>
+                                            </form>
+                                        @endif
+                                        <button type="button" @click="open = false" class="w-full text-sm text-slate-400 hover:text-white">Cancel</button>
+                                    </div>
+                                </div>
+                            @else
+                                <a href="{{ route('login') }}" class="px-5 py-3 rounded-xl border border-white/15 font-bold hover:bg-white/5">Log in to view demo</a>
+                            @endauth
+                        </div>
                     @endif
                     <a href="{{ route('dashboard.services.checkout', $product->slug) }}" class="px-5 py-3 rounded-xl bg-primary hover:bg-accent font-bold">{{ auth()->check() ? 'Buy now' : 'Log in to buy' }}</a>
                     @auth
@@ -54,13 +90,6 @@
                         </form>
                     @endauth
                 </div>
-                @if($product->demo_username)
-                    <div class="mt-6 glassmorphism rounded-xl p-4 text-sm">
-                        <p class="font-semibold mb-2">Test credentials</p>
-                        <p>User: <code class="text-accent">{{ $product->demo_username }}</code></p>
-                        <p>Password: <code class="text-accent">{{ $product->demo_password }}</code></p>
-                    </div>
-                @endif
             </div>
         </div>
 

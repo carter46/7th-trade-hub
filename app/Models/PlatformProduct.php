@@ -100,6 +100,11 @@ class PlatformProduct extends Model
         return $this->variants()->where('is_active', true);
     }
 
+    public function siteIntegration(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(SiteIntegration::class);
+    }
+
     public function reviews(): HasMany
     {
         return $this->hasMany(ProductReview::class);

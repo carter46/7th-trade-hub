@@ -25,6 +25,34 @@
             <span class="text-sm text-text-muted mr-2">Wallet: <strong class="text-text-primary">₦{{ number_format((float) $wallet->balance, 0) }}</strong></span>
         @endif
         <x-dashboard.button :href="route('dashboard.services.checkout', $product->slug)" variant="primary" size="sm" icon="orders">Buy with wallet</x-dashboard.button>
+        @php
+            $demoIntegration = $product->siteIntegration;
+            $canDemoUser = $demoIntegration?->isActive() && $demoIntegration->hasCapability(\App\Models\SiteIntegration::CAP_DEMO_USER_LOGIN) && filled($demoIntegration->demo_user_email);
+            $canDemoAdmin = $demoIntegration?->isActive() && $demoIntegration->hasCapability(\App\Models\SiteIntegration::CAP_DEMO_ADMIN_LOGIN) && filled($demoIntegration->demo_admin_email);
+        @endphp
+        @if ($canDemoUser || $canDemoAdmin)
+            <x-dashboard.button type="button" variant="secondary" size="sm" x-on:click="$dispatch('open-modal', 'view-demo-dash-{{ $product->id }}')">View Demo</x-dashboard.button>
+            <x-dashboard.modal name="view-demo-dash-{{ $product->id }}" maxWidth="md">
+                <div class="space-y-4 p-1">
+                    <h3 class="text-lg font-semibold text-text-primary">View demo</h3>
+                    <p class="text-sm text-text-secondary">Open the independent demo site without a password.</p>
+                    <div class="flex flex-col gap-2">
+                        @if ($canDemoUser)
+                            <form method="POST" action="{{ route('dashboard.services.demo-launch', [$product, 'user']) }}">
+                                @csrf
+                                <x-dashboard.button type="submit" class="w-full" variant="secondary">Login as User</x-dashboard.button>
+                            </form>
+                        @endif
+                        @if ($canDemoAdmin)
+                            <form method="POST" action="{{ route('dashboard.services.demo-launch', [$product, 'admin']) }}">
+                                @csrf
+                                <x-dashboard.button type="submit" class="w-full">Login as Admin</x-dashboard.button>
+                            </form>
+                        @endif
+                    </div>
+                </div>
+            </x-dashboard.modal>
+        @endif
     </x-slot:actions>
 
     <div class="grid gap-6 lg:grid-cols-[1.4fr_1fr]">

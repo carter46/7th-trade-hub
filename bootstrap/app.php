@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(SecurityHeaders::class);
         $middleware->validateCsrfTokens(except: [
             'webhooks/monnify',
+            'webhooks/site-integrations/*',
         ]);
         $middleware->alias([
             'not_suspended' => EnsureNotSuspended::class,

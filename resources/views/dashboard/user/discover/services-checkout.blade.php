@@ -52,6 +52,12 @@
             >
                 @csrf
                 <input type="hidden" name="idempotency_key" value="{{ $idempotencyKey }}">
+                @if ($renewTool ?? null)
+                    <input type="hidden" name="renew_user_tool_id" value="{{ $renewTool->id }}">
+                    <x-dashboard.alert type="info">
+                        Renewing <strong>{{ $renewTool->resolvedDisplayName() }}</strong>. This extends the same tool — it will not create a second instance.
+                    </x-dashboard.alert>
+                @endif
 
                 @if($variants->isNotEmpty())
                     <div>
