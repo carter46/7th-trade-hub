@@ -234,8 +234,11 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
     Route::get('/services', [\App\Http\Controllers\Dashboard\DiscoverServicesController::class, 'index'])->name('.services');
     Route::get('/services/product/{slug}/checkout', [\App\Http\Controllers\Dashboard\DiscoverServicesController::class, 'checkout'])->name('.services.checkout');
     Route::post('/services/product/{slug}/checkout', [\App\Http\Controllers\Dashboard\DiscoverServicesController::class, 'purchase'])
-        ->middleware(['verified', 'has_wallet', 'throttle:10,1'])
+        ->middleware(['verified', 'throttle:10,1'])
         ->name('.services.purchase');
+    Route::get('/services/product/{slug}/payment/callback', [\App\Http\Controllers\Dashboard\DiscoverServicesController::class, 'paymentCallback'])
+        ->middleware(['verified', 'throttle:30,1'])
+        ->name('.services.payment-callback');
     Route::get('/services/product/{slug}', [\App\Http\Controllers\Dashboard\DiscoverServicesController::class, 'product'])->name('.services.product');
     Route::get('/services/browse/{segment}', [\App\Http\Controllers\Dashboard\DiscoverServicesController::class, 'browse'])->name('.services.browse');
     Route::redirect('/discover/services', '/dashboard/services', 301)->name('.discover.services');

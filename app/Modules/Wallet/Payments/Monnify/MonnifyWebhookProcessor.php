@@ -3,10 +3,12 @@
 namespace App\Modules\Wallet\Payments\Monnify;
 
 use App\Jobs\ProcessMonnifyWebhook;
+use App\Models\Order;
 use App\Models\PaymentTimelineEvent;
 use App\Models\PaymentWebhook;
 use App\Models\WalletFunding;
 use App\Models\Withdrawal;
+use App\Modules\Catalog\Services\PlatformCheckoutService;
 use App\Modules\Wallet\Services\WalletService;
 use Illuminate\Support\Facades\Log;
 
@@ -215,6 +217,18 @@ class MonnifyWebhookProcessor
             ->first();
 
         if (! $funding) {
+            $order = Order::query()
+                ->where('provider_payment_reference', $paymentReference)
+                ->where('source', 'platform')
+                ->where('payment_method', 'gateway')
+                ->first();
+
+            if ($order) {
+                $this->completePlatformGatewayOrder($order, $verified, $amountPaid, $status);
+
+                return;
+            }
+
             app(\App\Modules\Wallet\Services\DepositCheckoutService::class)->creditReservedPayment($verified);
 
             return;
@@ -243,6 +257,32 @@ class MonnifyWebhookProcessor
         ]);
 
         $this->wallets->creditFromFunding($funding);
+    }
+
+    /**
+     * @param  array<string, mixed>  $verified
+     */
+    private function completePlatformGatewayOrder(Order $order, array $verified, string $amountPaid, string $status): void
+    {
+        if (bccomp($amountPaid, (string) $order->total_amount, 2) !== 0) {
+            Log::warning('Monnify platform order amount mismatch', [
+                'order_id' => $order->id,
+                'expected' => $order->total_amount,
+                'paid' => $amountPaid,
+            ]);
+
+            return;
+        }
+
+        $order->update([
+            'provider_transaction_reference' => $verified['transactionReference'] ?? $order->provider_transaction_reference,
+        ]);
+
+        if ($order->status === 'paid') {
+            return;
+        }
+
+        app(PlatformCheckoutService::class)->fulfillPaidGatewayOrder($order);
     }
 
     private function handleDisbursement(PaymentWebhook $webhook, array $eventData, string $eventType): void

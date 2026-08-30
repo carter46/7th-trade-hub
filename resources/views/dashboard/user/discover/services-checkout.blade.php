@@ -4,6 +4,9 @@
 
 @section('content')
 @php
+    $hasWallet = (bool) ($wallet ?? null);
+    $gatewayOn = (bool) ($gatewayEnabled ?? false);
+    $defaultMethod = $hasWallet ? 'wallet' : ($gatewayOn ? 'gateway' : 'wallet');
     $variantPayload = $variants->map(fn ($v) => [
         'id' => $v->id,
         'price' => (float) $v->price,
@@ -40,16 +43,21 @@
             <x-dashboard.alert type="warning">
                 <a href="{{ route('verification.notice') }}" class="underline font-medium">Verify your email</a> before purchasing.
             </x-dashboard.alert>
-        @elseif(! $wallet)
+        @elseif(! $hasWallet && ! $gatewayOn)
             <x-dashboard.alert type="warning">
-                <a href="{{ route('dashboard.wallet') }}" class="underline font-medium">Create a wallet</a> to purchase.
+                No payment method is available. <a href="{{ route('dashboard.wallet') }}" class="underline font-medium">Create a wallet</a>
+                or ask an admin to enable card/transfer checkout.
             </x-dashboard.alert>
         @else
             <form
                 method="POST"
                 action="{{ route('dashboard.services.purchase', $product->slug) }}"
                 class="space-y-5"
-                x-data="platformCheckout(@js($variantPayload), @js(['defaultVariantId' => $defaultVariantId, 'basePrice' => $basePrice]))"
+                x-data="platformCheckout(@js($variantPayload), @js([
+                    'defaultVariantId' => $defaultVariantId,
+                    'basePrice' => $basePrice,
+                    'paymentMethod' => $defaultMethod,
+                ]))"
             >
                 @csrf
                 <input type="hidden" name="idempotency_key" value="{{ $idempotencyKey }}">
@@ -92,6 +100,32 @@
                 @endif
 
                 <div>
+                    <label class="block text-sm font-medium text-text-secondary mb-2">Payment method</label>
+                    <div class="space-y-2">
+                        @if($hasWallet)
+                            <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-border-default px-4 py-3"
+                                   :class="paymentMethod === 'wallet' ? 'border-primary bg-primary/5' : 'hover:border-primary/40'">
+                                <input type="radio" name="payment_method" value="wallet" x-model="paymentMethod" class="mt-1 accent-primary" @checked($defaultMethod === 'wallet')>
+                                <span>
+                                    <span class="block text-sm font-medium text-text-primary">Wallet balance</span>
+                                    <span class="block text-xs text-text-muted">Available: ₦{{ number_format((float) $wallet->balance, 2) }}</span>
+                                </span>
+                            </label>
+                        @endif
+                        @if($gatewayOn)
+                            <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-border-default px-4 py-3"
+                                   :class="paymentMethod === 'gateway' ? 'border-primary bg-primary/5' : 'hover:border-primary/40'">
+                                <input type="radio" name="payment_method" value="gateway" x-model="paymentMethod" class="mt-1 accent-primary" @checked($defaultMethod === 'gateway')>
+                                <span>
+                                    <span class="block text-sm font-medium text-text-primary">Pay directly</span>
+                                    <span class="block text-xs text-text-muted">Card or bank transfer via payment gateway</span>
+                                </span>
+                            </label>
+                        @endif
+                    </div>
+                </div>
+
+                <div>
                     <label class="block text-sm font-medium text-text-secondary mb-2">Quantity</label>
                     <input type="number" name="quantity" min="1" max="100" x-model.number="qty" class="w-32 rounded-lg border-border-default bg-elevated text-text-primary text-sm">
                 </div>
@@ -110,16 +144,15 @@
                     <input type="hidden" name="domain_mode" value="none">
                 @endif
 
-                <p class="text-sm text-text-secondary">
-                    Wallet balance: <strong class="text-text-primary">₦{{ number_format((float) $wallet->balance, 2) }}</strong>
-                </p>
-
                 <div class="flex items-center justify-between border-t border-border-default pt-4">
                     <span class="text-text-secondary">Total</span>
                     <span class="text-2xl font-bold text-primary" x-text="'₦' + totalFormatted"></span>
                 </div>
 
-                <x-dashboard.button type="submit" icon="orders" class="w-full">Pay from wallet</x-dashboard.button>
+                <x-dashboard.button type="submit" icon="orders" class="w-full">
+                    <span x-show="paymentMethod === 'wallet'">Pay from wallet</span>
+                    <span x-cloak x-show="paymentMethod === 'gateway'">Continue to payment</span>
+                </x-dashboard.button>
             </form>
         @endif
 

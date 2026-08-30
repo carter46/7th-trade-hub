@@ -210,7 +210,7 @@ class DiscoverServicesController extends Controller
             'product' => $product,
             'variants' => $variants,
             'defaultVariantId' => $defaultVariant?->id,
-            'basePrice' => (float) $product->base_price,
+            'basePrice' => (float) $product->displayPrice(),
             'showDomainOptions' => in_array(
                 $product->product_type instanceof \BackedEnum
                     ? $product->product_type->value
@@ -221,6 +221,7 @@ class DiscoverServicesController extends Controller
             'idempotencyKey' => (string) Str::uuid(),
             'wallet' => $request->user()->wallet,
             'renewTool' => $renewTool,
+            'gatewayEnabled' => $this->checkoutService->gatewayEnabled(),
         ]);
     }
 
@@ -231,6 +232,21 @@ class DiscoverServicesController extends Controller
             ->where('slug', $slug)
             ->firstOrFail();
 
+        $gatewayEnabled = $this->checkoutService->gatewayEnabled();
+        $hasWallet = (bool) $request->user()->wallet;
+
+        $allowedMethods = [];
+        if ($hasWallet) {
+            $allowedMethods[] = 'wallet';
+        }
+        if ($gatewayEnabled) {
+            $allowedMethods[] = 'gateway';
+        }
+
+        if ($allowedMethods === []) {
+            return back()->withInput()->with('error', 'No payment method is available. Create a wallet or ask support to enable card/transfer checkout.');
+        }
+
         $data = $request->validate([
             'variant_id' => ['nullable', 'integer', 'exists:platform_product_variants,id'],
             'quantity' => ['required', 'integer', 'min:1', 'max:100'],
@@ -238,13 +254,25 @@ class DiscoverServicesController extends Controller
             'domain_name' => ['nullable', 'string', 'max:255'],
             'idempotency_key' => ['required', 'string', 'uuid', 'max:64'],
             'renew_user_tool_id' => ['nullable', 'integer', 'exists:user_tools,id'],
+            'payment_method' => ['nullable', 'in:'.implode(',', $allowedMethods)],
         ]);
+
+        $data['payment_method'] = $data['payment_method']
+            ?? ($hasWallet ? 'wallet' : ($gatewayEnabled ? 'gateway' : null));
+
+        if (! $data['payment_method'] || ! in_array($data['payment_method'], $allowedMethods, true)) {
+            return back()->withInput()->with('error', 'Choose a valid payment method.');
+        }
 
         if ($product->product_type === PlatformProductType::WebsitePackage) {
             $data['quantity'] = 1;
             if ((int) $request->input('quantity', 1) !== 1) {
                 return back()->withInput()->with('error', 'Website packages must be purchased with quantity 1.');
             }
+        }
+
+        if (($data['payment_method'] ?? '') === 'gateway') {
+            $data['redirect_url'] = route('dashboard.services.payment-callback', ['slug' => $product->slug]);
         }
 
         try {
@@ -259,6 +287,14 @@ class DiscoverServicesController extends Controller
             ]);
 
             return back()->withInput()->with('error', 'Checkout failed. Please try again or contact support.');
+        }
+
+        if ($order->payment_method === 'gateway' && in_array($order->status, ['pending', 'processing'], true)) {
+            if (! filled($order->checkout_url)) {
+                return back()->withInput()->with('error', 'Unable to start payment gateway checkout.');
+            }
+
+            return redirect()->away($order->checkout_url);
         }
 
         if (! empty($data['renew_user_tool_id'])) {
@@ -283,6 +319,70 @@ class DiscoverServicesController extends Controller
         return redirect()
             ->route('dashboard.service-orders')
             ->with('success', 'Order '.$order->reference.' placed successfully.');
+    }
+
+    public function paymentCallback(Request $request, string $slug): RedirectResponse
+    {
+        $paymentReference = $request->string('paymentReference')->toString()
+            ?: $request->string('payment_reference')->toString();
+
+        if ($paymentReference === '') {
+            return redirect()
+                ->route('dashboard.services.checkout', $slug)
+                ->with('error', 'Payment reference missing. If you paid, wait a moment and check My Tools / Service orders.');
+        }
+
+        $order = \App\Models\Order::query()
+            ->where('provider_payment_reference', $paymentReference)
+            ->where('user_id', $request->user()->id)
+            ->where('source', 'platform')
+            ->first();
+
+        if (! $order) {
+            return redirect()
+                ->route('dashboard.services.checkout', $slug)
+                ->with('error', 'Order not found for this payment.');
+        }
+
+        try {
+            $rail = app(\App\Modules\Wallet\Payments\Contracts\PaymentRailInterface::class);
+            $verified = $rail->verifyTransaction($paymentReference);
+            $status = strtoupper((string) ($verified['paymentStatus'] ?? ''));
+            $amountPaid = (string) ($verified['amountPaid'] ?? '0');
+
+            if (in_array($status, ['PAID', 'SUCCESS', 'COMPLETED'], true)
+                && bccomp($amountPaid, (string) $order->total_amount, 2) === 0) {
+                $order = $this->checkoutService->fulfillPaidGatewayOrder($order);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Platform gateway callback verify failed', [
+                'order_id' => $order->id,
+                'message' => $e->getMessage(),
+            ]);
+        }
+
+        $order->refresh();
+
+        if ($order->status !== 'paid') {
+            return redirect()
+                ->route('dashboard.services.checkout', $slug)
+                ->with('error', 'Payment is still pending. If you completed payment, refresh shortly or check Service orders.');
+        }
+
+        $tool = \App\Models\UserTool::query()
+            ->where('order_id', $order->id)
+            ->where('user_id', $request->user()->id)
+            ->first();
+
+        if ($tool) {
+            return redirect()
+                ->route('dashboard.my-tools.show', $tool)
+                ->with('success', 'Payment confirmed. Order '.$order->reference.'.');
+        }
+
+        return redirect()
+            ->route('dashboard.service-orders')
+            ->with('success', 'Payment confirmed. Order '.$order->reference.'.');
     }
 
     /**

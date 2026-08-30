@@ -694,6 +694,7 @@ document.addEventListener('alpine:init', () => {
             ?? null,
         qty: 1,
         domainMode: 'none',
+        paymentMethod: options.paymentMethod || 'wallet',
         basePrice: Number(options.basePrice || 0),
         get unit() {
             const row = this.variants.find((v) => Number(v.id) === Number(this.variantId));

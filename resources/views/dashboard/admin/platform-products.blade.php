@@ -62,6 +62,7 @@
         </x-slot:filters>
 
         <x-slot:head>
+            <x-dashboard.th class="w-24"> </x-dashboard.th>
             <x-dashboard.th>Title</x-dashboard.th>
             <x-dashboard.th>Service</x-dashboard.th>
             <x-dashboard.th>Sort</x-dashboard.th>
@@ -70,7 +71,21 @@
             <x-dashboard.th>Actions</x-dashboard.th>
         </x-slot:head>
         @foreach ($products as $product)
+            @php $thumb = $product->listThumbnailUrl(); @endphp
             <tr>
+                <x-dashboard.td>
+                    @if ($thumb)
+                        <img
+                            src="{{ $thumb }}"
+                            alt=""
+                            class="h-12 w-20 rounded-lg object-cover bg-muted"
+                        >
+                    @else
+                        <span class="inline-flex h-12 w-20 items-center justify-center rounded-lg bg-muted text-text-muted" aria-hidden="true">
+                            <x-dashboard.icon name="storefront" class="h-4 w-4" />
+                        </span>
+                    @endif
+                </x-dashboard.td>
                 <x-dashboard.td>
                     {{ $product->title }}
                     @if ($product->is_featured)
@@ -84,7 +99,7 @@
                         {{ $product->status->value }}
                     </x-dashboard.badge>
                 </x-dashboard.td>
-                <x-dashboard.td>₦{{ number_format($product->base_price, 2) }}</x-dashboard.td>
+                <x-dashboard.td>₦{{ number_format($product->displayPrice(), 2) }}</x-dashboard.td>
                 <x-dashboard.td>
                     <x-dashboard.row-actions>
                         <x-dashboard.menu-item :href="route('admin.platform-products.edit', $product)">Edit</x-dashboard.menu-item>

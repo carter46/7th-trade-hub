@@ -163,6 +163,31 @@ class WalletService
         });
     }
 
+    /**
+     * Credit platform revenue for a Monnify-paid catalog order (no user wallet required).
+     */
+    public function creditPlatformFromGatewaySale(Order $order, float $amount): Transaction
+    {
+        return DB::transaction(function () use ($order, $amount) {
+            $amountStr = number_format((float) $amount, 2, '.', '');
+
+            $platformWallet = Wallet::where('id', $this->getPlatformWallet()->id)->lockForUpdate()->firstOrFail();
+            $platformWallet->balance = bcadd((string) $platformWallet->balance, $amountStr, 2);
+            $platformWallet->save();
+
+            return $this->createLedgerEntry($platformWallet, [
+                'user_id' => $platformWallet->user_id,
+                'order_id' => $order->id,
+                'type' => TransactionType::Purchase->value,
+                'label' => 'Platform product sale (gateway)',
+                'description' => 'Gateway revenue from order '.$order->reference,
+                'amount' => (float) $amountStr,
+                'currency' => 'NGN',
+                'status' => 'completed',
+            ]);
+        });
+    }
+
     public function releaseEscrow(Escrow $escrow, ?int $releasedBy = null, float $feePercent = 0): void
     {
         DB::transaction(function () use ($escrow, $releasedBy, $feePercent) {

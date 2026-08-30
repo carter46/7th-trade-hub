@@ -22,6 +22,12 @@ class Order extends Model
         'amount',
         'total_amount',
         'status',
+        'payment_method',
+        'payment_provider',
+        'provider_payment_reference',
+        'provider_transaction_reference',
+        'checkout_url',
+        'checkout_expires_at',
     ];
 
     protected function casts(): array
@@ -29,7 +35,19 @@ class Order extends Model
         return [
             'amount' => 'decimal:2',
             'total_amount' => 'decimal:2',
+            'checkout_expires_at' => 'datetime',
         ];
+    }
+
+    public function isCheckoutExpired(): bool
+    {
+        return $this->checkout_expires_at !== null && $this->checkout_expires_at->isPast();
+    }
+
+    public function isAwaitingGatewayPayment(): bool
+    {
+        return $this->payment_method === 'gateway'
+            && in_array($this->status, ['pending', 'processing'], true);
     }
 
     public function user(): BelongsTo

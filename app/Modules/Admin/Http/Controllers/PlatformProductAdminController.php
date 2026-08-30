@@ -28,7 +28,7 @@ class PlatformProductAdminController extends Controller
     public function index(Request $request): View
     {
         $products = PlatformProduct::query()
-            ->with(['productType.serviceCategory'])
+            ->with(['productType.serviceCategory', 'heroMedia.variants', 'activeVariants'])
             ->when($request->filled('q'), function ($q) use ($request) {
                 $term = '%'.$request->string('q')->toString().'%';
                 $q->where(function ($inner) use ($term) {

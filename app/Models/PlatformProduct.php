@@ -218,4 +218,15 @@ class PlatformProduct extends Model
 
         return (float) ($lowest?->price ?? $this->base_price);
     }
+
+    /** Landscape thumb for admin lists — hero image is source of truth. */
+    public function listThumbnailUrl(): ?string
+    {
+        $media = $this->relationLoaded('heroMedia') ? $this->heroMedia : $this->heroMedia()->with('variants')->first();
+        if ($media) {
+            return $media->url('medium') ?? $media->url('small') ?? $media->thumbnailUrl();
+        }
+
+        return media_url(null, $this->hero_image, 'medium');
+    }
 }

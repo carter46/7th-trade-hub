@@ -3,12 +3,25 @@
 @section('title', $integration->name)
 
 @section('content')
+@php
+    $webhookUrl = url('/webhooks/site-integrations/'.$integration->integration_id);
+    $fresh = $freshCredentials ?? null;
+    $credentialRows = [
+        ['label' => 'Integration ID', 'value' => $fresh['integration_id'] ?? $integration->integration_id, 'secret' => false],
+        ['label' => 'Client ID', 'value' => $fresh['client_id'] ?? $integration->client_id, 'secret' => false],
+        ['label' => 'Client Secret', 'value' => $fresh['client_secret'] ?? $integration->client_secret, 'secret' => true],
+        ['label' => 'Webhook Secret', 'value' => $fresh['webhook_secret'] ?? $integration->webhook_secret, 'secret' => true],
+        ['label' => 'Webhook URL', 'value' => $fresh['webhook_url'] ?? $webhookUrl, 'secret' => false],
+        ['label' => 'Base URL', 'value' => $integration->base_url, 'secret' => false],
+    ];
+@endphp
 <x-layout.page
     title="{{ $integration->name }}"
     subtitle="{{ $integration->product?->title }}"
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
+        ['System', null],
         ['Demo Site Integrate', route('admin.site-integrations')],
         [$integration->name, null],
     ]"
@@ -24,21 +37,74 @@
         </form>
     </x-slot:actions>
 
-    @if ($freshCredentials ?? null)
-        <x-dashboard.card class="mb-6 border-primary/40 bg-primary/5">
-            <h3 class="text-sm font-semibold text-text-primary">Credentials (copy now — secret shown once)</h3>
-            <dl class="mt-3 space-y-2 font-mono text-xs">
-                <div><dt class="text-text-muted">Integration ID</dt><dd>{{ $freshCredentials['integration_id'] }}</dd></div>
-                <div><dt class="text-text-muted">Client ID</dt><dd>{{ $freshCredentials['client_id'] }}</dd></div>
-                <div><dt class="text-text-muted">Client Secret</dt><dd>{{ $freshCredentials['client_secret'] }}</dd></div>
-                <div><dt class="text-text-muted">Webhook Secret</dt><dd>{{ $freshCredentials['webhook_secret'] }}</dd></div>
-                <div><dt class="text-text-muted">Webhook URL</dt><dd>{{ $freshCredentials['webhook_url'] }}</dd></div>
-            </dl>
-        </x-dashboard.card>
-    @endif
+    <x-dashboard.card class="border border-primary/20 bg-gradient-to-br from-primary/10 via-elevated to-muted/40">
+        <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <h3 class="text-sm font-semibold text-text-primary">API credentials</h3>
+                <p class="mt-1 text-xs text-text-secondary">
+                    Give these values to the merchant site. Use <strong>Rotate keys</strong> if secrets may have leaked.
+                </p>
+            </div>
+            <x-dashboard.badge :status="$integration->status->value" />
+        </div>
+
+        <div class="space-y-3" x-data="{
+            async copy(text, key) {
+                try {
+                    await navigator.clipboard.writeText(text || '');
+                    this.copied = key;
+                    setTimeout(() => { if (this.copied === key) this.copied = null; }, 1600);
+                } catch (e) {
+                    alert('Copy failed');
+                }
+            },
+            copied: null,
+            reveal: {},
+        }">
+            @foreach ($credentialRows as $i => $row)
+                @php $value = (string) ($row['value'] ?? ''); @endphp
+                <div class="rounded-xl border border-border-default/80 bg-elevated/80 px-3 py-3 sm:px-4">
+                    <div class="mb-1.5 flex items-center justify-between gap-2">
+                        <p class="text-xs font-medium uppercase tracking-wide text-text-muted">{{ $row['label'] }}</p>
+                        <div class="flex items-center gap-1.5">
+                            @if ($row['secret'])
+                                <button
+                                    type="button"
+                                    class="rounded-lg px-2 py-1 text-xs font-medium text-text-secondary hover:bg-muted hover:text-text-primary"
+                                    x-on:click="reveal[{{ $i }}] = !reveal[{{ $i }}]"
+                                    x-text="reveal[{{ $i }}] ? 'Hide' : 'Show'"
+                                ></button>
+                            @endif
+                            <button
+                                type="button"
+                                class="rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary hover:bg-primary/15"
+                                x-on:click="copy(@js($value), {{ $i }})"
+                            >
+                                <span x-show="copied !== {{ $i }}">Copy</span>
+                                <span x-cloak x-show="copied === {{ $i }}">Copied</span>
+                            </button>
+                        </div>
+                    </div>
+                    @if ($row['secret'])
+                        <p class="break-all font-mono text-xs text-text-primary" x-text="reveal[{{ $i }}] ? @js($value) : @js(str_repeat('•', min(28, max(8, strlen($value)))))"></p>
+                    @else
+                        <p class="break-all font-mono text-xs text-text-primary">{{ $value }}</p>
+                    @endif
+                </div>
+            @endforeach
+        </div>
+
+        <p class="mt-4 text-xs text-text-muted">
+            Connection: <span class="font-medium text-text-secondary">{{ $integration->connection_status ?? 'unchecked' }}</span>
+            @if ($integration->last_error)
+                — {{ $integration->last_error }}
+            @endif
+        </p>
+    </x-dashboard.card>
 
     <div class="grid gap-6 lg:grid-cols-2">
         <x-dashboard.card>
+            <h3 class="mb-4 text-sm font-semibold text-text-primary">Integration settings</h3>
             <form method="POST" action="{{ route('admin.site-integrations.update', $integration) }}" class="space-y-4">
                 @csrf
                 @method('PUT')
@@ -64,9 +130,6 @@
                         </label>
                     @endforeach
                 </fieldset>
-                <p class="text-xs text-text-muted">Client ID: <span class="font-mono">{{ $integration->client_id }}</span></p>
-                <p class="text-xs text-text-muted">Integration ID: <span class="font-mono">{{ $integration->integration_id }}</span></p>
-                <p class="text-xs text-text-muted">Connection: {{ $integration->connection_status ?? 'unchecked' }} @if($integration->last_error) — {{ $integration->last_error }} @endif</p>
                 <x-dashboard.button type="submit">Save</x-dashboard.button>
             </form>
         </x-dashboard.card>
