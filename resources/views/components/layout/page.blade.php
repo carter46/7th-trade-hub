@@ -25,9 +25,9 @@
     $max = $widths[$width] ?? $widths['full'];
 @endphp
 
-<div {{ $attributes->merge(['class' => $max . ' mx-auto w-full space-y-section']) }}>
+<div {{ $attributes->merge(['class' => $max . ' mx-auto w-full min-w-0 space-y-section']) }}>
     @if (count($breadcrumb))
-        <x-ui.breadcrumb :items="$breadcrumb" />
+        <x-ui.breadcrumb :items="$breadcrumb" class="w-full" />
     @endif
 
     <x-ui.page-header :title="$title" :subtitle="$subtitle" class="!mb-0">
