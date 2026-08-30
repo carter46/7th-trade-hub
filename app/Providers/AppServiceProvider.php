@@ -198,7 +198,7 @@ class AppServiceProvider extends ServiceProvider
                 ]);
             }
 
-            // Regenerate PWA/APK icons when missing or admin favicon is newer than generated files.
+            // Regenerate PWA icons when missing or admin favicon is newer than generated files.
             $pwa = app(\App\Services\Branding\PwaBrandingSync::class);
             if ($pwa->shouldRegenerateIcons($branding)) {
                 $pwa->sync($branding);

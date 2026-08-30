@@ -62,19 +62,16 @@ class HomeHeroTest extends TestCase
         $this->assertStringContainsString('Crypto Cash Exchange', $html);
     }
 
-    public function test_home_shows_apk_download_section(): void
+    public function test_home_shows_pwa_install_section(): void
     {
-        config([
-            'pwa.apk.enabled' => true,
-            'pwa.apk.download_url' => '/downloads/7th-trade-hub.apk',
-            'pwa.apk.version' => '1.0.0',
-        ]);
-
         $this->get(route('home'))
             ->assertOk()
-            ->assertSee('Download our APK on your phone', false)
+            ->assertSee('Your hub, anywhere', false)
+            ->assertSee('Download for Mobile', false)
+            ->assertSee('Download for Desktop', false)
+            ->assertSee('data-pwa-install="mobile"', false)
+            ->assertSee('data-pwa-install="desktop"', false)
             ->assertSee('tablet-black copy.png', false)
-            ->assertSee('/downloads/7th-trade-hub.apk', false)
-            ->assertSee('Version 1.0.0', false);
+            ->assertSee('pwa-install-modal', false);
     }
 }

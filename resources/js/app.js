@@ -1,4 +1,5 @@
 import './bootstrap';
+import './pwa-install';
 import './dashboard-theme';
 import { mountCommandCharts, bindCommandRange } from './command-charts';
 import { initGoogleIdentity } from './google-identity';

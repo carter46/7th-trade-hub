@@ -1,6 +1,6 @@
 # 7th Trade Hub
 
-Laravel + Blade + PWA digital services marketplace (crypto exchange, social growth, document templates, website listings).
+Laravel + Blade + PWA digital services marketplace (crypto exchange, social growth, receipts, documents, website listings).
 
 ## Current state
 

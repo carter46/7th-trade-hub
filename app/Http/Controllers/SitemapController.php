@@ -43,7 +43,6 @@ class SitemapController extends Controller
             'help' => ['priority' => '0.5', 'changefreq' => 'monthly'],
             'contact' => ['priority' => '0.5', 'changefreq' => 'monthly'],
             'services' => ['priority' => '0.8', 'changefreq' => 'weekly'],
-            'templates' => ['priority' => '0.7', 'changefreq' => 'weekly'],
             'website-listings' => ['priority' => '0.7', 'changefreq' => 'weekly'],
             'exchange' => ['priority' => '0.7', 'changefreq' => 'weekly'],
             'legal' => ['priority' => '0.3', 'changefreq' => 'yearly'],
@@ -53,6 +52,17 @@ class SitemapController extends Controller
             if (Route::has($name)) {
                 $this->push($urls, route($name), $meta);
             }
+        }
+
+        if (Route::has('services.type')) {
+            $this->push($urls, route('services.type', [
+                'category' => 'business-documents',
+                'service' => 'receipt',
+            ]), ['priority' => '0.7', 'changefreq' => 'weekly']);
+            $this->push($urls, route('services.type', [
+                'category' => 'business-documents',
+                'service' => 'document',
+            ]), ['priority' => '0.7', 'changefreq' => 'weekly']);
         }
 
         $this->push($urls, route('legal', ['doc' => 'terms']), ['priority' => '0.3', 'changefreq' => 'yearly']);

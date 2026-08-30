@@ -23,8 +23,10 @@ return [
         'short_name' => '7thHub',
         'background_color' => '#0F172A',
         'display' => 'standalone',
-        'description' => '7th Trade Hub — digital services marketplace (crypto exchange, social growth, templates, listings).',
+        'description' => '7th Trade Hub — digital services marketplace (crypto exchange, social growth, receipts, documents, listings).',
         'theme_color' => '#0B6A39',
+        'start_url' => '/',
+        'scope' => '/',
         'icons' => [
             [
                 'src' => '/icons/icon-512x512.png',
@@ -70,16 +72,5 @@ return [
         'assets/images/favicon.png',
         'assets/images/favicon.ico',
         'assets/images/white_originla_logo.png',
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Android APK download (home page + optional direct link)
-    |--------------------------------------------------------------------------
-    */
-    'apk' => [
-        'enabled' => env('APK_DOWNLOAD_ENABLED', true),
-        'download_url' => env('APK_DOWNLOAD_URL', '/downloads/7th-trade-hub.apk'),
-        'version' => env('APK_VERSION', ''),
     ],
 ];

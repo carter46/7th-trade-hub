@@ -247,6 +247,8 @@
 
         @include('partials.tracking.body-end')
 
+        @include('partials.pwa.install-modal')
+
         @RegisterServiceWorkerScript
     </body>
 </html>

@@ -9,7 +9,7 @@
         $faqs = [
             [
                 'q' => 'What is '.$brandName.'?',
-                'a' => $brandName.' is a digital services hub. Browse VPN, domains, website packages, document templates, social tools, and more — plus a standalone crypto-to-cash exchange.',
+                'a' => $brandName.' is a digital services hub. Browse VPN, domains, website packages, receipts, business documents, social tools, and more — plus a standalone crypto-to-cash exchange.',
             ],
             [
                 'q' => 'What services can I browse?',
@@ -21,7 +21,7 @@
             ],
             [
                 'q' => 'Can I buy domains and business documents here?',
-                'a' => 'Yes. Register .com, .io, and .co domains, and download ready-to-edit templates such as employment agreements and invoice sets from the Documents section.',
+                'a' => 'Yes. Register .com, .io, and .co domains, and download ready-to-edit receipts and business documents from the Documents & Receipts section.',
             ],
             [
                 'q' => 'What is Crypto Cash Exchange?',
@@ -162,50 +162,53 @@
         </div>
     </section>
 
-    @if (config('pwa.apk.enabled', true))
+    <section class="py-16 sm:py-20 lg:py-24 bg-slate-900/20">
         @php
-            $apkUrl = config('pwa.apk.download_url');
-            $apkVersion = trim((string) config('pwa.apk.version', ''));
             $tabletImage = asset('assets/images/tablet-black copy.png');
         @endphp
-        <section class="py-16 sm:py-20 lg:py-24 bg-slate-900/20">
-            <div class="max-w-marketing mx-auto px-5 sm:px-6">
-                <div class="glassmorphism rounded-[2rem] border-white/10 overflow-hidden">
-                    <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center p-8 sm:p-10 lg:p-14">
-                        <div class="order-2 lg:order-1 text-center lg:text-left">
-                            <p class="text-accent text-xs sm:text-sm font-bold uppercase tracking-widest mb-3">Mobile app</p>
-                            <h2 class="text-3xl sm:text-4xl font-bold mb-4 font-display">Download our APK on your phone</h2>
-                            <p class="text-slate-400 text-sm sm:text-base leading-relaxed mb-6 max-w-lg mx-auto lg:mx-0">
-                                Install {{ $brandName }} on Android for quick access to services, wallet checkout, and your dashboard — right from your home screen.
-                            </p>
-                            @if ($apkVersion !== '')
-                                <p class="text-slate-500 text-xs mb-4">Version {{ $apkVersion }}</p>
-                            @endif
-                            @if (is_string($apkUrl) && $apkUrl !== '')
-                                <a
-                                    href="{{ $apkUrl }}"
-                                    class="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-primary hover:bg-accent text-white text-sm font-bold transition-colors shadow-lg"
-                                    download
-                                >
-                                    <x-ui.icon name="phone" class="w-5 h-5" />
-                                    Download APK
-                                </a>
-                            @endif
-                        </div>
-                        <div class="order-1 lg:order-2 flex justify-center lg:justify-end">
-                            <img
-                                src="{{ $tabletImage }}"
-                                alt="7th Trade Hub mobile app on a tablet"
-                                class="w-full max-w-md lg:max-w-lg h-auto drop-shadow-2xl"
-                                loading="lazy"
-                                decoding="async"
+        <div class="max-w-marketing mx-auto px-5 sm:px-6">
+            <div class="glassmorphism rounded-[2rem] border-white/10 overflow-hidden">
+                <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center p-8 sm:p-10 lg:p-14">
+                    <div class="order-2 lg:order-1 text-center lg:text-left">
+                        <p class="text-accent text-xs sm:text-sm font-bold uppercase tracking-widest mb-3">Mobile &amp; desktop app</p>
+                        <h2 class="text-3xl sm:text-4xl font-bold mb-4 font-display">Your hub, anywhere</h2>
+                        <p class="text-slate-400 text-sm sm:text-base leading-relaxed mb-8 max-w-lg mx-auto lg:mx-0">
+                            Install {{ $brandName }} on your phone or computer for quick access to services, wallet checkout, and your dashboard — right from your home screen or desktop.
+                        </p>
+                        <div class="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
+                            <button
+                                type="button"
+                                data-pwa-install="mobile"
+                                aria-label="Install {{ $brandName }} on your phone"
+                                class="inline-flex flex-col items-center sm:items-start gap-0.5 px-6 py-3.5 rounded-xl bg-primary hover:bg-accent text-white text-sm font-bold transition-colors shadow-lg text-left"
                             >
+                                <span data-pwa-label>Download for Mobile</span>
+                                <span data-pwa-sub class="text-xs font-normal text-white/80">Install directly to your device</span>
+                            </button>
+                            <button
+                                type="button"
+                                data-pwa-install="desktop"
+                                aria-label="Install {{ $brandName }} on your computer"
+                                class="inline-flex flex-col items-center sm:items-start gap-0.5 px-6 py-3.5 rounded-xl border border-white/15 hover:border-accent/40 hover:bg-white/5 text-white text-sm font-bold transition-colors text-left"
+                            >
+                                <span data-pwa-label>Download for Desktop</span>
+                                <span data-pwa-sub class="text-xs font-normal text-slate-400">Install directly to your device</span>
+                            </button>
                         </div>
+                    </div>
+                    <div class="order-1 lg:order-2 flex justify-center lg:justify-end">
+                        <img
+                            src="{{ $tabletImage }}"
+                            alt="{{ $brandName }} app on a tablet"
+                            class="w-full max-w-md lg:max-w-lg h-auto drop-shadow-2xl"
+                            loading="lazy"
+                            decoding="async"
+                        >
                     </div>
                 </div>
             </div>
-        </section>
-    @endif
+        </div>
+    </section>
 
     <section class="py-16 sm:py-20 lg:py-24">
         <div class="max-w-marketing mx-auto px-5 sm:px-6">

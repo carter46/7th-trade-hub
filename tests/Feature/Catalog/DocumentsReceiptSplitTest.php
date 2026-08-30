@@ -52,4 +52,23 @@ class DocumentsReceiptSplitTest extends TestCase
                 'service' => 'receipt',
             ]));
     }
+
+    public function test_legacy_templates_product_url_redirects_to_canonical_product_page(): void
+    {
+        $this->seed(\Database\Seeders\PlatformCatalogSeeder::class);
+        Artisan::call('catalog:backfill-hierarchy');
+
+        $this->get('/templates/invoice-receipt-set')
+            ->assertRedirect(route('services.nested.show', [
+                'category' => 'business-documents',
+                'service' => 'receipt',
+                'productSlug' => 'invoice-receipt-set',
+            ]));
+    }
+
+    public function test_document_templates_legacy_path_redirects_to_receipt_service(): void
+    {
+        $this->get('/document-templates')
+            ->assertRedirect('/services/business-documents/receipt');
+    }
 }
