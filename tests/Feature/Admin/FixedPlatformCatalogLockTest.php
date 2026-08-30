@@ -198,10 +198,9 @@ class FixedPlatformCatalogLockTest extends TestCase
                 'short_description' => 'Updated short',
                 'description' => 'Updated long',
                 'status' => 'published',
-                'base_price' => 5500,
                 'sort_order' => $product->sort_order,
                 'variants' => [
-                    ['id' => $variant->id, 'price' => 5500],
+                    ['id' => $variant->id, 'price' => 5500, 'description' => 'Best for home use'],
                 ],
             ])
             ->assertRedirect(route('admin.platform-products'));
@@ -210,6 +209,7 @@ class FixedPlatformCatalogLockTest extends TestCase
         $this->assertSame('Residential VPN Plus', $product->title);
         $this->assertEquals(5500.0, (float) $product->base_price);
         $this->assertEquals(5500.0, (float) $variant->fresh()->price);
+        $this->assertSame('Best for home use', $variant->fresh()->description);
         $this->assertSame('residential-vpn-lock-test', $product->slug);
     }
 
@@ -227,7 +227,6 @@ class FixedPlatformCatalogLockTest extends TestCase
                 'short_description' => $product->short_description,
                 'description' => $product->description,
                 'status' => 'published',
-                'base_price' => $product->base_price,
                 'sort_order' => $product->sort_order,
                 // is_featured omitted = unchecked on edit form
                 'variants' => [
@@ -244,7 +243,6 @@ class FixedPlatformCatalogLockTest extends TestCase
                 'short_description' => $product->short_description,
                 'description' => $product->description,
                 'status' => 'published',
-                'base_price' => $product->base_price,
                 'sort_order' => $product->fresh()->sort_order,
                 'is_featured' => '1',
                 'variants' => [
@@ -283,7 +281,6 @@ class FixedPlatformCatalogLockTest extends TestCase
                 'short_description' => $product->short_description,
                 'description' => $product->description,
                 'status' => 'published',
-                'base_price' => $product->base_price,
                 'sort_order' => $product->sort_order,
                 'provider' => 'hacked-provider',
                 'provider_sku' => 'HACK',
@@ -319,7 +316,6 @@ class FixedPlatformCatalogLockTest extends TestCase
             ->put(route('admin.platform-products.update', $product), [
                 'title' => $product->title,
                 'status' => 'published',
-                'base_price' => $product->base_price,
                 'sort_order' => $product->sort_order,
                 'variants' => [
                     ['id' => $variant->id, 'price' => 5000],

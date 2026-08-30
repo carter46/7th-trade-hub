@@ -309,6 +309,10 @@ class ServiceController extends Controller
         }
 
         if (in_array($enumType, [PlatformProductType::WebsitePackage, PlatformProductType::WebsiteTemplate], true)) {
+            if (auth()->check()) {
+                return redirect()->route('dashboard.services.product', $product->slug);
+            }
+
             return redirect()->route('website-listings.show', $product->slug);
         }
 
@@ -399,6 +403,10 @@ class ServiceController extends Controller
         }
 
         if (in_array($enumType, [PlatformProductType::WebsitePackage, PlatformProductType::WebsiteTemplate], true)) {
+            if (auth()->check()) {
+                return redirect()->route('dashboard.services.product', $product->slug);
+            }
+
             return redirect()->route('website-listings.show', $product->slug, 301);
         }
 

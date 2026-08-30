@@ -8,6 +8,7 @@
         'id' => $v->id,
         'price' => (float) $v->price,
         'label' => $v->displayLabel(),
+        'description' => (string) ($v->description ?? ''),
         'is_default' => (bool) $v->is_default,
     ])->values();
 @endphp
@@ -64,18 +65,26 @@
                         <label class="block text-sm font-medium text-text-secondary mb-2">Plan / variant</label>
                         <div class="space-y-2">
                             @foreach($variants as $variant)
-                                <label class="flex items-center justify-between gap-3 rounded-xl border border-border-default px-4 py-3 cursor-pointer hover:border-primary/40">
-                                    <span class="flex items-center gap-3">
-                                        <input
-                                            type="radio"
-                                            name="variant_id"
-                                            value="{{ $variant->id }}"
-                                            @checked((int) $defaultVariantId === (int) $variant->id)
-                                            x-model.number="variantId"
-                                        >
-                                        <span class="text-sm text-text-primary">{{ $variant->displayLabel() }}</span>
+                                <label
+                                    class="flex cursor-pointer flex-col gap-1 rounded-xl border border-border-default px-4 py-3 hover:border-primary/40"
+                                    :class="Number(variantId) === {{ (int) $variant->id }} ? 'border-primary bg-primary/5' : ''"
+                                >
+                                    <span class="flex items-center justify-between gap-3">
+                                        <span class="flex items-center gap-3">
+                                            <input
+                                                type="radio"
+                                                name="variant_id"
+                                                value="{{ $variant->id }}"
+                                                @checked((int) $defaultVariantId === (int) $variant->id)
+                                                x-model.number="variantId"
+                                            >
+                                            <span class="text-sm text-text-primary">{{ $variant->displayLabel() }}</span>
+                                        </span>
+                                        <span class="font-semibold text-text-primary">₦{{ number_format($variant->price, 2) }}</span>
                                     </span>
-                                    <span class="font-semibold text-text-primary">₦{{ number_format($variant->price, 2) }}</span>
+                                    @if(filled($variant->description))
+                                        <span class="pl-7 text-xs leading-relaxed text-text-secondary">{{ $variant->description }}</span>
+                                    @endif
                                 </label>
                             @endforeach
                         </div>

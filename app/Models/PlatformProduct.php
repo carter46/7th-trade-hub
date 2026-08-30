@@ -214,9 +214,8 @@ class PlatformProduct extends Model
             ? $this->activeVariants
             : $this->activeVariants()->get();
 
-        $default = $variants->firstWhere('is_default', true)
-            ?? $variants->sortBy('price')->first();
+        $lowest = $variants->sortBy('price')->first();
 
-        return (float) ($default?->price ?? $this->base_price);
+        return (float) ($lowest?->price ?? $this->base_price);
     }
 }

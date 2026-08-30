@@ -12,7 +12,16 @@
         $crumbs[] = [$groupLabel, route('dashboard.services.browse', $groupSlug)];
     }
     $crumbs[] = [$product->title, null];
-    $variants = $product->activeVariants;
+    $variants = $product->activeVariants->sortBy('price')->values();
+    $defaultVariant = $variants->first();
+    $heroUrl = media_url($product->heroMedia, $product->hero_image, 'large')
+        ?? media_url($product->heroMedia, $product->hero_image, 'medium');
+    $variantPayload = $variants->map(fn ($v) => [
+        'id' => $v->id,
+        'label' => $v->displayLabel(),
+        'price' => (float) $v->price,
+        'description' => (string) ($v->description ?? ''),
+    ])->values();
 @endphp
 <x-layout.page
     :title="$product->title"
@@ -20,78 +29,148 @@
     width="default"
     :breadcrumb="$crumbs"
 >
-    <x-slot:actions>
-        @if($wallet)
-            <span class="text-sm text-text-muted mr-2">Wallet: <strong class="text-text-primary">₦{{ number_format((float) $wallet->balance, 0) }}</strong></span>
-        @endif
-        <x-dashboard.button :href="route('dashboard.services.checkout', $product->slug)" variant="primary" size="sm" icon="orders">Buy with wallet</x-dashboard.button>
-        @php
-            $demoIntegration = $product->siteIntegration;
-            $canDemoUser = $demoIntegration?->isActive() && $demoIntegration->hasCapability(\App\Models\SiteIntegration::CAP_DEMO_USER_LOGIN) && filled($demoIntegration->demo_user_email);
-            $canDemoAdmin = $demoIntegration?->isActive() && $demoIntegration->hasCapability(\App\Models\SiteIntegration::CAP_DEMO_ADMIN_LOGIN) && filled($demoIntegration->demo_admin_email);
-        @endphp
-        @if ($canDemoUser || $canDemoAdmin)
-            <x-dashboard.button type="button" variant="secondary" size="sm" x-on:click="$dispatch('open-modal', 'view-demo-dash-{{ $product->id }}')">View Demo</x-dashboard.button>
-            <x-dashboard.modal name="view-demo-dash-{{ $product->id }}" maxWidth="md">
-                <div class="space-y-4 p-1">
-                    <h3 class="text-lg font-semibold text-text-primary">View demo</h3>
-                    <p class="text-sm text-text-secondary">Open the independent demo site without a password.</p>
-                    <div class="flex flex-col gap-2">
-                        @if ($canDemoUser)
-                            <form method="POST" action="{{ route('dashboard.services.demo-launch', [$product, 'user']) }}">
-                                @csrf
-                                <x-dashboard.button type="submit" class="w-full" variant="secondary">Login as User</x-dashboard.button>
-                            </form>
-                        @endif
-                        @if ($canDemoAdmin)
-                            <form method="POST" action="{{ route('dashboard.services.demo-launch', [$product, 'admin']) }}">
-                                @csrf
-                                <x-dashboard.button type="submit" class="w-full">Login as Admin</x-dashboard.button>
-                            </form>
-                        @endif
-                    </div>
-                </div>
-            </x-dashboard.modal>
-        @endif
-    </x-slot:actions>
-
-    <div class="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-        <x-dashboard.card class="space-y-4">
-            @if($product->hero_image || $product->heroMedia)
-                <img
-                    src="{{ $product->heroMedia?->url('medium') ?? asset($product->hero_image) }}"
-                    alt="{{ $product->title }}"
-                    class="w-full max-h-72 rounded-xl object-cover"
-                >
-            @endif
-            @if(filled($product->description))
-                <div class="prose prose-sm max-w-none text-text-secondary whitespace-pre-line">{{ $product->description }}</div>
-            @elseif(filled($product->short_description))
-                <p class="text-text-secondary">{{ $product->short_description }}</p>
-            @endif
-        </x-dashboard.card>
-
-        <x-dashboard.card class="space-y-4 h-fit">
-            <div>
-                <p class="text-xs font-semibold uppercase tracking-wider text-text-muted">From</p>
-                <p class="text-3xl font-bold text-primary mt-1">₦{{ number_format($product->displayPrice(), 0) }}</p>
+    <div
+        class="space-y-6"
+        x-data="{
+            variants: @js($variantPayload),
+            variantId: {{ (int) ($defaultVariant?->id ?? 0) }},
+            get selected() {
+                return this.variants.find(v => Number(v.id) === Number(this.variantId)) || this.variants[0] || null;
+            },
+            checkoutUrl() {
+                const base = @js(route('dashboard.services.checkout', $product->slug));
+                if (! this.selected) return base;
+                return base + (base.includes('?') ? '&' : '?') + 'variant=' + this.selected.id;
+            }
+        }"
+    >
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2">
+                @if($wallet)
+                    <span class="text-sm text-text-muted">Wallet: <strong class="text-text-primary">₦{{ number_format((float) $wallet->balance, 0) }}</strong></span>
+                @endif
             </div>
-            @if($variants->isNotEmpty())
-                <div class="space-y-2">
-                    <p class="text-sm font-medium text-text-secondary">Available plans</p>
-                    @foreach($variants->take(4) as $variant)
-                        <div class="flex items-center justify-between text-sm border border-border-subtle rounded-lg px-3 py-2">
-                            <span>{{ $variant->displayLabel() }}</span>
-                            <span class="font-semibold">₦{{ number_format((float) $variant->price, 0) }}</span>
+            <div class="flex flex-wrap items-center gap-2">
+                <x-dashboard.button
+                    href="#"
+                    variant="primary"
+                    size="sm"
+                    icon="orders"
+                    x-bind:href="checkoutUrl()"
+                >Buy with wallet</x-dashboard.button>
+                @php
+                    $demoIntegration = $product->siteIntegration;
+                    $canDemoUser = $demoIntegration?->isActive() && $demoIntegration->hasCapability(\App\Models\SiteIntegration::CAP_DEMO_USER_LOGIN) && filled($demoIntegration->demo_user_email);
+                    $canDemoAdmin = $demoIntegration?->isActive() && $demoIntegration->hasCapability(\App\Models\SiteIntegration::CAP_DEMO_ADMIN_LOGIN) && filled($demoIntegration->demo_admin_email);
+                @endphp
+                @if ($canDemoUser || $canDemoAdmin)
+                    <x-dashboard.button type="button" variant="secondary" size="sm" x-on:click="$dispatch('open-modal', 'view-demo-dash-{{ $product->id }}')">View Demo</x-dashboard.button>
+                    <x-dashboard.modal name="view-demo-dash-{{ $product->id }}" maxWidth="md">
+                        <div class="space-y-4 p-1">
+                            <h3 class="text-lg font-semibold text-text-primary">View demo</h3>
+                            <p class="text-sm text-text-secondary">Open the independent demo site without a password.</p>
+                            <div class="flex flex-col gap-2">
+                                @if ($canDemoUser)
+                                    <form method="POST" action="{{ route('dashboard.services.demo-launch', [$product, 'user']) }}">
+                                        @csrf
+                                        <x-dashboard.button type="submit" class="w-full" variant="secondary">Login as User</x-dashboard.button>
+                                    </form>
+                                @endif
+                                @if ($canDemoAdmin)
+                                    <form method="POST" action="{{ route('dashboard.services.demo-launch', [$product, 'admin']) }}">
+                                        @csrf
+                                        <x-dashboard.button type="submit" class="w-full">Login as Admin</x-dashboard.button>
+                                    </form>
+                                @endif
+                            </div>
                         </div>
-                    @endforeach
+                    </x-dashboard.modal>
+                @endif
+            </div>
+        </div>
+
+        <x-dashboard.card class="space-y-4 overflow-hidden !p-0">
+            @if($heroUrl)
+                <div class="w-full bg-muted">
+                    <img
+                        src="{{ $heroUrl }}"
+                        alt="{{ $product->title }}"
+                        class="block w-full h-auto max-h-[28rem] object-contain"
+                    >
                 </div>
             @endif
-            <x-dashboard.button :href="route('dashboard.services.checkout', $product->slug)" variant="primary" icon="orders" class="w-full">Continue to checkout</x-dashboard.button>
-            @if($groupSlug)
-                <a href="{{ route('dashboard.services.browse', $groupSlug) }}" class="inline-flex text-sm text-text-secondary hover:text-primary">← Back to {{ $groupLabel ?? 'services' }}</a>
-            @endif
+            <div class="space-y-4 p-5 sm:p-6">
+                @if(filled($product->description))
+                    <div class="prose prose-sm max-w-none text-text-secondary whitespace-pre-line">{{ $product->description }}</div>
+                @elseif(filled($product->short_description))
+                    <p class="text-text-secondary">{{ $product->short_description }}</p>
+                @endif
+            </div>
         </x-dashboard.card>
+
+        <div class="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
+            <x-dashboard.card class="space-y-4 h-fit">
+                <div>
+                    <p class="text-sm font-medium text-text-primary">Choose a plan</p>
+                    <p class="mt-1 text-xs text-text-muted">Pricing starts from the lowest plan. Select a plan to see its details.</p>
+                </div>
+
+                @if($variants->isNotEmpty())
+                    <div class="space-y-2">
+                        @foreach($variants as $variant)
+                            <label
+                                class="flex cursor-pointer flex-col gap-1 rounded-xl border px-4 py-3 transition-colors"
+                                :class="Number(variantId) === {{ (int) $variant->id }} ? 'border-primary bg-primary/5' : 'border-border-default hover:border-primary/40'"
+                            >
+                                <span class="flex items-center justify-between gap-3">
+                                    <span class="flex items-center gap-3">
+                                        <input
+                                            type="radio"
+                                            name="preview_variant_id"
+                                            value="{{ $variant->id }}"
+                                            class="accent-primary"
+                                            x-model.number="variantId"
+                                            @checked((int) $defaultVariant?->id === (int) $variant->id)
+                                        >
+                                        <span class="text-sm font-medium text-text-primary">{{ $variant->displayLabel() }}</span>
+                                    </span>
+                                    <span class="font-semibold text-text-primary">₦{{ number_format((float) $variant->price, 0) }}</span>
+                                </span>
+                                @if(filled($variant->description))
+                                    <span
+                                        class="pl-7 text-xs leading-relaxed text-text-secondary"
+                                        x-show="Number(variantId) === {{ (int) $variant->id }}"
+                                    >{{ $variant->description }}</span>
+                                @endif
+                            </label>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="text-sm text-text-muted">No plans are available for this product yet.</p>
+                @endif
+            </x-dashboard.card>
+
+            <x-dashboard.card class="space-y-4 h-fit">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-text-muted">Selected plan</p>
+                    <p class="mt-1 text-lg font-semibold text-text-primary" x-text="selected ? selected.label : '—'"></p>
+                    <p class="text-3xl font-bold text-primary mt-2">
+                        <span x-text="selected ? ('₦' + Number(selected.price).toLocaleString('en-NG')) : '—'"></span>
+                    </p>
+                    <p class="mt-1 text-xs text-text-muted">From ₦{{ number_format($product->displayPrice(), 0) }}</p>
+                </div>
+                <x-dashboard.button
+                    href="#"
+                    variant="primary"
+                    icon="orders"
+                    class="w-full"
+                    x-bind:href="checkoutUrl()"
+                >Continue to checkout</x-dashboard.button>
+                @if($groupSlug)
+                    <a href="{{ route('dashboard.services.browse', $groupSlug) }}" class="inline-flex text-sm text-text-secondary hover:text-primary">← Back to {{ $groupLabel ?? 'services' }}</a>
+                @endif
+            </x-dashboard.card>
+        </div>
     </div>
 </x-layout.page>
 @endsection

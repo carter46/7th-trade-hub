@@ -6,6 +6,7 @@ use App\Enums\PlatformProductType;
 use App\Http\Controllers\Controller;
 use App\Models\PlatformCategory;
 use App\Models\PlatformProduct;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
@@ -28,7 +29,7 @@ class WebsiteListingController extends Controller
         $products = PlatformProduct::query()
             ->visibleToPublic()
             ->ofType(PlatformProductType::WebsitePackage)
-            ->with(['productType', 'activeVariants', 'images'])
+            ->with(['productType', 'activeVariants', 'images', 'heroMedia.variants'])
             ->when($categoryId, fn ($builder) => $builder->where('platform_category_id', $categoryId))
             ->when($industry, fn ($builder) => $builder->where('industry', $industry))
             ->when($framework, fn ($builder) => $builder->where('framework', $framework))
@@ -60,8 +61,12 @@ class WebsiteListingController extends Controller
         ]);
     }
 
-    public function show(string $slug): View
+    public function show(string $slug): View|RedirectResponse
     {
+        if (auth()->check()) {
+            return redirect()->route('dashboard.services.product', $slug);
+        }
+
         $product = PlatformProduct::query()
             ->visibleToPublic()
             ->ofType(PlatformProductType::WebsitePackage)
@@ -71,8 +76,7 @@ class WebsiteListingController extends Controller
 
         return view('pages.website-listings-show', [
             'product' => $product,
-            'isFavorited' => auth()->check()
-                && $product->favorites()->where('user_id', auth()->id())->exists(),
+            'isFavorited' => false,
         ]);
     }
 }

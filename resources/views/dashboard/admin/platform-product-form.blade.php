@@ -9,6 +9,7 @@
             'id' => $v->id,
             'name' => $v->name,
             'price' => $v->price,
+            'description' => $v->description,
         ])->values()->all()
         : []);
     $heroId = old('hero_media_id', $product->hero_media_id);
@@ -18,7 +19,7 @@
 @endphp
 <x-layout.page
     title="Edit Product"
-    subtitle="Fixed platform product — title, description, price, image, featured, and status."
+    subtitle="Fixed platform product — title, description, plan prices, image, featured, and status."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
@@ -54,8 +55,6 @@
                 Featured (show in featured sections on public / user pages)
             </label>
 
-            <x-dashboard.input label="Base price (NGN)" name="base_price" type="number" step="0.01" min="0" :value="old('base_price', $product->base_price)" required />
-
             <x-dashboard.input
                 label="Sort position"
                 name="sort_order"
@@ -70,7 +69,7 @@
             <x-dashboard.media-picker
                 name="hero_media_id"
                 label="Image"
-                hint="Product hero image."
+                hint="Product hero image. Shown full-width without cropping on the product page."
                 preview="wide"
                 :value="$heroId"
                 :preview-url="$heroPreview"
@@ -78,27 +77,40 @@
 
             @if ($variantRows !== [])
                 <div class="space-y-3 rounded-xl border border-border-subtle px-4 py-4">
-                    <p class="text-sm font-medium text-text-primary">Variants (prices only)</p>
-                    <p class="text-xs text-text-muted">Variant structure is fixed by the platform. You can change prices only.</p>
+                    <p class="text-sm font-medium text-text-primary">Plans / variants</p>
+                    <p class="text-xs text-text-muted">Variant names are fixed. Set price and an optional description for each plan. The storefront shows the lowest price as “from”.</p>
                     @foreach ($variantRows as $i => $variant)
-                        <div class="grid grid-cols-1 gap-2 md:grid-cols-2 items-end">
+                        <div class="space-y-2 rounded-xl border border-border-default bg-muted/20 p-3">
                             <input type="hidden" name="variants[{{ $i }}][id]" value="{{ $variant['id'] }}">
-                            <div>
-                                <label class="block text-xs text-text-muted mb-1">Variant</label>
-                                <p class="rounded-xl border border-border-default bg-muted/40 px-3 py-2.5 text-sm">{{ $variant['name'] }}</p>
+                            <div class="grid grid-cols-1 gap-2 md:grid-cols-2 items-end">
+                                <div>
+                                    <label class="block text-xs text-text-muted mb-1">Variant</label>
+                                    <p class="rounded-xl border border-border-default bg-muted/40 px-3 py-2.5 text-sm">{{ $variant['name'] }}</p>
+                                </div>
+                                <x-dashboard.input
+                                    label="Price (NGN)"
+                                    :name="'variants['.$i.'][price]'"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    :value="old('variants.'.$i.'.price', $variant['price'])"
+                                    required
+                                />
                             </div>
-                            <x-dashboard.input
-                                label="Price (NGN)"
-                                :name="'variants['.$i.'][price]'"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                :value="old('variants.'.$i.'.price', $variant['price'])"
-                                required
-                            />
+                            <div>
+                                <label class="mb-1 block text-xs text-text-muted">Plan description</label>
+                                <textarea
+                                    name="variants[{{ $i }}][description]"
+                                    rows="2"
+                                    class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2.5 text-sm"
+                                    placeholder="What this plan includes…"
+                                >{{ old('variants.'.$i.'.description', $variant['description'] ?? '') }}</textarea>
+                            </div>
                         </div>
                     @endforeach
                 </div>
+            @else
+                <p class="text-sm text-amber-600">This product has no variants. Pricing cannot be set until plans exist in the catalog seed.</p>
             @endif
 
             <div class="flex flex-wrap gap-2 pt-2">

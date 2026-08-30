@@ -63,7 +63,6 @@ class MediaLifecycleTest extends TestCase
                 'short_description' => 'Short',
                 'description' => 'Long',
                 'status' => 'draft',
-                'base_price' => 10,
                 'sort_order' => max(1, (int) $product->sort_order),
                 'hero_media_id' => $asset->id,
             ])
@@ -172,7 +171,6 @@ class MediaLifecycleTest extends TestCase
             ->put(route('admin.platform-products.update', $product), [
                 'title' => 'Blocked Attach',
                 'status' => 'draft',
-                'base_price' => 10,
                 'sort_order' => max(1, (int) $product->sort_order),
                 'hero_media_id' => $asset->id,
             ])

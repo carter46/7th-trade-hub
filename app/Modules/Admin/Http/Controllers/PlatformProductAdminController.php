@@ -135,12 +135,12 @@ class PlatformProductAdminController extends Controller
                 PlatformProductStatus::Draft->value,
                 PlatformProductStatus::Published->value,
             ])],
-            'base_price' => ['required', 'numeric', 'min:0'],
             'sort_order' => ['required', 'integer', 'min:1', 'max:'.$siblingMax],
             'hero_media_id' => ['nullable', 'integer', $this->mediaPaths->existsRule()],
             'variants' => ['nullable', 'array'],
             'variants.*.id' => ['required', 'integer'],
             'variants.*.price' => ['required', 'numeric', 'min:0'],
+            'variants.*.description' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $heroMediaId = filled($data['hero_media_id'] ?? null) ? (int) $data['hero_media_id'] : null;
@@ -152,14 +152,13 @@ class PlatformProductAdminController extends Controller
             'description' => $data['description'] ?? null,
             'status' => $data['status'],
             'is_featured' => $request->boolean('is_featured'),
-            'base_price' => $data['base_price'],
             'hero_media_id' => $heroMediaId,
             'hero_image' => $heroPath,
         ]);
 
         SortOrder::move($platformProduct, (int) $data['sort_order'], $siblings);
 
-        $this->updateExistingVariantPrices($platformProduct, $data['variants'] ?? []);
+        $this->updateExistingVariants($platformProduct, $data['variants'] ?? []);
         $this->mediaUsages->syncUsages($platformProduct, [
             'hero' => $heroMediaId,
         ]);
@@ -198,28 +197,41 @@ class PlatformProductAdminController extends Controller
     }
 
     /**
-     * @param  list<array{id: int, price: mixed}>  $variants
+     * @param  list<array{id: int, price: mixed, description?: string|null}>  $variants
      */
-    private function updateExistingVariantPrices(PlatformProduct $product, array $variants): void
+    private function updateExistingVariants(PlatformProduct $product, array $variants): void
     {
         if ($variants === []) {
             return;
         }
 
         $existingIds = $product->variants()->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $prices = [];
 
         foreach ($variants as $row) {
             $id = (int) ($row['id'] ?? 0);
             if ($id <= 0 || ! in_array($id, $existingIds, true)) {
                 throw ValidationException::withMessages([
-                    'variants' => 'Variant structure is fixed. You can only change prices of existing variants.',
+                    'variants' => 'Variant structure is fixed. You can only change prices and descriptions of existing variants.',
                 ]);
+            }
+
+            $price = (float) $row['price'];
+            $prices[] = $price;
+
+            $payload = ['price' => $price];
+            if (array_key_exists('description', $row)) {
+                $payload['description'] = trim((string) ($row['description'] ?? '')) ?: null;
             }
 
             PlatformProductVariant::query()
                 ->where('id', $id)
                 ->where('platform_product_id', $product->id)
-                ->update(['price' => (float) $row['price']]);
+                ->update($payload);
+        }
+
+        if ($prices !== []) {
+            $product->update(['base_price' => min($prices)]);
         }
     }
 

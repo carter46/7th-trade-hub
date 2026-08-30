@@ -11,6 +11,7 @@ class PlatformProductVariant extends Model
         'platform_product_id',
         'name',
         'label',
+        'description',
         'sku',
         'duration_months',
         'price',

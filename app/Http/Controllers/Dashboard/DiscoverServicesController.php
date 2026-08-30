@@ -162,15 +162,6 @@ class DiscoverServicesController extends Controller
             ->firstOrFail();
 
         $typeSlug = $product->typeSlug();
-        try {
-            $enumType = PlatformProductType::from((string) $typeSlug);
-        } catch (\ValueError) {
-            $enumType = null;
-        }
-
-        if (in_array($enumType, [PlatformProductType::WebsitePackage, PlatformProductType::WebsiteTemplate], true)) {
-            return redirect()->route('website-listings.show', $product->slug);
-        }
 
         $this->activity->record($request->user()->id, 'viewed', $product, 'service.viewed');
 
@@ -193,8 +184,11 @@ class DiscoverServicesController extends Controller
             ->with('activeVariants')
             ->firstOrFail();
 
-        $variants = $product->activeVariants;
-        $defaultVariant = $variants->firstWhere('is_default', true) ?? $variants->first();
+        $variants = $product->activeVariants->sortBy('price')->values();
+        $requestedVariantId = $request->integer('variant') ?: null;
+        $defaultVariant = $requestedVariantId
+            ? ($variants->firstWhere('id', $requestedVariantId) ?? $variants->first())
+            : $variants->first();
         $webTypes = [
             PlatformProductType::WebsitePackage->value,
             PlatformProductType::WebsiteTemplate->value,
@@ -339,7 +333,7 @@ class DiscoverServicesController extends Controller
         $products = PlatformProduct::query()
             ->visibleToPublic()
             ->ofTypeMany($activeTypes)
-            ->with(['productType.serviceCategory', 'activeVariants'])
+            ->with(['productType.serviceCategory', 'activeVariants', 'heroMedia.variants'])
             ->when($q !== '', function ($builder) use ($q) {
                 $builder->where(function ($inner) use ($q) {
                     $inner->where('title', 'like', "%{$q}%")
