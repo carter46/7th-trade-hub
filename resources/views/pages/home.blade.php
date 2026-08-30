@@ -167,43 +167,55 @@
             $tabletImage = asset('assets/images/tablet-black copy.png');
         @endphp
         <div class="max-w-marketing mx-auto px-5 sm:px-6">
-            <div class="glassmorphism rounded-[2rem] border-white/10 overflow-hidden">
-                <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center p-8 sm:p-10 lg:p-14">
+            <div class="glassmorphism rounded-[2.5rem] sm:rounded-[3rem] border border-white/10 overflow-hidden shadow-xl">
+                <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center p-8 sm:p-10 lg:p-14 rounded-[2rem] sm:rounded-[2.5rem]">
                     <div class="order-2 lg:order-1 text-center lg:text-left">
                         <p class="text-accent text-xs sm:text-sm font-bold uppercase tracking-widest mb-3">Mobile &amp; desktop app</p>
                         <h2 class="text-3xl sm:text-4xl font-bold mb-4 font-display">Your hub, anywhere</h2>
                         <p class="text-slate-400 text-sm sm:text-base leading-relaxed mb-8 max-w-lg mx-auto lg:mx-0">
-                            Install {{ $brandName }} on your phone or computer for quick access to services, wallet checkout, and your dashboard — right from your home screen or desktop.
+                            Install {{ $brandName }} on your phone or computer for quick access to services, wallet checkout, and your dashboard — right from your home screen or desktop. No APK file required.
                         </p>
                         <div class="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
                             <button
                                 type="button"
                                 data-pwa-install="mobile"
-                                aria-label="Install {{ $brandName }} on your phone"
-                                class="inline-flex flex-col items-center sm:items-start gap-0.5 px-6 py-3.5 rounded-xl bg-primary hover:bg-accent text-white text-sm font-bold transition-colors shadow-lg text-left"
+                                aria-label="Download {{ $brandName }} mobile app"
+                                class="inline-flex items-center justify-center sm:justify-start gap-3 px-6 py-3.5 rounded-2xl bg-primary hover:bg-accent text-white text-sm font-bold transition-colors shadow-lg text-left"
                             >
-                                <span data-pwa-label>Download for Mobile</span>
-                                <span data-pwa-sub class="text-xs font-normal text-white/80">Install directly to your device</span>
+                                <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                                    <x-ui.icon name="smartphone" class="w-5 h-5" />
+                                </span>
+                                <span class="inline-flex flex-col items-start gap-0.5 min-w-0">
+                                    <span data-pwa-label>Download Mobile app</span>
+                                    <span data-pwa-sub class="text-xs font-normal text-white/80">Install to your home screen</span>
+                                </span>
                             </button>
                             <button
                                 type="button"
                                 data-pwa-install="desktop"
-                                aria-label="Install {{ $brandName }} on your computer"
-                                class="inline-flex flex-col items-center sm:items-start gap-0.5 px-6 py-3.5 rounded-xl border border-white/15 hover:border-accent/40 hover:bg-white/5 text-white text-sm font-bold transition-colors text-left"
+                                aria-label="Download {{ $brandName }} desktop app"
+                                class="inline-flex items-center justify-center sm:justify-start gap-3 px-6 py-3.5 rounded-2xl border border-white/15 hover:border-accent/40 hover:bg-white/5 text-white text-sm font-bold transition-colors text-left"
                             >
-                                <span data-pwa-label>Download for Desktop</span>
-                                <span data-pwa-sub class="text-xs font-normal text-slate-400">Install directly to your device</span>
+                                <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10">
+                                    <x-ui.icon name="monitor" class="w-5 h-5" />
+                                </span>
+                                <span class="inline-flex flex-col items-start gap-0.5 min-w-0">
+                                    <span data-pwa-label>Download Desktop app</span>
+                                    <span data-pwa-sub class="text-xs font-normal text-slate-400">Install to your computer</span>
+                                </span>
                             </button>
                         </div>
                     </div>
                     <div class="order-1 lg:order-2 flex justify-center lg:justify-end">
-                        <img
-                            src="{{ $tabletImage }}"
-                            alt="{{ $brandName }} app on a tablet"
-                            class="w-full max-w-md lg:max-w-lg h-auto drop-shadow-2xl"
-                            loading="lazy"
-                            decoding="async"
-                        >
+                        <div class="rounded-[1.75rem] sm:rounded-[2rem] overflow-hidden bg-slate-900/40 p-3 sm:p-4 border border-white/5">
+                            <img
+                                src="{{ $tabletImage }}"
+                                alt="{{ $brandName }} app on a tablet"
+                                class="w-full max-w-md lg:max-w-lg h-auto drop-shadow-2xl rounded-xl sm:rounded-2xl"
+                                loading="lazy"
+                                decoding="async"
+                            >
+                        </div>
                     </div>
                 </div>
             </div>

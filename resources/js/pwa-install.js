@@ -133,17 +133,17 @@ function setState(next) {
 
         if (mode === 'mobile') {
             if (labelEl) {
-                labelEl.textContent = 'Download for Mobile';
+                labelEl.textContent = 'Download Mobile app';
             }
             if (subEl) {
-                subEl.textContent = 'Install directly to your device';
+                subEl.textContent = 'Install to your home screen';
             }
         } else if (mode === 'desktop') {
             if (labelEl) {
-                labelEl.textContent = 'Download for Desktop';
+                labelEl.textContent = 'Download Desktop app';
             }
             if (subEl) {
-                subEl.textContent = 'Install directly to your device';
+                subEl.textContent = 'Install to your computer';
             }
         } else if (mode === 'menu' || mode === 'footer') {
             if (labelEl) {

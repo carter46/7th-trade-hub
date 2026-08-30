@@ -1,0 +1,18 @@
+---
+description: Run Vite builds locally and commit public/build — never on shared hosting
+alwaysApply: true
+---
+
+# Frontend build (local only)
+
+Production shared hosting (e.g. 7th-tradehub.online) has **no Node.js** and must not run `npm run build`.
+
+When JS or CSS under `resources/js/` or `resources/css/` changes (or Vite config changes):
+
+1. Run **`npm run build` locally** in the project root.
+2. **Commit the generated files** in `public/build/` (manifest + hashed assets). This repo intentionally keeps them in git — see `.gitignore`.
+3. Deploy by pushing/pulling code; the server only needs the committed `public/build/` output.
+
+Do **not** tell the user to run `npm run build` on the server. Server-side steps are PHP-only (e.g. `php artisan migrate`, `php artisan branding:sync-pwa`).
+
+After a build, mention that `public/build/` should be included in the next commit if the user is deploying.
