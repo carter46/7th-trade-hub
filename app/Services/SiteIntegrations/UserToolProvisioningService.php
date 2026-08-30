@@ -2,7 +2,6 @@
 
 namespace App\Services\SiteIntegrations;
 
-use App\Enums\PlatformProductType;
 use App\Enums\UserToolStatus;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -31,7 +30,7 @@ class UserToolProvisioningService
         }
 
         $product = PlatformProduct::query()->find($item->item_id);
-        if (! $product || $product->product_type !== PlatformProductType::WebsitePackage) {
+        if (! $product) {
             return null;
         }
 

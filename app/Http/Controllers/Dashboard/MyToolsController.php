@@ -33,8 +33,11 @@ class MyToolsController extends Controller
             ->ownedBy($userId)
             ->with(['product', 'variant', 'integration'])
             ->when($status !== '', fn ($query) => $query->where('status', $status))
-            ->when($type === 'websites', function ($query) {
-                $query->whereHas('product', fn ($p) => $p->where('product_type', PlatformProductType::WebsitePackage));
+            ->when($type !== '', function ($query) use ($type) {
+                $enum = PlatformProductType::tryFrom($type);
+                if ($enum) {
+                    $query->whereHas('product', fn ($p) => $p->where('product_type', $enum));
+                }
             })
             ->when($q !== '', function ($query) use ($q) {
                 $term = '%'.$q.'%';
@@ -56,6 +59,7 @@ class MyToolsController extends Controller
 
         return view('dashboard.user.my-tools.index', [
             'tools' => $tools,
+            'toolTypes' => PlatformProductType::cases(),
             'filters' => [
                 'q' => $q,
                 'status' => $status,

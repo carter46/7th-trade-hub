@@ -18,7 +18,7 @@ Never reuse these credentials for a customer purchase. Base URLs must be HTTPS a
 
 Path: **Dashboard → Services → My Tools**
 
-- After buying a website package (quantity **must be 1**), a tool appears as **Pending setup**.
+- After buying an internal catalog service (website packages require quantity **1**), a tool appears as **Pending setup**.
 - Orders remain under **Service orders**; My Tools is ownership/access.
 - When configured: site URL, admin URL, admin email, **Copy password** (POST only, active+live subscriptions), **Login as admin** (auto session).
 - **Expiring soon** is shown when active and ≤ 7 days remain — not a stored status.

@@ -5,7 +5,7 @@
 @section('content')
 <x-layout.page
     title="Add Demo Integration"
-    subtitle="Select an existing Website Package product, then enter the independent demo site details."
+    subtitle="Link a demo site to an existing Website Package product."
     width="narrow"
     :breadcrumb="[
         ['Admin', route('admin')],
@@ -13,6 +13,10 @@
         ['Create', null],
     ]"
 >
+    <p class="max-w-3xl text-sm leading-relaxed text-text-secondary">
+        Select the product, then enter the independent demo site URL and demo login emails. Hub generates API keys after you save.
+    </p>
+
     <x-dashboard.card>
         <form method="POST" action="{{ route('admin.site-integrations.store') }}" class="space-y-4">
             @csrf

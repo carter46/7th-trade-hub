@@ -176,7 +176,7 @@ class UserTool extends Model
             return $this->display_name;
         }
 
-        $title = $this->product?->title ?? 'Website';
+        $title = $this->product?->title ?? 'Service';
 
         return $this->instance_sequence > 1
             ? $title.' #'.$this->instance_sequence

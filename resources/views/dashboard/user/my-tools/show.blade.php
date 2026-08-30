@@ -31,7 +31,7 @@
         <x-dashboard.card>
             <h2 class="text-lg font-semibold text-text-primary">Pending setup</h2>
             <p class="mt-2 text-sm text-text-secondary">
-                Payment received. Our team is configuring your website. You will see URLs and login controls here once setup is complete.
+                Payment received. Our team is configuring your service. Access details will appear here once setup is complete.
             </p>
             <dl class="mt-6 grid gap-3 sm:grid-cols-2 text-sm">
                 <div>

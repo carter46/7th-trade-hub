@@ -5,7 +5,7 @@
 @section('content')
 <x-layout.page
     title="Demo Site Integrate"
-    subtitle="Connect independent website demos to Website Package products. Credentials are per product and never used for customer purchases."
+    subtitle="Demo credentials for Website Package products."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
@@ -16,6 +16,10 @@
     <x-slot:actions>
         <x-dashboard.button :href="route('admin.site-integrations.create')" size="sm">Add integration</x-dashboard.button>
     </x-slot:actions>
+
+    <p class="max-w-3xl text-sm leading-relaxed text-text-secondary">
+        Connect independent demo sites to products. Credentials are per product and never used for customer purchases.
+    </p>
 
     <x-dashboard.table
         :empty="$integrations->isEmpty()"

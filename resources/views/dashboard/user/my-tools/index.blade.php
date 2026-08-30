@@ -12,10 +12,14 @@
         ['My Tools', null],
     ]"
 >
+    <p class="max-w-3xl text-sm leading-relaxed text-text-secondary">
+        Internal catalog services you have purchased appear here for setup, access, and renewal. Order receipts stay under Service orders.
+    </p>
+
     <x-dashboard.table
         :empty="$tools->isEmpty()"
         empty-title="No tools yet"
-        empty-description="When you buy a website package, it appears here for setup and access."
+        empty-description="When you buy an internal service from the catalog, it appears here for setup and access."
         empty-icon="listings"
         striped
     >
@@ -36,7 +40,9 @@
                     <div class="min-w-[8rem]">
                         <x-dashboard.select name="type">
                             <option value="">All types</option>
-                            <option value="websites" @selected(($filters['type'] ?? '') === 'websites')>Websites</option>
+                            @foreach ($toolTypes as $productType)
+                                <option value="{{ $productType->value }}" @selected(($filters['type'] ?? '') === $productType->value)>{{ $productType->label() }}</option>
+                            @endforeach
                         </x-dashboard.select>
                     </div>
                     <label class="flex items-center gap-2 text-sm text-text-secondary">
@@ -49,6 +55,7 @@
         </x-slot:filters>
         <x-slot:head>
             <x-dashboard.th>Name</x-dashboard.th>
+            <x-dashboard.th>Type</x-dashboard.th>
             <x-dashboard.th>Status</x-dashboard.th>
             <x-dashboard.th>Expires</x-dashboard.th>
             <x-dashboard.th></x-dashboard.th>
@@ -56,6 +63,7 @@
         @foreach ($tools as $tool)
             <tr>
                 <x-dashboard.td class="font-medium text-text-primary">{{ $tool->resolvedDisplayName() }}</x-dashboard.td>
+                <x-dashboard.td class="text-xs text-text-secondary">{{ $tool->product?->product_type?->label() ?? '—' }}</x-dashboard.td>
                 <x-dashboard.td>
                     <x-dashboard.badge :status="$tool->status->value" />
                     @if ($tool->isExpiringSoon())

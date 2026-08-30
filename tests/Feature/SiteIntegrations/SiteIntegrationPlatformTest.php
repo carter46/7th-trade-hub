@@ -288,6 +288,80 @@ class SiteIntegrationPlatformTest extends TestCase
         ]);
     }
 
+    public function test_checkout_creates_user_tool_for_non_website_internal_service(): void
+    {
+        \Illuminate\Support\Facades\Artisan::call('catalog:backfill-hierarchy');
+
+        $service = \App\Models\ProductType::query()
+            ->where('slug', 'vpn')
+            ->first();
+
+        if (! $service) {
+            $category = $this->forceCreateServiceCategory([
+                'name' => 'Network Services',
+                'slug' => 'network-services-test',
+                'is_active' => true,
+                'sort_order' => 2,
+            ]);
+            $service = $this->forceCreateProductType([
+                'service_category_id' => $category->id,
+                'name' => 'VPN',
+                'slug' => 'vpn',
+                'is_active' => true,
+                'sort_order' => 1,
+            ]);
+        }
+
+        $product = $this->forceCreatePlatformProduct([
+            'title' => 'Business VPN',
+            'slug' => 'business-vpn-'.Str::lower(Str::random(4)),
+            'product_type' => PlatformProductType::Vpn,
+            'product_type_id' => $service->id,
+            'status' => PlatformProductStatus::Published,
+            'base_price' => 5000,
+            'sort_order' => 1,
+            'provider' => 'manual',
+            'fulfillment_mode' => 'manual',
+        ]);
+
+        PlatformProductVariant::query()->create([
+            'platform_product_id' => $product->id,
+            'name' => '1 Month',
+            'label' => '1 Month',
+            'sku' => $product->slug.'-1m',
+            'duration_months' => 1,
+            'price' => 5000,
+            'sort_order' => 0,
+            'is_default' => true,
+            'is_active' => true,
+        ]);
+
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $user->assignRole('user');
+        Wallet::factory()->create([
+            'user_id' => $user->id,
+            'balance' => 100000,
+            'locked_balance' => 0,
+        ]);
+
+        $variant = $product->fresh('activeVariants')->activeVariants->first();
+
+        $this->actingAs($user)
+            ->post(route('dashboard.services.purchase', $product->slug), [
+                'variant_id' => $variant->id,
+                'quantity' => 1,
+                'domain_mode' => 'none',
+                'idempotency_key' => (string) Str::uuid(),
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('user_tools', [
+            'user_id' => $user->id,
+            'platform_product_id' => $product->id,
+            'status' => UserToolStatus::PendingSetup->value,
+        ]);
+    }
+
     public function test_expire_command_marks_tools_expired(): void
     {
         $product = $this->seedWebsiteProduct();

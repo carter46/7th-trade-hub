@@ -96,7 +96,7 @@
                 @endif
             </x-dashboard.card>
         @endif
-        <x-dashboard.table :empty="($tools ?? collect())->isEmpty()" empty-title="No tools" empty-description="Purchased website packages appear here after checkout." striped>
+        <x-dashboard.table :empty="($tools ?? collect())->isEmpty()" empty-title="No tools" empty-description="Purchased internal catalog services appear here after checkout." striped>
             <x-slot:head>
                 <x-dashboard.th>Tool</x-dashboard.th>
                 <x-dashboard.th>Status</x-dashboard.th>
