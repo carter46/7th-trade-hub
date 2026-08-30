@@ -176,38 +176,47 @@
                             Install {{ $brandName }} on your phone or computer for quick access to services, wallet checkout, and your dashboard — right from your home screen or desktop. No APK file required.
                         </p>
                         <div class="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-                            <button
-                                type="button"
-                                data-pwa-install="mobile"
-                                aria-label="Download {{ $brandName }} mobile app"
-                                class="inline-flex items-center justify-center sm:justify-start gap-3 px-6 py-3.5 rounded-2xl bg-primary hover:bg-accent text-white text-sm font-bold transition-colors shadow-lg text-left"
-                            >
-                                <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
-                                    <x-ui.icon name="smartphone" class="w-5 h-5" />
-                                </span>
-                                <span class="inline-flex flex-col items-start gap-0.5 min-w-0">
-                                    <span data-pwa-label>Download Mobile app</span>
-                                    <span data-pwa-sub class="text-xs font-normal text-white/80">Install to your home screen</span>
-                                </span>
-                            </button>
-                            <button
-                                type="button"
-                                data-pwa-install="desktop"
-                                aria-label="Download {{ $brandName }} desktop app"
-                                class="inline-flex items-center justify-center sm:justify-start gap-3 px-6 py-3.5 rounded-2xl border border-white/15 hover:border-accent/40 hover:bg-white/5 text-white text-sm font-bold transition-colors text-left"
-                            >
-                                <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10">
-                                    <x-ui.icon name="monitor" class="w-5 h-5" />
-                                </span>
-                                <span class="inline-flex flex-col items-start gap-0.5 min-w-0">
-                                    <span data-pwa-label>Download Desktop app</span>
-                                    <span data-pwa-sub class="text-xs font-normal text-slate-400">Install to your computer</span>
-                                </span>
-                            </button>
+                            {{-- Mobile CTA: phones/tablets only (PWA install JS must not fight wrapper visibility) --}}
+                            <div class="w-full sm:w-auto lg:hidden">
+                                <button
+                                    type="button"
+                                    data-pwa-install="mobile"
+                                    aria-label="Download {{ $brandName }} mobile app"
+                                    class="inline-flex w-full sm:w-auto items-center justify-center sm:justify-start gap-3 px-6 py-3.5 rounded-2xl bg-primary hover:bg-accent text-white text-sm font-bold transition-colors shadow-lg text-left"
+                                >
+                                    <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                                        <x-ui.icon name="smartphone" class="w-5 h-5" />
+                                    </span>
+                                    <span class="inline-flex flex-col items-start gap-0.5 min-w-0">
+                                        <span data-pwa-label>Download Mobile app</span>
+                                        <span data-pwa-sub class="text-xs font-normal text-white/80">Install to your home screen</span>
+                                    </span>
+                                </button>
+                            </div>
+                            {{-- Desktop CTA: large screens only --}}
+                            <div class="hidden lg:block w-auto">
+                                <button
+                                    type="button"
+                                    data-pwa-install="desktop"
+                                    aria-label="Download {{ $brandName }} desktop app"
+                                    class="inline-flex items-center justify-start gap-3 px-6 py-3.5 rounded-2xl border border-white/15 hover:border-accent/40 hover:bg-white/5 text-white text-sm font-bold transition-colors text-left"
+                                >
+                                    <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10">
+                                        <x-ui.icon name="monitor" class="w-5 h-5" />
+                                    </span>
+                                    <span class="inline-flex flex-col items-start gap-0.5 min-w-0">
+                                        <span data-pwa-label>Download Desktop app</span>
+                                        <span data-pwa-sub class="text-xs font-normal text-slate-400">Install to your computer</span>
+                                    </span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div class="order-1 lg:order-2 flex justify-center lg:justify-end">
-                        <div class="rounded-[1.75rem] sm:rounded-[2rem] overflow-hidden bg-slate-900/40 p-3 sm:p-4 border border-white/5">
+                        <div
+                            data-reveal="fade-up"
+                            class="reveal-fade-up rounded-[1.75rem] sm:rounded-[2rem] overflow-hidden bg-slate-900/40 p-3 sm:p-4 border border-white/5"
+                        >
                             <img
                                 src="{{ $tabletImage }}"
                                 alt="{{ $brandName }} app on a tablet"

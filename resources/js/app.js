@@ -1,5 +1,6 @@
 import './bootstrap';
 import './pwa-install';
+import './scroll-reveal';
 import './dashboard-theme';
 import { mountCommandCharts, bindCommandRange } from './command-charts';
 import { initGoogleIdentity } from './google-identity';
