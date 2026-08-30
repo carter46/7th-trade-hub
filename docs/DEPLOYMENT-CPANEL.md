@@ -8,7 +8,9 @@ This project is deployed on **shared hosting** using **cPanel Git Version Contro
 2. **Local:** When frontend assets change (`resources/css` or `resources/js`), run **`npm run build`** so `public/build/` is updated.
 3. **Local:** Commit and push to GitHub (e.g. via GitHub Desktop).
 4. **Server:** In cPanel → Git Version Control, **Pull** the latest changes from the GitHub repository.
-5. **Server:** No `npm install`, no `npm run build`, no `php artisan migrate`. The repo already contains built assets and the database is managed via phpMyAdmin.
+5. **Server (after pull only):** If you have SSH/terminal, run migrations and refresh branding icons — **never run `branding:sync-pwa` before pull** (see [Git pull blocked by icon files](#git-pull-blocked-by-icon-files) below).
+
+Do **not** run `npm run build` on the server (no Node.js). Do **not** run `php artisan test` on shared hosting (`proc_open` is usually disabled).
 
 ## Composer / vendor
 
@@ -48,6 +50,7 @@ See [PRODUCTION-ENV-CHECKLIST.md](PRODUCTION-ENV-CHECKLIST.md) and [LAUNCH-CHECK
 ## Repository requirements
 
 - **`public/build/`** is **committed** to the repo (it is **not** in `.gitignore`). The server serves these files as-is.
+- **PWA / favicon files** under `public/` (`favicon-*.png`, `favicon.ico`, `apple-touch-icon.png`, `logo.png`, `public/icons/*.png`, `manifest.json`) are **committed** as baselines. After each pull, you may run `php artisan branding:sync-pwa` to regenerate them from admin branding — run it **only after** a successful pull.
 - **`.env`** is **not** committed. Configure environment variables on the server manually (copy from `.env.example` and set values in cPanel or via file manager).
 - **Database schema** is in **`database/sql/migration.sql`**. When the schema changes, update this file and commit it. Import or re-import it in phpMyAdmin as needed.
 - **Legacy `analytics_providers`:** Superseded by `integration_providers`. The SQL still creates the old table for one-time cutover copy only; the app does not write to it. After all environments have migrated, you may `DROP TABLE IF EXISTS analytics_providers;`. Re-run `PermissionSeeder` (or grant `fees.manage`) on existing DBs after fees moved out of Settings.
@@ -67,7 +70,45 @@ See [PRODUCTION-ENV-CHECKLIST.md](PRODUCTION-ENV-CHECKLIST.md) and [LAUNCH-CHECK
    - `QUEUE_CONNECTION=sync` on shared hosting unless a queue worker is configured
    - With `sync`, email delivery still tries Brevo → Brevo retry → Laravel Mail, then notifies admins immediately. Delayed 5/30 minute retries require `database`/`redis` queue + a worker.
 5. **Permissions:** Ensure `storage/` and `bootstrap/cache/` are writable by the web server (e.g. 755 or 775 and correct owner). Use cPanel File Manager or FTP.
-6. **PWA (optional):** Add `public/icons/icon-192x192.png` and `public/icons/icon-512x512.png` so the PWA install icon is correct (see `public/icons/README.md`).
+6. **PWA icons:** Baseline icons are in git under `public/icons/` and `public/favicon-*.png`. After the first successful pull, run `php artisan branding:sync-pwa` once to match admin favicon (see `public/icons/README.md`).
+
+## Git pull blocked by icon files
+
+If cPanel deploy fails with:
+
+```text
+error: The following untracked working tree files would be overwritten by merge:
+    public/apple-touch-icon.png
+    public/favicon-16x16.png
+    ...
+```
+
+**Cause:** `php artisan branding:sync-pwa` was run **before** `git pull`. That created icon files on the server that are not in git’s index, then pull tried to write the committed versions from GitHub.
+
+**Fix (SSH or cPanel Terminal — run from the Laravel app root, same folder as `artisan`):**
+
+```bash
+cd ~/domains/7th-tradehub.online/public_html   # adjust if your path differs
+
+# Remove only the conflicting untracked icons (safe — pull restores them from git)
+rm -f public/apple-touch-icon.png public/favicon-16x16.png public/favicon-32x32.png public/favicon.ico public/logo.png
+
+git pull origin main    # or master — match your default branch
+
+php artisan migrate --force
+php artisan branding:sync-pwa
+php artisan config:cache
+php artisan route:cache
+```
+
+**Correct order every deploy:**
+
+1. **Pull** (cPanel Git or `git pull`)
+2. **`php artisan migrate --force`** (if you use migrations on server)
+3. **`php artisan branding:sync-pwa`** (optional — refreshes favicon/PWA from admin settings)
+4. **Cache** (`config:cache`, `route:cache`) if you use them
+
+Never run step 3 before step 1.
 
 ## Local workflow summary
 

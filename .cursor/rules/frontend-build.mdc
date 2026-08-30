@@ -13,6 +13,8 @@ When JS or CSS under `resources/js/` or `resources/css/` changes (or Vite config
 2. **Commit the generated files** in `public/build/` (manifest + hashed assets). This repo intentionally keeps them in git — see `.gitignore`.
 3. Deploy by pushing/pulling code; the server only needs the committed `public/build/` output.
 
-Do **not** tell the user to run `npm run build` on the server. Server-side steps are PHP-only (e.g. `php artisan migrate`, `php artisan branding:sync-pwa`).
+Do **not** tell the user to run `npm run build` on the server. Server-side steps are PHP-only **after** git pull (e.g. `php artisan migrate`, `php artisan branding:sync-pwa`).
+
+**Never run `php artisan branding:sync-pwa` before `git pull` on shared hosting** — it writes untracked files under `public/` and the next pull will fail with “untracked working tree files would be overwritten by merge”. Correct order: pull → migrate → branding:sync-pwa.
 
 After a build, mention that `public/build/` should be included in the next commit if the user is deploying.
