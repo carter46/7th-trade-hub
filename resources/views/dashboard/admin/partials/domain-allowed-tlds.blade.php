@@ -19,7 +19,7 @@
         advancedOpen: false,
         advancedQuery: '',
         matches(tld) {
-            const q = this.advancedQuery.trim().toLowerCase();
+            const q = (this.advancedQuery || '').trim().toLowerCase();
             if (!q) return true;
             return tld.includes(q) || ('.' + tld).includes(q);
         },

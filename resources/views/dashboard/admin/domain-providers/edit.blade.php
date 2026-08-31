@@ -88,8 +88,7 @@
             @csrf
             <p x-show="status" x-cloak class="mb-2 text-sm" :class="ok ? 'text-emerald-700' : 'text-danger'" x-text="status"></p>
             <x-dashboard.button type="submit" variant="secondary" size="sm" x-bind:disabled="testing">
-                <span x-show="!testing">Test connection</span>
-                <span x-cloak x-show="testing">Testing…</span>
+                <span x-text="testing ? 'Testing…' : 'Test connection'">Test connection</span>
             </x-dashboard.button>
         </form>
     </x-dashboard.card>

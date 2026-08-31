@@ -243,8 +243,7 @@
                     </select>
                 </div>
                 <x-dashboard.button type="button" variant="secondary" @click="test()" x-bind:disabled="testing">
-                    <span x-show="!testing">Test connection</span>
-                    <span x-show="testing" x-cloak>Testing…</span>
+                    <span x-text="testing ? 'Testing…' : 'Test connection'">Test connection</span>
                 </x-dashboard.button>
                 <p
                     class="w-full text-sm break-words"

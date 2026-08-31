@@ -33,7 +33,7 @@
     @endif
 
     {{-- Always bind x-show: without search, query stays empty so the menu remains visible. --}}
-    <div class="flex min-h-0 flex-1 flex-col" @if ($showNavSearch) x-show="!query.trim()" @endif>
+    <div class="flex min-h-0 flex-1 flex-col" @if ($showNavSearch) x-show="!(query || '').trim()" @endif>
         <x-dashboard.sidebar
             :label="$label"
             class="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto overscroll-contain px-1 scrollbar-hide"
@@ -60,7 +60,7 @@
     @if ($showNavSearch)
         <div
             class="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overscroll-contain px-1 scrollbar-hide"
-            x-show="query.trim()"
+            x-show="(query || '').trim()"
             x-cloak
             role="listbox"
             :aria-label="'Search results'"

@@ -6,7 +6,7 @@ import { registerPullToRefresh } from './dashboard-pull-refresh';
 import { mountCommandCharts, bindCommandRange } from './command-charts';
 import { initGoogleIdentity } from './google-identity';
 import { initDashboardPageLoader } from './dashboard-page-loader';
-import { createDomainSearchHelpers, extractQuoteError } from './domain-search-shared';
+import { assignAlpineHelpers, createDomainSearchHelpers, extractQuoteError } from './domain-search-shared';
 import { createCheckoutValidationHelpers } from './checkout-validation';
 import { registerAdminConnectionTest } from './admin-connection-test';
 import Alpine from 'alpinejs';
@@ -247,7 +247,7 @@ document.addEventListener('alpine:init', () => {
             this.activeResult = 0;
         },
         filteredDestinations() {
-            const term = this.query.trim().toLowerCase();
+            const term = (this.query || '').trim().toLowerCase();
             if (!term) return [];
 
             return this.destinations.filter((item) => {
@@ -318,7 +318,7 @@ document.addEventListener('alpine:init', () => {
             });
         },
         async fetchSearch() {
-            const term = this.query.trim();
+            const term = (this.query || '').trim();
             if (!this.searchUrl || term.length < 2) {
                 this.searchResults = [];
                 return;
@@ -345,7 +345,7 @@ document.addEventListener('alpine:init', () => {
             }
         },
         filtered() {
-            const term = this.query.trim().toLowerCase();
+            const term = (this.query || '').trim().toLowerCase();
             const nav = term
                 ? this.destinations.filter((item) => {
                     const haystack = [item.label, item.group, ...(item.keywords || [])]
@@ -694,9 +694,11 @@ document.addEventListener('alpine:init', () => {
         },
     }));
 
-    Alpine.data('platformCheckout', (variants = [], options = {}) => ({
-        ...createDomainSearchHelpers(),
-        ...createCheckoutValidationHelpers(),
+    Alpine.data('platformCheckout', (variants = [], options = {}) => assignAlpineHelpers(
+        {},
+        createDomainSearchHelpers(),
+        createCheckoutValidationHelpers(),
+        {
         variants,
         variantId: options.defaultVariantId
             ?? variants.find((v) => v.is_default)?.id
@@ -777,12 +779,12 @@ document.addEventListener('alpine:init', () => {
             return new Intl.NumberFormat('en-NG', { maximumFractionDigits: 0 }).format(this.domainRetailPrice || 0);
         },
         get isAdvancedTldSelected() {
-            return this.domainTldsAdvanced.some((row) => row.tld === this.domainTld);
+            return (this.domainTldsAdvanced || []).some((row) => row.tld === this.domainTld);
         },
         get filteredAdvancedTlds() {
-            const q = this.advancedQuery.trim().toLowerCase();
-            if (!q) return this.domainTldsAdvanced;
-            return this.domainTldsAdvanced.filter((row) =>
+            const q = (this.advancedQuery || '').trim().toLowerCase();
+            if (!q) return this.domainTldsAdvanced || [];
+            return (this.domainTldsAdvanced || []).filter((row) =>
                 row.tld.includes(q) || row.label.toLowerCase().includes(q),
             );
         },
@@ -826,7 +828,7 @@ document.addEventListener('alpine:init', () => {
             }
             if (this.requireDomainChoice) {
                 if (this.domainMode === 'buy') {
-                    if (!this.domainLabel.trim() || !this.domainTld || this.domainLabelError) return false;
+                    if (!(this.domainLabel || '').trim() || !this.domainTld || this.domainLabelError) return false;
                     return Boolean(this.domainQuoteToken && this.domainAvailable && this.registrantComplete);
                 }
                 if (this.domainMode === 'connect') {
@@ -857,7 +859,7 @@ document.addEventListener('alpine:init', () => {
             this.connectScanning = false;
         },
         async scanConnectDomain() {
-            const fqdn = this.connectFqdnInput.trim().toLowerCase();
+            const fqdn = (this.connectFqdnInput || '').trim().toLowerCase();
             if (!fqdn || !this.connectScanUrl) return;
             const requestId = ++this.connectScanRequestId;
             this.connectScanning = true;
@@ -907,7 +909,7 @@ document.addEventListener('alpine:init', () => {
             }
         },
         async checkDomain() {
-            const label = this.domainLabel.trim();
+            const label = (this.domainLabel || '').trim();
             if (!label || !this.quoteUrl || this.domainLabelError) return;
             this.domainChecking = true;
             this.domainMessage = '';
@@ -939,10 +941,13 @@ document.addEventListener('alpine:init', () => {
                 this.domainChecking = false;
             }
         },
-    }));
+        },
+    ));
 
-    Alpine.data('domainProductSearch', (options = {}) => ({
-        ...createDomainSearchHelpers(),
+    Alpine.data('domainProductSearch', (options = {}) => assignAlpineHelpers(
+        {},
+        createDomainSearchHelpers(),
+        {
         productSlug: options.productSlug ?? '',
         quoteUrl: options.quoteUrl ?? '',
         checkoutBase: options.checkoutBase ?? '',
@@ -967,12 +972,12 @@ document.addEventListener('alpine:init', () => {
             return Boolean(this.domainQuoteToken && this.domainFqdn && this.domainAvailable);
         },
         get isAdvancedTldSelected() {
-            return this.domainTldsAdvanced.some((row) => row.tld === this.domainTld);
+            return (this.domainTldsAdvanced || []).some((row) => row.tld === this.domainTld);
         },
         get filteredAdvancedTlds() {
-            const q = this.advancedQuery.trim().toLowerCase();
-            if (!q) return this.domainTldsAdvanced;
-            return this.domainTldsAdvanced.filter((row) =>
+            const q = (this.advancedQuery || '').trim().toLowerCase();
+            if (!q) return this.domainTldsAdvanced || [];
+            return (this.domainTldsAdvanced || []).filter((row) =>
                 row.tld.includes(q) || row.label.toLowerCase().includes(q),
             );
         },
@@ -985,7 +990,7 @@ document.addEventListener('alpine:init', () => {
             this.invalidateQuote();
         },
         async checkDomain() {
-            const label = this.domainLabel.trim();
+            const label = (this.domainLabel || '').trim();
             if (!label || !this.quoteUrl || this.domainLabelError) return;
             this.domainChecking = true;
             this.domainMessage = '';
@@ -1030,7 +1035,8 @@ document.addEventListener('alpine:init', () => {
             }
             window.location.href = `${this.checkoutBase}${sep}${params.toString()}`;
         },
-    }));
+        },
+    ));
 
     Alpine.data('ecosystemSlider', () => ({
         dragging: false,

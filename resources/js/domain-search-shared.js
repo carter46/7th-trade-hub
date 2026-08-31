@@ -61,6 +61,20 @@ export function formatDomainNgn(amount) {
     return new Intl.NumberFormat('en-NG', { maximumFractionDigits: 0 }).format(Number(amount) || 0);
 }
 
+/**
+ * Merge Alpine helper objects while preserving getters.
+ * Object spread ({...helpers}) evaluates getters once and can throw
+ * (e.g. this.domainLabel.trim() before domainLabel exists), which breaks
+ * the entire x-data component — blank buttons, dead x-if panels, etc.
+ */
+export function assignAlpineHelpers(target, ...sources) {
+    for (const source of sources) {
+        Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+    }
+
+    return target;
+}
+
 export function createDomainSearchHelpers() {
     return {
         domainLabelError: '',
@@ -68,8 +82,8 @@ export function createDomainSearchHelpers() {
         selectedSuggestionTld: null,
         allowedTldSet() {
             return new Set([
-                ...this.domainTlds.map((row) => row.tld),
-                ...this.domainTldsAdvanced.map((row) => row.tld),
+                ...(this.domainTlds ?? []).map((row) => row.tld),
+                ...(this.domainTldsAdvanced ?? []).map((row) => row.tld),
             ]);
         },
         onDomainLabelInput(event) {
@@ -86,7 +100,7 @@ export function createDomainSearchHelpers() {
             this.invalidateQuote();
         },
         get canCheckDomain() {
-            return Boolean(this.domainLabel.trim()) && !this.domainLabelError;
+            return Boolean(this.domainLabel?.trim()) && !this.domainLabelError;
         },
         formatSuggestionPrice(amount) {
             return formatDomainNgn(amount);

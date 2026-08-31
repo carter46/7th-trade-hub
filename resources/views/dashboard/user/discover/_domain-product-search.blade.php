@@ -47,8 +47,7 @@
             x-on:click="checkDomain()"
             x-bind:disabled="domainChecking || !canCheckDomain"
         >
-            <span x-show="!domainChecking">Check availability</span>
-            <span x-cloak x-show="domainChecking">Checking…</span>
+            <span x-text="domainChecking ? 'Checking…' : 'Check availability'">Check availability</span>
         </x-dashboard.button>
 
         @include('dashboard.user.discover._domain-search-results')

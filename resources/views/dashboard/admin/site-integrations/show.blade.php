@@ -36,8 +36,7 @@
         >
             @csrf
             <x-dashboard.button type="submit" variant="secondary" size="sm" x-bind:disabled="testing">
-                <span x-show="!testing">Check connection</span>
-                <span x-cloak x-show="testing">Checking…</span>
+                <span x-text="testing ? 'Checking…' : 'Check connection'">Check connection</span>
             </x-dashboard.button>
         </form>
         <form method="POST" action="{{ route('admin.site-integrations.rotate', $integration) }}" onsubmit="return confirm('Rotate credentials? The site must update its config.');">

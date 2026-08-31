@@ -370,8 +370,7 @@
                     <p class="text-sm text-danger" x-show="!status">{{ $message }}</p>
                 @enderror
                 <x-dashboard.button type="submit" variant="secondary" x-bind:disabled="sending">
-                    <span x-show="!sending">Send test email</span>
-                    <span x-show="sending" x-cloak>Sending…</span>
+                    <span x-text="sending ? 'Sending…' : 'Send test email'">Send test email</span>
                 </x-dashboard.button>
             </form>
         </x-dashboard.card>
@@ -499,8 +498,7 @@
                 @csrf
                 <input type="hidden" name="google_identity_client_id" value="{{ old('google_identity_client_id', $googleIdentity->credential('client_id')) }}">
                 <x-dashboard.button type="submit" variant="secondary" x-bind:disabled="testing">
-                    <span x-show="!testing">Test configuration</span>
-                    <span x-show="testing" x-cloak>Testing…</span>
+                    <span x-text="testing ? 'Testing…' : 'Test configuration'">Test configuration</span>
                 </x-dashboard.button>
                 <p class="text-sm break-words" x-show="status" x-text="status" x-cloak :class="ok === true ? 'text-success' : 'text-danger'"></p>
             </form>
@@ -613,8 +611,7 @@
             >
                 @csrf
                 <x-dashboard.button type="submit" variant="secondary" x-bind:disabled="testing">
-                    <span x-show="!testing">Test connection</span>
-                    <span x-show="testing" x-cloak>Testing…</span>
+                    <span x-text="testing ? 'Testing…' : 'Test connection'">Test connection</span>
                 </x-dashboard.button>
                 <p class="text-sm break-words" x-show="status" x-text="status" x-cloak :class="ok === true ? 'text-success' : 'text-danger'"></p>
             </form>

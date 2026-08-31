@@ -43,7 +43,7 @@
         active: -1,
         index: {{ Js::from($searchIndex ?? []) }},
         get suggestions() {
-            const term = this.q.trim().toLowerCase();
+            const term = (this.q || '').trim().toLowerCase();
             if (!term) return [];
             return this.index
                 .filter((item) => String(item.text || '').toLowerCase().includes(term))
@@ -80,7 +80,7 @@
                     this.$refs.search?.focus();
                 }
             });
-            this.$watch('q', () => { this.open = this.q.trim().length > 0; this.active = -1; });
+            this.$watch('q', () => { this.open = (this.q || '').trim().length > 0; this.active = -1; });
         }
     }"
     @click.outside="open = false"
@@ -97,7 +97,7 @@
             x-ref="search"
             x-model="q"
             @keydown="onKey($event)"
-            @focus="open = q.trim().length > 0"
+            @focus="open = (q || '').trim().length > 0"
             type="search"
             autocomplete="off"
             placeholder="Search our knowledge base..."
@@ -116,8 +116,8 @@
             class="absolute left-0 right-0 top-full mt-2 z-40 rounded-2xl border border-border-default bg-elevated shadow-2xl overflow-hidden"
             role="listbox"
         >
-            <template x-if="suggestions.length === 0 && q.trim()">
-                <p class="px-5 py-4 text-sm text-text-secondary">No results for “<span x-text="q.trim()"></span>”.</p>
+            <template x-if="suggestions.length === 0 && (q || '').trim()">
+                <p class="px-5 py-4 text-sm text-text-secondary">No results for “<span x-text="(q || '').trim()"></span>”.</p>
             </template>
             <ul class="max-h-80 overflow-y-auto py-2">
                 <template x-for="(item, i) in suggestions" :key="item.href + item.label">

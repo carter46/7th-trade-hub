@@ -187,8 +187,7 @@
                                 </div>
                             </div>
 
-                            <template x-if="domainMode === 'buy'">
-                                <div class="space-y-3">
+                            <div x-show="domainMode === 'buy'" x-cloak class="space-y-3">
                                     <div class="grid gap-3 sm:grid-cols-[1fr_minmax(9rem,14rem)]">
                                         <div>
                                             <label class="mb-1 block text-xs text-text-muted">Domain name</label>
@@ -221,22 +220,17 @@
                                             x-on:click="checkDomain()"
                                             x-bind:disabled="domainChecking || !canCheckDomain"
                                         >
-                                            <span x-show="!domainChecking">Check availability</span>
-                                            <span x-cloak x-show="domainChecking">Checking…</span>
+                                            <span x-text="domainChecking ? 'Checking…' : 'Check availability'">Check availability</span>
                                         </x-dashboard.button>
                                         @include('dashboard.user.discover._domain-search-results')
                                     </div>
 
-                                    <template x-if="domainAvailable">
-                                        <div x-cloak>
-                                            @include('dashboard.user.discover._domain-registrant-fields')
-                                        </div>
-                                    </template>
+                                    <div x-show="domainAvailable" x-cloak>
+                                        @include('dashboard.user.discover._domain-registrant-fields')
+                                    </div>
                                 </div>
-                            </template>
 
-                            <template x-if="domainMode === 'connect'">
-                                <div class="space-y-3">
+                            <div x-show="domainMode === 'connect'" x-cloak class="space-y-3">
                                     <input type="hidden" name="domain_fqdn" x-bind:value="connectFqdn">
                                     <input type="hidden" name="domain_connect_acknowledged" :value="connectAcknowledged ? '1' : '0'">
 
@@ -261,10 +255,9 @@
                                         variant="secondary"
                                         size="sm"
                                         x-on:click="scanConnectDomain()"
-                                        x-bind:disabled="connectScanning || !connectFqdnInput.trim()"
+                                        x-bind:disabled="connectScanning || !(connectFqdnInput || '').trim()"
                                     >
-                                        <span x-show="!connectScanning">Check Domain</span>
-                                        <span x-cloak x-show="connectScanning">Checking domain…</span>
+                                        <span x-text="connectScanning ? 'Checking domain…' : 'Check Domain'">Check Domain</span>
                                     </x-dashboard.button>
 
                                     <p x-show="connectError" x-cloak class="text-sm text-danger" x-text="connectError"></p>
@@ -300,7 +293,6 @@
                                         </label>
                                     </div>
                                 </div>
-                            </template>
                         </div>
                     @endif
                 @endif
@@ -345,8 +337,7 @@
                 </div>
 
                 <x-dashboard.button type="submit" icon="orders" class="w-full" x-bind:disabled="!canSubmit">
-                    <span x-show="paymentMethod === 'wallet'">Pay from wallet</span>
-                    <span x-cloak x-show="paymentMethod === 'gateway'">Continue to payment</span>
+                    <span x-text="paymentMethod === 'gateway' ? 'Continue to payment' : 'Pay from wallet'">Pay from wallet</span>
                 </x-dashboard.button>
             </form>
         @endif
