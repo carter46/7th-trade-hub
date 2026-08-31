@@ -13,12 +13,15 @@
         [$provider->display_name, null],
     ]"
 >
+    @if(session('status'))
+        <x-dashboard.alert type="success">{{ session('status') }}</x-dashboard.alert>
+    @endif
     @if(session('error'))
         <x-dashboard.alert type="danger">{{ session('error') }}</x-dashboard.alert>
     @endif
 
     <x-dashboard.card>
-        <form method="POST" action="{{ route('admin.domain-providers.update', $provider) }}" class="space-y-5">
+        <form method="POST" action="{{ route('admin.domain-providers.update', $provider) }}" class="space-y-5" autocomplete="off">
             @csrf
             @method('PUT')
 
@@ -51,15 +54,21 @@
             @endif
 
             @foreach($credentialLabels as $field => $label)
-                <div>
-                    <label class="block text-sm font-medium text-text-secondary mb-1">{{ $label }}</label>
+                @if($provider->isSecretCredentialField($field))
+                    <x-dashboard.secret-input
+                        :name="'credentials['.$field.']'"
+                        :label="$label"
+                        :stored="$provider->credential($field)"
+                    />
+                @else
                     <x-dashboard.input
                         :name="'credentials['.$field.']'"
-                        :type="str_contains($field, 'token') || str_contains($field, 'key') ? 'password' : 'text'"
-                        placeholder="Leave blank to keep existing"
+                        :label="$label"
+                        :value="old('credentials.'.$field, $provider->credential($field))"
                         autocomplete="off"
+                        :hint="filled($provider->credential($field)) ? 'Saved on server. Edit to replace.' : 'No value stored yet.'"
                     />
-                </div>
+                @endif
             @endforeach
 
             <div class="flex flex-wrap gap-2">

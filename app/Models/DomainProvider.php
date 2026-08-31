@@ -70,4 +70,21 @@ class DomainProvider extends Model
             'api_token' => 'API token',
         ]);
     }
+
+    public function credential(string $key): ?string
+    {
+        $value = ($this->credentials ?? [])[$key] ?? null;
+
+        return is_string($value) ? $value : null;
+    }
+
+    public function maskedCredential(string $key): ?string
+    {
+        return mask_secret($this->credential($key));
+    }
+
+    public function isSecretCredentialField(string $key): bool
+    {
+        return str_contains($key, 'token') || str_contains($key, 'key');
+    }
 }

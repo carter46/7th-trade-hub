@@ -29,11 +29,33 @@ class DomainProviderAdminTest extends TestCase
                     'api_token' => 'admin-token',
                 ],
             ])
-            ->assertRedirect(route('admin.domain-providers'));
+            ->assertRedirect(route('admin.domain-providers.edit', $provider));
 
         $provider->refresh();
         $this->assertTrue($provider->enabled);
         $this->assertSame('admin-user', $provider->credentials['username'] ?? null);
+    }
+
+    public function test_edit_page_shows_saved_username_and_masked_token_placeholder(): void
+    {
+        $admin = User::factory()->create(['email_verified_at' => now()]);
+        $admin->assignRole('admin');
+
+        $provider = DomainProvider::query()->where('key', 'namecom')->firstOrFail();
+        $provider->update([
+            'credentials' => [
+                'username' => 'saved-namecom-user',
+                'api_token' => 'secret-token-value',
+            ],
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->get(route('admin.domain-providers.edit', $provider));
+
+        $response->assertOk();
+        $response->assertSee('saved-namecom-user', false);
+        $response->assertSee(mask_secret('secret-token-value'), false);
+        $response->assertSee('Saved', false);
     }
 
     public function test_admin_test_connection_updates_health(): void

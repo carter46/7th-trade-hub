@@ -102,7 +102,9 @@ class DomainProviderAdminController extends Controller
             $request->user()?->id,
         );
 
-        return redirect()->route('admin.domain-providers')->with('status', 'Provider updated.');
+        return redirect()
+            ->route('admin.domain-providers.edit', $domainProvider)
+            ->with('status', 'Provider updated.');
     }
 
     public function test(DomainProvider $domainProvider): RedirectResponse
