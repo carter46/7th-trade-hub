@@ -37,7 +37,7 @@ class PlatformCatalogSeeder extends Seeder
                 'Twitter Audience Pack', 'LinkedIn Lead Boost', 'Multi-Platform Starter',
             ],
             PlatformProductType::Domain->value => [
-                '.com Domain Registration', '.io Domain Registration', '.co Domain Registration',
+                'Domain Registration',
             ],
             PlatformProductType::EscrowService->value => [
                 'Standard Escrow Trade', 'High-Value Escrow', 'Website Sale Escrow',
@@ -64,7 +64,7 @@ class PlatformCatalogSeeder extends Seeder
             PlatformProductType::Smtp->value => ['smtp-transactional'],
             PlatformProductType::Email->value => ['email-business'],
             PlatformProductType::SocialService->value => ['social-growth', 'social-engagement', 'social-growth', 'social-engagement', 'social-growth', 'social-growth'],
-            PlatformProductType::Domain->value => ['domain-registration', 'domain-registration', 'domain-registration'],
+            PlatformProductType::Domain->value => ['domain-registration'],
             PlatformProductType::EscrowService->value => ['escrow-standard', 'escrow-high-value', 'escrow-high-value', 'escrow-standard', 'escrow-standard', 'escrow-standard'],
         ];
 
@@ -74,7 +74,9 @@ class PlatformCatalogSeeder extends Seeder
                     continue;
                 }
 
-                $slug = Str::slug($title);
+                $slug = $type === PlatformProductType::Domain->value
+                    ? 'domain-registration'
+                    : Str::slug($title);
                 $categoryId = null;
                 if (Schema::hasTable('platform_categories') && isset($categoryMap[$type][$i])) {
                     $categoryId = PlatformCategory::where('slug', $categoryMap[$type][$i])->value('id');
@@ -83,6 +85,9 @@ class PlatformCatalogSeeder extends Seeder
                 $base = 5000 + ($i * 2500);
                 if (in_array($type, [PlatformProductType::WebsitePackage->value, PlatformProductType::Vps->value], true)) {
                     $base = 15000 + ($i * 5000);
+                }
+                if ($type === PlatformProductType::Domain->value) {
+                    $base = 0;
                 }
 
                 $attrs = [
@@ -111,8 +116,11 @@ class PlatformCatalogSeeder extends Seeder
                     ],
                     'support_text' => 'Open a support ticket from your dashboard if you need help.',
                     'base_price' => $base,
-                    'meta' => null,
-                    'provider' => 'manual',
+                    'meta' => $type === PlatformProductType::Domain->value ? [
+                        'domain_markup_percent' => 15,
+                        'domain_fx_policy' => ['usd_ngn_rate' => 1600],
+                    ] : null,
+                    'provider' => $type === PlatformProductType::Domain->value ? 'domain_provider' : 'manual',
                     'fulfillment_mode' => 'manual',
                     'auto_renew' => false,
                 ];
@@ -144,6 +152,24 @@ class PlatformCatalogSeeder extends Seeder
             PlatformProductType::Smtp->value,
             PlatformProductType::Proxy->value,
         ], true);
+
+        if ($type === PlatformProductType::Domain->value) {
+            PlatformProductVariant::firstOrCreate(
+                ['sku' => $product->slug.'-std'],
+                [
+                    'platform_product_id' => $product->id,
+                    'name' => 'Standard',
+                    'label' => 'Standard',
+                    'duration_months' => null,
+                    'price' => 0,
+                    'sort_order' => 0,
+                    'is_default' => true,
+                    'is_active' => true,
+                ]
+            );
+
+            return;
+        }
 
         if (! $needsDuration) {
             // Non-destructive: never overwrite admin-edited prices/names on re-seed.

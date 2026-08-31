@@ -59,11 +59,11 @@
                         <label class="block text-sm font-semibold mb-2">Domain (optional)</label>
                         <select name="domain_mode" x-model="domainMode" class="w-full rounded-xl bg-slate-900/60 border-white/10 mb-3">
                             <option value="none">No domain needed</option>
-                            <option value="buy">Buy a domain (Phase 2: live availability)</option>
+                            <option value="buy">Buy a domain</option>
                             <option value="connect">Connect existing domain</option>
                         </select>
                         <input type="text" name="domain_name" x-show="domainMode !== 'none'" placeholder="example.com" class="w-full rounded-xl bg-slate-900/60 border-white/10">
-                        <p class="text-xs text-slate-500 mt-2" x-show="domainMode === 'buy'">Domain availability via provider integrations ships in Phase 2.</p>
+                        <p class="text-xs text-slate-500 mt-2">Search availability and live pricing are provided at checkout.</p>
                     </div>
                 @else
                     <input type="hidden" name="domain_mode" value="none">

@@ -12,6 +12,8 @@ use App\Models\User;
 use App\Models\UserTool;
 use App\Modules\Wallet\Payments\Contracts\PaymentRailInterface;
 use App\Modules\Wallet\Services\WalletService;
+use App\Services\Domains\DomainCheckoutValidator;
+use App\Services\Domains\DomainQuoteService;
 use App\Services\SiteIntegrations\UserToolProvisioningService;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +26,8 @@ class PlatformCheckoutService
         private WalletService $walletService,
         private UserToolProvisioningService $userTools,
         private PaymentRailInterface $paymentRail,
+        private DomainCheckoutValidator $domainCheckout,
+        private DomainQuoteService $domainQuotes,
     ) {}
 
     public function gatewayEnabled(): bool
@@ -65,6 +69,8 @@ class PlatformCheckoutService
                 throw new InvalidArgumentException('Order cannot be fulfilled in status '.$locked->status);
             }
 
+            $this->consumeReservedDomainQuotes($locked);
+
             $this->walletService->creditPlatformFromGatewaySale($locked, (float) $locked->total_amount);
             $locked->status = 'paid';
             $locked->save();
@@ -78,6 +84,19 @@ class PlatformCheckoutService
 
             return $locked;
         });
+    }
+
+    private function consumeReservedDomainQuotes(Order $order): void
+    {
+        $buyer = User::query()->findOrFail($order->user_id);
+        $quotes = \App\Models\DomainQuote::query()
+            ->where('reserved_order_id', $order->id)
+            ->whereNull('consumed_at')
+            ->get();
+
+        foreach ($quotes as $quote) {
+            $this->domainQuotes->consumeReservedQuote($buyer, $quote, (int) $order->id);
+        }
     }
 
     /**
@@ -114,35 +133,37 @@ class PlatformCheckoutService
                     }
                 }
 
-                [$product, $variant, $lineTotal, $unitPrice, $qty, $renewTool, $options] = $this->prepareLine($buyer, $product, $data);
+                $checkout = $this->buildCheckout($buyer, $product, $data);
 
                 $order = Order::create([
                     'source' => 'platform',
                     'user_id' => $buyer->id,
                     'listing_id' => null,
                     'reference' => 'PLT-'.strtoupper(Str::random(8)),
-                    'amount' => $lineTotal,
-                    'total_amount' => $lineTotal,
+                    'amount' => $checkout['total'],
+                    'total_amount' => $checkout['total'],
                     'status' => 'paid',
                     'payment_method' => 'wallet',
                     'idempotency_key' => $idempotencyKey,
                 ]);
 
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'item_type' => 'platform_product',
-                    'item_id' => $product->id,
-                    'quantity' => $qty,
-                    'unit_price' => $unitPrice,
-                    'line_total' => $lineTotal,
-                    'platform_product_variant_id' => $variant?->id,
-                    'options' => $options,
-                ]);
+                foreach ($checkout['lines'] as $line) {
+                    OrderItem::create([
+                        'order_id' => $order->id,
+                        'item_type' => 'platform_product',
+                        'item_id' => $line['product_id'],
+                        'quantity' => $line['quantity'],
+                        'unit_price' => $line['unit_price'],
+                        'line_total' => $line['line_total'],
+                        'platform_product_variant_id' => $line['variant_id'],
+                        'options' => $line['options'],
+                    ]);
+                }
 
-                $this->walletService->debitForPlatformPurchase($wallet, $order, (float) $lineTotal);
+                $this->walletService->debitForPlatformPurchase($wallet, $order, (float) $checkout['total']);
 
                 $order->load('items.variant');
-                $this->fulfillTools($order, $renewTool, $variant);
+                $this->fulfillTools($order, $checkout['renew_tool'], $checkout['variant']);
 
                 DB::afterCommit(function () use ($order, $buyer) {
                     OrderCompleted::dispatch($order->id, $buyer->id, null);
@@ -211,7 +232,8 @@ class PlatformCheckoutService
                     }
                 }
 
-                [$product, $variant, $lineTotal, $unitPrice, $qty, $renewTool, $options] = $this->prepareLine($buyer, $product, $data);
+                $deferDomain = true;
+                $checkout = $this->buildCheckout($buyer, $product, $data, deferDomainConsumption: $deferDomain);
 
                 $paymentReference = 'PLT-PAY-'.strtoupper((string) Str::ulid());
 
@@ -220,8 +242,8 @@ class PlatformCheckoutService
                     'user_id' => $buyer->id,
                     'listing_id' => null,
                     'reference' => 'PLT-'.strtoupper(Str::random(8)),
-                    'amount' => $lineTotal,
-                    'total_amount' => $lineTotal,
+                    'amount' => $checkout['total'],
+                    'total_amount' => $checkout['total'],
                     'status' => 'pending',
                     'payment_method' => 'gateway',
                     'payment_provider' => 'monnify',
@@ -229,16 +251,28 @@ class PlatformCheckoutService
                     'idempotency_key' => $idempotencyKey,
                 ]);
 
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'item_type' => 'platform_product',
-                    'item_id' => $product->id,
-                    'quantity' => $qty,
-                    'unit_price' => $unitPrice,
-                    'line_total' => $lineTotal,
-                    'platform_product_variant_id' => $variant?->id,
-                    'options' => $options,
-                ]);
+                foreach ($checkout['pending_domain_quotes'] ?? [] as $pending) {
+                    $this->domainQuotes->reserveForGateway(
+                        $buyer,
+                        $pending['token'],
+                        $pending['fqdn'],
+                        (int) $order->id,
+                        $pending['product_id'],
+                    );
+                }
+
+                foreach ($checkout['lines'] as $line) {
+                    OrderItem::create([
+                        'order_id' => $order->id,
+                        'item_type' => 'platform_product',
+                        'item_id' => $line['product_id'],
+                        'quantity' => $line['quantity'],
+                        'unit_price' => $line['unit_price'],
+                        'line_total' => $line['line_total'],
+                        'platform_product_variant_id' => $line['variant_id'],
+                        'options' => $line['options'],
+                    ]);
+                }
 
                 return $order;
             });
@@ -278,9 +312,9 @@ class PlatformCheckoutService
 
     /**
      * @param  array<string, mixed>  $data
-     * @return array{0: PlatformProduct, 1: ?PlatformProductVariant, 2: string, 3: string, 4: int, 5: ?UserTool, 6: array<string, mixed>}
+     * @return array{lines: list<array<string, mixed>>, total: string, renew_tool: ?UserTool, variant: ?PlatformProductVariant}
      */
-    private function prepareLine(User $buyer, PlatformProduct $product, array $data): array
+    private function buildCheckout(User $buyer, PlatformProduct $product, array $data, bool $deferDomainConsumption = false): array
     {
         $product = PlatformProduct::query()
             ->with(['productType.serviceCategory'])
@@ -292,6 +326,99 @@ class PlatformCheckoutService
             throw new InvalidArgumentException('This product is no longer available.');
         }
 
+        $lines = [];
+        $domainContext = null;
+        $pendingDomainQuotes = [];
+
+        if ($product->product_type === PlatformProductType::Domain) {
+            $domainContext = $this->domainCheckout->validateStandaloneDomainPurchase($buyer, $product, $data, $deferDomainConsumption);
+            if ($deferDomainConsumption) {
+                $pendingDomainQuotes[] = [
+                    'token' => $domainContext['domain_quote_token'],
+                    'fqdn' => $domainContext['fqdn'],
+                    'product_id' => $product->id,
+                ];
+            }
+            $lines[] = $this->domainLineFromQuote($domainContext, $product);
+        } else {
+            $domainContext = null;
+            if ($product->product_type === PlatformProductType::WebsitePackage) {
+                $domainContext = $this->domainCheckout->validateWebsitePackageDomain($buyer, $product, $data, $deferDomainConsumption);
+            }
+
+            [$variant, $renewTool, $mainLine] = $this->prepareMainLine($buyer, $product, $data, $domainContext);
+            $lines[] = $mainLine;
+
+            if ($domainContext !== null && ($domainContext['mode'] ?? '') === 'buy') {
+                /** @var PlatformProduct $domainProduct */
+                $domainProduct = $domainContext['domain_product'];
+                if ($deferDomainConsumption) {
+                    $pendingDomainQuotes[] = [
+                        'token' => $domainContext['domain_quote_token'],
+                        'fqdn' => $domainContext['fqdn'],
+                        'product_id' => $domainProduct->id,
+                    ];
+                }
+                $lines[] = $this->domainLineFromQuote($domainContext, $domainProduct);
+            }
+
+            $total = $this->sumLines($lines);
+
+            return [
+                'lines' => $lines,
+                'total' => $total,
+                'renew_tool' => $renewTool ?? null,
+                'variant' => $variant ?? null,
+                'pending_domain_quotes' => $pendingDomainQuotes,
+            ];
+        }
+
+        $total = $this->sumLines($lines);
+
+        return [
+            'lines' => $lines,
+            'total' => $total,
+            'renew_tool' => null,
+            'variant' => null,
+            'pending_domain_quotes' => $pendingDomainQuotes,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $domainContext
+     */
+    private function domainLineFromQuote(array $domainContext, PlatformProduct $domainProduct): array
+    {
+        $consumed = $domainContext['quote'];
+        $quote = $consumed['quote'];
+        $retail = $consumed['validated_retail'];
+
+        return [
+            'product_id' => $domainProduct->id,
+            'variant_id' => $domainProduct->activeVariants()->orderBy('price')->value('id'),
+            'quantity' => 1,
+            'unit_price' => $retail,
+            'line_total' => $retail,
+            'options' => [
+                'domain_fqdn' => $domainContext['fqdn'],
+                'tld' => $domainContext['tld'],
+                'domain_mode' => 'buy',
+                'retail_price' => $retail,
+                'retail_currency' => 'NGN',
+                'premium' => $quote->premium,
+                'product_title' => $domainProduct->title,
+                'domain_quote_id' => $quote->id,
+            ],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>|null  $domainContext
+     * @return array{0: ?PlatformProductVariant, 1: ?UserTool, 2: array<string, mixed>}
+     */
+    private function prepareMainLine(User $buyer, PlatformProduct $product, array $data, ?array $domainContext = null): array
+    {
         $variant = $this->resolveVariant($product, $data['variant_id'] ?? null);
         if ($variant) {
             $variant = PlatformProductVariant::query()
@@ -312,7 +439,6 @@ class PlatformCheckoutService
         }
 
         $lineTotal = bcmul($unitPrice, (string) $qty, 2);
-        $domainMode = $data['domain_mode'] ?? 'none';
 
         $renewToolId = isset($data['renew_user_tool_id']) ? (int) $data['renew_user_tool_id'] : null;
         $renewTool = null;
@@ -328,16 +454,42 @@ class PlatformCheckoutService
             }
         }
 
-        $options = [
-            'domain_mode' => $domainMode,
-            'domain_name' => $data['domain_name'] ?? null,
-            'domain_availability' => 'pending_provider_integration',
+        $domainOptions = [
+            'domain_mode' => $domainContext['mode'] ?? ($data['domain_mode'] ?? 'none'),
+            'domain_name' => $domainContext['fqdn'] ?? ($data['domain_name'] ?? null),
             'product_title' => $product->title,
             'variant_label' => $variant?->displayLabel(),
             'renew_user_tool_id' => $renewTool?->id,
         ];
 
-        return [$product, $variant, $lineTotal, $unitPrice, $qty, $renewTool, $options];
+        if ($domainContext !== null) {
+            $domainOptions['domain_fqdn'] = $domainContext['fqdn'];
+            $domainOptions['domain_tld'] = $domainContext['tld'];
+        }
+
+        $line = [
+            'product_id' => $product->id,
+            'variant_id' => $variant?->id,
+            'quantity' => $qty,
+            'unit_price' => $unitPrice,
+            'line_total' => $lineTotal,
+            'options' => $domainOptions,
+        ];
+
+        return [$variant, $renewTool, $line];
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $lines
+     */
+    private function sumLines(array $lines): string
+    {
+        $total = '0.00';
+        foreach ($lines as $line) {
+            $total = bcadd($total, (string) $line['line_total'], 2);
+        }
+
+        return $total;
     }
 
     private function fulfillTools(Order $order, ?UserTool $renewTool = null, ?PlatformProductVariant $variant = null): void

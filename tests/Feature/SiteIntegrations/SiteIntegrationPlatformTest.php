@@ -276,7 +276,9 @@ class SiteIntegrationPlatformTest extends TestCase
             ->post(route('dashboard.services.purchase', $product->slug), [
                 'variant_id' => $variant->id,
                 'quantity' => 1,
-                'domain_mode' => 'none',
+                'domain_mode' => 'connect',
+                'domain_label' => 'mysite',
+                'domain_tld' => 'com',
                 'idempotency_key' => (string) Str::uuid(),
             ])
             ->assertRedirect();
@@ -350,7 +352,9 @@ class SiteIntegrationPlatformTest extends TestCase
             ->post(route('dashboard.services.purchase', $product->slug), [
                 'variant_id' => $variant->id,
                 'quantity' => 1,
-                'domain_mode' => 'none',
+                'domain_mode' => 'connect',
+                'domain_label' => 'mysite',
+                'domain_tld' => 'com',
                 'idempotency_key' => (string) Str::uuid(),
             ])
             ->assertRedirect();

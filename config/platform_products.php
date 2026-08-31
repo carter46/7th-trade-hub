@@ -13,9 +13,7 @@ return [
     ],
 
     'domain' => [
-        'com-domain-registration',
-        'io-domain-registration',
-        'co-domain-registration',
+        'domain-registration',
     ],
     'website_package' => [
         'online-banking-website',

@@ -14,6 +14,23 @@
         'description' => (string) ($v->description ?? ''),
         'is_default' => (bool) $v->is_default,
     ])->values();
+    $selectedVariant = $variants->firstWhere('id', $defaultVariantId);
+    $checkoutOptions = [
+        'defaultVariantId' => $defaultVariantId,
+        'basePrice' => $basePrice,
+        'paymentMethod' => $defaultMethod,
+        'showPlanSummary' => (bool) ($showPlanSummary ?? false),
+        'requireDomainChoice' => (bool) ($requireDomainChoice ?? false),
+        'isWebsitePackage' => (bool) ($isWebsitePackage ?? false),
+        'isDomainProduct' => (bool) ($isDomainProduct ?? false),
+        'productSlug' => $product->slug,
+        'quoteUrl' => route('dashboard.services.domain-quote'),
+        'domainTlds' => $domainTlds ?? [],
+        'quoteToken' => $quoteToken ?? null,
+        'quotedFqdn' => $quotedFqdn ?? null,
+        'quotedPrice' => $quotedPrice ?? null,
+        'csrfToken' => csrf_token(),
+    ];
 @endphp
 <x-layout.page
     title="Checkout"
@@ -53,11 +70,7 @@
                 method="POST"
                 action="{{ route('dashboard.services.purchase', $product->slug) }}"
                 class="space-y-5"
-                x-data="platformCheckout(@js($variantPayload), @js([
-                    'defaultVariantId' => $defaultVariantId,
-                    'basePrice' => $basePrice,
-                    'paymentMethod' => $defaultMethod,
-                ]))"
+                x-data="platformCheckout(@js($variantPayload), @js($checkoutOptions))"
             >
                 @csrf
                 <input type="hidden" name="idempotency_key" value="{{ $idempotencyKey }}">
@@ -68,35 +81,136 @@
                     </x-dashboard.alert>
                 @endif
 
-                @if($variants->isNotEmpty())
-                    <div>
-                        <label class="block text-sm font-medium text-text-secondary mb-2">Plan / variant</label>
-                        <div class="space-y-2">
-                            @foreach($variants as $variant)
-                                <label
-                                    class="flex cursor-pointer flex-col gap-1 rounded-xl border border-border-default px-4 py-3 hover:border-primary/40"
-                                    :class="Number(variantId) === {{ (int) $variant->id }} ? 'border-primary bg-primary/5' : ''"
-                                >
-                                    <span class="flex items-center justify-between gap-3">
-                                        <span class="flex items-center gap-3">
-                                            <input
-                                                type="radio"
-                                                name="variant_id"
-                                                value="{{ $variant->id }}"
-                                                @checked((int) $defaultVariantId === (int) $variant->id)
-                                                x-model.number="variantId"
-                                            >
-                                            <span class="text-sm text-text-primary">{{ $variant->displayLabel() }}</span>
-                                        </span>
-                                        <span class="font-semibold text-text-primary">₦{{ number_format($variant->price, 2) }}</span>
-                                    </span>
-                                    @if(filled($variant->description))
-                                        <span class="pl-7 text-xs leading-relaxed text-text-secondary">{{ $variant->description }}</span>
-                                    @endif
-                                </label>
-                            @endforeach
-                        </div>
+                @if($isDomainProduct ?? false)
+                    <input type="hidden" name="domain_quote_token" x-bind:value="domainQuoteToken">
+                    <input type="hidden" name="domain_fqdn" x-bind:value="domainFqdn">
+                    <input type="hidden" name="quantity" value="1">
+
+                    <div class="rounded-xl border border-border-default bg-muted/20 px-4 py-3 space-y-1">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-text-muted">Domain</p>
+                        <p class="text-lg font-semibold text-text-primary" x-text="domainFqdn || '—'"></p>
+                        <p class="text-sm text-text-secondary">
+                            Registration · <span x-text="'₦' + retailFormatted"></span>
+                            <span x-show="domainPremium" x-cloak class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Premium</span>
+                        </p>
                     </div>
+                @else
+                    @if(($showPlanSummary ?? false) && $selectedVariant)
+                        <input type="hidden" name="variant_id" value="{{ $selectedVariant->id }}">
+                        <div class="rounded-xl border border-border-default bg-muted/20 px-4 py-3 space-y-1">
+                            <p class="text-xs font-semibold uppercase tracking-wider text-text-muted">Selected plan</p>
+                            <p class="text-lg font-semibold text-text-primary">{{ $selectedVariant->displayLabel() }}</p>
+                            <p class="text-2xl font-bold text-primary">₦{{ number_format((float) $selectedVariant->price, 0) }}</p>
+                            @if(filled($selectedVariant->description))
+                                <p class="text-sm text-text-secondary">{{ $selectedVariant->description }}</p>
+                            @endif
+                        </div>
+                    @elseif($variants->isNotEmpty())
+                        <div>
+                            <label class="block text-sm font-medium text-text-secondary mb-2">Plan / variant</label>
+                            <div class="space-y-2">
+                                @foreach($variants as $variant)
+                                    <label
+                                        class="flex cursor-pointer flex-col gap-1 rounded-xl border border-border-default px-4 py-3 hover:border-primary/40"
+                                        :class="Number(variantId) === {{ (int) $variant->id }} ? 'border-primary bg-primary/5' : ''"
+                                    >
+                                        <span class="flex items-center justify-between gap-3">
+                                            <span class="flex items-center gap-3">
+                                                <input
+                                                    type="radio"
+                                                    name="variant_id"
+                                                    value="{{ $variant->id }}"
+                                                    @checked((int) $defaultVariantId === (int) $variant->id)
+                                                    x-model.number="variantId"
+                                                >
+                                                <span class="text-sm text-text-primary">{{ $variant->displayLabel() }}</span>
+                                            </span>
+                                            <span class="font-semibold text-text-primary">₦{{ number_format($variant->price, 2) }}</span>
+                                        </span>
+                                        @if(filled($variant->description))
+                                            <span class="pl-7 text-xs leading-relaxed text-text-secondary">{{ $variant->description }}</span>
+                                        @endif
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+
+                    @if($isWebsitePackage ?? false)
+                        <input type="hidden" name="quantity" value="1">
+                    @else
+                        <div>
+                            <label class="block text-sm font-medium text-text-secondary mb-2">Quantity</label>
+                            <input type="number" name="quantity" min="1" max="100" x-model.number="qty" class="w-32 rounded-lg border-border-default bg-elevated text-text-primary text-sm">
+                        </div>
+                    @endif
+
+                    @if($requireDomainChoice ?? false)
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-text-secondary mb-2">Domain <span class="text-danger">*</span></label>
+                                <div class="flex flex-wrap gap-4">
+                                    <label class="flex items-center gap-2 text-sm">
+                                        <input type="radio" name="domain_mode" value="buy" x-model="domainMode" @change="invalidateQuote()" class="accent-primary">
+                                        Buy a new domain
+                                    </label>
+                                    <label class="flex items-center gap-2 text-sm">
+                                        <input type="radio" name="domain_mode" value="connect" x-model="domainMode" @change="invalidateQuote()" class="accent-primary">
+                                        Connect existing domain
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="grid gap-3 sm:grid-cols-[1fr_auto]">
+                                <div>
+                                    <label class="mb-1 block text-xs text-text-muted">Domain name</label>
+                                    <input
+                                        type="text"
+                                        name="domain_label"
+                                        x-model="domainLabel"
+                                        @input="invalidateQuote()"
+                                        placeholder="mysite"
+                                        autocomplete="off"
+                                        class="w-full rounded-lg border-border-default bg-elevated text-text-primary text-sm"
+                                    >
+                                </div>
+                                <div class="sm:w-36">
+                                    <label class="mb-1 block text-xs text-text-muted">Extension</label>
+                                    <select
+                                        name="domain_tld"
+                                        x-model="domainTld"
+                                        @change="invalidateQuote()"
+                                        class="w-full rounded-lg border-border-default bg-elevated text-text-primary text-sm"
+                                    >
+                                        <template x-for="row in domainTlds" :key="row.tld">
+                                            <option :value="row.tld" x-text="row.label"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <template x-if="domainMode === 'buy'">
+                                <div class="space-y-2">
+                                    <input type="hidden" name="domain_quote_token" x-bind:value="domainQuoteToken">
+                                    <x-dashboard.button
+                                        type="button"
+                                        variant="secondary"
+                                        size="sm"
+                                        x-on:click="checkDomain()"
+                                        x-bind:disabled="domainChecking || !domainLabel.trim()"
+                                    >
+                                        <span x-show="!domainChecking">Check availability</span>
+                                        <span x-cloak x-show="domainChecking">Checking…</span>
+                                    </x-dashboard.button>
+                                    <p x-show="domainMessage" x-cloak class="text-sm" :class="domainAvailable ? 'text-emerald-700' : 'text-text-secondary'" x-text="domainMessage"></p>
+                                    <p x-show="domainAvailable && domainMode === 'buy'" x-cloak class="text-sm font-medium text-primary">
+                                        Domain add-on: <span x-text="'₦' + retailFormatted"></span>
+                                        <span x-show="domainPremium" class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Premium</span>
+                                    </p>
+                                </div>
+                            </template>
+                        </div>
+                    @endif
                 @endif
 
                 <div>
@@ -125,31 +239,12 @@
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-text-secondary mb-2">Quantity</label>
-                    <input type="number" name="quantity" min="1" max="100" x-model.number="qty" class="w-32 rounded-lg border-border-default bg-elevated text-text-primary text-sm">
-                </div>
-
-                @if($showDomainOptions)
-                    <div>
-                        <label class="block text-sm font-medium text-text-secondary mb-2">Domain (optional)</label>
-                        <select name="domain_mode" x-model="domainMode" class="w-full rounded-lg border-border-default bg-elevated text-text-primary text-sm mb-3">
-                            <option value="none">No domain needed</option>
-                            <option value="buy">Buy a domain</option>
-                            <option value="connect">Connect existing domain</option>
-                        </select>
-                        <input type="text" name="domain_name" x-show="domainMode !== 'none'" placeholder="example.com" class="w-full rounded-lg border-border-default bg-elevated text-text-primary text-sm">
-                    </div>
-                @else
-                    <input type="hidden" name="domain_mode" value="none">
-                @endif
-
                 <div class="flex items-center justify-between border-t border-border-default pt-4">
                     <span class="text-text-secondary">Total</span>
                     <span class="text-2xl font-bold text-primary" x-text="'₦' + totalFormatted"></span>
                 </div>
 
-                <x-dashboard.button type="submit" icon="orders" class="w-full">
+                <x-dashboard.button type="submit" icon="orders" class="w-full" x-bind:disabled="!canSubmit">
                     <span x-show="paymentMethod === 'wallet'">Pay from wallet</span>
                     <span x-cloak x-show="paymentMethod === 'gateway'">Continue to payment</span>
                 </x-dashboard.button>

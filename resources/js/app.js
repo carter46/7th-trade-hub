@@ -693,19 +693,198 @@ document.addEventListener('alpine:init', () => {
             ?? variants[0]?.id
             ?? null,
         qty: 1,
-        domainMode: 'none',
+        domainMode: options.requireDomainChoice ? 'buy' : 'none',
+        domainLabel: '',
+        domainTld: (options.domainTlds?.[0]?.tld) ?? 'com',
+        domainTlds: options.domainTlds ?? [],
+        domainQuoteToken: options.quoteToken ?? '',
+        domainFqdn: options.quotedFqdn ?? '',
+        domainRetailPrice: Number(options.quotedPrice ?? 0),
+        domainPremium: false,
+        domainChecking: false,
+        domainMessage: '',
+        domainAvailable: Boolean(options.quoteToken),
+        productSlug: options.productSlug ?? '',
+        quoteUrl: options.quoteUrl ?? '',
+        csrfToken: options.csrfToken ?? '',
+        showPlanSummary: Boolean(options.showPlanSummary),
+        requireDomainChoice: Boolean(options.requireDomainChoice),
+        isDomainProduct: Boolean(options.isDomainProduct),
+        isWebsitePackage: Boolean(options.isWebsitePackage),
         paymentMethod: options.paymentMethod || 'wallet',
         basePrice: Number(options.basePrice || 0),
-        get unit() {
+        get planUnit() {
             const row = this.variants.find((v) => Number(v.id) === Number(this.variantId));
             if (row) return Number(row.price);
             return this.basePrice;
         },
+        get domainAddon() {
+            if (this.isDomainProduct) return this.domainRetailPrice;
+            if (this.requireDomainChoice && this.domainMode === 'buy' && this.domainAvailable) {
+                return this.domainRetailPrice;
+            }
+            return 0;
+        },
         get total() {
-            return this.unit * (Number(this.qty) || 1);
+            if (this.isDomainProduct) return this.domainAddon;
+            let sum = this.planUnit * (Number(this.qty) || 1);
+            sum += this.domainAddon;
+            return sum;
         },
         get totalFormatted() {
             return new Intl.NumberFormat('en-NG', { maximumFractionDigits: 2 }).format(this.total);
+        },
+        get retailFormatted() {
+            return new Intl.NumberFormat('en-NG', { maximumFractionDigits: 0 }).format(this.domainRetailPrice || 0);
+        },
+        get canSubmit() {
+            if (this.isDomainProduct) {
+                return Boolean(this.domainQuoteToken && this.domainFqdn);
+            }
+            if (this.requireDomainChoice) {
+                if (!this.domainLabel.trim() || !this.domainTld) return false;
+                if (this.domainMode === 'buy') {
+                    return Boolean(this.domainQuoteToken && this.domainAvailable);
+                }
+                if (this.domainMode === 'connect') return true;
+                return false;
+            }
+            return true;
+        },
+        invalidateQuote() {
+            this.domainQuoteToken = '';
+            this.domainFqdn = '';
+            this.domainRetailPrice = 0;
+            this.domainPremium = false;
+            this.domainAvailable = false;
+            this.domainMessage = '';
+        },
+        async checkDomain() {
+            const label = this.domainLabel.trim();
+            if (!label || !this.quoteUrl) return;
+            this.domainChecking = true;
+            this.domainMessage = '';
+            try {
+                const res = await fetch(this.quoteUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        'X-CSRF-TOKEN': this.csrfToken,
+                    },
+                    body: JSON.stringify({
+                        product_slug: this.productSlug,
+                        domain_label: label,
+                        domain_tld: this.domainTld,
+                    }),
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    this.invalidateQuote();
+                    this.domainMessage = data.message || 'Unable to check domain.';
+                    return;
+                }
+                this.domainFqdn = data.fqdn || '';
+                this.domainPremium = Boolean(data.premium);
+                if (data.available && data.quote_token) {
+                    this.domainAvailable = true;
+                    this.domainQuoteToken = data.quote_token;
+                    this.domainRetailPrice = Number(data.retail_price || 0);
+                    this.domainMessage = `${data.fqdn} is available.`;
+                } else {
+                    this.invalidateQuote();
+                    this.domainMessage = data.message || `${data.fqdn || label} is not available.`;
+                }
+            } catch {
+                this.invalidateQuote();
+                this.domainMessage = 'Domain search is temporarily unavailable.';
+            } finally {
+                this.domainChecking = false;
+            }
+        },
+    }));
+
+    Alpine.data('domainProductSearch', (options = {}) => ({
+        productSlug: options.productSlug ?? '',
+        quoteUrl: options.quoteUrl ?? '',
+        checkoutBase: options.checkoutBase ?? '',
+        domainTlds: options.domainTlds ?? [],
+        csrfToken: options.csrfToken ?? '',
+        domainLabel: '',
+        domainTld: (options.domainTlds?.[0]?.tld) ?? 'com',
+        domainQuoteToken: '',
+        domainFqdn: '',
+        domainRetailPrice: 0,
+        domainPremium: false,
+        domainChecking: false,
+        domainMessage: '',
+        domainAvailable: false,
+        get retailFormatted() {
+            return new Intl.NumberFormat('en-NG', { maximumFractionDigits: 0 }).format(this.domainRetailPrice || 0);
+        },
+        get canCheckout() {
+            return Boolean(this.domainQuoteToken && this.domainFqdn && this.domainAvailable);
+        },
+        invalidateQuote() {
+            this.domainQuoteToken = '';
+            this.domainFqdn = '';
+            this.domainRetailPrice = 0;
+            this.domainPremium = false;
+            this.domainAvailable = false;
+            this.domainMessage = '';
+        },
+        async checkDomain() {
+            const label = this.domainLabel.trim();
+            if (!label || !this.quoteUrl) return;
+            this.domainChecking = true;
+            this.domainMessage = '';
+            try {
+                const res = await fetch(this.quoteUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        'X-CSRF-TOKEN': this.csrfToken,
+                    },
+                    body: JSON.stringify({
+                        product_slug: this.productSlug,
+                        domain_label: label,
+                        domain_tld: this.domainTld,
+                    }),
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    this.invalidateQuote();
+                    this.domainMessage = data.message || 'Unable to check domain.';
+                    return;
+                }
+                this.domainFqdn = data.fqdn || '';
+                this.domainPremium = Boolean(data.premium);
+                if (data.available && data.quote_token) {
+                    this.domainAvailable = true;
+                    this.domainQuoteToken = data.quote_token;
+                    this.domainRetailPrice = Number(data.retail_price || 0);
+                    this.domainMessage = `${data.fqdn} is available.`;
+                } else {
+                    this.invalidateQuote();
+                    this.domainMessage = data.message || `${data.fqdn || label} is not available.`;
+                }
+            } catch {
+                this.invalidateQuote();
+                this.domainMessage = 'Domain search is temporarily unavailable.';
+            } finally {
+                this.domainChecking = false;
+            }
+        },
+        goCheckout() {
+            if (!this.canCheckout) return;
+            const params = new URLSearchParams({
+                quote_token: this.domainQuoteToken,
+                domain_fqdn: this.domainFqdn,
+                quoted_price: String(this.domainRetailPrice),
+            });
+            const sep = this.checkoutBase.includes('?') ? '&' : '?';
+            window.location.href = `${this.checkoutBase}${sep}${params.toString()}`;
         },
     }));
 

@@ -1,0 +1,59 @@
+<?php
+
+return [
+    'quote_ttl_minutes' => (int) env('DOMAIN_QUOTE_TTL_MINUTES', 15),
+
+    'price_drift_tolerance_percent' => (float) env('DOMAIN_PRICE_DRIFT_TOLERANCE_PERCENT', 2),
+
+    'tld_cache_ttl_minutes' => (int) env('DOMAIN_TLD_CACHE_TTL_MINUTES', 60),
+
+    'http_timeout_seconds' => (int) env('DOMAIN_HTTP_TIMEOUT_SECONDS', 15),
+
+    'registration_product_slug' => 'domain-registration',
+
+    'auto_register_on_purchase' => (bool) env('DOMAIN_AUTO_REGISTER', true),
+
+    'common_tlds' => ['com', 'net', 'org', 'io', 'co', 'ng'],
+
+    'default_nameservers' => array_values(array_filter([
+        env('DOMAIN_NS1'),
+        env('DOMAIN_NS2'),
+    ])),
+
+    'registration_contacts' => [
+        'first_name' => env('DOMAIN_CONTACT_FIRST_NAME', 'Domain'),
+        'last_name' => env('DOMAIN_CONTACT_LAST_NAME', 'Admin'),
+        'company' => env('DOMAIN_CONTACT_COMPANY', '7th Trade Hub'),
+        'email' => env('DOMAIN_CONTACT_EMAIL', 'domains@7thtradehub.online'),
+        'phone' => env('DOMAIN_CONTACT_PHONE', '+234.8000000000'),
+        'address' => env('DOMAIN_CONTACT_ADDRESS', 'Lagos'),
+        'city' => env('DOMAIN_CONTACT_CITY', 'Lagos'),
+        'state' => env('DOMAIN_CONTACT_STATE', 'LA'),
+        'zip' => env('DOMAIN_CONTACT_ZIP', '100001'),
+        'country' => env('DOMAIN_CONTACT_COUNTRY', 'NG'),
+    ],
+
+    'providers' => [
+        'namecom' => [
+            'display_name' => 'Name.com',
+            'adapter' => \App\Services\Domains\Providers\NameCom\NameComProvider::class,
+            'capabilities' => ['search', 'availability', 'registration_quote', 'tld_pricing', 'register'],
+            'credential_keys' => ['username', 'api_token'],
+            'credential_labels' => [
+                'username' => 'Username',
+                'api_token' => 'API token',
+            ],
+            'sandbox_hint' => 'Sandbox API username is typically your production username with "-test" appended (see Name.com docs).',
+        ],
+        'domainnameapi' => [
+            'display_name' => 'DomainNameAPI',
+            'adapter' => \App\Services\Domains\Providers\DomainNameApi\DomainNameApiProvider::class,
+            'capabilities' => ['search', 'availability', 'registration_quote', 'tld_pricing', 'register'],
+            'credential_keys' => ['reseller_id', 'api_key'],
+            'credential_labels' => [
+                'reseller_id' => 'Reseller ID',
+                'api_key' => 'API key',
+            ],
+        ],
+    ],
+];

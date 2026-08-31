@@ -9,6 +9,7 @@ use App\Models\PlatformProduct;
 use App\Models\PlatformProductVariant;
 use App\Models\ProductType;
 use App\Models\ServiceCategory;
+use App\Services\Domains\DomainQuoteService;
 use App\Services\Media\MediaPathService;
 use App\Services\Media\MediaUsageService;
 use App\Support\SortOrder;
@@ -23,6 +24,7 @@ class PlatformProductAdminController extends Controller
     public function __construct(
         private MediaUsageService $mediaUsages,
         private MediaPathService $mediaPaths,
+        private DomainQuoteService $domainQuotes,
     ) {}
 
     public function index(Request $request): View
@@ -111,6 +113,9 @@ class PlatformProductAdminController extends Controller
             'product' => $platformProduct,
             'lockedCatalog' => true,
             'siblingMax' => $siblingMax,
+            'domainFloorExample' => $platformProduct->product_type === PlatformProductType::Domain
+                ? $this->domainQuotes->pricingFloorExample($platformProduct)
+                : null,
         ]);
     }
 
@@ -141,12 +146,14 @@ class PlatformProductAdminController extends Controller
             'variants.*.id' => ['required', 'integer'],
             'variants.*.price' => ['required', 'numeric', 'min:0'],
             'variants.*.description' => ['nullable', 'string', 'max:2000'],
+            'domain_markup_percent' => ['nullable', 'numeric', 'min:0', 'max:500'],
+            'domain_usd_ngn_rate' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $heroMediaId = filled($data['hero_media_id'] ?? null) ? (int) $data['hero_media_id'] : null;
         $heroPath = $this->mediaPaths->legacyPathFromMediaId($heroMediaId);
 
-        $platformProduct->update([
+        $updatePayload = [
             'title' => $data['title'],
             'short_description' => $data['short_description'] ?? null,
             'description' => $data['description'] ?? null,
@@ -154,17 +161,38 @@ class PlatformProductAdminController extends Controller
             'is_featured' => $request->boolean('is_featured'),
             'hero_media_id' => $heroMediaId,
             'hero_image' => $heroPath,
-        ]);
+        ];
+
+        if ($platformProduct->product_type === PlatformProductType::Domain) {
+            $meta = $platformProduct->meta ?? [];
+            if ($request->has('domain_markup_percent')) {
+                $meta['domain_markup_percent'] = (float) ($data['domain_markup_percent'] ?? 0);
+            }
+            if ($request->has('domain_usd_ngn_rate')) {
+                $meta['domain_fx_policy'] = array_merge($meta['domain_fx_policy'] ?? [], [
+                    'usd_ngn_rate' => (float) ($data['domain_usd_ngn_rate'] ?? 0),
+                ]);
+            }
+            $updatePayload['meta'] = $meta;
+        }
+
+        $platformProduct->update($updatePayload);
 
         SortOrder::move($platformProduct, (int) $data['sort_order'], $siblings);
 
-        $this->updateExistingVariants($platformProduct, $data['variants'] ?? []);
+        if ($platformProduct->product_type !== PlatformProductType::Domain) {
+            $this->updateExistingVariants($platformProduct, $data['variants'] ?? []);
+        }
         $this->mediaUsages->syncUsages($platformProduct, [
             'hero' => $heroMediaId,
         ]);
 
         if ($data['status'] === PlatformProductStatus::Published->value) {
             $this->assertPublishable($platformProduct->fresh(['variants']));
+        }
+
+        if ($platformProduct->product_type === PlatformProductType::Domain) {
+            app(\App\Services\Domains\DomainCacheInvalidator::class)->invalidateAllDomainPricingCaches();
         }
 
         return redirect()->route('admin.platform-products')->with('status', 'Product updated.');
@@ -237,6 +265,38 @@ class PlatformProductAdminController extends Controller
 
     private function assertPublishable(PlatformProduct $product): void
     {
+        if ($product->product_type === PlatformProductType::Domain) {
+            $meta = $product->meta ?? [];
+            $rate = (float) ($meta['domain_fx_policy']['usd_ngn_rate'] ?? 0);
+            if ($rate <= 0) {
+                throw ValidationException::withMessages([
+                    'domain_usd_ngn_rate' => 'Set a USD → NGN rate before publishing the domain product.',
+                ]);
+            }
+
+            $floor = $this->domainQuotes->pricingFloorExample($product);
+            if ($floor !== null) {
+                $markup = max(0, (float) ($meta['domain_markup_percent'] ?? 0));
+                $ngnCost = $floor['provider_cost'];
+                if (strtoupper($floor['provider_currency']) === 'USD') {
+                    $ngnCost = $floor['provider_cost'] * $rate;
+                }
+                $minRetail = ceil($ngnCost);
+                if ((float) $floor['retail_ngn'] < $minRetail) {
+                    throw ValidationException::withMessages([
+                        'domain_markup_percent' => 'Markup and FX settings would price domains below provider cost. Increase markup or FX rate.',
+                    ]);
+                }
+                if ($markup < 0) {
+                    throw ValidationException::withMessages([
+                        'domain_markup_percent' => 'Markup cannot be negative.',
+                    ]);
+                }
+            }
+
+            return;
+        }
+
         $hasActive = $product->variants()->where('is_active', true)->exists();
         if (! $hasActive && (float) $product->base_price <= 0) {
             throw ValidationException::withMessages([

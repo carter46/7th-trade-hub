@@ -233,7 +233,9 @@ class SiteIntegrationRemediationTest extends TestCase
             ->post(route('dashboard.services.purchase', $product->slug), [
                 'variant_id' => $product->activeVariants->first()->id,
                 'quantity' => 2,
-                'domain_mode' => 'none',
+                'domain_mode' => 'connect',
+                'domain_label' => 'mysite',
+                'domain_tld' => 'com',
                 'idempotency_key' => (string) Str::uuid(),
             ])
             ->assertRedirect()

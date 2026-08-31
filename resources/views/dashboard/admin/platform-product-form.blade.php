@@ -4,7 +4,11 @@
 
 @section('content')
 @php
-    $variantRows = old('variants', $product->relationLoaded('variants') && $product->variants->isNotEmpty()
+    $isDomainProduct = $product->product_type === \App\Enums\PlatformProductType::Domain;
+    $domainMeta = $product->meta ?? [];
+    $domainMarkup = old('domain_markup_percent', $domainMeta['domain_markup_percent'] ?? 15);
+    $domainFxRate = old('domain_usd_ngn_rate', $domainMeta['domain_fx_policy']['usd_ngn_rate'] ?? 1600);
+    $variantRows = old('variants', ! $isDomainProduct && $product->relationLoaded('variants') && $product->variants->isNotEmpty()
         ? $product->variants->map(fn ($v) => [
             'id' => $v->id,
             'name' => $v->name,
@@ -75,7 +79,44 @@
                 :preview-url="$heroPreview"
             />
 
-            @if ($variantRows !== [])
+            @if ($isDomainProduct)
+                <div class="space-y-3 rounded-xl border border-border-subtle px-4 py-4">
+                    <p class="text-sm font-medium text-text-primary">Domain pricing policy</p>
+                    <p class="text-xs text-text-muted">Retail prices are calculated from the active domain provider cost plus markup and FX. Variant prices are not used.</p>
+                    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <x-dashboard.input
+                            label="Markup %"
+                            name="domain_markup_percent"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="500"
+                            :value="$domainMarkup"
+                        />
+                        <x-dashboard.input
+                            label="USD → NGN rate"
+                            name="domain_usd_ngn_rate"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            :value="$domainFxRate"
+                        />
+                    </div>
+                    <p class="text-xs text-text-muted">Example: $12.99 provider cost × rate × (1 + markup%) → minimum retail NGN.</p>
+                    @if (! empty($domainFloorExample))
+                        <div class="rounded-xl border border-border-default bg-muted/30 px-3 py-2.5 text-sm text-text-secondary">
+                            <p class="font-medium text-text-primary">Live floor example (from cached provider TLD list)</p>
+                            <p class="mt-1">
+                                Cheapest extension <strong>.{{ $domainFloorExample['tld'] }}</strong>:
+                                {{ number_format($domainFloorExample['provider_cost'], 2) }} {{ $domainFloorExample['provider_currency'] }}
+                                → retail <strong>₦{{ number_format($domainFloorExample['retail_ngn'], 0) }}</strong>
+                            </p>
+                        </div>
+                    @else
+                        <p class="text-xs text-amber-600">Enable a domain provider with valid credentials to see a live floor example.</p>
+                    @endif
+                </div>
+            @elseif ($variantRows !== [])
                 <div class="space-y-3 rounded-xl border border-border-subtle px-4 py-4">
                     <p class="text-sm font-medium text-text-primary">Plans / variants</p>
                     <p class="text-xs text-text-muted">Variant names are fixed. Set price and an optional description for each plan. The storefront shows the lowest price as “from”.</p>

@@ -52,6 +52,19 @@ class PlatformCatalogTrim
                 continue;
             }
 
+            if ($typeSlug === 'domain') {
+                $drafted = DB::table('platform_products')
+                    ->where('product_type', $typeSlug)
+                    ->whereNotIn('slug', $keepSlugs)
+                    ->update([
+                        'status' => 'draft',
+                        'updated_at' => now(),
+                    ]);
+                $removed[$typeSlug] = $drafted;
+
+                continue;
+            }
+
             if (Schema::hasTable('favorites')) {
                 DB::table('favorites')
                     ->where('favoritable_type', PlatformProduct::class)

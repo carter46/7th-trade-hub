@@ -10,6 +10,8 @@ use App\Modules\Catalog\Services\CatalogBrowseService;
 use App\Modules\Catalog\Services\CatalogContentResolver;
 use App\Modules\Catalog\Services\PlatformCheckoutService;
 use App\Services\Analytics\UserActivityRecorder;
+use App\Services\Domains\DomainQuoteService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -25,6 +27,7 @@ class DiscoverServicesController extends Controller
         private CatalogContentResolver $content,
         private UserActivityRecorder $activity,
         private PlatformCheckoutService $checkoutService,
+        private DomainQuoteService $domainQuotes,
     ) {}
 
     public function index(Request $request): View
@@ -155,6 +158,10 @@ class DiscoverServicesController extends Controller
 
     public function product(Request $request, string $slug): View|RedirectResponse
     {
+        if (in_array($slug, ['com-domain-registration', 'io-domain-registration', 'co-domain-registration', 'ng-domain-registration'], true)) {
+            return redirect()->route('dashboard.services.product', config('domains.registration_product_slug', 'domain-registration'));
+        }
+
         $product = PlatformProduct::query()
             ->visibleToPublic()
             ->where('slug', $slug)
@@ -168,32 +175,90 @@ class DiscoverServicesController extends Controller
         $groupSlug = $product->productType?->serviceCategory?->slug
             ?? $this->browse->groupForType((string) $typeSlug);
 
+        $isDomainProduct = $product->product_type === PlatformProductType::Domain;
+
         return view('dashboard.user.discover.services-product', [
             'product' => $product,
             'groupSlug' => $groupSlug,
             'groupLabel' => $groupSlug ? ($this->content->forGroup($groupSlug)['label'] ?? $groupSlug) : null,
             'wallet' => $request->user()->wallet,
+            'isDomainProduct' => $isDomainProduct,
+            'domainTlds' => $isDomainProduct ? $this->domainQuotes->tldOptionsForUi() : [],
         ]);
     }
 
-    public function checkout(Request $request, string $slug): View
+    public function domainTlds(): JsonResponse
     {
+        return response()->json([
+            'tlds' => $this->domainQuotes->tldOptionsForUi(),
+        ]);
+    }
+
+    public function domainQuote(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'product_slug' => ['required', 'string', 'max:255'],
+            'domain_label' => ['required', 'string', 'max:63'],
+            'domain_tld' => ['required', 'string', 'max:63'],
+        ]);
+
+        $product = PlatformProduct::query()
+            ->visibleToPublic()
+            ->where('slug', $data['product_slug'])
+            ->firstOrFail();
+
+        if ($product->product_type !== PlatformProductType::Domain
+            && $product->product_type !== PlatformProductType::WebsitePackage) {
+            abort(422, 'Invalid product for domain quote.');
+        }
+
+        $quoteProduct = $product->product_type === PlatformProductType::Domain
+            ? $product
+            : $this->domainQuotes->registrationProduct();
+
+        $result = $this->domainQuotes->quoteForUser(
+            $request->user(),
+            $quoteProduct,
+            $data['domain_label'],
+            $data['domain_tld'],
+        );
+
+        return response()->json($result);
+    }
+
+    public function checkout(Request $request, string $slug): View|RedirectResponse
+    {
+        if (in_array($slug, ['com-domain-registration', 'io-domain-registration', 'co-domain-registration', 'ng-domain-registration'], true)) {
+            return redirect()->route('dashboard.services.checkout', config('domains.registration_product_slug', 'domain-registration'));
+        }
+
         $product = PlatformProduct::query()
             ->visibleToPublic()
             ->where('slug', $slug)
             ->with('activeVariants')
             ->firstOrFail();
 
+        if ($product->product_type === PlatformProductType::WebsitePackage && ! $request->filled('variant')) {
+            return redirect()
+                ->route('dashboard.services.product', $product->slug)
+                ->with('error', 'Choose a plan before checkout.');
+        }
+
         $variants = $product->activeVariants->sortBy('price')->values();
         $requestedVariantId = $request->integer('variant') ?: null;
         $defaultVariant = $requestedVariantId
             ? ($variants->firstWhere('id', $requestedVariantId) ?? $variants->first())
             : $variants->first();
-        $webTypes = [
-            PlatformProductType::WebsitePackage->value,
-            PlatformProductType::WebsiteTemplate->value,
-            PlatformProductType::Domain->value,
-        ];
+
+        if ($requestedVariantId && (int) $defaultVariant?->id !== $requestedVariantId) {
+            return redirect()
+                ->route('dashboard.services.product', $product->slug)
+                ->with('error', 'Selected plan is unavailable.');
+        }
+
+        $isWebsitePackage = $product->product_type === PlatformProductType::WebsitePackage;
+        $isDomainProduct = $product->product_type === PlatformProductType::Domain;
+        $showPlanSummary = $requestedVariantId !== null || $isDomainProduct;
 
         $this->activity->record($request->user()->id, 'viewed', $product, 'service.checkout');
 
@@ -206,18 +271,25 @@ class DiscoverServicesController extends Controller
                 ->first();
         }
 
+        if ($isDomainProduct && ! $request->filled('quote_token')) {
+            return redirect()
+                ->route('dashboard.services.product', $product->slug)
+                ->with('error', 'Check domain availability before checkout.');
+        }
+
         return view('dashboard.user.discover.services-checkout', [
             'product' => $product,
             'variants' => $variants,
             'defaultVariantId' => $defaultVariant?->id,
             'basePrice' => (float) $product->displayPrice(),
-            'showDomainOptions' => in_array(
-                $product->product_type instanceof \BackedEnum
-                    ? $product->product_type->value
-                    : (string) $product->product_type,
-                $webTypes,
-                true
-            ),
+            'showPlanSummary' => $showPlanSummary,
+            'isWebsitePackage' => $isWebsitePackage,
+            'isDomainProduct' => $isDomainProduct,
+            'requireDomainChoice' => $isWebsitePackage,
+            'domainTlds' => ($isWebsitePackage || $isDomainProduct) ? $this->domainQuotes->tldOptionsForUi() : [],
+            'quoteToken' => $request->string('quote_token')->toString() ?: null,
+            'quotedFqdn' => $request->string('domain_fqdn')->toString() ?: null,
+            'quotedPrice' => $request->string('quoted_price')->toString() ?: null,
             'idempotencyKey' => (string) Str::uuid(),
             'wallet' => $request->user()->wallet,
             'renewTool' => $renewTool,
@@ -250,7 +322,11 @@ class DiscoverServicesController extends Controller
         $data = $request->validate([
             'variant_id' => ['nullable', 'integer', 'exists:platform_product_variants,id'],
             'quantity' => ['required', 'integer', 'min:1', 'max:100'],
-            'domain_mode' => ['nullable', 'in:none,buy,connect'],
+            'domain_mode' => ['nullable', 'in:buy,connect'],
+            'domain_label' => ['nullable', 'string', 'max:63'],
+            'domain_tld' => ['nullable', 'string', 'max:63'],
+            'domain_quote_token' => ['nullable', 'string', 'max:128'],
+            'domain_fqdn' => ['nullable', 'string', 'max:255'],
             'domain_name' => ['nullable', 'string', 'max:255'],
             'idempotency_key' => ['required', 'string', 'uuid', 'max:64'],
             'renew_user_tool_id' => ['nullable', 'integer', 'exists:user_tools,id'],
@@ -268,6 +344,9 @@ class DiscoverServicesController extends Controller
             $data['quantity'] = 1;
             if ((int) $request->input('quantity', 1) !== 1) {
                 return back()->withInput()->with('error', 'Website packages must be purchased with quantity 1.');
+            }
+            if (empty($data['variant_id'])) {
+                return back()->withInput()->with('error', 'Choose a plan before checkout.');
             }
         }
 

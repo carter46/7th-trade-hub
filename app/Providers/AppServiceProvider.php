@@ -19,6 +19,7 @@ use App\Events\UserVerified;
 use App\Events\WalletFunded;
 use App\Events\WalletWithdrawalCompleted;
 use App\Listeners\CreateUserToolsFromOrder;
+use App\Listeners\FulfillDomainRegistrations;
 use App\Listeners\DispatchMarketingAnalytics;
 use App\Listeners\NotifyAdmins;
 use App\Listeners\NotifyUsersFromEvent;
@@ -75,7 +76,18 @@ class AppServiceProvider extends ServiceProvider
         );
         $this->app->singleton(CryptoPriceService::class);
         $this->app->singleton(\App\Modules\Wallet\Services\ExchangeQuoteService::class);
-        $this->app->singleton(WalletProvisioningService::class);
+        $this->app->singleton(\App\Services\Domains\Providers\NameCom\NameComClient::class);
+        $this->app->singleton(\App\Services\Domains\Providers\NameCom\NameComProvider::class);
+        $this->app->singleton(\App\Services\Domains\Providers\DomainNameApi\DomainNameApiClient::class);
+        $this->app->singleton(\App\Services\Domains\Providers\DomainNameApi\DomainNameApiProvider::class);
+        $this->app->singleton(\App\Services\Domains\DomainProviderManager::class);
+        $this->app->singleton(\App\Services\Domains\PlatformDomainPricingPolicy::class);
+        $this->app->singleton(\App\Services\Domains\DomainQuoteService::class);
+        $this->app->singleton(\App\Services\Domains\DomainCheckoutValidator::class);
+        $this->app->singleton(\App\Services\Domains\DomainRegistrationFulfillmentService::class);
+        $this->app->singleton(\App\Services\Domains\DomainAuditLogger::class);
+        $this->app->singleton(\App\Services\Domains\DomainCacheInvalidator::class);
+        $this->app->singleton(\App\Services\Domains\DomainProviderConfigValidator::class);
         $this->app->singleton(CheckoutService::class);
         $this->app->singleton(AuditLogService::class);
         $this->app->singleton(\App\Modules\Marketplace\Services\NotificationService::class);
@@ -108,6 +120,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->registerAnalyticsListeners();
         Event::listen(OrderCompleted::class, CreateUserToolsFromOrder::class);
+        Event::listen(OrderCompleted::class, FulfillDomainRegistrations::class);
         $this->applySiteBrandingConfig();
 
         View::composer(['layouts.dashboard-user', 'layouts.dashboard-admin'], function ($view) {

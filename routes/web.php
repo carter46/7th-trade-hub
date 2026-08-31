@@ -232,6 +232,12 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
 
     // Services (primary section; discover paths redirect)
     Route::get('/services', [\App\Http\Controllers\Dashboard\DiscoverServicesController::class, 'index'])->name('.services');
+    Route::post('/services/domain-quote', [\App\Http\Controllers\Dashboard\DiscoverServicesController::class, 'domainQuote'])
+        ->middleware(['verified', 'throttle:30,1'])
+        ->name('.services.domain-quote');
+    Route::get('/services/domain-tlds', [\App\Http\Controllers\Dashboard\DiscoverServicesController::class, 'domainTlds'])
+        ->middleware(['verified'])
+        ->name('.services.domain-tlds');
     Route::get('/services/product/{slug}/checkout', [\App\Http\Controllers\Dashboard\DiscoverServicesController::class, 'checkout'])->name('.services.checkout');
     Route::post('/services/product/{slug}/checkout', [\App\Http\Controllers\Dashboard\DiscoverServicesController::class, 'purchase'])
         ->middleware(['verified', 'throttle:10,1'])
@@ -450,6 +456,11 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::put('/site-integrations/{siteIntegration}', [\App\Http\Controllers\Admin\SiteIntegrationAdminController::class, 'update'])->name('.site-integrations.update');
         Route::post('/site-integrations/{siteIntegration}/rotate', [\App\Http\Controllers\Admin\SiteIntegrationAdminController::class, 'rotate'])->name('.site-integrations.rotate');
         Route::post('/site-integrations/{siteIntegration}/check', [\App\Http\Controllers\Admin\SiteIntegrationAdminController::class, 'check'])->name('.site-integrations.check');
+
+        Route::get('/domain-providers', [\App\Http\Controllers\Admin\DomainProviderAdminController::class, 'index'])->name('.domain-providers');
+        Route::get('/domain-providers/{domainProvider}/edit', [\App\Http\Controllers\Admin\DomainProviderAdminController::class, 'edit'])->name('.domain-providers.edit');
+        Route::put('/domain-providers/{domainProvider}', [\App\Http\Controllers\Admin\DomainProviderAdminController::class, 'update'])->name('.domain-providers.update');
+        Route::post('/domain-providers/{domainProvider}/test', [\App\Http\Controllers\Admin\DomainProviderAdminController::class, 'test'])->name('.domain-providers.test');
 
         Route::get('/service-categories', [\App\Modules\Admin\Http\Controllers\ServiceCategoryAdminController::class, 'index'])->name('.service-categories');
         Route::get('/service-categories/{serviceCategory}/edit', [\App\Modules\Admin\Http\Controllers\ServiceCategoryAdminController::class, 'edit'])->name('.service-categories.edit');
