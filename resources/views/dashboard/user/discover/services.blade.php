@@ -16,7 +16,7 @@
         @if($wallet)
             <span class="text-sm text-text-muted mr-2">Wallet: <strong class="text-text-primary">₦{{ number_format((float) $wallet->balance, 0) }}</strong></span>
         @endif
-        <x-dashboard.button :href="route('dashboard.service-orders')" variant="secondary" size="sm" icon="orders">My orders</x-dashboard.button>
+        <x-dashboard.button :href="route('dashboard.service-orders')" variant="secondary" size="sm" icon="orders">My Orders</x-dashboard.button>
     </x-slot:actions>
 
     <div class="space-y-8">

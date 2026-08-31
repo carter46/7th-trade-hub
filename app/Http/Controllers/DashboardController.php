@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\CryptoSellRequest;
+use App\Models\DomainRegistration;
 use App\Models\Listing;
 use App\Models\Message;
 use App\Models\Order;
+use App\Models\PlatformProduct;
+use App\Models\UserTool;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -20,17 +23,30 @@ class DashboardController extends Controller
         $lockedNgn = $wallet ? (float) $wallet->locked_balance : 0;
         $totalNgn = $wallet ? (float) $wallet->balance : 0;
 
-        $activeOrdersCount = $user->orders()->whereIn('status', ['pending', 'processing'])->count();
-        $ordersAwaiting = $user->orders()->where('status', 'processing')->count();
+        $activeOrdersCount = $user->orders()
+            ->where('source', 'platform')
+            ->whereIn('status', ['pending', 'processing'])
+            ->count();
+        $ordersAwaiting = $user->orders()
+            ->where('source', 'platform')
+            ->where('status', 'processing')
+            ->count();
 
-        $transactions = $user->transactions()
-            ->orderByDesc('created_at')
-            ->limit(10)
+        $myToolsCount = UserTool::query()->ownedBy($user->id)->count()
+            + DomainRegistration::query()->forUser($user->id)->count();
+
+        $featuredServices = PlatformProduct::query()
+            ->visibleToPublic()
+            ->with('heroMedia')
+            ->orderByDesc('is_featured')
+            ->orderBy('sort_order')
+            ->limit(4)
             ->get();
 
-        $recommendedListings = Listing::published()
-            ->orderBy('id')
-            ->limit(6)
+        $marketplacePicks = Listing::published()
+            ->with('marketplaceProduct')
+            ->orderByDesc('id')
+            ->limit(4)
             ->get();
 
         $messagesCount = Message::where('to_user_id', $user->id)->whereNull('read_at')->count();
@@ -48,11 +64,12 @@ class DashboardController extends Controller
             'lockedNgn' => $lockedNgn,
             'totalNgn' => $totalNgn,
             'activeOrdersCount' => $activeOrdersCount,
-            'ordersAwaitingLabel' => $ordersAwaiting > 0 ? "{$ordersAwaiting} awaiting delivery" : 'All caught up',
+            'ordersAwaitingLabel' => $ordersAwaiting > 0 ? "{$ordersAwaiting} in progress" : 'All caught up',
+            'myToolsCount' => $myToolsCount,
             'messagesCount' => $messagesCount,
             'myListingsCount' => $myListingsCount,
-            'transactions' => $transactions,
-            'recommendedListings' => $recommendedListings,
+            'featuredServices' => $featuredServices,
+            'marketplacePicks' => $marketplacePicks,
             'kycLevel' => $user->kyc_level,
             'openCryptoSell' => $openCryptoSell,
         ]);
@@ -104,7 +121,7 @@ class DashboardController extends Controller
     public function serviceOrders(): View
     {
         return $this->ordersForSource('platform', [
-            'title' => 'Service orders',
+            'title' => 'My Orders',
             'subtitle' => 'Purchases from platform services.',
             'breadcrumbParent' => ['Services', route('dashboard.services')],
             'emptyTitle' => 'No service orders yet',

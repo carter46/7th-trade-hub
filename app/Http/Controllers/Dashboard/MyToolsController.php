@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Dashboard;
 use App\Enums\PlatformProductType;
 use App\Enums\UserToolStatus;
 use App\Http\Controllers\Controller;
+use App\Models\DomainRegistration;
 use App\Models\UserTool;
 use App\Modules\Admin\Services\AuditLogService;
 use App\Services\SiteIntegrations\DemoLaunchService;
@@ -26,19 +27,18 @@ class MyToolsController extends Controller
         $userId = (int) $request->user()->id;
         $status = $request->string('status')->toString();
         $expiringSoon = $request->boolean('expiring_soon');
-        $type = $request->string('type')->toString();
         $q = $request->string('q')->toString();
+
+        $websiteTypes = [
+            PlatformProductType::WebsiteTemplate,
+            PlatformProductType::WebsitePackage,
+        ];
 
         $tools = UserTool::query()
             ->ownedBy($userId)
             ->with(['product', 'variant', 'integration'])
+            ->whereHas('product', fn ($query) => $query->whereIn('product_type', $websiteTypes))
             ->when($status !== '', fn ($query) => $query->where('status', $status))
-            ->when($type !== '', function ($query) use ($type) {
-                $enum = PlatformProductType::tryFrom($type);
-                if ($enum) {
-                    $query->whereHas('product', fn ($p) => $p->where('product_type', $enum));
-                }
-            })
             ->when($q !== '', function ($query) use ($q) {
                 $term = '%'.$q.'%';
                 $query->where(function ($inner) use ($term) {
@@ -58,14 +58,31 @@ class MyToolsController extends Controller
             ->withQueryString();
 
         return view('dashboard.user.my-tools.index', [
+            'activeTab' => 'websites',
             'tools' => $tools,
-            'toolTypes' => PlatformProductType::cases(),
+            'domains' => null,
             'filters' => [
                 'q' => $q,
                 'status' => $status,
-                'type' => $type,
                 'expiring_soon' => $expiringSoon,
             ],
+        ]);
+    }
+
+    public function domains(Request $request): View
+    {
+        $domains = DomainRegistration::query()
+            ->forUser((int) $request->user()->id)
+            ->with('order')
+            ->orderByDesc('created_at')
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('dashboard.user.my-tools.index', [
+            'activeTab' => 'domains',
+            'tools' => null,
+            'domains' => $domains,
+            'filters' => [],
         ]);
     }
 

@@ -2,6 +2,7 @@ import './bootstrap';
 import './pwa-install';
 import './scroll-reveal';
 import './dashboard-theme';
+import { registerPullToRefresh } from './dashboard-pull-refresh';
 import { mountCommandCharts, bindCommandRange } from './command-charts';
 import { initGoogleIdentity } from './google-identity';
 
@@ -19,6 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 document.addEventListener('alpine:init', () => {
+    registerPullToRefresh(Alpine);
+
     Alpine.data('toastStore', (initial = []) => ({
         toasts: [],
         init() {

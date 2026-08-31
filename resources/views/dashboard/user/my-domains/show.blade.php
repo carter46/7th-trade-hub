@@ -13,7 +13,7 @@
     width="default"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
-        ['My Domains', route('dashboard.my-domains')],
+        ['My Tools', route('dashboard.my-tools.domains')],
         [$registration->fqdn, null],
     ]"
 >

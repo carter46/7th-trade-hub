@@ -56,9 +56,19 @@ class MyDomainsIndexTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('dashboard.my-domains'))
+            ->get(route('dashboard.my-tools.domains'))
             ->assertOk()
             ->assertSee('mine.example.com')
             ->assertDontSee('not-mine.example.com');
+    }
+
+    public function test_legacy_my_domains_index_redirects_to_tools_domains_tab(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $user->assignRole('user');
+
+        $this->actingAs($user)
+            ->get(route('dashboard.my-domains'))
+            ->assertRedirect(route('dashboard.my-tools.domains'));
     }
 }

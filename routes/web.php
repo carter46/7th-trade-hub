@@ -251,6 +251,7 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
     Route::get('/service-orders', [DashboardController::class, 'serviceOrders'])->name('.service-orders');
 
     Route::get('/my-tools', [\App\Http\Controllers\Dashboard\MyToolsController::class, 'index'])->name('.my-tools');
+    Route::get('/my-tools/domains', [\App\Http\Controllers\Dashboard\MyToolsController::class, 'domains'])->name('.my-tools.domains');
     Route::get('/my-tools/{tool}', [\App\Http\Controllers\Dashboard\MyToolsController::class, 'show'])->name('.my-tools.show');
     Route::post('/my-tools/{tool}/launch/admin', [\App\Http\Controllers\Dashboard\MyToolsController::class, 'launchAdmin'])
         ->middleware('throttle:10,1')

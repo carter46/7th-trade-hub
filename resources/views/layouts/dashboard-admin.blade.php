@@ -11,9 +11,9 @@
             @include('partials.dashboard.shell-mobile-overlay')
             @include('partials.sidebar-admin')
 
-            <main id="main-content" class="min-h-0 min-w-0 flex-1 overflow-y-auto bg-surface p-4 lg:p-8">
+            <x-dashboard.scroll-main>
                 @yield('content')
-            </main>
+            </x-dashboard.scroll-main>
         </div>
     </div>
 

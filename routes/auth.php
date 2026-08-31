@@ -69,6 +69,6 @@ Route::middleware('auth')->group(function () {
         ->middleware('throttle:5,1')
         ->name('auth.google.unlink');
 
-    Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
+    Route::match(['get', 'post'], 'logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');
 });

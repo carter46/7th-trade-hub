@@ -12,13 +12,8 @@
         ['Overview', null],
     ]"
 >
-    <x-slot:actions>
-        <x-dashboard.button :href="route('dashboard.deposit.index')" icon="deposit" size="sm">Deposit</x-dashboard.button>
-        <x-dashboard.button :href="route('dashboard.withdrawal.create')" variant="secondary" icon="withdraw" size="sm">Withdraw</x-dashboard.button>
-    </x-slot:actions>
-
     @if($openCryptoSell ?? null)
-        <div class="rounded-xl border border-primary/30 bg-primary/5 px-4 py-3">
+        <div class="mb-6 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <p class="text-sm font-medium text-text-primary">Continue your crypto sell</p>
@@ -31,114 +26,103 @@
         </div>
     @endif
 
-    <x-dashboard.stat-grid>
+    <div class="space-y-4">
         <x-dashboard.stats-card
             label="Total Balance"
             :value="'₦' . number_format($balanceNgn ?? 0, 2)"
             :hint="'Locked: ₦' . number_format($lockedNgn ?? 0, 2)"
             icon="wallet"
+            :href="route('dashboard.wallet')"
         />
-        <x-dashboard.stats-card
-            label="My Listings"
-            :value="(string) ($myListingsCount ?? 0)"
-            hint="Create listing"
-            icon="storefront"
-            :href="route('dashboard.listings.create')"
-        />
-        <x-dashboard.stats-card
-            label="Active Orders"
-            :value="(string) ($activeOrdersCount ?? 0)"
-            :hint="$ordersAwaitingLabel ?? 'All caught up'"
-            icon="shopping-bag"
-        />
-        <x-dashboard.stats-card
-            label="Escrow chats"
-            :value="(string) ($messagesCount ?? 0)"
-            hint="Check inbox"
-            icon="chat"
-            :href="route('dashboard.messages')"
-        />
-    </x-dashboard.stat-grid>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <x-dashboard.card class="lg:col-span-2">
-            <h2 class="text-lg font-semibold text-text-primary">Wallet Activity</h2>
-            <p class="text-sm text-text-secondary mt-1">Summary from your ledger</p>
-            <div class="grid grid-cols-2 gap-4 mt-6">
-                <div class="rounded-xl bg-muted/40 p-5">
-                    <p class="text-sm text-text-secondary">Available balance</p>
-                    <p class="text-2xl font-bold text-text-primary mt-2">₦{{ number_format($balanceNgn ?? 0, 2) }}</p>
-                </div>
-                <div class="rounded-xl bg-muted/40 p-5">
-                    <p class="text-sm text-text-secondary">In escrow</p>
-                    <p class="text-2xl font-bold text-text-primary mt-2">₦{{ number_format($lockedNgn ?? 0, 2) }}</p>
-                </div>
-                <div class="rounded-xl bg-muted/40 p-5 col-span-2">
-                    <p class="text-sm text-text-secondary">Recent transactions</p>
-                    <p class="text-2xl font-bold text-text-primary mt-2">{{ ($transactions ?? collect())->count() }}</p>
-                </div>
-            </div>
-        </x-dashboard.card>
-
-        <x-dashboard.card>
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold text-text-primary">Recommended</h2>
-                <x-dashboard.button :href="route('dashboard.marketplace')" variant="link" size="sm">View All</x-dashboard.button>
-            </div>
-            <div class="space-y-3">
-                @forelse($recommendedListings ?? collect() as $listing)
-                    <a href="{{ route('dashboard.marketplace.show', $listing->slug) }}" class="block p-4 rounded-xl bg-muted/40 hover:bg-muted/60 transition-colors border border-transparent hover:border-border-default">
-                        <div class="flex items-start gap-3">
-                            <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                                <x-dashboard.icon name="listings" class="w-5 h-5" />
-                            </div>
-                            <div class="min-w-0">
-                                <h3 class="text-sm font-semibold text-text-primary">{{ $listing->title }}</h3>
-                                <p class="text-xs text-text-secondary mt-1 line-clamp-1">{{ $listing->description ?? '' }}</p>
-                                <div class="mt-2 text-primary font-bold text-sm">₦{{ number_format($listing->price, 2) }}</div>
-                            </div>
-                        </div>
-                    </a>
-                @empty
-                    <x-dashboard.empty
-                        icon="storefront"
-                        title="No recommendations yet"
-                        description="Browse the marketplace to discover services and assets."
-                        :action="['href' => route('dashboard.marketplace'), 'label' => 'Browse marketplace']"
-                    />
-                @endforelse
-            </div>
-        </x-dashboard.card>
+        <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <x-dashboard.stats-card
+                label="My Tools"
+                :value="(string) ($myToolsCount ?? 0)"
+                hint="Websites & domains"
+                icon="listings"
+                :href="route('dashboard.my-tools')"
+            />
+            <x-dashboard.stats-card
+                label="Active Orders"
+                :value="(string) ($activeOrdersCount ?? 0)"
+                :hint="$ordersAwaitingLabel ?? 'All caught up'"
+                icon="shopping-bag"
+                :href="route('dashboard.service-orders')"
+            />
+            <x-dashboard.stats-card
+                label="Escrow chats"
+                :value="(string) ($messagesCount ?? 0)"
+                hint="Check inbox"
+                icon="chat"
+                :href="route('dashboard.messages')"
+            />
+            <x-dashboard.stats-card
+                label="My Listings"
+                :value="(string) ($myListingsCount ?? 0)"
+                hint="Marketplace"
+                icon="storefront"
+                :href="route('dashboard.listings')"
+            />
+        </div>
     </div>
 
-    <x-dashboard.table
-        :empty="($transactions ?? collect())->isEmpty()"
-        empty-title="No transactions yet"
-        empty-description="Your recent wallet activity will show up here."
-        empty-icon="transactions"
-        striped
-    >
-        <x-slot:head>
-            <x-dashboard.th>Transaction ID</x-dashboard.th>
-            <x-dashboard.th>Asset / Service</x-dashboard.th>
-            <x-dashboard.th>Date</x-dashboard.th>
-            <x-dashboard.th>Amount</x-dashboard.th>
-            <x-dashboard.th>Status</x-dashboard.th>
-        </x-slot:head>
-        @foreach($transactions ?? [] as $tx)
-            <tr class="hover:bg-muted/50">
-                <x-dashboard.td class="font-mono text-xs">#{{ $tx->reference }}</x-dashboard.td>
-                <x-dashboard.td>
-                    <div class="flex items-center gap-3">
-                        <span class="text-primary"><x-dashboard.icon name="paid" class="w-4 h-4" /></span>
-                        <span>{{ $tx->label }}</span>
-                    </div>
-                </x-dashboard.td>
-                <x-dashboard.td class="text-text-secondary text-xs">{{ $tx->created_at->format('M j, Y, H:i') }}</x-dashboard.td>
-                <x-dashboard.td class="font-semibold">₦{{ number_format(abs($tx->amount), 2) }}</x-dashboard.td>
-                <x-dashboard.td><x-dashboard.badge :status="$tx->status" /></x-dashboard.td>
-            </tr>
-        @endforeach
-    </x-dashboard.table>
+    <section class="mt-8 space-y-4">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-semibold text-text-primary">Services</h2>
+                <p class="mt-1 text-sm text-text-secondary">Browse platform services and buy from your wallet.</p>
+            </div>
+            <x-dashboard.button :href="route('dashboard.services')" variant="secondary" size="sm">View all services</x-dashboard.button>
+        </div>
+
+        @if(($featuredServices ?? collect())->isEmpty())
+            <x-dashboard.empty
+                icon="listings"
+                title="No services available"
+                description="Check back soon for new platform services."
+                :action="['href' => route('dashboard.services'), 'label' => 'Browse services']"
+            />
+        @else
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                @foreach($featuredServices as $product)
+                    @include('dashboard.user.partials.service-product-card', ['product' => $product])
+                @endforeach
+            </div>
+        @endif
+    </section>
+
+    <section class="mt-8 space-y-4">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-semibold text-text-primary">Marketplace picks</h2>
+                <p class="mt-1 text-sm text-text-secondary">Listings from the community marketplace.</p>
+            </div>
+            <x-dashboard.button :href="route('dashboard.marketplace')" variant="secondary" size="sm">Browse marketplace</x-dashboard.button>
+        </div>
+
+        @if(($marketplacePicks ?? collect())->isEmpty())
+            <x-dashboard.empty
+                icon="storefront"
+                title="No marketplace listings yet"
+                description="Browse the marketplace to discover services and assets."
+                :action="['href' => route('dashboard.marketplace'), 'label' => 'Browse marketplace']"
+            />
+        @else
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                @foreach($marketplacePicks as $listing)
+                    <x-dashboard.card class="h-full">
+                        <a href="{{ route('dashboard.marketplace.show', $listing->slug) }}" class="font-semibold text-text-primary line-clamp-2 hover:text-primary">{{ $listing->title }}</a>
+                        <div class="mt-1 text-xs text-text-muted">{{ $listing->marketplaceProduct?->name ?? 'Listing' }}</div>
+                        @if(filled($listing->description))
+                            <p class="mt-2 text-sm text-text-secondary line-clamp-2">{{ $listing->description }}</p>
+                        @endif
+                        <div class="mt-3 text-primary font-bold">₦{{ number_format((float) $listing->price, 0) }}</div>
+                        <x-dashboard.button class="mt-3" :href="route('dashboard.marketplace.show', $listing->slug)" size="sm">View listing</x-dashboard.button>
+                    </x-dashboard.card>
+                @endforeach
+            </div>
+        @endif
+    </section>
 </x-layout.page>
 @endsection

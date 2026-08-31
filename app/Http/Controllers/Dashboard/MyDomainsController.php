@@ -17,18 +17,9 @@ class MyDomainsController extends Controller
         private DomainNameserverService $nameservers,
     ) {}
 
-    public function index(Request $request): View
+    public function index(Request $request): RedirectResponse
     {
-        $domains = DomainRegistration::query()
-            ->forUser((int) $request->user()->id)
-            ->with('order')
-            ->orderByDesc('created_at')
-            ->paginate(15)
-            ->withQueryString();
-
-        return view('dashboard.user.my-domains.index', [
-            'domains' => $domains,
-        ]);
+        return redirect()->route('dashboard.my-tools.domains');
     }
 
     public function show(Request $request, DomainRegistration $registration): View
