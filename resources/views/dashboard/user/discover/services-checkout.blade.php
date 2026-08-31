@@ -30,6 +30,18 @@
         'quotedFqdn' => $quotedFqdn ?? null,
         'quotedPrice' => $quotedPrice ?? null,
         'csrfToken' => csrf_token(),
+        'registrantDefaults' => [
+            'first_name' => old('registrant.first_name', ''),
+            'last_name' => old('registrant.last_name', ''),
+            'company' => old('registrant.company', ''),
+            'email' => old('registrant.email', auth()->user()->email),
+            'phone' => old('registrant.phone', ''),
+            'address' => old('registrant.address', ''),
+            'city' => old('registrant.city', ''),
+            'state' => old('registrant.state', ''),
+            'zip' => old('registrant.zip', ''),
+            'country' => old('registrant.country', 'NG'),
+        ],
     ];
 @endphp
 <x-layout.page
@@ -94,6 +106,8 @@
                             <span x-show="domainPremium" x-cloak class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Premium</span>
                         </p>
                     </div>
+
+                    @include('dashboard.user.discover._domain-registrant-fields')
                 @else
                     @if(($showPlanSummary ?? false) && $selectedVariant)
                         <input type="hidden" name="variant_id" value="{{ $selectedVariant->id }}">
@@ -207,6 +221,12 @@
                                         Domain add-on: <span x-text="'₦' + retailFormatted"></span>
                                         <span x-show="domainPremium" class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Premium</span>
                                     </p>
+                                </div>
+                            </template>
+
+                            <template x-if="domainMode === 'buy' && domainAvailable">
+                                <div x-cloak>
+                                    @include('dashboard.user.discover._domain-registrant-fields')
                                 </div>
                             </template>
                         </div>

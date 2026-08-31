@@ -713,6 +713,18 @@ document.addEventListener('alpine:init', () => {
         isWebsitePackage: Boolean(options.isWebsitePackage),
         paymentMethod: options.paymentMethod || 'wallet',
         basePrice: Number(options.basePrice || 0),
+        registrant: {
+            first_name: options.registrantDefaults?.first_name ?? '',
+            last_name: options.registrantDefaults?.last_name ?? '',
+            company: options.registrantDefaults?.company ?? '',
+            email: options.registrantDefaults?.email ?? '',
+            phone: options.registrantDefaults?.phone ?? '',
+            address: options.registrantDefaults?.address ?? '',
+            city: options.registrantDefaults?.city ?? '',
+            state: options.registrantDefaults?.state ?? '',
+            zip: options.registrantDefaults?.zip ?? '',
+            country: options.registrantDefaults?.country ?? 'NG',
+        },
         get planUnit() {
             const row = this.variants.find((v) => Number(v.id) === Number(this.variantId));
             if (row) return Number(row.price);
@@ -737,14 +749,36 @@ document.addEventListener('alpine:init', () => {
         get retailFormatted() {
             return new Intl.NumberFormat('en-NG', { maximumFractionDigits: 0 }).format(this.domainRetailPrice || 0);
         },
+        get needsRegistrant() {
+            if (this.isDomainProduct) {
+                return true;
+            }
+
+            return this.requireDomainChoice && this.domainMode === 'buy' && this.domainAvailable;
+        },
+        get registrantComplete() {
+            const r = this.registrant;
+
+            return Boolean(
+                r.first_name?.trim()
+                && r.last_name?.trim()
+                && r.email?.trim()
+                && r.phone?.trim()
+                && r.address?.trim()
+                && r.city?.trim()
+                && r.state?.trim()
+                && r.zip?.trim()
+                && (r.country?.trim()?.length === 2),
+            );
+        },
         get canSubmit() {
             if (this.isDomainProduct) {
-                return Boolean(this.domainQuoteToken && this.domainFqdn);
+                return Boolean(this.domainQuoteToken && this.domainFqdn && this.registrantComplete);
             }
             if (this.requireDomainChoice) {
                 if (!this.domainLabel.trim() || !this.domainTld) return false;
                 if (this.domainMode === 'buy') {
-                    return Boolean(this.domainQuoteToken && this.domainAvailable);
+                    return Boolean(this.domainQuoteToken && this.domainAvailable && this.registrantComplete);
                 }
                 if (this.domainMode === 'connect') return true;
                 return false;

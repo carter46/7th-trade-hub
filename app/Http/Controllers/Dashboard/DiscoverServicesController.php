@@ -11,6 +11,7 @@ use App\Modules\Catalog\Services\CatalogContentResolver;
 use App\Modules\Catalog\Services\PlatformCheckoutService;
 use App\Services\Analytics\UserActivityRecorder;
 use App\Services\Domains\DomainQuoteService;
+use App\Support\Domains\DomainRegistrantContact;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -319,7 +320,7 @@ class DiscoverServicesController extends Controller
             return back()->withInput()->with('error', 'No payment method is available. Create a wallet or ask support to enable card/transfer checkout.');
         }
 
-        $data = $request->validate([
+        $rules = [
             'variant_id' => ['nullable', 'integer', 'exists:platform_product_variants,id'],
             'quantity' => ['required', 'integer', 'min:1', 'max:100'],
             'domain_mode' => ['nullable', 'in:buy,connect'],
@@ -331,7 +332,13 @@ class DiscoverServicesController extends Controller
             'idempotency_key' => ['required', 'string', 'uuid', 'max:64'],
             'renew_user_tool_id' => ['nullable', 'integer', 'exists:user_tools,id'],
             'payment_method' => ['nullable', 'in:'.implode(',', $allowedMethods)],
-        ]);
+        ];
+
+        if ($this->purchaseRequiresRegistrant($product, $request)) {
+            $rules = array_merge($rules, DomainRegistrantContact::validationRules());
+        }
+
+        $data = $request->validate($rules);
 
         $data['payment_method'] = $data['payment_method']
             ?? ($hasWallet ? 'wallet' : ($gatewayEnabled ? 'gateway' : null));
@@ -537,5 +544,18 @@ class DiscoverServicesController extends Controller
             'typeKeys' => $typeKeys,
             'wallet' => $request->user()->wallet,
         ]);
+    }
+
+    private function purchaseRequiresRegistrant(PlatformProduct $product, Request $request): bool
+    {
+        if ($product->product_type === PlatformProductType::Domain) {
+            return true;
+        }
+
+        if ($product->product_type === PlatformProductType::WebsitePackage) {
+            return $request->input('domain_mode') === 'buy';
+        }
+
+        return false;
     }
 }

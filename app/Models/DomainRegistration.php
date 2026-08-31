@@ -25,6 +25,7 @@ class DomainRegistration extends Model
         'provider_key',
         'provider_cost_at_checkout',
         'provider_currency_at_checkout',
+        'registrant_contact',
         'status',
         'retry_count',
         'last_attempt_at',
@@ -39,6 +40,7 @@ class DomainRegistration extends Model
     {
         return [
             'provider_cost_at_checkout' => 'decimal:4',
+            'registrant_contact' => 'array',
             'provider_meta' => 'array',
             'registered_at' => 'datetime',
             'last_attempt_at' => 'datetime',

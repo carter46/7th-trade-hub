@@ -94,6 +94,7 @@ class DomainRegistrationFulfillmentTest extends TestCase
                     'consumed_at' => now(),
                 ])->id,
                 'premium' => false,
+                'registrant_contact' => $this->sampleDomainRegistrant(),
             ],
         ]);
 

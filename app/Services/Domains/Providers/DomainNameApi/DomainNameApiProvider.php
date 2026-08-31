@@ -150,12 +150,23 @@ class DomainNameApiProvider implements DomainProviderInterface
             return new DomainRegistrationResult(false, errorMessage: 'Default nameservers are not configured.');
         }
 
+        $contactProfile = $context['registrant_contact'] ?? null;
+        if (! is_array($contactProfile)) {
+            return new DomainRegistrationResult(false, errorMessage: 'Registrant contact details are missing.');
+        }
+
+        try {
+            DomainRegistrationContacts::assertComplete($contactProfile);
+        } catch (\InvalidArgumentException $e) {
+            return new DomainRegistrationResult(false, errorMessage: $e->getMessage());
+        }
+
         try {
             $payload = $this->client->registerWithContacts($provider, [
                 'domainName' => $fqdn,
                 'period' => 1,
                 'nameServers' => $nameservers,
-                'contacts' => DomainRegistrationContacts::forDomainNameApi(),
+                'contacts' => DomainRegistrationContacts::forDomainNameApi($contactProfile),
             ]);
 
             if (! ($payload['success'] ?? false)) {

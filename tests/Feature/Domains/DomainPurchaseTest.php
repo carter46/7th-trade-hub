@@ -98,6 +98,7 @@ class DomainPurchaseTest extends TestCase
                 'quantity' => 1,
                 'domain_quote_token' => $token,
                 'domain_fqdn' => 'purchase-test.com',
+                'registrant' => $this->sampleDomainRegistrant(),
                 'idempotency_key' => (string) Str::uuid(),
             ])
             ->assertRedirect();

@@ -217,6 +217,7 @@ class DomainCheckoutTest extends TestCase
                 'domain_label' => 'example',
                 'domain_tld' => 'com',
                 'domain_quote_token' => $token,
+                'registrant' => $this->sampleDomainRegistrant(),
                 'idempotency_key' => (string) Str::uuid(),
             ])
             ->assertRedirect();

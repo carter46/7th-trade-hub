@@ -21,6 +21,7 @@ return [
     ])),
 
     'registration_contacts' => [
+        // Legacy/dev fallback only — checkout collects per-customer registrant details.
         'first_name' => env('DOMAIN_CONTACT_FIRST_NAME', 'Domain'),
         'last_name' => env('DOMAIN_CONTACT_LAST_NAME', 'Admin'),
         'company' => env('DOMAIN_CONTACT_COMPANY', '7th Trade Hub'),

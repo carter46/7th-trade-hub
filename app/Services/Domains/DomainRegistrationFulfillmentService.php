@@ -55,6 +55,24 @@ class DomainRegistrationFulfillmentService
             return;
         }
 
+        $registrantContact = $options['registrant_contact'] ?? null;
+        if (! is_array($registrantContact)) {
+            $registration = DomainRegistration::query()->create([
+                'order_id' => $order->id,
+                'order_item_id' => $item->id,
+                'domain_quote_id' => $quote->id,
+                'fqdn' => $fqdn,
+                'provider_key' => $quote->provider_key,
+                'provider_cost_at_checkout' => $quote->provider_cost,
+                'provider_currency_at_checkout' => $quote->provider_currency,
+                'status' => DomainRegistration::STATUS_FAILED,
+                'error_message' => 'Registrant contact details are missing.',
+            ]);
+            $this->audit->log('domains.fulfillment.failed', $registration, ['reason' => 'missing_registrant']);
+
+            return;
+        }
+
         $registration = DomainRegistration::query()->create([
             'order_id' => $order->id,
             'order_item_id' => $item->id,
@@ -63,6 +81,7 @@ class DomainRegistrationFulfillmentService
             'provider_key' => $quote->provider_key,
             'provider_cost_at_checkout' => $quote->provider_cost,
             'provider_currency_at_checkout' => $quote->provider_currency,
+            'registrant_contact' => $registrantContact,
             'status' => DomainRegistration::STATUS_PROCESSING,
         ]);
 
@@ -99,6 +118,7 @@ class DomainRegistrationFulfillmentService
                 'purchase_type' => $quote->purchase_type,
                 'quote_id' => $quote->id,
                 'idempotency_key' => 'domain-'.$order->id.'-'.$item->id,
+                'registrant_contact' => $registrantContact,
             ]);
 
             if ($result->success) {

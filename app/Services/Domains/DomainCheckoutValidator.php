@@ -6,6 +6,7 @@ use App\Enums\PlatformProductType;
 use App\Models\PlatformProduct;
 use App\Models\User;
 use App\Support\Domains\DomainFqdn;
+use App\Support\Domains\DomainRegistrantContact;
 use InvalidArgumentException;
 
 class DomainCheckoutValidator
@@ -63,6 +64,7 @@ class DomainCheckoutValidator
             'quote' => $quoteResult,
             'domain_product' => $domainProduct,
             'domain_quote_token' => $token,
+            'registrant_contact' => $this->resolveRegistrantContact($data),
         ];
     }
 
@@ -95,6 +97,7 @@ class DomainCheckoutValidator
             'quote' => $quoteResult,
             'domain_product' => $product,
             'domain_quote_token' => $token,
+            'registrant_contact' => $this->resolveRegistrantContact($data),
         ];
     }
 
@@ -125,6 +128,20 @@ class DomainCheckoutValidator
         if (! in_array($tld, $supported, true)) {
             throw new InvalidArgumentException('Selected extension is not supported.');
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, string|null>
+     */
+    private function resolveRegistrantContact(array $data): array
+    {
+        $raw = $data['registrant'] ?? null;
+        if (! is_array($raw)) {
+            throw new InvalidArgumentException('Enter registrant contact details for domain registration.');
+        }
+
+        return DomainRegistrantContact::fromArray($raw)->toStorageArray();
     }
 
     /**

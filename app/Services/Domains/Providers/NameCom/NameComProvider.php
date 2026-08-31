@@ -149,7 +149,18 @@ class NameComProvider implements DomainProviderInterface
         }
 
         $quote = $this->getRegistrationQuote($provider, $fqdn, $availability);
-        $contact = DomainRegistrationContacts::forNameCom();
+        $contactProfile = $context['registrant_contact'] ?? null;
+        if (! is_array($contactProfile)) {
+            return new DomainRegistrationResult(false, errorMessage: 'Registrant contact details are missing.');
+        }
+
+        try {
+            DomainRegistrationContacts::assertComplete($contactProfile);
+        } catch (\InvalidArgumentException $e) {
+            return new DomainRegistrationResult(false, errorMessage: $e->getMessage());
+        }
+
+        $contact = DomainRegistrationContacts::forNameCom($contactProfile);
 
         $payload = [
             'domain' => [
