@@ -77,9 +77,20 @@
             </div>
         </form>
 
-        <form method="POST" action="{{ route('admin.domain-providers.test', $provider) }}" class="mt-4 pt-4 border-t border-border-default">
+        <form
+            method="POST"
+            action="{{ route('admin.domain-providers.test', $provider) }}"
+            class="mt-4 pt-4 border-t border-border-default"
+            data-ajax-form
+            x-data="adminConnectionTest()"
+            @submit.prevent="run($event)"
+        >
             @csrf
-            <x-dashboard.button type="submit" variant="secondary" size="sm">Test connection</x-dashboard.button>
+            <p x-show="status" x-cloak class="mb-2 text-sm" :class="ok ? 'text-emerald-700' : 'text-danger'" x-text="status"></p>
+            <x-dashboard.button type="submit" variant="secondary" size="sm" x-bind:disabled="testing">
+                <span x-show="!testing">Test connection</span>
+                <span x-cloak x-show="testing">Testing…</span>
+            </x-dashboard.button>
         </form>
     </x-dashboard.card>
 </x-layout.page>

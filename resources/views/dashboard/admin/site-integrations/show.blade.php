@@ -27,9 +27,18 @@
     ]"
 >
     <x-slot:actions>
-        <form method="POST" action="{{ route('admin.site-integrations.check', $integration) }}">
+        <form
+            method="POST"
+            action="{{ route('admin.site-integrations.check', $integration) }}"
+            data-ajax-form
+            x-data="adminConnectionTest()"
+            @submit.prevent="run($event)"
+        >
             @csrf
-            <x-dashboard.button type="submit" variant="secondary" size="sm">Check connection</x-dashboard.button>
+            <x-dashboard.button type="submit" variant="secondary" size="sm" x-bind:disabled="testing">
+                <span x-show="!testing">Check connection</span>
+                <span x-cloak x-show="testing">Checking…</span>
+            </x-dashboard.button>
         </form>
         <form method="POST" action="{{ route('admin.site-integrations.rotate', $integration) }}" onsubmit="return confirm('Rotate credentials? The site must update its config.');">
             @csrf

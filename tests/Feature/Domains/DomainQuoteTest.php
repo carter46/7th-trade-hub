@@ -105,7 +105,7 @@ class DomainQuoteTest extends TestCase
             ]);
 
         $response->assertOk()
-            ->assertJsonStructure(['available', 'fqdn', 'retail_price', 'premium', 'quote_token'])
+            ->assertJsonStructure(['available', 'fqdn', 'retail_price', 'premium', 'quote_token', 'suggestions'])
             ->assertJsonMissing(['provider_key', 'provider_cost']);
 
         $this->assertTrue($response->json('available'));
@@ -131,6 +131,29 @@ class DomainQuoteTest extends TestCase
             ->assertJson([
                 'available' => false,
             ]);
+    }
+
+    public function test_domain_quote_with_dot_in_label_returns_validation_message_not_server_error(): void
+    {
+        $this->enableNameComProvider();
+        $product = $this->seedDomainProduct();
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $user->assignRole('user');
+
+        $response = $this->actingAs($user)
+            ->postJson(route('dashboard.services.domain-quote'), [
+                'product_slug' => $product->slug,
+                'domain_label' => 'ulopamy.com',
+                'domain_tld' => 'com',
+            ]);
+
+        $response->assertOk()
+            ->assertJson([
+                'available' => false,
+            ])
+            ->assertJsonStructure(['message', 'suggestions']);
+
+        $this->assertStringContainsString('extension', strtolower((string) $response->json('message')));
     }
 
     public function test_markup_formula_applies_ceiling(): void

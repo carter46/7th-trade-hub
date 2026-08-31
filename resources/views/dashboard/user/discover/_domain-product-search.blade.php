@@ -25,11 +25,15 @@
                 <input
                     type="text"
                     x-model="domainLabel"
-                    @input="invalidateQuote()"
+                    @input="onDomainLabelInput($event)"
                     placeholder="mysite"
                     autocomplete="off"
-                    class="w-full rounded-lg border-border-default bg-elevated text-text-primary text-sm"
+                    autocapitalize="off"
+                    spellcheck="false"
+                    :class="domainLabelError ? 'border-danger' : 'border-border-default'"
+                    class="w-full rounded-lg bg-elevated text-text-primary text-sm"
                 >
+                <p x-show="domainLabelError" x-cloak class="mt-1 text-xs text-danger" x-text="domainLabelError"></p>
             </div>
             <div>
                 @include('dashboard.user.discover._domain-extension-picker')
@@ -41,19 +45,13 @@
             variant="secondary"
             class="w-full sm:w-auto"
             x-on:click="checkDomain()"
-            x-bind:disabled="domainChecking || !domainLabel.trim()"
+            x-bind:disabled="domainChecking || !canCheckDomain"
         >
             <span x-show="!domainChecking">Check availability</span>
             <span x-cloak x-show="domainChecking">Checking…</span>
         </x-dashboard.button>
 
-        <div x-show="domainMessage" x-cloak class="rounded-xl border border-border-default bg-muted/30 px-4 py-3 text-sm">
-            <p x-text="domainMessage" :class="domainAvailable ? 'text-emerald-700' : 'text-text-secondary'"></p>
-            <p x-show="domainAvailable" class="mt-2 text-lg font-semibold text-primary">
-                <span x-text="'₦' + retailFormatted"></span>
-                <span x-show="domainPremium" class="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Premium</span>
-            </p>
-        </div>
+        @include('dashboard.user.discover._domain-search-results')
 
         <x-dashboard.button
             type="button"

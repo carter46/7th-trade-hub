@@ -25,22 +25,80 @@ class DomainQuoteService
     ) {}
 
     /**
-     * @return array{available: bool, fqdn: string, retail_price: string, premium: bool, quote_token: string|null, message: string|null}
+     * @return array{
+     *     available: bool,
+     *     fqdn: string,
+     *     retail_price: string,
+     *     premium: bool,
+     *     quote_token: string|null,
+     *     message: string|null,
+     *     suggestions: list<array{tld: string, label: string, fqdn: string, retail_price: string, premium: bool, quote_token: string, available: bool}>
+     * }
      */
     public function quoteForUser(User $user, PlatformProduct $product, string $sld, string $tld): array
+    {
+        $label = DomainFqdn::validateLabel($sld);
+        if ($label['error'] !== null && $label['value'] === '') {
+            return $this->quoteFailure('', '0.00', $label['error'], []);
+        }
+
+        if ($label['error'] !== null) {
+            try {
+                $fqdn = DomainFqdn::parse($label['value'], $tld)['fqdn'];
+            } catch (InvalidArgumentException) {
+                $fqdn = '';
+            }
+
+            return $this->quoteFailure($fqdn, '0.00', $label['error'], []);
+        }
+
+        try {
+            $parsed = DomainFqdn::parse($label['value'], $tld);
+        } catch (InvalidArgumentException $e) {
+            return $this->quoteFailure('', '0.00', $e->getMessage(), []);
+        }
+
+        $fqdn = $parsed['fqdn'];
+
+        if (! DomainProductTldPolicy::isAllowed($product, $parsed['tld'])) {
+            return $this->quoteFailure(
+                $fqdn,
+                '0.00',
+                'Selected extension is not available for this product.',
+                $this->alternativeSuggestions($user, $product, $parsed['sld'], $parsed['tld']),
+            );
+        }
+
+        $primary = $this->attemptQuoteForTld($user, $product, $parsed['sld'], $parsed['tld']);
+
+        $primary['suggestions'] = $this->alternativeSuggestions(
+            $user,
+            $product,
+            $parsed['sld'],
+            $parsed['tld'],
+            excludeQuoteToken: $primary['quote_token'] ?? null,
+        );
+
+        return $primary;
+    }
+
+    /**
+     * @return array{
+     *     available: bool,
+     *     fqdn: string,
+     *     retail_price: string,
+     *     premium: bool,
+     *     quote_token: string|null,
+     *     message: string|null
+     * }
+     */
+    private function attemptQuoteForTld(User $user, PlatformProduct $product, string $sld, string $tld): array
     {
         $parsed = DomainFqdn::parse($sld, $tld);
         $fqdn = $parsed['fqdn'];
 
         if (! DomainProductTldPolicy::isAllowed($product, $parsed['tld'])) {
-            return [
-                'available' => false,
-                'fqdn' => $fqdn,
-                'retail_price' => '0.00',
-                'premium' => false,
-                'quote_token' => null,
-                'message' => 'Selected extension is not available for this product.',
-            ];
+            return $this->quoteFailure($fqdn, '0.00', 'Selected extension is not available for this product.');
         }
 
         try {
@@ -64,34 +122,17 @@ class DomainQuoteService
                 ];
             });
         } catch (DomainBusinessException $e) {
-            return [
-                'available' => false,
-                'fqdn' => $fqdn,
-                'retail_price' => '0.00',
-                'premium' => false,
-                'quote_token' => null,
-                'message' => $e->getMessage(),
-            ];
-        } catch (\Throwable $e) {
-            return [
-                'available' => false,
-                'fqdn' => $fqdn,
-                'retail_price' => '0.00',
-                'premium' => false,
-                'quote_token' => null,
-                'message' => 'Domain search is temporarily unavailable. Please try again shortly.',
-            ];
+            return $this->quoteFailure($fqdn, '0.00', $e->getMessage());
+        } catch (\Throwable) {
+            return $this->quoteFailure($fqdn, '0.00', 'Domain search is temporarily unavailable. Please try again shortly.');
         }
 
         if (! ($result['available'] ?? false)) {
-            return [
-                'available' => false,
-                'fqdn' => $fqdn,
-                'retail_price' => '0.00',
-                'premium' => false,
-                'quote_token' => null,
-                'message' => $result['availability']->message ?? 'Domain is not available.',
-            ];
+            return $this->quoteFailure(
+                $fqdn,
+                '0.00',
+                $result['availability']->message ?? 'Domain is not available.',
+            );
         }
 
         /** @var DomainProvider $provider */
@@ -137,6 +178,91 @@ class DomainQuoteService
             'premium' => $registration->premium,
             'quote_token' => $plainToken,
             'message' => null,
+        ];
+    }
+
+    /**
+     * @return list<array{tld: string, label: string, fqdn: string, retail_price: string, premium: bool, quote_token: string, available: bool}>
+     */
+    private function alternativeSuggestions(
+        User $user,
+        PlatformProduct $product,
+        string $sld,
+        string $excludeTld,
+        ?string $excludeQuoteToken = null,
+    ): array {
+        $limit = max(1, (int) config('domains.suggestion_limit', 3));
+        $maxAttempts = max($limit, (int) config('domains.suggestion_max_attempts', 8));
+        $featured = DomainProductTldPolicy::featuredTlds($product);
+        $allowed = DomainProductTldPolicy::allowedTlds($product);
+
+        $candidates = collect($allowed)
+            ->reject(fn (string $tld) => $tld === $excludeTld)
+            ->sortBy(function (string $tld) use ($featured) {
+                $index = array_search($tld, $featured, true);
+
+                return $index === false ? 1000 + ord($tld[0] ?? 'z') : $index;
+            })
+            ->values();
+
+        $suggestions = [];
+        $attempts = 0;
+
+        foreach ($candidates as $candidateTld) {
+            if (count($suggestions) >= $limit || $attempts >= $maxAttempts) {
+                break;
+            }
+
+            $attempts++;
+            $result = $this->attemptQuoteForTld($user, $product, $sld, $candidateTld);
+            if (! ($result['available'] ?? false) || empty($result['quote_token'])) {
+                continue;
+            }
+
+            if ($excludeQuoteToken !== null && hash_equals($excludeQuoteToken, (string) $result['quote_token'])) {
+                continue;
+            }
+
+            $suggestions[] = [
+                'tld' => $candidateTld,
+                'label' => '.'.ltrim($candidateTld, '.'),
+                'fqdn' => (string) $result['fqdn'],
+                'retail_price' => (string) $result['retail_price'],
+                'premium' => (bool) ($result['premium'] ?? false),
+                'quote_token' => (string) $result['quote_token'],
+                'available' => true,
+            ];
+        }
+
+        return $suggestions;
+    }
+
+    /**
+     * @param  list<array{tld: string, label: string, fqdn: string, retail_price: string, premium: bool, quote_token: string, available: bool}>  $suggestions
+     * @return array{
+     *     available: bool,
+     *     fqdn: string,
+     *     retail_price: string,
+     *     premium: bool,
+     *     quote_token: string|null,
+     *     message: string|null,
+     *     suggestions: list<array{tld: string, label: string, fqdn: string, retail_price: string, premium: bool, quote_token: string, available: bool}>
+     * }
+     */
+    private function quoteFailure(
+        string $fqdn,
+        string $retailPrice,
+        string $message,
+        array $suggestions = [],
+    ): array {
+        return [
+            'available' => false,
+            'fqdn' => $fqdn,
+            'retail_price' => $retailPrice,
+            'premium' => false,
+            'quote_token' => null,
+            'message' => $message,
+            'suggestions' => $suggestions,
         ];
     }
 

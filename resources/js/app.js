@@ -5,7 +5,10 @@ import './dashboard-theme';
 import { registerPullToRefresh } from './dashboard-pull-refresh';
 import { mountCommandCharts, bindCommandRange } from './command-charts';
 import { initGoogleIdentity } from './google-identity';
-
+import { initDashboardPageLoader } from './dashboard-page-loader';
+import { createDomainSearchHelpers, extractQuoteError } from './domain-search-shared';
+import { createCheckoutValidationHelpers } from './checkout-validation';
+import { registerAdminConnectionTest } from './admin-connection-test';
 import Alpine from 'alpinejs';
 import Chart from 'chart.js/auto';
 
@@ -17,10 +20,12 @@ window.bindCommandRange = bindCommandRange;
 document.addEventListener('DOMContentLoaded', () => {
     mountCommandCharts(document);
     initGoogleIdentity();
+    initDashboardPageLoader();
 });
 
 document.addEventListener('alpine:init', () => {
     registerPullToRefresh(Alpine);
+    registerAdminConnectionTest(Alpine);
 
     Alpine.data('toastStore', (initial = []) => ({
         toasts: [],
@@ -690,6 +695,8 @@ document.addEventListener('alpine:init', () => {
     }));
 
     Alpine.data('platformCheckout', (variants = [], options = {}) => ({
+        ...createDomainSearchHelpers(),
+        ...createCheckoutValidationHelpers(),
         variants,
         variantId: options.defaultVariantId
             ?? variants.find((v) => v.is_default)?.id
@@ -719,6 +726,9 @@ document.addEventListener('alpine:init', () => {
         isWebsitePackage: Boolean(options.isWebsitePackage),
         paymentMethod: options.paymentMethod || 'wallet',
         basePrice: Number(options.basePrice || 0),
+        walletBalance: Number(options.walletBalance ?? 0),
+        hasWallet: Boolean(options.hasWallet),
+        gatewayEnabled: Boolean(options.gatewayEnabled),
         registrant: {
             first_name: options.registrantDefaults?.first_name ?? '',
             last_name: options.registrantDefaults?.last_name ?? '',
@@ -796,11 +806,15 @@ document.addEventListener('alpine:init', () => {
             );
         },
         get canSubmit() {
+            if (this.paymentMethod === 'wallet' && this.walletShortfall > 0) {
+                return false;
+            }
+
             if (this.isDomainProduct) {
                 return Boolean(this.domainQuoteToken && this.domainFqdn && this.registrantComplete);
             }
             if (this.requireDomainChoice) {
-                if (!this.domainLabel.trim() || !this.domainTld) return false;
+                if (!this.domainLabel.trim() || !this.domainTld || this.domainLabelError) return false;
                 if (this.domainMode === 'buy') {
                     return Boolean(this.domainQuoteToken && this.domainAvailable && this.registrantComplete);
                 }
@@ -809,17 +823,9 @@ document.addEventListener('alpine:init', () => {
             }
             return true;
         },
-        invalidateQuote() {
-            this.domainQuoteToken = '';
-            this.domainFqdn = '';
-            this.domainRetailPrice = 0;
-            this.domainPremium = false;
-            this.domainAvailable = false;
-            this.domainMessage = '';
-        },
         async checkDomain() {
             const label = this.domainLabel.trim();
-            if (!label || !this.quoteUrl) return;
+            if (!label || !this.quoteUrl || this.domainLabelError) return;
             this.domainChecking = true;
             this.domainMessage = '';
             try {
@@ -839,20 +845,10 @@ document.addEventListener('alpine:init', () => {
                 const data = await res.json();
                 if (!res.ok) {
                     this.invalidateQuote();
-                    this.domainMessage = data.message || 'Unable to check domain.';
+                    this.domainMessage = extractQuoteError(data);
                     return;
                 }
-                this.domainFqdn = data.fqdn || '';
-                this.domainPremium = Boolean(data.premium);
-                if (data.available && data.quote_token) {
-                    this.domainAvailable = true;
-                    this.domainQuoteToken = data.quote_token;
-                    this.domainRetailPrice = Number(data.retail_price || 0);
-                    this.domainMessage = `${data.fqdn} is available.`;
-                } else {
-                    this.invalidateQuote();
-                    this.domainMessage = data.message || `${data.fqdn || label} is not available.`;
-                }
+                this.applyQuoteResponse(data, label);
             } catch {
                 this.invalidateQuote();
                 this.domainMessage = 'Domain search is temporarily unavailable.';
@@ -863,6 +859,7 @@ document.addEventListener('alpine:init', () => {
     }));
 
     Alpine.data('domainProductSearch', (options = {}) => ({
+        ...createDomainSearchHelpers(),
         productSlug: options.productSlug ?? '',
         quoteUrl: options.quoteUrl ?? '',
         checkoutBase: options.checkoutBase ?? '',
@@ -904,17 +901,9 @@ document.addEventListener('alpine:init', () => {
             this.domainTld = this.domainTlds[0]?.tld ?? 'com';
             this.invalidateQuote();
         },
-        invalidateQuote() {
-            this.domainQuoteToken = '';
-            this.domainFqdn = '';
-            this.domainRetailPrice = 0;
-            this.domainPremium = false;
-            this.domainAvailable = false;
-            this.domainMessage = '';
-        },
         async checkDomain() {
             const label = this.domainLabel.trim();
-            if (!label || !this.quoteUrl) return;
+            if (!label || !this.quoteUrl || this.domainLabelError) return;
             this.domainChecking = true;
             this.domainMessage = '';
             try {
@@ -934,20 +923,10 @@ document.addEventListener('alpine:init', () => {
                 const data = await res.json();
                 if (!res.ok) {
                     this.invalidateQuote();
-                    this.domainMessage = data.message || 'Unable to check domain.';
+                    this.domainMessage = extractQuoteError(data);
                     return;
                 }
-                this.domainFqdn = data.fqdn || '';
-                this.domainPremium = Boolean(data.premium);
-                if (data.available && data.quote_token) {
-                    this.domainAvailable = true;
-                    this.domainQuoteToken = data.quote_token;
-                    this.domainRetailPrice = Number(data.retail_price || 0);
-                    this.domainMessage = `${data.fqdn} is available.`;
-                } else {
-                    this.invalidateQuote();
-                    this.domainMessage = data.message || `${data.fqdn || label} is not available.`;
-                }
+                this.applyQuoteResponse(data, label);
             } catch {
                 this.invalidateQuote();
                 this.domainMessage = 'Domain search is temporarily unavailable.';
@@ -963,6 +942,9 @@ document.addEventListener('alpine:init', () => {
                 quoted_price: String(this.domainRetailPrice),
             });
             const sep = this.checkoutBase.includes('?') ? '&' : '?';
+            if (typeof window.showDashboardPageLoader === 'function') {
+                window.showDashboardPageLoader('domain-checkout');
+            }
             window.location.href = `${this.checkoutBase}${sep}${params.toString()}`;
         },
     }));

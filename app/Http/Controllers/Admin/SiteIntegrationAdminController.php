@@ -9,6 +9,7 @@ use App\Models\PlatformProduct;
 use App\Models\SiteIntegration;
 use App\Models\SiteIntegrationCheckLog;
 use App\Services\SiteIntegrations\SiteIntegrationAdminService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -125,9 +126,16 @@ class SiteIntegrationAdminController extends Controller
             ->with('fresh_credentials', $result['credentials']);
     }
 
-    public function check(Request $request, SiteIntegration $siteIntegration): RedirectResponse
+    public function check(Request $request, SiteIntegration $siteIntegration): RedirectResponse|JsonResponse
     {
         $result = $this->service->checkConnection($siteIntegration);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => (bool) ($result['ok'] ?? false),
+                'message' => (string) ($result['message'] ?? ($result['ok'] ? 'Connection successful.' : 'Connection failed.')),
+            ]);
+        }
 
         return back()->with(
             $result['ok'] ? 'status' : 'error',

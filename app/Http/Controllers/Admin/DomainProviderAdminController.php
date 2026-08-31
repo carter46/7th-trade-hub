@@ -8,6 +8,7 @@ use App\Services\Domains\DomainAuditLogger;
 use App\Services\Domains\DomainCacheInvalidator;
 use App\Services\Domains\DomainProviderConfigValidator;
 use App\Services\Domains\DomainProviderManager;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -107,7 +108,7 @@ class DomainProviderAdminController extends Controller
             ->with('status', 'Provider updated.');
     }
 
-    public function test(DomainProvider $domainProvider): RedirectResponse
+    public function test(Request $request, DomainProvider $domainProvider): RedirectResponse|JsonResponse
     {
         try {
             $adapter = $this->manager->adapterFor($domainProvider);
@@ -117,12 +118,26 @@ class DomainProviderAdminController extends Controller
                 'last_health_check_at' => now(),
             ]);
 
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'ok' => $ok,
+                    'message' => $ok ? 'Connection successful.' : 'Connection failed. Check credentials and sandbox settings.',
+                ]);
+            }
+
             return back()->with('status', 'Connection successful.');
         } catch (\Throwable $e) {
             $domainProvider->update([
                 'health_status' => DomainProvider::HEALTH_UNAVAILABLE,
                 'last_health_check_at' => now(),
             ]);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Connection failed. Check credentials and sandbox settings.',
+                ]);
+            }
 
             return back()->with('error', 'Connection failed. Check credentials and sandbox settings.');
         }

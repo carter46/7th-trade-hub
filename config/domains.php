@@ -23,6 +23,10 @@ return [
         'store', 'us', 'uk', 'vip', 'xyz',
     ],
 
+    'suggestion_limit' => (int) env('DOMAIN_SUGGESTION_LIMIT', 3),
+
+    'suggestion_max_attempts' => (int) env('DOMAIN_SUGGESTION_MAX_ATTEMPTS', 8),
+
     'default_nameservers' => array_values(array_filter([
         env('DOMAIN_NS1'),
         env('DOMAIN_NS2'),

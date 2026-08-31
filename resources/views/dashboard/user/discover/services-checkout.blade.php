@@ -43,6 +43,9 @@
             'zip' => old('registrant.zip', ''),
             'country' => old('registrant.country', 'NG'),
         ],
+        'walletBalance' => $hasWallet ? (float) $wallet->balance : 0,
+        'hasWallet' => $hasWallet,
+        'gatewayEnabled' => $gatewayOn,
     ];
 @endphp
 <x-layout.page
@@ -83,7 +86,9 @@
                 method="POST"
                 action="{{ route('dashboard.services.purchase', $product->slug) }}"
                 class="space-y-5"
+                data-no-page-loader
                 x-data="platformCheckout(@js($variantPayload), @js($checkoutOptions))"
+                @submit.prevent="handleCheckoutSubmit($event)"
             >
                 @csrf
                 <input type="hidden" name="idempotency_key" value="{{ $idempotencyKey }}">
@@ -183,11 +188,15 @@
                                         type="text"
                                         name="domain_label"
                                         x-model="domainLabel"
-                                        @input="invalidateQuote()"
+                                        @input="onDomainLabelInput($event)"
                                         placeholder="mysite"
                                         autocomplete="off"
-                                        class="w-full rounded-lg border-border-default bg-elevated text-text-primary text-sm"
+                                        autocapitalize="off"
+                                        spellcheck="false"
+                                        :class="domainLabelError ? 'border-danger' : 'border-border-default'"
+                                        class="w-full rounded-lg bg-elevated text-text-primary text-sm"
                                     >
+                                    <p x-show="domainLabelError" x-cloak class="mt-1 text-xs text-danger" x-text="domainLabelError"></p>
                                 </div>
                                 <div>
                                     <input type="hidden" name="domain_tld" x-bind:value="domainTld">
@@ -203,16 +212,12 @@
                                         variant="secondary"
                                         size="sm"
                                         x-on:click="checkDomain()"
-                                        x-bind:disabled="domainChecking || !domainLabel.trim()"
+                                        x-bind:disabled="domainChecking || !canCheckDomain"
                                     >
                                         <span x-show="!domainChecking">Check availability</span>
                                         <span x-cloak x-show="domainChecking">Checking…</span>
                                     </x-dashboard.button>
-                                    <p x-show="domainMessage" x-cloak class="text-sm" :class="domainAvailable ? 'text-emerald-700' : 'text-text-secondary'" x-text="domainMessage"></p>
-                                    <p x-show="domainAvailable && domainMode === 'buy'" x-cloak class="text-sm font-medium text-primary">
-                                        Domain add-on: <span x-text="'₦' + retailFormatted"></span>
-                                        <span x-show="domainPremium" class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Premium</span>
-                                    </p>
+                                    @include('dashboard.user.discover._domain-search-results')
                                 </div>
                             </template>
 
@@ -249,7 +254,15 @@
                             </label>
                         @endif
                     </div>
+                    <p
+                        x-show="paymentMethod === 'wallet' && walletShortfall > 0"
+                        x-cloak
+                        class="mt-2 text-xs text-danger"
+                        x-text="'Insufficient balance. You need ₦' + walletShortfallFormatted + ' more to pay from wallet.'"
+                    ></p>
                 </div>
+
+                <p x-show="submitError" x-cloak class="text-sm text-danger" x-text="submitError"></p>
 
                 <div class="flex items-center justify-between border-t border-border-default pt-4">
                     <span class="text-text-secondary">Total</span>

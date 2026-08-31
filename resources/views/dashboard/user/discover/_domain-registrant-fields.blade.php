@@ -18,10 +18,13 @@
                 type="text"
                 name="registrant[first_name]"
                 x-model="registrant.first_name"
+                @input="validateRegistrantFields()"
                 value="{{ old('registrant.first_name') }}"
                 autocomplete="given-name"
-                class="w-full rounded-lg border-border-default bg-elevated text-text-primary text-sm"
+                :class="registrantErrors.first_name ? 'border-danger' : 'border-border-default'"
+                class="w-full rounded-lg bg-elevated text-text-primary text-sm"
             >
+            <p x-show="registrantErrors.first_name" x-cloak class="mt-1 text-xs text-danger" x-text="registrantErrors.first_name"></p>
         </div>
         <div>
             <label class="mb-1 block text-xs text-text-muted">Last name <span class="text-danger">*</span></label>
@@ -29,10 +32,13 @@
                 type="text"
                 name="registrant[last_name]"
                 x-model="registrant.last_name"
+                @input="validateRegistrantFields()"
                 value="{{ old('registrant.last_name') }}"
                 autocomplete="family-name"
-                class="w-full rounded-lg border-border-default bg-elevated text-text-primary text-sm"
+                :class="registrantErrors.last_name ? 'border-danger' : 'border-border-default'"
+                class="w-full rounded-lg bg-elevated text-text-primary text-sm"
             >
+            <p x-show="registrantErrors.last_name" x-cloak class="mt-1 text-xs text-danger" x-text="registrantErrors.last_name"></p>
         </div>
     </div>
 
@@ -55,10 +61,13 @@
                 type="email"
                 name="registrant[email]"
                 x-model="registrant.email"
+                @input="validateRegistrantFields()"
                 value="{{ old('registrant.email', auth()->user()->email) }}"
                 autocomplete="email"
-                class="w-full rounded-lg border-border-default bg-elevated text-text-primary text-sm"
+                :class="registrantErrors.email ? 'border-danger' : 'border-border-default'"
+                class="w-full rounded-lg bg-elevated text-text-primary text-sm"
             >
+            <p x-show="registrantErrors.email" x-cloak class="mt-1 text-xs text-danger" x-text="registrantErrors.email"></p>
         </div>
         <div>
             <label class="mb-1 block text-xs text-text-muted">Phone <span class="text-danger">*</span></label>
@@ -66,12 +75,15 @@
                 type="tel"
                 name="registrant[phone]"
                 x-model="registrant.phone"
+                @input="validateRegistrantFields()"
                 value="{{ old('registrant.phone') }}"
                 placeholder="+234.8012345678"
                 autocomplete="tel"
-                class="w-full rounded-lg border-border-default bg-elevated text-text-primary text-sm"
+                :class="registrantErrors.phone ? 'border-danger' : 'border-border-default'"
+                class="w-full rounded-lg bg-elevated text-text-primary text-sm"
             >
-            <p class="mt-1 text-xs text-text-muted">International format, e.g. +234.8012345678</p>
+            <p x-show="registrantErrors.phone" x-cloak class="mt-1 text-xs text-danger" x-text="registrantErrors.phone"></p>
+            <p x-show="!registrantErrors.phone" class="mt-1 text-xs text-text-muted">International format, e.g. +234.8012345678</p>
         </div>
     </div>
 
@@ -81,10 +93,13 @@
             type="text"
             name="registrant[address]"
             x-model="registrant.address"
+            @input="validateRegistrantFields()"
             value="{{ old('registrant.address') }}"
             autocomplete="street-address"
-            class="w-full rounded-lg border-border-default bg-elevated text-text-primary text-sm"
+            :class="registrantErrors.address ? 'border-danger' : 'border-border-default'"
+            class="w-full rounded-lg bg-elevated text-text-primary text-sm"
         >
+        <p x-show="registrantErrors.address" x-cloak class="mt-1 text-xs text-danger" x-text="registrantErrors.address"></p>
     </div>
 
     <div class="grid gap-3 sm:grid-cols-2">
@@ -94,10 +109,13 @@
                 type="text"
                 name="registrant[city]"
                 x-model="registrant.city"
+                @input="validateRegistrantFields()"
                 value="{{ old('registrant.city') }}"
                 autocomplete="address-level2"
-                class="w-full rounded-lg border-border-default bg-elevated text-text-primary text-sm"
+                :class="registrantErrors.city ? 'border-danger' : 'border-border-default'"
+                class="w-full rounded-lg bg-elevated text-text-primary text-sm"
             >
+            <p x-show="registrantErrors.city" x-cloak class="mt-1 text-xs text-danger" x-text="registrantErrors.city"></p>
         </div>
         <div>
             <label class="mb-1 block text-xs text-text-muted">State / region <span class="text-danger">*</span></label>
@@ -105,10 +123,13 @@
                 type="text"
                 name="registrant[state]"
                 x-model="registrant.state"
+                @input="validateRegistrantFields()"
                 value="{{ old('registrant.state') }}"
                 autocomplete="address-level1"
-                class="w-full rounded-lg border-border-default bg-elevated text-text-primary text-sm"
+                :class="registrantErrors.state ? 'border-danger' : 'border-border-default'"
+                class="w-full rounded-lg bg-elevated text-text-primary text-sm"
             >
+            <p x-show="registrantErrors.state" x-cloak class="mt-1 text-xs text-danger" x-text="registrantErrors.state"></p>
         </div>
     </div>
 
@@ -119,10 +140,13 @@
                 type="text"
                 name="registrant[zip]"
                 x-model="registrant.zip"
+                @input="validateRegistrantFields()"
                 value="{{ old('registrant.zip') }}"
                 autocomplete="postal-code"
-                class="w-full rounded-lg border-border-default bg-elevated text-text-primary text-sm"
+                :class="registrantErrors.zip ? 'border-danger' : 'border-border-default'"
+                class="w-full rounded-lg bg-elevated text-text-primary text-sm"
             >
+            <p x-show="registrantErrors.zip" x-cloak class="mt-1 text-xs text-danger" x-text="registrantErrors.zip"></p>
         </div>
         <div>
             <label class="mb-1 block text-xs text-text-muted">Country <span class="text-danger">*</span></label>
@@ -130,13 +154,16 @@
                 type="text"
                 name="registrant[country]"
                 x-model="registrant.country"
+                @input="validateRegistrantFields()"
                 value="{{ old('registrant.country', 'NG') }}"
                 maxlength="2"
                 placeholder="NG"
                 autocomplete="country"
-                class="w-full rounded-lg border-border-default bg-elevated text-text-primary text-sm uppercase"
+                :class="registrantErrors.country ? 'border-danger' : 'border-border-default'"
+                class="w-full rounded-lg bg-elevated text-text-primary text-sm uppercase"
             >
-            <p class="mt-1 text-xs text-text-muted">2-letter code (e.g. NG, US, GB)</p>
+            <p x-show="registrantErrors.country" x-cloak class="mt-1 text-xs text-danger" x-text="registrantErrors.country"></p>
+            <p x-show="!registrantErrors.country" class="mt-1 text-xs text-text-muted">2-letter code (e.g. NG, US, GB)</p>
         </div>
     </div>
 </div>

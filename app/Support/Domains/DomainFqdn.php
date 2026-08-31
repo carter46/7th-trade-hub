@@ -7,6 +7,71 @@ use InvalidArgumentException;
 final class DomainFqdn
 {
     /**
+     * Validate a domain label (SLD only — no extension).
+     *
+     * @return array{value: string, error: string|null, detected_tld: string|null}
+     */
+    public static function validateLabel(string $input): array
+    {
+        $raw = trim($input);
+        $value = strtolower($raw);
+        $error = null;
+        $detectedTld = null;
+
+        if ($value === '') {
+            return ['value' => '', 'error' => 'Enter a domain name.', 'detected_tld' => null];
+        }
+
+        if (preg_match('/\s/u', $value)) {
+            $error = 'Spaces are not allowed. Enter only the domain name.';
+            $value = preg_replace('/\s+/u', '', $value) ?? $value;
+        }
+
+        if (str_contains($value, '.')) {
+            $parts = explode('.', $value, 2);
+            $value = preg_replace('/[^a-z0-9-]/', '', $parts[0]) ?? $parts[0];
+            $maybeTld = preg_replace('/[^a-z0-9-]/', '', $parts[1] ?? '') ?? '';
+            if ($maybeTld !== '') {
+                $detectedTld = $maybeTld;
+            }
+            $error = $error ?? 'Do not include an extension here — choose it from the dropdown.';
+        } else {
+            $sanitized = preg_replace('/[^a-z0-9-]/', '', $value);
+            if ($sanitized !== $value) {
+                $error = $error ?? 'Use letters, numbers, and hyphens only.';
+                $value = $sanitized ?? $value;
+            }
+        }
+
+        if (strlen($value) > 63) {
+            $value = substr($value, 0, 63);
+            $error = $error ?? 'Domain name cannot exceed 63 characters.';
+        }
+
+        if ($value === '') {
+            return ['value' => '', 'error' => $error ?? 'Enter a domain name.', 'detected_tld' => $detectedTld];
+        }
+
+        if (str_starts_with($value, '-') || str_ends_with($value, '-')) {
+            return [
+                'value' => $value,
+                'error' => $error ?? 'Domain name cannot start or end with a hyphen.',
+                'detected_tld' => $detectedTld,
+            ];
+        }
+
+        if (! preg_match('/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/', $value)) {
+            return [
+                'value' => $value,
+                'error' => $error ?? 'Domain name contains invalid characters.',
+                'detected_tld' => $detectedTld,
+            ];
+        }
+
+        return ['value' => $value, 'error' => $error, 'detected_tld' => $detectedTld];
+    }
+
+    /**
      * @return array{sld: string, tld: string, fqdn: string}
      */
     public static function parse(string $sld, string $tld): array
