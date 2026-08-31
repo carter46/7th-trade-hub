@@ -15,10 +15,11 @@
             'quoteUrl' => $quoteUrl,
             'checkoutBase' => $checkoutBase,
             'domainTlds' => $domainTlds ?? [],
+            'domainTldsAdvanced' => $domainTldsAdvanced ?? [],
             'csrfToken' => csrf_token(),
         ]))"
     >
-        <div class="grid gap-3 sm:grid-cols-[1fr_auto]">
+        <div class="grid gap-3 sm:grid-cols-[1fr_minmax(9rem,12rem)]">
             <div>
                 <label class="mb-1 block text-xs text-text-muted">Domain name</label>
                 <input
@@ -30,17 +31,8 @@
                     class="w-full rounded-lg border-border-default bg-elevated text-text-primary text-sm"
                 >
             </div>
-            <div class="sm:w-36">
-                <label class="mb-1 block text-xs text-text-muted">Extension</label>
-                <select
-                    x-model="domainTld"
-                    @change="invalidateQuote()"
-                    class="w-full rounded-lg border-border-default bg-elevated text-text-primary text-sm"
-                >
-                    <template x-for="row in domainTlds" :key="row.tld">
-                        <option :value="row.tld" x-text="row.label"></option>
-                    </template>
-                </select>
+            <div>
+                @include('dashboard.user.discover._domain-extension-picker')
             </div>
         </div>
 

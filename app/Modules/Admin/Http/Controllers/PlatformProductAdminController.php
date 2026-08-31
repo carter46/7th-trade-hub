@@ -12,7 +12,7 @@ use App\Models\ServiceCategory;
 use App\Services\Domains\DomainQuoteService;
 use App\Services\Media\MediaPathService;
 use App\Services\Media\MediaUsageService;
-use App\Support\SortOrder;
+use App\Support\Domains\DomainProductTldPolicy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -116,6 +116,9 @@ class PlatformProductAdminController extends Controller
             'domainFloorExample' => $platformProduct->product_type === PlatformProductType::Domain
                 ? $this->domainQuotes->pricingFloorExample($platformProduct)
                 : null,
+            'registryTlds' => $platformProduct->product_type === PlatformProductType::Domain
+                ? $this->domainQuotes->registryTldOptionsForUi()
+                : [],
         ]);
     }
 
@@ -148,6 +151,8 @@ class PlatformProductAdminController extends Controller
             'variants.*.description' => ['nullable', 'string', 'max:2000'],
             'domain_markup_percent' => ['nullable', 'numeric', 'min:0', 'max:500'],
             'domain_usd_ngn_rate' => ['nullable', 'numeric', 'min:0'],
+            'allowed_tlds' => ['nullable', 'array', 'min:1'],
+            'allowed_tlds.*' => ['string', 'max:63'],
         ]);
 
         $heroMediaId = filled($data['hero_media_id'] ?? null) ? (int) $data['hero_media_id'] : null;
@@ -173,6 +178,13 @@ class PlatformProductAdminController extends Controller
                     'usd_ngn_rate' => (float) ($data['domain_usd_ngn_rate'] ?? 0),
                 ]);
             }
+            $allowed = DomainProductTldPolicy::normalizeList($data['allowed_tlds'] ?? []);
+            if ($allowed === []) {
+                throw ValidationException::withMessages([
+                    'allowed_tlds' => 'Select at least one allowed extension.',
+                ]);
+            }
+            $meta['allowed_tlds'] = $allowed;
             $updatePayload['meta'] = $meta;
         }
 

@@ -115,6 +115,10 @@
                     @else
                         <p class="text-xs text-amber-600">Enable a domain provider with valid credentials to see a live floor example.</p>
                     @endif
+                    @include('dashboard.admin.partials.domain-allowed-tlds', [
+                        'product' => $product,
+                        'registryTlds' => $registryTlds ?? [],
+                    ])
                 </div>
             @elseif ($variantRows !== [])
                 <div class="space-y-3 rounded-xl border border-border-subtle px-4 py-4">

@@ -114,6 +114,7 @@
                     @include('dashboard.user.discover._domain-product-search', [
                         'product' => $product,
                         'domainTlds' => $domainTlds ?? [],
+                        'domainTldsAdvanced' => $domainTldsAdvanced ?? [],
                     ])
                     @if($groupSlug)
                         <a href="{{ route('dashboard.services.browse', $groupSlug) }}" class="inline-flex text-sm text-text-secondary hover:text-primary">← Back to {{ $groupLabel ?? 'services' }}</a>

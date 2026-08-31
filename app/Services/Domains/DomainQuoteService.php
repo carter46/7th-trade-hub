@@ -9,6 +9,7 @@ use App\Models\PlatformProduct;
 use App\Models\User;
 use App\Services\Domains\Exceptions\DomainBusinessException;
 use App\Support\Domains\DomainFqdn;
+use App\Support\Domains\DomainProductTldPolicy;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -30,6 +31,17 @@ class DomainQuoteService
     {
         $parsed = DomainFqdn::parse($sld, $tld);
         $fqdn = $parsed['fqdn'];
+
+        if (! DomainProductTldPolicy::isAllowed($product, $parsed['tld'])) {
+            return [
+                'available' => false,
+                'fqdn' => $fqdn,
+                'retail_price' => '0.00',
+                'premium' => false,
+                'quote_token' => null,
+                'message' => 'Selected extension is not available for this product.',
+            ];
+        }
 
         try {
             $result = $this->providers->quoteThroughTld($parsed['tld'], $fqdn, function ($adapter, DomainProvider $provider) use ($fqdn) {
@@ -335,7 +347,59 @@ class DomainQuoteService
     /**
      * @return list<array{tld: string, label: string}>
      */
-    public function tldOptionsForUi(): array
+    public function tldOptionsForUi(?PlatformProduct $product = null): array
+    {
+        return $this->tldOptionsScoped($product, 'all');
+    }
+
+    /**
+     * @return list<array{tld: string, label: string}>
+     */
+    public function registryTldOptionsForUi(): array
+    {
+        return $this->mapRegistryTlds(null);
+    }
+
+    /**
+     * @return list<array{tld: string, label: string}>
+     */
+    public function featuredTldOptionsForUi(PlatformProduct $product): array
+    {
+        return $this->tldOptionsScoped($product, 'featured');
+    }
+
+    /**
+     * @return list<array{tld: string, label: string}>
+     */
+    public function advancedTldOptionsForUi(PlatformProduct $product): array
+    {
+        return $this->tldOptionsScoped($product, 'advanced');
+    }
+
+    /**
+     * @return list<array{tld: string, label: string}>
+     */
+    private function tldOptionsScoped(?PlatformProduct $product, string $scope): array
+    {
+        if ($product === null) {
+            return $this->mapRegistryTlds(null);
+        }
+
+        $allowed = DomainProductTldPolicy::allowedTlds($product);
+        $scopeTlds = match ($scope) {
+            'featured' => DomainProductTldPolicy::featuredTlds($product),
+            'advanced' => DomainProductTldPolicy::advancedTlds($product),
+            default => $allowed,
+        };
+
+        return $this->mapRegistryTlds($scopeTlds);
+    }
+
+    /**
+     * @param  list<string>|null  $onlyTlds
+     * @return list<array{tld: string, label: string}>
+     */
+    private function mapRegistryTlds(?array $onlyTlds): array
     {
         try {
             $tlds = $this->providers->mergedTldList();
@@ -347,12 +411,23 @@ class DomainQuoteService
             return [];
         }
 
+        $allowedSet = $onlyTlds !== null ? array_fill_keys($onlyTlds, true) : null;
         $common = config('domains.common_tlds', []);
+        $preset = DomainProductTldPolicy::defaultFeaturedTlds();
+
         $sorted = collect($tlds)
-            ->sortBy(function (DomainTld $row) use ($common) {
+            ->when($allowedSet !== null, fn ($collection) => $collection->filter(
+                fn (DomainTld $row) => isset($allowedSet[$row->tld]),
+            ))
+            ->sortBy(function (DomainTld $row) use ($common, $preset) {
+                $presetIndex = array_search($row->tld, $preset, true);
+                if ($presetIndex !== false) {
+                    return $presetIndex;
+                }
+
                 $index = array_search($row->tld, $common, true);
 
-                return $index === false ? 1000 + ord($row->tld[0] ?? 'z') : $index;
+                return $index === false ? 1000 + ord($row->tld[0] ?? 'z') : 100 + $index;
             })
             ->values();
 

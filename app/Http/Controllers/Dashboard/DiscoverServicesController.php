@@ -177,6 +177,7 @@ class DiscoverServicesController extends Controller
             ?? $this->browse->groupForType((string) $typeSlug);
 
         $isDomainProduct = $product->product_type === PlatformProductType::Domain;
+        $domainTldBundles = $isDomainProduct ? $this->domainTldBundlesForProduct($product) : ['featured' => [], 'advanced' => []];
 
         return view('dashboard.user.discover.services-product', [
             'product' => $product,
@@ -184,14 +185,19 @@ class DiscoverServicesController extends Controller
             'groupLabel' => $groupSlug ? ($this->content->forGroup($groupSlug)['label'] ?? $groupSlug) : null,
             'wallet' => $request->user()->wallet,
             'isDomainProduct' => $isDomainProduct,
-            'domainTlds' => $isDomainProduct ? $this->domainQuotes->tldOptionsForUi() : [],
+            'domainTlds' => $domainTldBundles['featured'],
+            'domainTldsAdvanced' => $domainTldBundles['advanced'],
         ]);
     }
 
     public function domainTlds(): JsonResponse
     {
+        $product = $this->domainQuotes->registrationProduct();
+        $bundles = $this->domainTldBundlesForProduct($product);
+
         return response()->json([
-            'tlds' => $this->domainQuotes->tldOptionsForUi(),
+            'tlds' => $bundles['featured'],
+            'tlds_advanced' => $bundles['advanced'],
         ]);
     }
 
@@ -278,6 +284,10 @@ class DiscoverServicesController extends Controller
                 ->with('error', 'Check domain availability before checkout.');
         }
 
+        $domainTldBundles = ($isWebsitePackage || $isDomainProduct)
+            ? $this->domainTldBundlesForProduct($product)
+            : ['featured' => [], 'advanced' => []];
+
         return view('dashboard.user.discover.services-checkout', [
             'product' => $product,
             'variants' => $variants,
@@ -287,7 +297,8 @@ class DiscoverServicesController extends Controller
             'isWebsitePackage' => $isWebsitePackage,
             'isDomainProduct' => $isDomainProduct,
             'requireDomainChoice' => $isWebsitePackage,
-            'domainTlds' => ($isWebsitePackage || $isDomainProduct) ? $this->domainQuotes->tldOptionsForUi() : [],
+            'domainTlds' => $domainTldBundles['featured'],
+            'domainTldsAdvanced' => $domainTldBundles['advanced'],
             'quoteToken' => $request->string('quote_token')->toString() ?: null,
             'quotedFqdn' => $request->string('domain_fqdn')->toString() ?: null,
             'quotedPrice' => $request->string('quoted_price')->toString() ?: null,
@@ -557,5 +568,20 @@ class DiscoverServicesController extends Controller
         }
 
         return false;
+    }
+
+    /**
+     * @return array{featured: list<array{tld: string, label: string}>, advanced: list<array{tld: string, label: string}>}
+     */
+    private function domainTldBundlesForProduct(PlatformProduct $product): array
+    {
+        $registrationProduct = $product->product_type === PlatformProductType::Domain
+            ? $product
+            : $this->domainQuotes->registrationProduct();
+
+        return [
+            'featured' => $this->domainQuotes->featuredTldOptionsForUi($registrationProduct),
+            'advanced' => $this->domainQuotes->advancedTldOptionsForUi($registrationProduct),
+        ];
     }
 }

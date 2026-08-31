@@ -700,6 +700,9 @@ document.addEventListener('alpine:init', () => {
         domainLabel: '',
         domainTld: (options.domainTlds?.[0]?.tld) ?? 'com',
         domainTlds: options.domainTlds ?? [],
+        domainTldsAdvanced: options.domainTldsAdvanced ?? [],
+        showAdvancedTlds: false,
+        advancedQuery: '',
         domainQuoteToken: options.quoteToken ?? '',
         domainFqdn: options.quotedFqdn ?? '',
         domainRetailPrice: Number(options.quotedPrice ?? 0),
@@ -751,6 +754,24 @@ document.addEventListener('alpine:init', () => {
         },
         get retailFormatted() {
             return new Intl.NumberFormat('en-NG', { maximumFractionDigits: 0 }).format(this.domainRetailPrice || 0);
+        },
+        get isAdvancedTldSelected() {
+            return this.domainTldsAdvanced.some((row) => row.tld === this.domainTld);
+        },
+        get filteredAdvancedTlds() {
+            const q = this.advancedQuery.trim().toLowerCase();
+            if (!q) return this.domainTldsAdvanced;
+            return this.domainTldsAdvanced.filter((row) =>
+                row.tld.includes(q) || row.label.toLowerCase().includes(q),
+            );
+        },
+        pickAdvancedTld(tld) {
+            this.domainTld = tld;
+            this.invalidateQuote();
+        },
+        resetToFeaturedTld() {
+            this.domainTld = this.domainTlds[0]?.tld ?? 'com';
+            this.invalidateQuote();
         },
         get needsRegistrant() {
             if (this.isDomainProduct) {
@@ -846,9 +867,12 @@ document.addEventListener('alpine:init', () => {
         quoteUrl: options.quoteUrl ?? '',
         checkoutBase: options.checkoutBase ?? '',
         domainTlds: options.domainTlds ?? [],
+        domainTldsAdvanced: options.domainTldsAdvanced ?? [],
         csrfToken: options.csrfToken ?? '',
         domainLabel: '',
         domainTld: (options.domainTlds?.[0]?.tld) ?? 'com',
+        showAdvancedTlds: false,
+        advancedQuery: '',
         domainQuoteToken: '',
         domainFqdn: '',
         domainRetailPrice: 0,
@@ -861,6 +885,24 @@ document.addEventListener('alpine:init', () => {
         },
         get canCheckout() {
             return Boolean(this.domainQuoteToken && this.domainFqdn && this.domainAvailable);
+        },
+        get isAdvancedTldSelected() {
+            return this.domainTldsAdvanced.some((row) => row.tld === this.domainTld);
+        },
+        get filteredAdvancedTlds() {
+            const q = this.advancedQuery.trim().toLowerCase();
+            if (!q) return this.domainTldsAdvanced;
+            return this.domainTldsAdvanced.filter((row) =>
+                row.tld.includes(q) || row.label.toLowerCase().includes(q),
+            );
+        },
+        pickAdvancedTld(tld) {
+            this.domainTld = tld;
+            this.invalidateQuote();
+        },
+        resetToFeaturedTld() {
+            this.domainTld = this.domainTlds[0]?.tld ?? 'com';
+            this.invalidateQuote();
         },
         invalidateQuote() {
             this.domainQuoteToken = '';

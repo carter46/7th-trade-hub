@@ -6,7 +6,7 @@ use App\Enums\PlatformProductType;
 use App\Models\PlatformProduct;
 use App\Models\User;
 use App\Support\Domains\DomainFqdn;
-use App\Support\Domains\DomainRegistrantContact;
+use App\Support\Domains\DomainProductTldPolicy;
 use InvalidArgumentException;
 
 class DomainCheckoutValidator
@@ -37,7 +37,10 @@ class DomainCheckoutValidator
         }
 
         $parsed = DomainFqdn::parse($sld, $tld);
-        $this->assertTldSupported($parsed['tld']);
+
+        if ($mode === 'buy') {
+            $this->assertTldSupported($parsed['tld'], $this->quotes->registrationProduct());
+        }
 
         if ($mode === 'connect') {
             return [
@@ -85,7 +88,7 @@ class DomainCheckoutValidator
         }
 
         $parsed = DomainFqdn::fromFqdn($fqdnInput);
-        $this->assertTldSupported($parsed['tld']);
+        $this->assertTldSupported($parsed['tld'], $product);
 
         $quoteResult = $this->resolveDomainQuote($user, $token, $parsed['fqdn'], $product->id, $deferConsumption, $orderId);
 
@@ -117,16 +120,10 @@ class DomainCheckoutValidator
         return $this->quotes->consumeForPurchase($user, $token, $fqdn, $productId);
     }
 
-    private function assertTldSupported(string $tld): void
+    private function assertTldSupported(string $tld, PlatformProduct $product): void
     {
-        $supported = collect($this->quotes->tldOptionsForUi())->pluck('tld')->all();
-
-        if ($supported === []) {
-            throw new InvalidArgumentException('Domain search is temporarily unavailable. Please try again shortly.');
-        }
-
-        if (! in_array($tld, $supported, true)) {
-            throw new InvalidArgumentException('Selected extension is not supported.');
+        if (! DomainProductTldPolicy::isAllowed($product, $tld)) {
+            throw new InvalidArgumentException('Selected extension is not available for this product.');
         }
     }
 

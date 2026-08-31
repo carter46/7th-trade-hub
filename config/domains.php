@@ -15,6 +15,14 @@ return [
 
     'common_tlds' => ['com', 'net', 'org', 'io', 'co', 'ng'],
 
+    // Shown first in admin + customer domain search; also the default allowed set for new domain products.
+    'default_product_tlds' => [
+        'com', 'agency', 'bet', 'biz', 'ca', 'cc', 'charity', 'click', 'club', 'co',
+        'eu', 'fit', 'forex', 'fund', 'icu', 'info', 'llc', 'ltd', 'me', 'net',
+        'ngo', 'online', 'org', 'pet', 'pro', 'shop', 'site', 'solutions', 'space',
+        'store', 'us', 'uk', 'vip', 'xyz',
+    ],
+
     'default_nameservers' => array_values(array_filter([
         env('DOMAIN_NS1'),
         env('DOMAIN_NS2'),

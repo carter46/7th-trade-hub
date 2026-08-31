@@ -77,4 +77,33 @@ class DomainBrowsePricingTest extends TestCase
 
         $this->assertSame('com', $options[0]['tld'] ?? null);
     }
+
+    public function test_featured_and_advanced_ui_options_respect_product_allowed_tlds(): void
+    {
+        $product = $this->domainProduct();
+        $product->update([
+            'meta' => array_merge($product->meta ?? [], [
+                'allowed_tlds' => ['com', 'io', 'dev'],
+            ]),
+        ]);
+
+        $manager = $this->createMock(DomainProviderManager::class);
+        $manager->method('mergedTldList')->willReturn([
+            new DomainTld(tld: 'com', registrationCost: 10.0, currency: 'USD', purchasable: true),
+            new DomainTld(tld: 'io', registrationCost: 39.0, currency: 'USD', purchasable: true),
+            new DomainTld(tld: 'dev', registrationCost: 12.0, currency: 'USD', purchasable: true),
+            new DomainTld(tld: 'net', registrationCost: 11.0, currency: 'USD', purchasable: true),
+        ]);
+
+        $this->app->forgetInstance(DomainQuoteService::class);
+        $this->app->instance(DomainProviderManager::class, $manager);
+        Cache::forget('domain.tlds.merged');
+
+        $service = app(DomainQuoteService::class);
+        $featured = $service->featuredTldOptionsForUi($product->fresh());
+        $advanced = $service->advancedTldOptionsForUi($product->fresh());
+
+        $this->assertSame(['com'], array_column($featured, 'tld'));
+        $this->assertSame(['io', 'dev'], array_column($advanced, 'tld'));
+    }
 }
