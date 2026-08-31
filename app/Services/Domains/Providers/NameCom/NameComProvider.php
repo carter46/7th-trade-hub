@@ -161,10 +161,15 @@ class NameComProvider implements DomainProviderInterface
         }
 
         $contact = DomainRegistrationContacts::forNameCom($contactProfile);
+        $nameservers = DomainRegistrationContacts::nameservers();
+        if ($nameservers === []) {
+            return new DomainRegistrationResult(false, errorMessage: 'Platform default nameservers are not configured.');
+        }
 
         $payload = [
             'domain' => [
                 'domainName' => $fqdn,
+                'nameservers' => $nameservers,
                 'contacts' => [
                     'registrant' => $contact,
                     'admin' => $contact,
@@ -197,5 +202,40 @@ class NameComProvider implements DomainProviderInterface
         } catch (\Throwable $e) {
             return new DomainRegistrationResult(false, errorMessage: $e->getMessage());
         }
+    }
+
+    public function getNameservers(DomainProvider $provider, string $fqdn): array
+    {
+        $payload = $this->client->getDomain($provider, $fqdn);
+        $rows = $payload['nameservers'] ?? $payload['domain']['nameservers'] ?? [];
+
+        return $this->normalizeNameserverList(is_array($rows) ? $rows : []);
+    }
+
+    public function updateNameservers(DomainProvider $provider, string $fqdn, array $nameservers): void
+    {
+        $this->client->setNameservers($provider, $fqdn, $nameservers);
+    }
+
+    /**
+     * @param  array<int, mixed>  $rows
+     * @return list<string>
+     */
+    private function normalizeNameserverList(array $rows): array
+    {
+        $hosts = [];
+
+        foreach ($rows as $entry) {
+            if (is_string($entry) && trim($entry) !== '') {
+                $hosts[] = strtolower(rtrim(trim($entry), '.'));
+            } elseif (is_array($entry)) {
+                $host = (string) ($entry['hostname'] ?? $entry['name'] ?? $entry['host'] ?? '');
+                if ($host !== '') {
+                    $hosts[] = strtolower(rtrim(trim($host), '.'));
+                }
+            }
+        }
+
+        return array_values(array_unique($hosts));
     }
 }

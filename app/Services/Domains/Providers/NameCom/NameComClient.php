@@ -70,6 +70,29 @@ class NameComClient
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    public function getDomain(DomainProvider $provider, string $fqdn): array
+    {
+        $encoded = rawurlencode($fqdn);
+
+        return $this->request($provider, 'GET', "/core/v1/domains/{$encoded}");
+    }
+
+    /**
+     * @param  list<string>  $nameservers
+     * @return array<string, mixed>
+     */
+    public function setNameservers(DomainProvider $provider, string $fqdn, array $nameservers): array
+    {
+        $encoded = rawurlencode($fqdn);
+
+        return $this->request($provider, 'POST', "/core/v1/domains/{$encoded}:setNameservers", [], [
+            'nameservers' => array_values($nameservers),
+        ]);
+    }
+
+    /**
      * @param  array<string, mixed>  $query
      * @param  array<string, mixed>|null  $json
      * @return array<string, mixed>

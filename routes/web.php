@@ -258,7 +258,20 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
     Route::post('/my-tools/{tool}/credentials/password', [\App\Http\Controllers\Dashboard\MyToolsController::class, 'copyPassword'])
         ->middleware('throttle:10,1')
         ->name('.my-tools.password');
-    Route::post('/services/product/{product:slug}/demo/{role}', \App\Http\Controllers\Dashboard\DemoLaunchController::class)
+
+    Route::get('/my-domains', [\App\Http\Controllers\Dashboard\MyDomainsController::class, 'index'])->name('.my-domains');
+    Route::get('/my-domains/{registration}', [\App\Http\Controllers\Dashboard\MyDomainsController::class, 'show'])->name('.my-domains.show');
+    Route::put('/my-domains/{registration}/nameservers', [\App\Http\Controllers\Dashboard\MyDomainsController::class, 'updateNameservers'])
+        ->middleware('throttle:10,1')
+        ->name('.my-domains.nameservers.update');
+    Route::post('/my-domains/{registration}/nameservers/defaults', [\App\Http\Controllers\Dashboard\MyDomainsController::class, 'applyDefaults'])
+        ->middleware('throttle:10,1')
+        ->name('.my-domains.nameservers.defaults');
+    Route::post('/my-domains/{registration}/nameservers/sync', [\App\Http\Controllers\Dashboard\MyDomainsController::class, 'syncFromRegistrar'])
+        ->middleware('throttle:10,1')
+        ->name('.my-domains.nameservers.sync');
+
+    Route::post('/services/product/{product:slug}/demo/{role}', \App\Http\Controllers\Dashboard\DemoLaunchController::class))
         ->whereIn('role', ['user', 'admin'])
         ->middleware('throttle:10,1')
         ->name('.services.demo-launch');

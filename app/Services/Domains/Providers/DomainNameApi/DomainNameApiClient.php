@@ -49,6 +49,28 @@ class DomainNameApiClient
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    public function getDomainInfo(DomainProvider $provider, string $fqdn): array
+    {
+        return $this->request($provider, 'GET', '/api/v1/domains/info', [
+            'DomainName' => $fqdn,
+        ]);
+    }
+
+    /**
+     * @param  list<string>  $nameservers
+     * @return array<string, mixed>
+     */
+    public function updateNameServers(DomainProvider $provider, string $fqdn, array $nameservers): array
+    {
+        return $this->request($provider, 'PUT', '/api/v1/domains/dns/name-server', [], [
+            'domainName' => $fqdn,
+            'nameServers' => array_values($nameservers),
+        ]);
+    }
+
+    /**
      * @param  array<string, mixed>  $query
      * @param  array<string, mixed>|null  $json
      * @return array<string, mixed>

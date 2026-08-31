@@ -121,7 +121,7 @@ class DashboardController extends Controller
         $orders = auth()->user()
             ->orders()
             ->where('source', $source)
-            ->with(['listing', 'escrow', 'review', 'items.variant'])
+            ->with(['listing', 'escrow', 'review', 'items.variant', 'domainRegistrations'])
             ->orderByDesc('created_at')
             ->paginate(15);
 

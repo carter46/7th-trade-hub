@@ -58,6 +58,10 @@
                 if ($order->source === 'platform') {
                     $meta[] = 'Platform';
                 }
+                $domainRegistration = $order->domainRegistrations->first();
+                if ($domainRegistration) {
+                    $meta[] = 'Domain: '.$domainRegistration->fqdn.' ('.$domainRegistration->status.')';
+                }
             @endphp
             <tr class="hover:bg-muted/50">
                 <x-dashboard.td class="font-mono text-sm">{{ $order->reference }}</x-dashboard.td>
@@ -125,7 +129,11 @@
                     @elseif ($order->review)
                         <span class="text-text-muted text-xs">Reviewed ★{{ $order->review->rating }}</span>
                     @elseif ($order->source === 'platform' && $order->status === 'paid')
-                        <span class="text-text-muted text-xs">Paid</span>
+                        @if($domainRegistration ?? null)
+                            <x-dashboard.button :href="route('dashboard.my-domains.show', $domainRegistration)" size="xs" variant="ghost">Manage domain</x-dashboard.button>
+                        @else
+                            <span class="text-text-muted text-xs">Paid</span>
+                        @endif
                     @endif
                 </x-dashboard.td>
             </tr>

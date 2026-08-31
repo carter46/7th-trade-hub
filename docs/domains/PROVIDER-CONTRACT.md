@@ -6,7 +6,9 @@ Implement `App\Contracts\Domains\DomainProviderInterface`:
 - `listTlds(DomainProvider $provider): DomainTld[]`
 - `checkAvailability(DomainProvider $provider, string $fqdn): DomainAvailabilityResult`
 - `getRegistrationQuote(...): DomainRegistrationQuote`
-- `registerDomain(DomainProvider, fqdn, context): DomainRegistrationResult` — post-payment registration (Phase 2)
+- `registerDomain(DomainProvider, fqdn, context): DomainRegistrationResult` — post-payment registration
+- `getNameservers(DomainProvider, fqdn): list<string>` — read live NS from registrar
+- `updateNameservers(DomainProvider, fqdn, nameservers): void` — update NS at registrar (throws on failure)
 
 ## Normalized results
 

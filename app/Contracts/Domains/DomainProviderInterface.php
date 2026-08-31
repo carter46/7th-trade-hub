@@ -27,4 +27,14 @@ interface DomainProviderInterface
      * @param  array<string, mixed>  $context  provider_cost, premium, purchase_type, idempotency_key, quote_id
      */
     public function registerDomain(DomainProvider $provider, string $fqdn, array $context = []): DomainRegistrationResult;
+
+    /**
+     * @return list<string>
+     */
+    public function getNameservers(DomainProvider $provider, string $fqdn): array;
+
+    /**
+     * @param  list<string>  $nameservers
+     */
+    public function updateNameservers(DomainProvider $provider, string $fqdn, array $nameservers): void;
 }

@@ -31,5 +31,14 @@ Paths like `/domains/{fqdn}:getPricing` use literal `:` — encode FQDN with `ra
 
 ## Registration (fulfillment)
 
-`POST /core/v1/domains` with contacts, `years: 1`, and `purchasePrice` when premium.  
+`POST /core/v1/domains` with contacts, `years: 1`, platform `nameservers` from `DOMAIN_NS*`, and `purchasePrice` when premium.  
 Send `X-Idempotency-Key` to prevent duplicate registrations on retry.
+
+## Nameserver management
+
+| Operation | Method | Path |
+|-----------|--------|------|
+| Get domain (incl. NS) | GET | `/core/v1/domains/{domainName}` |
+| Set nameservers | POST | `/core/v1/domains/{domainName}:setNameservers` |
+
+Customer changes go through **My Domains** → same Name.com API via `domain_registrations.provider_key`.

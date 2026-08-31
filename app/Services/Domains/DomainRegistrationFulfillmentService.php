@@ -17,6 +17,7 @@ class DomainRegistrationFulfillmentService
         private DomainProviderManager $providers,
         private PlatformDomainPricingPolicy $pricing,
         private DomainAuditLogger $audit,
+        private DomainNameserverService $nameservers,
     ) {}
 
     public function fulfillOrder(Order $order): void
@@ -122,12 +123,21 @@ class DomainRegistrationFulfillmentService
             ]);
 
             if ($result->success) {
+                $confirmedNs = $this->nameservers->resolveAfterRegistration(
+                    $quote->provider_key,
+                    $fqdn,
+                    $result->providerMeta,
+                );
+
                 $registration->update([
                     'status' => DomainRegistration::STATUS_REGISTERED,
                     'provider_reference' => $result->providerReference,
                     'provider_meta' => $result->providerMeta,
                     'registered_at' => now(),
                     'error_message' => null,
+                    'nameservers' => $confirmedNs !== [] ? $confirmedNs : null,
+                    'nameservers_updated_at' => $confirmedNs !== [] ? now() : null,
+                    'nameservers_synced_at' => $confirmedNs !== [] ? now() : null,
                 ]);
                 $this->audit->log('domains.fulfillment.registered', $registration->fresh());
 

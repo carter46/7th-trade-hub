@@ -30,4 +30,4 @@ Set `DOMAIN_AUTO_REGISTER=false` to disable API registration.
 
 ## Contacts / nameservers
 
-Configure via `DOMAIN_CONTACT_*` and `DOMAIN_NS*` env vars (see `config/domains.php`).
+Registrant contact is collected at checkout per customer. See [NAMESERVERS.md](NAMESERVERS.md) for nameserver defaults, per-domain snapshots, and My Domains management.

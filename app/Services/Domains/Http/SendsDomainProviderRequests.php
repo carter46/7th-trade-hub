@@ -38,6 +38,7 @@ trait SendsDomainProviderRequests
             $response = match (strtoupper($method)) {
                 'GET' => $pending->get($url, $query),
                 'POST' => $pending->post($url, $json ?? []),
+                'PUT' => $pending->put($url, $json ?? []),
                 default => throw new RuntimeException('Unsupported HTTP method.'),
             };
 

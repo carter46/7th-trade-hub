@@ -23,6 +23,10 @@ class DomainRegistrationFulfillmentTest extends TestCase
 
     public function test_fulfillment_registers_domain_after_paid_order(): void
     {
+        config([
+            'domains.default_nameservers' => ['ns1.platform.test', 'ns2.platform.test'],
+        ]);
+
         DomainProvider::query()->where('key', 'namecom')->update([
             'enabled' => true,
             'sandbox' => true,
@@ -40,7 +44,16 @@ class DomainRegistrationFulfillmentTest extends TestCase
                 ]],
             ]),
             'https://api.dev.name.com/core/v1/domains' => Http::response([
-                'domain' => ['domainName' => 'fulfill.com'],
+                'domain' => [
+                    'domainName' => 'fulfill.com',
+                    'nameservers' => ['ns1.platform.test', 'ns2.platform.test'],
+                ],
+            ]),
+            'https://api.dev.name.com/core/v1/domains/fulfill.com' => Http::response([
+                'domain' => [
+                    'domainName' => 'fulfill.com',
+                    'nameservers' => ['ns1.platform.test', 'ns2.platform.test'],
+                ],
             ]),
         ]);
 
@@ -105,5 +118,8 @@ class DomainRegistrationFulfillmentTest extends TestCase
             'fqdn' => 'fulfill.com',
             'status' => DomainRegistration::STATUS_REGISTERED,
         ]);
+
+        $registration = DomainRegistration::query()->where('order_item_id', $item->id)->first();
+        $this->assertSame(['ns1.platform.test', 'ns2.platform.test'], $registration->nameservers);
     }
 }

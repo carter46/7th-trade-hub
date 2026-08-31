@@ -19,6 +19,8 @@ return [
         env('DOMAIN_NS1'),
         env('DOMAIN_NS2'),
     ])),
+    // Platform default nameservers used only when initially registering a new domain.
+    // Not the authoritative current state after a customer changes nameservers via My Domains.
 
     'registration_contacts' => [
         // Legacy/dev fallback only — checkout collects per-customer registrant details.
@@ -38,7 +40,7 @@ return [
         'namecom' => [
             'display_name' => 'Name.com',
             'adapter' => \App\Services\Domains\Providers\NameCom\NameComProvider::class,
-            'capabilities' => ['search', 'availability', 'registration_quote', 'tld_pricing', 'register'],
+            'capabilities' => ['search', 'availability', 'registration_quote', 'tld_pricing', 'register', 'nameserver_read', 'nameserver_update'],
             'credential_keys' => ['username', 'api_token'],
             'credential_labels' => [
                 'username' => 'Username',
@@ -49,7 +51,7 @@ return [
         'domainnameapi' => [
             'display_name' => 'DomainNameAPI',
             'adapter' => \App\Services\Domains\Providers\DomainNameApi\DomainNameApiProvider::class,
-            'capabilities' => ['search', 'availability', 'registration_quote', 'tld_pricing', 'register'],
+            'capabilities' => ['search', 'availability', 'registration_quote', 'tld_pricing', 'register', 'nameserver_read', 'nameserver_update'],
             'credential_keys' => ['reseller_id', 'api_key'],
             'credential_labels' => [
                 'reseller_id' => 'Reseller ID',

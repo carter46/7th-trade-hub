@@ -21,6 +21,7 @@ return [
             'children' => [
                 ['route' => 'dashboard.services', 'match' => ['dashboard.services', 'dashboard.services.*', 'dashboard.discover.services', 'dashboard.discover.services.*'], 'label' => 'Browse', 'icon' => 'listings', 'keywords' => ['catalog', 'platform', 'buy', 'services'], 'sort' => 10],
                 ['route' => 'dashboard.my-tools', 'url' => '/dashboard/my-tools', 'match' => ['dashboard.my-tools', 'dashboard.my-tools.*'], 'label' => 'My Tools', 'icon' => 'listings', 'keywords' => ['websites', 'tools', 'owned'], 'sort' => 15],
+                ['route' => 'dashboard.my-domains', 'url' => '/dashboard/my-domains', 'match' => ['dashboard.my-domains', 'dashboard.my-domains.*'], 'label' => 'My Domains', 'icon' => 'grid', 'keywords' => ['domain', 'dns', 'nameserver', 'whois'], 'sort' => 17],
                 ['route' => 'dashboard.service-orders', 'match' => ['dashboard.service-orders', 'dashboard.service-orders.*'], 'label' => 'Orders', 'icon' => 'orders', 'keywords' => ['purchases', 'platform'], 'sort' => 20],
             ],
         ],

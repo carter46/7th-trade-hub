@@ -26,6 +26,9 @@ class DomainRegistration extends Model
         'provider_cost_at_checkout',
         'provider_currency_at_checkout',
         'registrant_contact',
+        'nameservers',
+        'nameservers_updated_at',
+        'nameservers_synced_at',
         'status',
         'retry_count',
         'last_attempt_at',
@@ -41,6 +44,7 @@ class DomainRegistration extends Model
         return [
             'provider_cost_at_checkout' => 'decimal:4',
             'registrant_contact' => 'array',
+            'nameservers' => 'array',
             'provider_meta' => 'array',
             'registered_at' => 'datetime',
             'last_attempt_at' => 'datetime',
@@ -61,5 +65,28 @@ class DomainRegistration extends Model
     public function domainQuote(): BelongsTo
     {
         return $this->belongsTo(DomainQuote::class);
+    }
+
+    public function isRegistered(): bool
+    {
+        return $this->status === self::STATUS_REGISTERED;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function nameserverList(): array
+    {
+        $list = $this->nameservers ?? [];
+
+        return is_array($list) ? array_values(array_filter($list, fn ($ns) => is_string($ns) && $ns !== '')) : [];
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<self>  $query
+     */
+    public function scopeForUser($query, int $userId): void
+    {
+        $query->whereHas('order', fn ($order) => $order->where('user_id', $userId));
     }
 }

@@ -32,9 +32,16 @@ Enable DomainNameAPI as a non-default provider with a `fallback_priority`. If th
 
 ## Registration fulfillment
 
-After a paid platform order, `DomainRegistrationFulfillmentService` calls `registerDomain()` on the provider recorded on the order line (from quote binding — never switched at fulfillment time).
+After a paid platform order, `DomainRegistrationFulfillmentService` calls `registerDomain()` with platform default nameservers from `config/domains.php` (`default_nameservers` / `DOMAIN_NS*`).
 
-Default registrant contact and nameservers come from `config/domains.php` (`registration_contacts`, `default_nameservers`).
+## Nameserver management
+
+| Operation | Method | Path |
+|-----------|--------|------|
+| Domain info | GET | `/api/v1/domains/info?DomainName={fqdn}` |
+| Update NS | PUT | `/api/v1/domains/dns/name-server` |
+
+Customer changes go through **My Domains** → same DomainNameAPI via `domain_registrations.provider_key`.
 
 ## Admin
 
