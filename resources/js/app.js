@@ -703,9 +703,10 @@ document.addEventListener('alpine:init', () => {
             ?? variants[0]?.id
             ?? null,
         qty: 1,
-        domainMode: options.requireDomainChoice ? 'buy' : 'none',
-        domainLabel: '',
-        domainTld: (options.domainTlds?.[0]?.tld) ?? 'com',
+        domainMode: options.domainMode
+            ?? (options.requireDomainChoice ? 'buy' : 'none'),
+        domainLabel: options.oldDomainLabel ?? '',
+        domainTld: options.oldDomainTld || (options.domainTlds?.[0]?.tld) || 'com',
         domainTlds: options.domainTlds ?? [],
         domainTldsAdvanced: options.domainTldsAdvanced ?? [],
         showAdvancedTlds: false,
@@ -719,6 +720,7 @@ document.addEventListener('alpine:init', () => {
         domainAvailable: Boolean(options.quoteToken),
         productSlug: options.productSlug ?? '',
         quoteUrl: options.quoteUrl ?? '',
+        connectScanUrl: options.connectScanUrl ?? '',
         csrfToken: options.csrfToken ?? '',
         showPlanSummary: Boolean(options.showPlanSummary),
         requireDomainChoice: Boolean(options.requireDomainChoice),
@@ -729,6 +731,15 @@ document.addEventListener('alpine:init', () => {
         walletBalance: Number(options.walletBalance ?? 0),
         hasWallet: Boolean(options.hasWallet),
         gatewayEnabled: Boolean(options.gatewayEnabled),
+        connectFqdnInput: options.connectFqdn ?? '',
+        connectFqdn: options.connectFqdn ?? '',
+        connectNameservers: [],
+        connectRequiredNameservers: [],
+        connectScanned: false,
+        connectScanning: false,
+        connectScanRequestId: 0,
+        connectAcknowledged: Boolean(options.connectAcknowledged),
+        connectError: '',
         registrant: {
             first_name: options.registrantDefaults?.first_name ?? '',
             last_name: options.registrantDefaults?.last_name ?? '',
@@ -814,14 +825,86 @@ document.addEventListener('alpine:init', () => {
                 return Boolean(this.domainQuoteToken && this.domainFqdn && this.registrantComplete);
             }
             if (this.requireDomainChoice) {
-                if (!this.domainLabel.trim() || !this.domainTld || this.domainLabelError) return false;
                 if (this.domainMode === 'buy') {
+                    if (!this.domainLabel.trim() || !this.domainTld || this.domainLabelError) return false;
                     return Boolean(this.domainQuoteToken && this.domainAvailable && this.registrantComplete);
                 }
-                if (this.domainMode === 'connect') return true;
+                if (this.domainMode === 'connect') {
+                    return Boolean(this.connectScanned && this.connectFqdn && this.connectAcknowledged && !this.connectError);
+                }
                 return false;
             }
             return true;
+        },
+        onDomainModeChange() {
+            this.invalidateQuote();
+            this.resetConnectState();
+            this.domainLabelError = '';
+            this.submitError = '';
+        },
+        resetConnectState() {
+            this.connectFqdn = '';
+            this.connectNameservers = [];
+            this.connectRequiredNameservers = [];
+            this.connectScanned = false;
+            this.connectAcknowledged = false;
+            this.connectError = '';
+        },
+        onConnectFqdnInput() {
+            this.connectScanRequestId += 1;
+            this.resetConnectState();
+            this.connectError = '';
+            this.connectScanning = false;
+        },
+        async scanConnectDomain() {
+            const fqdn = this.connectFqdnInput.trim().toLowerCase();
+            if (!fqdn || !this.connectScanUrl) return;
+            const requestId = ++this.connectScanRequestId;
+            this.connectScanning = true;
+            this.connectError = '';
+            this.connectScanned = false;
+            this.connectAcknowledged = false;
+            try {
+                const res = await fetch(this.connectScanUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        'X-CSRF-TOKEN': this.csrfToken,
+                    },
+                    body: JSON.stringify({ domain_fqdn: fqdn }),
+                });
+                const data = await res.json();
+                if (requestId !== this.connectScanRequestId) {
+                    return;
+                }
+                if (data.message && (!data.registered || data.already_connected || data.status === 'invalid')) {
+                    this.resetConnectState();
+                    this.connectError = data.message || 'Unable to check this domain.';
+                    return;
+                }
+                if (!data.registered || !data.fqdn) {
+                    this.resetConnectState();
+                    this.connectError = data.message || 'Unable to check this domain.';
+                    return;
+                }
+                this.connectFqdn = data.fqdn;
+                this.connectFqdnInput = data.fqdn;
+                this.connectNameservers = data.nameservers || [];
+                this.connectRequiredNameservers = data.required_nameservers || [];
+                this.connectScanned = true;
+                this.connectError = '';
+            } catch {
+                if (requestId !== this.connectScanRequestId) {
+                    return;
+                }
+                this.resetConnectState();
+                this.connectError = 'Domain check is temporarily unavailable.';
+            } finally {
+                if (requestId === this.connectScanRequestId) {
+                    this.connectScanning = false;
+                }
+            }
         },
         async checkDomain() {
             const label = this.domainLabel.trim();

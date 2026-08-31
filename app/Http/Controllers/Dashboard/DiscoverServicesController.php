@@ -10,6 +10,7 @@ use App\Modules\Catalog\Services\CatalogBrowseService;
 use App\Modules\Catalog\Services\CatalogContentResolver;
 use App\Modules\Catalog\Services\PlatformCheckoutService;
 use App\Services\Analytics\UserActivityRecorder;
+use App\Services\Domains\DomainConnectionService;
 use App\Services\Domains\DomainQuoteService;
 use App\Support\Domains\DomainRegistrantContact;
 use Illuminate\Http\JsonResponse;
@@ -29,6 +30,7 @@ class DiscoverServicesController extends Controller
         private UserActivityRecorder $activity,
         private PlatformCheckoutService $checkoutService,
         private DomainQuoteService $domainQuotes,
+        private DomainConnectionService $domainConnections,
     ) {}
 
     public function index(Request $request): View
@@ -233,6 +235,24 @@ class DiscoverServicesController extends Controller
         return response()->json($result);
     }
 
+    public function domainConnectScan(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'domain_fqdn' => ['required', 'string', 'max:255'],
+        ]);
+
+        $result = $this->domainConnections->scanForUser($request->user(), $data['domain_fqdn']);
+
+        $status = 200;
+        if (($result['status'] ?? '') === 'invalid' || ! empty($result['message'])) {
+            if (! ($result['registered'] ?? false) || ($result['already_connected'] ?? false)) {
+                $status = 200;
+            }
+        }
+
+        return response()->json($result, $status);
+    }
+
     public function checkout(Request $request, string $slug): View|RedirectResponse
     {
         if (in_array($slug, ['com-domain-registration', 'io-domain-registration', 'co-domain-registration', 'ng-domain-registration'], true)) {
@@ -340,6 +360,7 @@ class DiscoverServicesController extends Controller
             'domain_quote_token' => ['nullable', 'string', 'max:128'],
             'domain_fqdn' => ['nullable', 'string', 'max:255'],
             'domain_name' => ['nullable', 'string', 'max:255'],
+            'domain_connect_acknowledged' => ['nullable', 'boolean'],
             'idempotency_key' => ['required', 'string', 'uuid', 'max:64'],
             'renew_user_tool_id' => ['nullable', 'integer', 'exists:user_tools,id'],
             'payment_method' => ['nullable', 'in:'.implode(',', $allowedMethods)],

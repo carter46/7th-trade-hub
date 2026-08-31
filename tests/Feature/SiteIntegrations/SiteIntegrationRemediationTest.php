@@ -234,8 +234,8 @@ class SiteIntegrationRemediationTest extends TestCase
                 'variant_id' => $product->activeVariants->first()->id,
                 'quantity' => 2,
                 'domain_mode' => 'connect',
-                'domain_label' => 'mysite',
-                'domain_tld' => 'com',
+                'domain_fqdn' => 'mysite.com',
+                'domain_connect_acknowledged' => '1',
                 'idempotency_key' => (string) Str::uuid(),
             ])
             ->assertRedirect()

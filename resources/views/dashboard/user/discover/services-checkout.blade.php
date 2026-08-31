@@ -24,13 +24,19 @@
         'isWebsitePackage' => (bool) ($isWebsitePackage ?? false),
         'isDomainProduct' => (bool) ($isDomainProduct ?? false),
         'productSlug' => $product->slug,
+        'domainMode' => old('domain_mode', ($requireDomainChoice ?? false) ? 'buy' : 'none'),
+        'connectFqdn' => old('domain_fqdn', ''),
+        'connectAcknowledged' => (bool) old('domain_connect_acknowledged', false),
         'quoteUrl' => route('dashboard.services.domain-quote'),
+        'connectScanUrl' => route('dashboard.services.domain-connect-scan'),
         'domainTlds' => $domainTlds ?? [],
         'domainTldsAdvanced' => $domainTldsAdvanced ?? [],
         'quoteToken' => $quoteToken ?? null,
         'quotedFqdn' => $quotedFqdn ?? null,
         'quotedPrice' => $quotedPrice ?? null,
         'csrfToken' => csrf_token(),
+        'oldDomainLabel' => old('domain_label', ''),
+        'oldDomainTld' => old('domain_tld', ''),
         'registrantDefaults' => [
             'first_name' => old('registrant.first_name', ''),
             'last_name' => old('registrant.last_name', ''),
@@ -59,7 +65,7 @@
         ['Checkout', null],
     ]"
 >
-    <x-dashboard.card class="max-w-lg space-y-5">
+    <x-dashboard.card class="w-full space-y-5">
         <div>
             <p class="text-xs font-semibold uppercase tracking-wider text-primary mb-1">Platform service</p>
             <h2 class="text-xl font-semibold text-text-primary">{{ $product->title }}</h2>
@@ -171,59 +177,128 @@
                                 <label class="block text-sm font-medium text-text-secondary mb-2">Domain <span class="text-danger">*</span></label>
                                 <div class="flex flex-wrap gap-4">
                                     <label class="flex items-center gap-2 text-sm">
-                                        <input type="radio" name="domain_mode" value="buy" x-model="domainMode" @change="invalidateQuote()" class="accent-primary">
+                                        <input type="radio" name="domain_mode" value="buy" x-model="domainMode" @change="onDomainModeChange()" class="accent-primary">
                                         Buy a new domain
                                     </label>
                                     <label class="flex items-center gap-2 text-sm">
-                                        <input type="radio" name="domain_mode" value="connect" x-model="domainMode" @change="invalidateQuote()" class="accent-primary">
+                                        <input type="radio" name="domain_mode" value="connect" x-model="domainMode" @change="onDomainModeChange()" class="accent-primary">
                                         Connect existing domain
                                     </label>
                                 </div>
                             </div>
 
-                            <div class="grid gap-3 sm:grid-cols-[1fr_minmax(9rem,14rem)]">
-                                <div>
-                                    <label class="mb-1 block text-xs text-text-muted">Domain name</label>
-                                    <input
-                                        type="text"
-                                        name="domain_label"
-                                        x-model="domainLabel"
-                                        @input="onDomainLabelInput($event)"
-                                        placeholder="mysite"
-                                        autocomplete="off"
-                                        autocapitalize="off"
-                                        spellcheck="false"
-                                        :class="domainLabelError ? 'border-danger' : 'border-border-default'"
-                                        class="w-full rounded-lg bg-elevated text-text-primary text-sm"
-                                    >
-                                    <p x-show="domainLabelError" x-cloak class="mt-1 text-xs text-danger" x-text="domainLabelError"></p>
-                                </div>
-                                <div>
-                                    <input type="hidden" name="domain_tld" x-bind:value="domainTld">
-                                    @include('dashboard.user.discover._domain-extension-picker')
-                                </div>
-                            </div>
-
                             <template x-if="domainMode === 'buy'">
-                                <div class="space-y-2">
-                                    <input type="hidden" name="domain_quote_token" x-bind:value="domainQuoteToken">
+                                <div class="space-y-3">
+                                    <div class="grid gap-3 sm:grid-cols-[1fr_minmax(9rem,14rem)]">
+                                        <div>
+                                            <label class="mb-1 block text-xs text-text-muted">Domain name</label>
+                                            <input
+                                                type="text"
+                                                name="domain_label"
+                                                x-model="domainLabel"
+                                                @input="onDomainLabelInput($event)"
+                                                placeholder="mysite"
+                                                autocomplete="off"
+                                                autocapitalize="off"
+                                                spellcheck="false"
+                                                :class="domainLabelError ? 'border-danger' : 'border-border-default'"
+                                                class="w-full rounded-lg bg-elevated text-text-primary text-sm"
+                                            >
+                                            <p x-show="domainLabelError" x-cloak class="mt-1 text-xs text-danger" x-text="domainLabelError"></p>
+                                        </div>
+                                        <div>
+                                            <input type="hidden" name="domain_tld" x-bind:value="domainTld">
+                                            @include('dashboard.user.discover._domain-extension-picker')
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-2">
+                                        <input type="hidden" name="domain_quote_token" x-bind:value="domainQuoteToken">
+                                        <x-dashboard.button
+                                            type="button"
+                                            variant="secondary"
+                                            size="sm"
+                                            x-on:click="checkDomain()"
+                                            x-bind:disabled="domainChecking || !canCheckDomain"
+                                        >
+                                            <span x-show="!domainChecking">Check availability</span>
+                                            <span x-cloak x-show="domainChecking">Checking…</span>
+                                        </x-dashboard.button>
+                                        @include('dashboard.user.discover._domain-search-results')
+                                    </div>
+
+                                    <template x-if="domainAvailable">
+                                        <div x-cloak>
+                                            @include('dashboard.user.discover._domain-registrant-fields')
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+
+                            <template x-if="domainMode === 'connect'">
+                                <div class="space-y-3">
+                                    <input type="hidden" name="domain_fqdn" x-bind:value="connectFqdn">
+                                    <input type="hidden" name="domain_connect_acknowledged" :value="connectAcknowledged ? '1' : '0'">
+
+                                    <div>
+                                        <label class="mb-1 block text-xs text-text-muted">Existing domain</label>
+                                        <input
+                                            type="text"
+                                            x-model="connectFqdnInput"
+                                            @input="onConnectFqdnInput()"
+                                            placeholder="example.com"
+                                            autocomplete="off"
+                                            autocapitalize="off"
+                                            spellcheck="false"
+                                            x-bind:disabled="connectScanning"
+                                            :class="connectError && !connectScanned ? 'border-danger' : 'border-border-default'"
+                                            class="w-full rounded-lg bg-elevated text-text-primary text-sm"
+                                        >
+                                    </div>
+
                                     <x-dashboard.button
                                         type="button"
                                         variant="secondary"
                                         size="sm"
-                                        x-on:click="checkDomain()"
-                                        x-bind:disabled="domainChecking || !canCheckDomain"
+                                        x-on:click="scanConnectDomain()"
+                                        x-bind:disabled="connectScanning || !connectFqdnInput.trim()"
                                     >
-                                        <span x-show="!domainChecking">Check availability</span>
-                                        <span x-cloak x-show="domainChecking">Checking…</span>
+                                        <span x-show="!connectScanning">Check Domain</span>
+                                        <span x-cloak x-show="connectScanning">Checking domain…</span>
                                     </x-dashboard.button>
-                                    @include('dashboard.user.discover._domain-search-results')
-                                </div>
-                            </template>
 
-                            <template x-if="domainMode === 'buy' && domainAvailable">
-                                <div x-cloak>
-                                    @include('dashboard.user.discover._domain-registrant-fields')
+                                    <p x-show="connectError" x-cloak class="text-sm text-danger" x-text="connectError"></p>
+
+                                    <div x-show="connectScanned" x-cloak class="space-y-3 rounded-xl border border-border-default bg-muted/20 px-4 py-3">
+                                        <div>
+                                            <p class="text-xs font-semibold uppercase tracking-wider text-text-muted">Domain found</p>
+                                            <p class="mt-1 text-lg font-semibold text-text-primary" x-text="connectFqdn"></p>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs font-medium text-text-secondary">Current nameservers</p>
+                                            <ul class="mt-1 space-y-1 text-sm text-text-primary">
+                                                <template x-for="(ns, index) in connectNameservers" :key="'scan-'+index+'-'+ns">
+                                                    <li x-text="ns"></li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs font-medium text-text-secondary">Required nameservers</p>
+                                            <ul class="mt-1 space-y-1 text-sm text-primary">
+                                                <template x-for="(ns, index) in connectRequiredNameservers" :key="'req-'+index+'-'+ns">
+                                                    <li x-text="ns"></li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                        <p class="text-sm text-text-secondary">
+                                            To use this domain with your website, change its nameservers at your current registrar to the required values above.
+                                            Verification happens after purchase in My Domains — you can continue to payment now.
+                                        </p>
+                                        <label class="flex items-start gap-2 text-sm text-text-primary">
+                                            <input type="checkbox" class="mt-1 accent-primary" x-model="connectAcknowledged">
+                                            <span>I understand I must point this domain’s nameservers to the required values above.</span>
+                                        </label>
+                                    </div>
                                 </div>
                             </template>
                         </div>

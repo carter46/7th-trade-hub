@@ -104,8 +104,14 @@ export function createCheckoutValidationHelpers() {
             }
 
             if (this.requireDomainChoice && this.domainMode === 'connect') {
-                if (!this.domainLabel.trim() || this.domainLabelError) {
-                    return this.domainLabelError || 'Enter a domain name.';
+                if (!this.connectScanned || !this.connectFqdn) {
+                    return 'Check your existing domain before paying.';
+                }
+                if (!this.connectAcknowledged) {
+                    return 'Confirm that you will point this domain to our nameservers.';
+                }
+                if (this.connectError) {
+                    return this.connectError;
                 }
             }
 

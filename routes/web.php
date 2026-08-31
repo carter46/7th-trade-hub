@@ -235,6 +235,9 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
     Route::post('/services/domain-quote', [\App\Http\Controllers\Dashboard\DiscoverServicesController::class, 'domainQuote'])
         ->middleware(['verified', 'throttle:30,1'])
         ->name('.services.domain-quote');
+    Route::post('/services/domain-connect-scan', [\App\Http\Controllers\Dashboard\DiscoverServicesController::class, 'domainConnectScan'])
+        ->middleware(['verified', 'throttle:30,1'])
+        ->name('.services.domain-connect-scan');
     Route::get('/services/domain-tlds', [\App\Http\Controllers\Dashboard\DiscoverServicesController::class, 'domainTlds'])
         ->middleware(['verified'])
         ->name('.services.domain-tlds');
@@ -261,6 +264,10 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
         ->name('.my-tools.password');
 
     Route::get('/my-domains', [\App\Http\Controllers\Dashboard\MyDomainsController::class, 'index'])->name('.my-domains');
+    Route::get('/my-domains/connections/{connection}', [\App\Http\Controllers\Dashboard\MyDomainsController::class, 'showConnection'])->name('.my-domains.connections.show');
+    Route::post('/my-domains/connections/{connection}/check', [\App\Http\Controllers\Dashboard\MyDomainsController::class, 'checkConnection'])
+        ->middleware('throttle:10,1')
+        ->name('.my-domains.connections.check');
     Route::get('/my-domains/{registration}', [\App\Http\Controllers\Dashboard\MyDomainsController::class, 'show'])->name('.my-domains.show');
     Route::put('/my-domains/{registration}/nameservers', [\App\Http\Controllers\Dashboard\MyDomainsController::class, 'updateNameservers'])
         ->middleware('throttle:10,1')

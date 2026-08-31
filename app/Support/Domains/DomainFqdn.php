@@ -141,7 +141,7 @@ final class DomainFqdn
     private static function assertApexOnly(string $fqdn): void
     {
         if (substr_count($fqdn, '.') !== 1) {
-            throw new InvalidArgumentException('Only apex domains (e.g. example.com) can be registered.');
+            throw new InvalidArgumentException('Enter an apex domain only (e.g. example.com). Subdomains and multi-part extensions like example.co.uk are not supported yet.');
         }
     }
 }

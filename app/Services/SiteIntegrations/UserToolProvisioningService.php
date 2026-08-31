@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\UserTool;
 use App\Models\UserToolIntegration;
 use App\Modules\Admin\Services\AuditLogService;
+use App\Services\Domains\DomainConnectionService;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -22,6 +23,7 @@ class UserToolProvisioningService
         private SubscriptionSyncService $subscriptionSync,
         private AuditLogService $audit,
         private IntegrationOutboundUrlGuard $urlGuard,
+        private DomainConnectionService $domainConnections,
     ) {}
 
     public function createFromOrderItem(Order $order, OrderItem $item): ?UserTool
@@ -44,6 +46,8 @@ class UserToolProvisioningService
             ->where('order_item_id', $item->id)
             ->first();
         if ($existing) {
+            $this->domainConnections->attachUserTool($item, $existing->id);
+
             return $existing;
         }
 
@@ -55,7 +59,7 @@ class UserToolProvisioningService
         $variant = $item->variant;
         $duration = (int) ($variant?->duration_months ?? 0);
 
-        return UserTool::create([
+        $tool = UserTool::create([
             'user_id' => $order->user_id,
             'order_id' => $order->id,
             'order_item_id' => $item->id,
@@ -69,6 +73,10 @@ class UserToolProvisioningService
             'purchased_at' => now(),
             'duration_months' => $duration > 0 ? $duration : null,
         ]);
+
+        $this->domainConnections->attachUserTool($item, $tool->id);
+
+        return $tool;
     }
 
     /**

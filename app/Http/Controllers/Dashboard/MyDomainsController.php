@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\DomainConnection;
 use App\Models\DomainRegistration;
+use App\Services\Domains\DomainConnectionService;
 use App\Services\Domains\DomainNameserverService;
 use App\Services\Domains\Exceptions\DomainBusinessException;
 use Illuminate\Http\RedirectResponse;
@@ -15,6 +17,7 @@ class MyDomainsController extends Controller
 {
     public function __construct(
         private DomainNameserverService $nameservers,
+        private DomainConnectionService $connections,
     ) {}
 
     public function index(Request $request): RedirectResponse
@@ -34,6 +37,32 @@ class MyDomainsController extends Controller
             'showChangeForm' => $request->boolean('change'),
             'platformDefaultNameservers' => $this->nameservers->defaultNameservers(),
         ]);
+    }
+
+    public function showConnection(Request $request, DomainConnection $connection): View
+    {
+        $this->authorizeConnection($request, $connection);
+
+        return view('dashboard.user.my-domains.connection-show', [
+            'connection' => $connection,
+        ]);
+    }
+
+    public function checkConnection(Request $request, DomainConnection $connection): RedirectResponse
+    {
+        $this->authorizeConnection($request, $connection);
+
+        try {
+            $result = $this->connections->checkStatus($connection);
+        } catch (InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        } catch (\Throwable) {
+            return back()->with('error', 'Unable to check nameserver status right now. Please try again shortly.');
+        }
+
+        return redirect()
+            ->route('dashboard.my-domains.connections.show', $connection)
+            ->with($result['ok'] ? 'status' : 'error', $result['message']);
     }
 
     public function updateNameservers(Request $request, DomainRegistration $registration): RedirectResponse
@@ -103,5 +132,10 @@ class MyDomainsController extends Controller
     {
         $registration->loadMissing('order');
         abort_unless($registration->order && $registration->order->user_id === $request->user()->id, 404);
+    }
+
+    private function authorizeConnection(Request $request, DomainConnection $connection): void
+    {
+        abort_unless($connection->user_id === $request->user()->id, 404);
     }
 }

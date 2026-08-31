@@ -13,6 +13,7 @@ use App\Models\UserTool;
 use App\Modules\Wallet\Payments\Contracts\PaymentRailInterface;
 use App\Modules\Wallet\Services\WalletService;
 use App\Services\Domains\DomainCheckoutValidator;
+use App\Services\Domains\DomainConnectionService;
 use App\Services\Domains\DomainQuoteService;
 use App\Services\SiteIntegrations\UserToolProvisioningService;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -28,6 +29,7 @@ class PlatformCheckoutService
         private PaymentRailInterface $paymentRail,
         private DomainCheckoutValidator $domainCheckout,
         private DomainQuoteService $domainQuotes,
+        private DomainConnectionService $domainConnections,
     ) {}
 
     public function gatewayEnabled(): bool
@@ -76,6 +78,8 @@ class PlatformCheckoutService
             $locked->save();
 
             $locked->load('items.variant');
+            $buyer = User::query()->findOrFail($locked->user_id);
+            $this->createDomainConnectionsForOrder($buyer, $locked);
             $this->fulfillTools($locked);
 
             DB::afterCommit(function () use ($locked) {
@@ -160,9 +164,11 @@ class PlatformCheckoutService
                     ]);
                 }
 
+                $order->load('items.variant');
+                $this->createDomainConnectionsForOrder($buyer, $order);
+
                 $this->walletService->debitForPlatformPurchase($wallet, $order, (float) $checkout['total']);
 
-                $order->load('items.variant');
                 $this->fulfillTools($order, $checkout['renew_tool'], $checkout['variant']);
 
                 DB::afterCommit(function () use ($order, $buyer) {
@@ -466,6 +472,10 @@ class PlatformCheckoutService
         if ($domainContext !== null) {
             $domainOptions['domain_fqdn'] = $domainContext['fqdn'];
             $domainOptions['domain_tld'] = $domainContext['tld'];
+            if (($domainContext['mode'] ?? '') === 'connect') {
+                $domainOptions['domain_connect_acknowledged'] = true;
+                $domainOptions['nameservers_at_scan'] = $domainContext['nameservers_at_scan'] ?? [];
+            }
         }
 
         $line = [
@@ -491,6 +501,30 @@ class PlatformCheckoutService
         }
 
         return $total;
+    }
+
+    private function createDomainConnectionsForOrder(User $buyer, Order $order): void
+    {
+        foreach ($order->items as $item) {
+            $options = $item->options ?? [];
+            if (($options['domain_mode'] ?? '') !== 'connect') {
+                continue;
+            }
+
+            $fqdn = (string) ($options['domain_fqdn'] ?? $options['domain_name'] ?? '');
+            if ($fqdn === '') {
+                continue;
+            }
+
+            $this->domainConnections->createFromOrderItem(
+                $buyer,
+                $order,
+                $item,
+                $fqdn,
+                is_array($options['nameservers_at_scan'] ?? null) ? $options['nameservers_at_scan'] : [],
+                (bool) ($options['domain_connect_acknowledged'] ?? false),
+            );
+        }
     }
 
     private function fulfillTools(Order $order, ?UserTool $renewTool = null, ?PlatformProductVariant $variant = null): void
@@ -522,7 +556,7 @@ class PlatformCheckoutService
 
                 continue;
             }
-            $this->userTools->createFromOrderItem($order, $orderItem);
+            $tool = $this->userTools->createFromOrderItem($order, $orderItem);
         }
     }
 

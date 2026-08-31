@@ -1,7 +1,7 @@
 <x-dashboard.table
     :empty="$domains->isEmpty()"
     empty-title="No domains yet"
-    empty-description="When you register a domain through our catalog, it appears here."
+    empty-description="Registered and connected domains for your websites appear here."
     empty-icon="listings"
     striped
 >
@@ -13,10 +13,15 @@
     </x-slot:head>
     @foreach ($domains as $domain)
         @php
-            $ns = $domain->nameserverList();
+            $ns = $domain->nameservers ?? [];
         @endphp
         <tr>
-            <x-dashboard.td class="font-medium text-text-primary">{{ $domain->fqdn }}</x-dashboard.td>
+            <x-dashboard.td class="font-medium text-text-primary">
+                <span>{{ $domain->fqdn }}</span>
+                @if(($domain->kind ?? '') === 'connection')
+                    <span class="mt-0.5 block text-xs font-normal text-text-muted">Connected domain</span>
+                @endif
+            </x-dashboard.td>
             <x-dashboard.td>
                 <x-dashboard.badge :status="$domain->status" />
             </x-dashboard.td>
@@ -33,9 +38,8 @@
                 @endif
             </x-dashboard.td>
             <x-dashboard.td>
-                <x-dashboard.button :href="route('dashboard.my-domains.show', $domain)" size="sm">Manage</x-dashboard.button>
+                <x-dashboard.button :href="$domain->manage_url" size="sm">Manage</x-dashboard.button>
             </x-dashboard.td>
         </tr>
     @endforeach
 </x-dashboard.table>
-<x-dashboard.pagination :paginator="$domains" />

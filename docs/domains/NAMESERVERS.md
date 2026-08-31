@@ -51,6 +51,19 @@ DOMAIN_NS2=ns2.your-dns.example.com
 
 These can point at your hosting DNS, Cloudflare, or any DNS destination you choose as the platform default for **new** registrations.
 
+They are also the **required nameservers** for **Connect existing domain** ownership verification (public DNS lookup vs `DOMAIN_NS*`). Connect checkout does not require a live match before payment; customers verify later under **My Domains → Check status**.
+
+## Connect existing domain (website packages)
+
+1. Checkout: customer enters a full FQDN → **Check Domain** runs `DomainDnsLookupService` (public NS records via `dns_get_record`).
+2. UI shows current NS + required platform defaults from config.
+3. Customer acknowledges they will update NS, then pays (no registration fee, no registrar call).
+4. A `domain_connections` row is created with `verification_status=pending` **only after the order is paid** (wallet immediately; gateway after Monnify fulfillment). Unpaid gateway checkouts do not claim the FQDN.
+5. **My Domains** lists paid connections; **Check status** re-queries public DNS and marks `verified` when all required platform NS are present.
+6. Active claims use a unique `claim_key` (= FQDN) so concurrent checkouts cannot double-claim the same domain.
+
+`DOMAIN_NS1` / `DOMAIN_NS2` must be set or connect scan/verify fails with a clear message.
+
 ## Schema
 
 `domain_registrations`:
@@ -58,3 +71,9 @@ These can point at your hosting DNS, Cloudflare, or any DNS destination you choo
 - `nameservers` — JSON array of hostnames
 - `nameservers_updated_at` — last confirmed change
 - `nameservers_synced_at` — last successful registrar fetch
+
+`domain_connections` (external domains pointed at the platform):
+
+- `fqdn`, `nameservers_at_scan`, `nameservers_last_seen`, `required_nameservers`
+- `verification_status` — `pending` | `verified` | `failed`
+- `acknowledged_at`, `verified_at`, `last_checked_at`

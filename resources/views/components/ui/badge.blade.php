@@ -7,6 +7,7 @@
         'default' => 'bg-muted text-text-secondary',
         'neutral' => 'bg-muted text-text-secondary',
         'pending' => 'bg-warning/20 text-warning',
+        'verified' => 'bg-success/20 text-success',
         'approved' => 'bg-success/20 text-success',
         'completed' => 'bg-success/20 text-success',
         'rejected' => 'bg-danger/20 text-danger',

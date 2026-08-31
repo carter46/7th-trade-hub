@@ -83,6 +83,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\Domains\DomainProviderManager::class);
         $this->app->singleton(\App\Services\Domains\PlatformDomainPricingPolicy::class);
         $this->app->singleton(\App\Services\Domains\DomainQuoteService::class);
+        $this->app->singleton(\App\Services\Domains\DomainDnsLookupService::class);
+        $this->app->singleton(\App\Services\Domains\DomainConnectionService::class);
         $this->app->singleton(\App\Services\Domains\DomainCheckoutValidator::class);
         $this->app->singleton(\App\Services\Domains\DomainRegistrationFulfillmentService::class);
         $this->app->singleton(\App\Services\Domains\DomainNameserverService::class);

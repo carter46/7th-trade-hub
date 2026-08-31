@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Dashboard;
 use App\Enums\PlatformProductType;
 use App\Enums\UserToolStatus;
 use App\Http\Controllers\Controller;
+use App\Models\DomainConnection;
 use App\Models\DomainRegistration;
 use App\Models\UserTool;
 use App\Modules\Admin\Services\AuditLogService;
@@ -71,12 +72,40 @@ class MyToolsController extends Controller
 
     public function domains(Request $request): View
     {
-        $domains = DomainRegistration::query()
-            ->forUser((int) $request->user()->id)
+        $userId = (int) $request->user()->id;
+
+        $registrations = DomainRegistration::query()
+            ->forUser($userId)
             ->with('order')
             ->orderByDesc('created_at')
-            ->paginate(15)
-            ->withQueryString();
+            ->get()
+            ->map(fn (DomainRegistration $row) => (object) [
+                'kind' => 'registration',
+                'fqdn' => $row->fqdn,
+                'status' => $row->status,
+                'nameservers' => $row->nameserverList(),
+                'manage_url' => route('dashboard.my-domains.show', $row),
+                'created_at' => $row->created_at,
+            ]);
+
+        $connections = DomainConnection::query()
+            ->forUser($userId)
+            ->whereHas('order', fn ($q) => $q->where('status', 'paid'))
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn (DomainConnection $row) => (object) [
+                'kind' => 'connection',
+                'fqdn' => $row->fqdn,
+                'status' => $row->verification_status,
+                'nameservers' => $row->displayNameserverList(),
+                'manage_url' => route('dashboard.my-domains.connections.show', $row),
+                'created_at' => $row->created_at,
+            ]);
+
+        $domains = $registrations
+            ->concat($connections)
+            ->sortByDesc(fn ($row) => $row->created_at?->timestamp ?? 0)
+            ->values();
 
         return view('dashboard.user.my-tools.index', [
             'activeTab' => 'domains',

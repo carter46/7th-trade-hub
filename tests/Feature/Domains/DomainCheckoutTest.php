@@ -154,6 +154,18 @@ class DomainCheckoutTest extends TestCase
 
     public function test_website_checkout_connect_mode_succeeds_without_domain_fee(): void
     {
+        config(['domains.default_nameservers' => ['ns1.platform.test', 'ns2.platform.test']]);
+
+        $this->app->instance(
+            \App\Services\Domains\DomainDnsLookupService::class,
+            new \App\Services\Domains\DomainDnsLookupService(fn () => [
+                ['target' => 'ns1.oldhost.test'],
+                ['target' => 'ns2.oldhost.test'],
+            ]),
+        );
+        $this->app->forgetInstance(\App\Services\Domains\DomainConnectionService::class);
+        $this->app->forgetInstance(\App\Services\Domains\DomainCheckoutValidator::class);
+
         $product = $this->seedWebsiteProduct();
         $user = User::factory()->create(['email_verified_at' => now()]);
         $user->assignRole('user');
@@ -170,8 +182,8 @@ class DomainCheckoutTest extends TestCase
                 'variant_id' => $variant->id,
                 'quantity' => 1,
                 'domain_mode' => 'connect',
-                'domain_label' => 'mysite',
-                'domain_tld' => 'com',
+                'domain_fqdn' => 'mysite.com',
+                'domain_connect_acknowledged' => '1',
                 'idempotency_key' => (string) Str::uuid(),
             ])
             ->assertRedirect();
@@ -181,6 +193,53 @@ class DomainCheckoutTest extends TestCase
             'total_amount' => '27000.00',
         ]);
         $this->assertDatabaseCount('order_items', 1);
+        $this->assertDatabaseHas('domain_connections', [
+            'user_id' => $user->id,
+            'fqdn' => 'mysite.com',
+            'claim_key' => 'mysite.com',
+            'verification_status' => 'pending',
+        ]);
+        $this->assertDatabaseCount('domain_registrations', 0);
+    }
+
+    public function test_website_checkout_connect_requires_acknowledgment(): void
+    {
+        config(['domains.default_nameservers' => ['ns1.platform.test', 'ns2.platform.test']]);
+
+        $this->app->instance(
+            \App\Services\Domains\DomainDnsLookupService::class,
+            new \App\Services\Domains\DomainDnsLookupService(fn () => [
+                ['target' => 'ns1.oldhost.test'],
+                ['target' => 'ns2.oldhost.test'],
+            ]),
+        );
+        $this->app->forgetInstance(\App\Services\Domains\DomainConnectionService::class);
+        $this->app->forgetInstance(\App\Services\Domains\DomainCheckoutValidator::class);
+
+        $product = $this->seedWebsiteProduct();
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $user->assignRole('user');
+        Wallet::factory()->create([
+            'user_id' => $user->id,
+            'balance' => 100000,
+            'locked_balance' => 0,
+        ]);
+
+        $variant = $product->activeVariants->first();
+
+        $this->actingAs($user)
+            ->post(route('dashboard.services.purchase', $product->slug), [
+                'variant_id' => $variant->id,
+                'quantity' => 1,
+                'domain_mode' => 'connect',
+                'domain_fqdn' => 'mysite.com',
+                'domain_connect_acknowledged' => '0',
+                'idempotency_key' => (string) Str::uuid(),
+            ])
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertDatabaseCount('domain_connections', 0);
     }
 
     public function test_website_checkout_buy_mode_creates_two_order_lines(): void

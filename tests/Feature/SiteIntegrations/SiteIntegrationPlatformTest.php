@@ -272,13 +272,24 @@ class SiteIntegrationPlatformTest extends TestCase
 
         $variant = $product->activeVariants->first();
 
+        config(['domains.default_nameservers' => ['ns1.platform.test', 'ns2.platform.test']]);
+        $this->app->instance(
+            \App\Services\Domains\DomainDnsLookupService::class,
+            new \App\Services\Domains\DomainDnsLookupService(fn () => [
+                ['target' => 'ns1.oldhost.test'],
+                ['target' => 'ns2.oldhost.test'],
+            ]),
+        );
+        $this->app->forgetInstance(\App\Services\Domains\DomainConnectionService::class);
+        $this->app->forgetInstance(\App\Services\Domains\DomainCheckoutValidator::class);
+
         $this->actingAs($user)
             ->post(route('dashboard.services.purchase', $product->slug), [
                 'variant_id' => $variant->id,
                 'quantity' => 1,
                 'domain_mode' => 'connect',
-                'domain_label' => 'mysite',
-                'domain_tld' => 'com',
+                'domain_fqdn' => 'mysite.com',
+                'domain_connect_acknowledged' => '1',
                 'idempotency_key' => (string) Str::uuid(),
             ])
             ->assertRedirect();
@@ -348,13 +359,24 @@ class SiteIntegrationPlatformTest extends TestCase
 
         $variant = $product->fresh('activeVariants')->activeVariants->first();
 
+        config(['domains.default_nameservers' => ['ns1.platform.test', 'ns2.platform.test']]);
+        $this->app->instance(
+            \App\Services\Domains\DomainDnsLookupService::class,
+            new \App\Services\Domains\DomainDnsLookupService(fn () => [
+                ['target' => 'ns1.oldhost.test'],
+                ['target' => 'ns2.oldhost.test'],
+            ]),
+        );
+        $this->app->forgetInstance(\App\Services\Domains\DomainConnectionService::class);
+        $this->app->forgetInstance(\App\Services\Domains\DomainCheckoutValidator::class);
+
         $this->actingAs($user)
             ->post(route('dashboard.services.purchase', $product->slug), [
                 'variant_id' => $variant->id,
                 'quantity' => 1,
                 'domain_mode' => 'connect',
-                'domain_label' => 'mysite',
-                'domain_tld' => 'com',
+                'domain_fqdn' => 'mysite.com',
+                'domain_connect_acknowledged' => '1',
                 'idempotency_key' => (string) Str::uuid(),
             ])
             ->assertRedirect();
