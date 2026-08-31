@@ -27,6 +27,9 @@ return [
 
     'suggestion_max_attempts' => (int) env('DOMAIN_SUGGESTION_MAX_ATTEMPTS', 8),
 
+    // Tried first when building alternate available extensions after a search.
+    'suggestion_preferred_tlds' => ['online', 'net', 'pro'],
+
     'default_nameservers' => array_values(array_filter([
         env('DOMAIN_NS1'),
         env('DOMAIN_NS2'),

@@ -195,13 +195,25 @@ class DomainQuoteService
         $maxAttempts = max($limit, (int) config('domains.suggestion_max_attempts', 8));
         $featured = DomainProductTldPolicy::featuredTlds($product);
         $allowed = DomainProductTldPolicy::allowedTlds($product);
+        $preferred = collect(config('domains.suggestion_preferred_tlds', ['online', 'net', 'pro']))
+            ->map(fn ($tld) => ltrim(strtolower((string) $tld), '.'))
+            ->filter()
+            ->values()
+            ->all();
 
         $candidates = collect($allowed)
             ->reject(fn (string $tld) => $tld === $excludeTld)
-            ->sortBy(function (string $tld) use ($featured) {
-                $index = array_search($tld, $featured, true);
+            ->sortBy(function (string $tld) use ($featured, $preferred) {
+                $preferredIndex = array_search($tld, $preferred, true);
+                if ($preferredIndex !== false) {
+                    return $preferredIndex;
+                }
 
-                return $index === false ? 1000 + ord($tld[0] ?? 'z') : $index;
+                $featuredIndex = array_search($tld, $featured, true);
+
+                return $featuredIndex === false
+                    ? 1000 + ord($tld[0] ?? 'z')
+                    : 100 + $featuredIndex;
             })
             ->values();
 

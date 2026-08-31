@@ -108,8 +108,7 @@ export function createDomainSearchHelpers() {
         applyQuoteResponse(data, label) {
             this.domainFqdn = data.fqdn || '';
             this.domainPremium = Boolean(data.premium);
-            this.domainSuggestions = Array.isArray(data.suggestions) ? data.suggestions : [];
-            this.selectedSuggestionTld = null;
+            const suggestions = Array.isArray(data.suggestions) ? [...data.suggestions] : [];
 
             if (data.available && data.quote_token) {
                 this.domainAvailable = true;
@@ -117,12 +116,27 @@ export function createDomainSearchHelpers() {
                 this.domainRetailPrice = Number(data.retail_price || 0);
                 this.domainMessage = `${data.fqdn} is available.`;
                 this.selectedSuggestionTld = this.domainTld;
+
+                const primaryTld = this.domainTld;
+                if (primaryTld && !suggestions.some((row) => row.tld === primaryTld)) {
+                    suggestions.unshift({
+                        tld: primaryTld,
+                        label: `.${primaryTld}`,
+                        fqdn: data.fqdn,
+                        retail_price: String(data.retail_price || 0),
+                        premium: Boolean(data.premium),
+                        quote_token: data.quote_token,
+                        available: true,
+                    });
+                }
+
+                this.domainSuggestions = suggestions;
                 return;
             }
 
             this.invalidateQuote(false);
             this.domainMessage = data.message || `${data.fqdn || label} is not available.`;
-            this.domainSuggestions = Array.isArray(data.suggestions) ? data.suggestions : [];
+            this.domainSuggestions = suggestions;
         },
         selectSuggestion(row) {
             if (!row?.quote_token) {
@@ -137,7 +151,6 @@ export function createDomainSearchHelpers() {
             this.domainAvailable = true;
             this.domainMessage = `${row.fqdn} is available.`;
             this.selectedSuggestionTld = row.tld;
-            this.domainSuggestions = this.domainSuggestions.filter((item) => item.tld !== row.tld);
         },
         invalidateQuote(clearSuggestions = true) {
             this.domainQuoteToken = '';
