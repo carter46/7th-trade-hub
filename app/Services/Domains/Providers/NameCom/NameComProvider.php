@@ -26,10 +26,12 @@ class NameComProvider implements DomainProviderInterface
     {
         $items = [];
         $page = 1;
+        $lastPage = 1;
 
         do {
             $payload = $this->client->tldPricing($provider, $page, 100);
-            $rows = $payload['tlds'] ?? $payload['results'] ?? [];
+            $rows = $this->tldPricingRows($payload);
+            $lastPage = max(1, (int) ($payload['lastPage'] ?? $page));
 
             foreach ($rows as $row) {
                 if (! is_array($row)) {
@@ -42,7 +44,7 @@ class NameComProvider implements DomainProviderInterface
                 }
 
                 $price = $row['registrationPrice'] ?? $row['registrationprice'] ?? null;
-                if ($price === null) {
+                if ($price === null || ! is_numeric($price)) {
                     continue;
                 }
 
@@ -57,12 +59,27 @@ class NameComProvider implements DomainProviderInterface
             }
 
             $page++;
-            $hasMore = count($rows) >= 100;
-        } while ($hasMore && $page <= 20);
+        } while ($page <= $lastPage && $page <= 20);
 
         ksort($items);
 
         return array_values($items);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return list<mixed>
+     */
+    private function tldPricingRows(array $payload): array
+    {
+        foreach (['pricing', 'tlds', 'results'] as $key) {
+            $rows = $payload[$key] ?? null;
+            if (is_array($rows)) {
+                return array_values($rows);
+            }
+        }
+
+        return [];
     }
 
     public function checkAvailability(DomainProvider $provider, string $fqdn): DomainAvailabilityResult

@@ -8,7 +8,7 @@ HTTP client: `NameComClient` (Basic Auth)
 | Operation | Method | Path |
 |-----------|--------|------|
 | Health | GET | `/core/v1/hello` |
-| TLD list | GET | `/core/v1/tldpricing?duration=1` |
+| TLD list | GET | `/core/v1/tldpricing?duration=1` — response rows are in `pricing` (paginated via `lastPage`) |
 | Availability | POST | `/core/v1/domains:checkAvailability` |
 | Premium pricing | GET | `/core/v1/domains/{fqdn}:getPricing?years=1` |
 
