@@ -271,7 +271,7 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
         ->middleware('throttle:10,1')
         ->name('.my-domains.nameservers.sync');
 
-    Route::post('/services/product/{product:slug}/demo/{role}', \App\Http\Controllers\Dashboard\DemoLaunchController::class))
+    Route::post('/services/product/{product:slug}/demo/{role}', \App\Http\Controllers\Dashboard\DemoLaunchController::class)
         ->whereIn('role', ['user', 'admin'])
         ->middleware('throttle:10,1')
         ->name('.services.demo-launch');
