@@ -7,7 +7,7 @@ function buildLoaderMarkup() {
       <div class="dashboard-page-loader__content">
         <div class="dashboard-page-loader__stage" aria-hidden="true">
           <div class="dashboard-page-loader__ring"></div>
-          <canvas class="dashboard-page-loader__canvas" width="176" height="176"></canvas>
+          <canvas class="dashboard-page-loader__canvas" width="296" height="296"></canvas>
         </div>
       </div>`;
 }
@@ -45,11 +45,11 @@ function startLoaderAnimation(root) {
     }
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const size = 176;
+    const size = 296;
     const center = size / 2;
-    const radius = 52;
+    const radius = 96;
     const trail = [];
-    const trailMax = 28;
+    const trailMax = 36;
     let angle = -Math.PI / 2;
     let startedAt = performance.now();
     animationActive = true;
@@ -77,17 +77,24 @@ function startLoaderAnimation(root) {
 
         ctx.clearRect(0, 0, size, size);
 
+        // Positioning / orbit circle — intentionally strong for visibility.
         ctx.beginPath();
         ctx.arc(center, center, radius, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(11, 106, 57, 0.08)';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(11, 106, 57, 0.32)';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(center, center, radius, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(11, 106, 57, 0.1)';
+        ctx.lineWidth = 8;
         ctx.stroke();
 
         for (let i = 0; i < trail.length - 1; i += 1) {
             const t = (i + 1) / trail.length;
             const point = trail[i];
-            const alpha = 0.04 + t * 0.28;
-            const dotRadius = 1.1 + t * 2.1;
+            const alpha = 0.08 + t * 0.42;
+            const dotRadius = 2.2 + t * 3.4;
             ctx.beginPath();
             ctx.arc(point.x, point.y, dotRadius, 0, Math.PI * 2);
             ctx.fillStyle = `rgba(${LOADER_COLOR.r}, ${LOADER_COLOR.g}, ${LOADER_COLOR.b}, ${alpha})`;
@@ -96,13 +103,13 @@ function startLoaderAnimation(root) {
 
         const lead = trail[trail.length - 1] || { x, y };
         ctx.beginPath();
-        ctx.arc(lead.x, lead.y, 3.4, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${LOADER_COLOR.r}, ${LOADER_COLOR.g}, ${LOADER_COLOR.b}, 0.88)`;
+        ctx.arc(lead.x, lead.y, 11, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${LOADER_COLOR.r}, ${LOADER_COLOR.g}, ${LOADER_COLOR.b}, 0.16)`;
         ctx.fill();
 
         ctx.beginPath();
-        ctx.arc(lead.x, lead.y, 6.5, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${LOADER_COLOR.r}, ${LOADER_COLOR.g}, ${LOADER_COLOR.b}, 0.12)`;
+        ctx.arc(lead.x, lead.y, 5.8, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${LOADER_COLOR.r}, ${LOADER_COLOR.g}, ${LOADER_COLOR.b}, 0.95)`;
         ctx.fill();
 
         animationFrameId = requestAnimationFrame(drawFrame);
@@ -111,19 +118,18 @@ function startLoaderAnimation(root) {
     if (reduceMotion) {
         ctx.beginPath();
         ctx.arc(center, center, radius, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(11, 106, 57, 0.12)';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(11, 106, 57, 0.32)';
+        ctx.lineWidth = 3;
         ctx.stroke();
         ctx.beginPath();
-        ctx.arc(center + radius, center, 3.4, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(11, 106, 57, 0.75)';
+        ctx.arc(center + radius, center, 5.8, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(11, 106, 57, 0.9)';
         ctx.fill();
         return;
     }
 
     animationFrameId = requestAnimationFrame(drawFrame);
 }
-
 export function showDashboardPageLoader() {
     const root = ensureLoaderElement();
     if (!root) {
