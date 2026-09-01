@@ -19,7 +19,6 @@ class EmailService
         private BrevoApiProvider $brevo,
         private LaravelMailProvider $laravelMail,
         private EmailDeliveryLogger $logger,
-        private NotificationDispatcher $notifications,
     ) {}
 
     /**
@@ -212,7 +211,7 @@ class EmailService
     private function notifyAdminsOfFailure(OutgoingEmail $email, string $error): void
     {
         try {
-            $this->notifications->notifyAdmins(
+            app(NotificationDispatcher::class)->notifyAdmins(
                 new NotificationMessage(
                     type: 'email.delivery_failed',
                     title: 'Email delivery failed',
