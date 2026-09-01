@@ -65,14 +65,26 @@
             color: #777;
         }
 
-        button {
+        .actions {
             margin-top: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        button, .link-btn {
             appearance: none;
             border: 0;
             border-radius: 0.65rem;
             padding: 0.75rem 1.25rem;
             font-size: 0.95rem;
             font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        button {
             color: #fff;
             background: var(--brand);
             cursor: pointer;
@@ -80,6 +92,12 @@
 
         button:hover { background: #095a30; }
         button:disabled { opacity: 0.65; cursor: wait; }
+
+        .link-btn {
+            color: var(--brand);
+            background: transparent;
+            border: 1px solid rgba(11, 106, 57, 0.25);
+        }
 
         @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -92,9 +110,12 @@
     <div class="card">
         <div class="spinner" aria-hidden="true"></div>
         <h1 id="title">You're offline</h1>
-        <p id="message">We couldn't reach the server. We'll reload this page automatically when your connection is back.</p>
+        <p id="message">We couldn't reach the server. We'll try again automatically when your connection is back.</p>
         <p class="status" id="status" aria-live="polite">Checking connection…</p>
-        <button type="button" id="retry">Try again</button>
+        <div class="actions">
+            <button type="button" id="retry">Try again</button>
+            <a class="link-btn" id="home-link" href="/dashboard">Go to dashboard</a>
+        </div>
     </div>
 
     <script>
@@ -103,8 +124,57 @@
             var messageEl = document.getElementById('message');
             var statusEl = document.getElementById('status');
             var retryBtn = document.getElementById('retry');
+            var homeLink = document.getElementById('home-link');
             var checking = false;
             var reloadScheduled = false;
+            var maxAutoReloads = 2;
+            var reloadKey = 'offline-reload:' + window.location.pathname + window.location.search;
+
+            function isPaymentCallback() {
+                var path = window.location.pathname || '';
+                var search = window.location.search || '';
+
+                return path.indexOf('/callback') !== -1
+                    || search.indexOf('paymentReference=') !== -1
+                    || search.indexOf('payment_reference=') !== -1;
+            }
+
+            function reloadCount() {
+                try {
+                    return Number(sessionStorage.getItem(reloadKey) || '0');
+                } catch {
+                    return 0;
+                }
+            }
+
+            function incrementReloadCount() {
+                try {
+                    sessionStorage.setItem(reloadKey, String(reloadCount() + 1));
+                } catch {
+                    // ignore
+                }
+            }
+
+            function probeTarget() {
+                if (isPaymentCallback()) {
+                    return '/dashboard';
+                }
+
+                var target = window.location.pathname + window.location.search;
+                if (!target || target === '/offline.html') {
+                    return '/';
+                }
+
+                return target;
+            }
+
+            function resumeTarget() {
+                if (isPaymentCallback()) {
+                    return window.location.pathname + window.location.search;
+                }
+
+                return window.location.pathname + window.location.search;
+            }
 
             function setStatus(text) {
                 if (statusEl) {
@@ -116,13 +186,28 @@
                 if (reloadScheduled) {
                     return;
                 }
+
+                if (reloadCount() >= maxAutoReloads) {
+                    setStatus('Connection looks OK. Use Try again or open the dashboard.');
+                    if (messageEl) {
+                        messageEl.textContent = 'Automatic reload stopped to avoid a loop. Your payment may already be complete.';
+                    }
+                    if (homeLink && isPaymentCallback()) {
+                        homeLink.textContent = 'Go to wallet / deposits';
+                        homeLink.href = '/dashboard/deposit';
+                    }
+                    return;
+                }
+
                 reloadScheduled = true;
+                incrementReloadCount();
                 setStatus('Connection restored. Reloading…');
                 if (titleEl) {
                     titleEl.textContent = 'Back online';
                 }
+
                 window.setTimeout(function () {
-                    window.location.reload();
+                    window.location.replace(resumeTarget());
                 }, 400);
             }
 
@@ -136,12 +221,7 @@
                     retryBtn.disabled = true;
                 }
 
-                var target = window.location.pathname + window.location.search;
-                if (!target || target === '/offline.html') {
-                    target = '/';
-                }
-
-                return fetch(target, {
+                return fetch(probeTarget(), {
                     method: 'GET',
                     cache: 'no-store',
                     credentials: 'same-origin',
@@ -152,6 +232,7 @@
                             scheduleReload();
                             return true;
                         }
+
                         setStatus('Still offline. Retrying…');
                         return false;
                     })
@@ -181,9 +262,25 @@
 
             if (retryBtn) {
                 retryBtn.addEventListener('click', function () {
+                    if (isPaymentCallback()) {
+                        setStatus('Retrying payment return…');
+                        window.location.replace(resumeTarget());
+                        return;
+                    }
+
                     setStatus('Checking connection…');
                     probe();
                 });
+            }
+
+            if (isPaymentCallback()) {
+                if (messageEl) {
+                    messageEl.textContent = 'We could not finish confirming your payment. If you completed checkout, open deposits or try again.';
+                }
+                if (homeLink) {
+                    homeLink.textContent = 'Go to wallet / deposits';
+                    homeLink.href = '/dashboard/deposit';
+                }
             }
 
             if (navigator.onLine) {
@@ -193,10 +290,10 @@
             }
 
             window.setInterval(function () {
-                if (!reloadScheduled) {
+                if (!reloadScheduled && reloadCount() < maxAutoReloads) {
                     probe();
                 }
-            }, 5000);
+            }, 8000);
         })();
     </script>
 </body>
