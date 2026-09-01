@@ -347,7 +347,12 @@ class CatalogBrowseService
     {
         $services = $category->relationLoaded('services')
             ? $category->services->where('is_active', true)->sortBy('sort_order')->values()
-            : $category->services()->active()->orderBy('sort_order')->get();
+            : $category->services()->active()->with([
+                'cardMedia.variants',
+                'bannerMedia.variants',
+                'serviceCategory.cardMedia.variants',
+                'serviceCategory.bannerMedia.variants',
+            ])->orderBy('sort_order')->get();
 
         return $services->map(function (ProductType $service) use ($content, $category) {
             $resolved = $content->forService($service);

@@ -127,18 +127,45 @@ class CatalogContentResolver
     public function forService(ProductType $service): array
     {
         $config = config('catalog.types.'.$service->slug, []);
+        $category = $service->relationLoaded('serviceCategory')
+            ? $service->serviceCategory
+            : ($service->service_category_id
+                ? $service->serviceCategory()->with(['cardMedia.variants', 'bannerMedia.variants'])->first()
+                : null);
+        $categoryConfig = $category ? config('catalog.groups.'.$category->slug, []) : [];
+
+        $cardFallback = $config['card_image'] ?? $categoryConfig['card_image'] ?? null;
+        $bannerFallback = $config['banner_image'] ?? $categoryConfig['banner_image'] ?? $categoryConfig['card_image'] ?? null;
 
         $cardImage = $this->resolveImage(
             $service->cardMedia,
             $service->card_image,
             'medium',
-            $config['card_image'] ?? null,
+            $cardFallback,
         );
+
+        if (! $cardImage && $category) {
+            $cardImage = $this->resolveImage(
+                $category->cardMedia,
+                $category->card_image,
+                'medium',
+                $categoryConfig['card_image'] ?? null,
+            );
+        }
 
         $hasCardMedia = (bool) $service->card_media_id;
         $bannerImage = $hasCardMedia
-            ? ($this->resolveImage($service->cardMedia, $service->card_image, 'large', $config['card_image'] ?? null) ?: $cardImage)
-            : ($this->resolveImage($service->bannerMedia, $service->banner_image, 'large', $config['banner_image'] ?? null) ?: $cardImage);
+            ? ($this->resolveImage($service->cardMedia, $service->card_image, 'large', $bannerFallback) ?: $cardImage)
+            : ($this->resolveImage($service->bannerMedia, $service->banner_image, 'large', $bannerFallback) ?: $cardImage);
+
+        if (! $bannerImage && $category) {
+            $bannerImage = $this->resolveImage(
+                $category->bannerMedia,
+                $category->banner_image,
+                'large',
+                $categoryConfig['banner_image'] ?? $categoryConfig['card_image'] ?? null,
+            ) ?: $cardImage;
+        }
 
         return [
             'label' => $service->name,

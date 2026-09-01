@@ -24,13 +24,13 @@
         @if($searchResults)
             <section>
                 <h2 class="text-sm font-semibold text-text-secondary uppercase tracking-wide mb-3">Search results</h2>
-                <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+                <x-dashboard.card-grid :count="$searchResults->count()">
                     @forelse($searchResults as $product)
                         @include('dashboard.user.partials.service-product-card', ['product' => $product])
                     @empty
                         <p class="col-span-full text-text-muted">No services matched.</p>
                     @endforelse
-                </div>
+                </x-dashboard.card-grid>
                 <div class="mt-4">
                     <x-dashboard.pagination :paginator="$searchResults" />
                 </div>
@@ -38,7 +38,7 @@
         @else
             <section>
                 <h2 class="text-sm font-semibold text-text-secondary uppercase tracking-wide mb-3">Categories</h2>
-                <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+                <x-dashboard.card-grid :count="count($groups)">
                     @foreach($groups as $group)
                         @php
                             $image = $group['card_image'] ?? null;
@@ -83,7 +83,7 @@
                             </div>
                         </x-dashboard.card>
                     @endforeach
-                </div>
+                </x-dashboard.card-grid>
             </section>
         @endif
     </div>

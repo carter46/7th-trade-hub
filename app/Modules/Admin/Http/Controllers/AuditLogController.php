@@ -4,9 +4,12 @@ namespace App\Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
+use App\Models\NotificationDeliveryLog;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
+use Throwable;
 
 class AuditLogController extends Controller
 {
@@ -47,6 +50,7 @@ class AuditLogController extends Controller
             'logs' => $logs,
             'admins' => $admins,
             'modules' => $modules,
+            'recentNotificationDeliveries' => $this->safeRecentNotificationDeliveries(),
             'filters' => [
                 'action' => $request->string('action')->toString(),
                 'module' => $request->string('module')->toString(),
@@ -55,5 +59,24 @@ class AuditLogController extends Controller
                 'date_to' => $request->string('date_to')->toString(),
             ],
         ]);
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, NotificationDeliveryLog>
+     */
+    private function safeRecentNotificationDeliveries(): \Illuminate\Support\Collection
+    {
+        if (! Schema::hasTable('notification_delivery_logs')) {
+            return collect();
+        }
+
+        try {
+            return NotificationDeliveryLog::query()
+                ->latest('created_at')
+                ->limit(25)
+                ->get();
+        } catch (Throwable) {
+            return collect();
+        }
     }
 }

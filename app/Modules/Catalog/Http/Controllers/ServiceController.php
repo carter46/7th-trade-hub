@@ -101,7 +101,12 @@ class ServiceController extends Controller
         if ($this->browse->usesDbHierarchy() && $typeFilter === '' && $q === '' && ! $categoryId) {
             $serviceCategory = $this->browse->findServiceCategory($group);
             $typeCards = $this->browse->serviceCardsForCategory(
-                $serviceCategory->load(['services.cardMedia.variants', 'services.bannerMedia.variants']),
+                $serviceCategory->load([
+                    'services.cardMedia.variants',
+                    'services.bannerMedia.variants',
+                    'services.serviceCategory.cardMedia.variants',
+                    'services.serviceCategory.bannerMedia.variants',
+                ]),
                 $this->content,
             );
 

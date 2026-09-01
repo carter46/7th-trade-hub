@@ -14,7 +14,7 @@
 >
     <div class="space-y-6">
         @if(!empty($typeCards) && $typeCards->isNotEmpty())
-            <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+            <x-dashboard.card-grid :count="$typeCards->count()">
                 @foreach($typeCards as $card)
                     @php
                         $image = $card['card_image'] ?? null;
@@ -62,7 +62,7 @@
                         </div>
                     </x-dashboard.card>
                 @endforeach
-            </div>
+            </x-dashboard.card-grid>
         @else
             <x-dashboard.card>
                 <form method="GET" action="{{ route('dashboard.services.browse', $segment) }}" class="flex flex-wrap gap-3">
@@ -79,11 +79,11 @@
             @if(!$products || $products->isEmpty())
                 <p class="text-text-muted">No products found.</p>
             @else
-                <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+                <x-dashboard.card-grid :count="$products->count()">
                     @foreach($products as $product)
                         @include('dashboard.user.partials.service-product-card', ['product' => $product])
                     @endforeach
-                </div>
+                </x-dashboard.card-grid>
                 <div class="mt-4">
                     <x-dashboard.pagination :paginator="$products" />
                 </div>

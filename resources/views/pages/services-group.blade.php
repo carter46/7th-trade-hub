@@ -19,11 +19,11 @@
             <h2 class="text-xl font-bold font-display">Services in {{ $content['label'] }}</h2>
             <p class="text-sm text-slate-400">Choose a service to browse products and plans.</p>
         </div>
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <x-ui.card-grid :count="$typeCards->count()">
             @foreach($typeCards as $card)
                 @include('partials.catalog.explore-card', ['card' => $card])
             @endforeach
-        </div>
+        </x-ui.card-grid>
     @else
         <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
             <h2 class="text-xl font-bold font-display">All {{ $content['label'] }}</h2>
@@ -64,11 +64,11 @@
         @if(! $products || $products->isEmpty())
             <p class="text-slate-400">No services match your filters.</p>
         @else
-            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <x-ui.card-grid :count="$products->count()">
                 @foreach($products as $product)
                     @include('partials.catalog.product-card', ['product' => $product])
                 @endforeach
-            </div>
+            </x-ui.card-grid>
             <div class="mt-8">{{ $products->links() }}</div>
         @endif
     @endif

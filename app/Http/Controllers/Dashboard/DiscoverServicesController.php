@@ -93,7 +93,12 @@ class DiscoverServicesController extends Controller
 
             if ($category && $typeFilter === '' && $request->string('q')->toString() === '') {
                 $typeCards = $this->browse->serviceCardsForCategory(
-                    $category->load(['services.cardMedia.variants', 'services.bannerMedia.variants']),
+                    $category->load([
+                        'services.cardMedia.variants',
+                        'services.bannerMedia.variants',
+                        'services.serviceCategory.cardMedia.variants',
+                        'services.serviceCategory.bannerMedia.variants',
+                    ]),
                     $this->content,
                 )
                     ->map(function (array $card) use ($segment) {

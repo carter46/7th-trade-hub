@@ -81,11 +81,11 @@
             </span>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+        <x-ui.card-grid :count="$groupCount">
             @foreach($groups as $card)
                 @include('partials.catalog.explore-card', ['card' => $card])
             @endforeach
-        </div>
+        </x-ui.card-grid>
     </div>
 </section>
 @endsection

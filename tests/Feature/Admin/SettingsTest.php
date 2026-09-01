@@ -190,13 +190,36 @@ class SettingsTest extends TestCase
             ->assertDontSee('mempool.space');
     }
 
-    public function test_admin_settings_page_loads(): void
+    public function test_admin_site_settings_page_loads(): void
     {
         $admin = User::factory()->create(['email_verified_at' => now()]);
         $admin->assignRole('admin');
 
         $this->actingAs($admin)
             ->get(route('admin.settings'))
+            ->assertOk()
+            ->assertSee('Site information')
+            ->assertDontSee('Manual bank transfer');
+    }
+
+    public function test_admin_email_settings_page_loads(): void
+    {
+        $admin = User::factory()->create(['email_verified_at' => now()]);
+        $admin->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->get(route('admin.settings.email-settings'))
+            ->assertOk()
+            ->assertSee('Brevo (primary)');
+    }
+
+    public function test_admin_payment_settings_page_loads(): void
+    {
+        $admin = User::factory()->create(['email_verified_at' => now()]);
+        $admin->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->get(route('admin.settings.payments'))
             ->assertOk()
             ->assertSee('Manual bank transfer');
     }

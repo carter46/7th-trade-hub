@@ -9,7 +9,7 @@
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
-        ['Settings', route('admin.settings')],
+        ['Site Settings', route('admin.settings')],
         ['Marketing & Tracking', null],
     ]"
 >

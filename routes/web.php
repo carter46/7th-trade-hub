@@ -544,6 +544,8 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::delete('/media/{mediaAsset}', [MediaLibraryController::class, 'destroy'])->name('.media.destroy');
         Route::post('/media/{mediaAsset}/replace', [MediaLibraryController::class, 'replace'])->name('.media.replace');
         Route::get('/settings', [AdminSettingsController::class, 'index'])->name('.settings');
+        Route::get('/settings/email', [AdminSettingsController::class, 'emailSettings'])->name('.settings.email-settings');
+        Route::get('/settings/payments', [AdminSettingsController::class, 'paymentSettings'])->name('.settings.payments');
         Route::post('/settings/branding', [AdminSettingsController::class, 'updateBranding'])->name('.settings.branding');
         Route::post('/settings/contact', [AdminSettingsController::class, 'updateContact'])->name('.settings.contact');
         Route::post('/settings/social', [AdminSettingsController::class, 'updateSocial'])->name('.settings.social');

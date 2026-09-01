@@ -12,6 +12,33 @@
         ['Audit Logs', null],
     ]"
 >
+    @if(isset($recentNotificationDeliveries) && $recentNotificationDeliveries->isNotEmpty())
+        <x-dashboard.card variant="solid" class="mb-6">
+            <h2 class="text-lg font-semibold text-text-primary mb-1">Notification delivery log</h2>
+            <p class="text-sm text-text-secondary mb-4">Recent admin alert delivery attempts across mail and in-app channels (dedupe, skip, sent, failed). Admin action history is in the table below.</p>
+            <div class="space-y-2">
+                @foreach($recentNotificationDeliveries as $row)
+                    <div class="text-sm text-text-secondary border-t border-border-subtle pt-2 first:border-0 first:pt-0">
+                        <p class="text-text-primary">
+                            {{ $row->created_at?->diffForHumans() }}
+                            · {{ $row->notification_type }}
+                            · {{ $row->channel }}
+                            · <span class="font-medium {{ $row->status === 'sent' ? 'text-success' : ($row->status === 'failed' ? 'text-danger' : '') }}">{{ $row->status }}</span>
+                            @if($row->profile) · {{ $row->profile }}@endif
+                            @if($row->recipient) · {{ $row->recipient }}@endif
+                        </p>
+                        @if($row->dedupe_key)
+                            <p class="text-xs text-text-muted">dedupe: {{ $row->dedupe_key }}</p>
+                        @endif
+                        @if($row->failure_reason)
+                            <p class="text-danger break-words">{{ $row->failure_reason }}</p>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        </x-dashboard.card>
+    @endif
+
     <x-dashboard.table
         :empty="$logs->isEmpty()"
         empty-title="No audit logs yet"

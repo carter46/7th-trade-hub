@@ -216,7 +216,7 @@ class EmailService
                     type: 'email.delivery_failed',
                     title: 'Email delivery failed',
                     body: mb_substr('Subject: '.$email->subject.' — '.$error, 0, 2000),
-                    actionUrl: route('admin.settings'),
+                    actionUrl: route('admin.settings.email-settings'),
                     meta: [
                         'template' => $email->templateKey,
                         'to' => $email->to,

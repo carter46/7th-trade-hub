@@ -9,7 +9,6 @@ use App\Models\EmailIdentity;
 use App\Models\IntegrationProvider;
 use App\Models\SystemSetting;
 use App\Models\MediaUsage;
-use App\Models\NotificationDeliveryLog;
 use App\Models\SocialLink;
 use App\Modules\Admin\Services\AuditLogService;
 use App\Services\Analytics\Providers\GoogleAnalyticsProvider;
@@ -44,8 +43,6 @@ class SettingsController extends Controller
 
     public function index(): View
     {
-        $brevo = IntegrationProvider::forProvider(IntegrationProvider::BREVO);
-        $laravelMail = IntegrationProvider::forProvider(IntegrationProvider::LARAVEL_MAIL);
         $chat = $this->liveChat->resolved();
         $branding = $this->branding->all();
         $contact = $this->contact->all();
@@ -55,25 +52,36 @@ class SettingsController extends Controller
             'contact' => $contact,
             'liveChat' => $chat,
             'socialLinks' => SocialLink::query()->orderBy('sort_order')->orderBy('id')->get(),
+            'googleIdentity' => IntegrationProvider::forProvider(IntegrationProvider::GOOGLE_IDENTITY),
+            'googleIdentityJsOrigin' => rtrim((string) config('app.url'), '/'),
+        ]);
+    }
+
+    public function emailSettings(): View
+    {
+        $branding = $this->branding->all();
+
+        return view('dashboard.admin.settings-email', [
+            'brevo' => IntegrationProvider::forProvider(IntegrationProvider::BREVO),
+            'laravelMail' => IntegrationProvider::forProvider(IntegrationProvider::LARAVEL_MAIL),
             'emailIdentities' => Schema::hasTable('email_identities')
                 ? EmailIdentity::query()->orderBy('id')->get()
                 : collect(),
+            'recentEmailFailures' => $this->safeRecentEmailFailures(),
+            'siteName' => $branding['site_name'],
+        ]);
+    }
+
+    public function paymentSettings(): View
+    {
+        return view('dashboard.admin.settings-payments', [
+            'monnify' => IntegrationProvider::forProvider(IntegrationProvider::MONNIFY),
+            'monnifyWebhookUrl' => url('/webhooks/monnify'),
             'manualBankTransfer' => SystemSetting::manualBankTransferDetails(),
             'manualBankTransferEnabled' => SystemSetting::manualBankTransferEnabled(),
             'manualBankTransferSaveUrl' => Route::has('admin.settings.manual-bank-transfer')
                 ? route('admin.settings.manual-bank-transfer')
                 : null,
-            'brevo' => $brevo,
-            'laravelMail' => $laravelMail,
-            'recentEmailFailures' => $this->safeRecentEmailFailures(),
-            'recentNotificationDeliveries' => $this->safeRecentNotificationDeliveries(),
-            'analyticsGoogle' => AnalyticsProvider::forProvider(AnalyticsProvider::PROVIDER_GOOGLE_ANALYTICS),
-            'analyticsClarity' => AnalyticsProvider::forProvider(AnalyticsProvider::PROVIDER_MICROSOFT_CLARITY),
-            'googleIdentity' => IntegrationProvider::forProvider(IntegrationProvider::GOOGLE_IDENTITY),
-            'googleIdentityJsOrigin' => rtrim((string) config('app.url'), '/'),
-            'monnify' => IntegrationProvider::forProvider(IntegrationProvider::MONNIFY),
-            'monnifyWebhookUrl' => url('/webhooks/monnify'),
-            'siteName' => $branding['site_name'],
         ]);
     }
 
@@ -793,25 +801,6 @@ class SettingsController extends Controller
                 ->where('success', false)
                 ->latest('created_at')
                 ->limit(10)
-                ->get();
-        } catch (Throwable) {
-            return collect();
-        }
-    }
-
-    /**
-     * @return \Illuminate\Support\Collection<int, NotificationDeliveryLog>
-     */
-    private function safeRecentNotificationDeliveries(): \Illuminate\Support\Collection
-    {
-        if (! Schema::hasTable('notification_delivery_logs')) {
-            return collect();
-        }
-
-        try {
-            return NotificationDeliveryLog::query()
-                ->latest('created_at')
-                ->limit(25)
                 ->get();
         } catch (Throwable) {
             return collect();
