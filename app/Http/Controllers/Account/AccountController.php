@@ -75,14 +75,20 @@ class AccountController extends Controller
         return Redirect::route('home');
     }
 
-    public function notifications(Request $request): RedirectResponse
+    public function notifications(Request $request): View|RedirectResponse
     {
-        // Single inbox — Account → Notifications is not a separate page.
         if (self::routePrefix($request) === 'admin') {
             return Redirect::route('admin.inbox');
         }
 
-        return Redirect::route('dashboard.notifications');
+        $user = $request->user();
+        $unreadCount = (\Illuminate\Support\Facades\Schema::hasTable('user_notifications') && $user)
+            ? (int) $user->notifications()->whereNull('read_at')->count()
+            : 0;
+
+        return $this->view($request, 'notifications', [
+            'unreadCount' => $unreadCount,
+        ]);
     }
 
     public function kyc(Request $request): View|RedirectResponse

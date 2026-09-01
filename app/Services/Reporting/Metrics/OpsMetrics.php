@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\SupportTicket;
 use App\Models\User;
 use App\Models\WalletFunding;
+use App\Models\Withdrawal;
 use App\Services\Reporting\ReportingRange;
 use Illuminate\Support\Facades\DB;
 
@@ -70,6 +71,16 @@ class OpsMetrics
     public function pendingEscrows(): int
     {
         return (int) Escrow::query()->whereIn('status', ['locked', 'disputed'])->count();
+    }
+
+    public function pendingWithdrawals(): int
+    {
+        return (int) Withdrawal::query()
+            ->where(function ($query) {
+                $query->whereIn('status', Withdrawal::OPEN_STATUSES)
+                    ->orWhereIn('internal_status', Withdrawal::OPEN_INTERNAL);
+            })
+            ->count();
     }
 
     public function lockedEscrowVolume(): float

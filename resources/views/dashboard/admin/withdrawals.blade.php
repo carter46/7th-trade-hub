@@ -3,6 +3,13 @@
 @section('title', 'Withdrawals')
 
 @section('content')
+@php
+    $monnifyEnv = null;
+    if ($monnifyEnabled ?? false) {
+        $provider = \App\Models\IntegrationProvider::forProvider(\App\Models\IntegrationProvider::MONNIFY);
+        $monnifyEnv = (string) ($provider->meta['environment'] ?? 'sandbox');
+    }
+@endphp
 <x-layout.page
     title="Withdrawals"
     subtitle="Approve &amp; Send payouts to verified bank snapshots."
@@ -12,9 +19,24 @@
         ['Withdrawals', null],
     ]"
 >
+    @if ($errors->any())
+        <x-dashboard.alert type="danger">
+            {{ $errors->first() }}
+        </x-dashboard.alert>
+    @endif
+    @if (session('status'))
+        <x-dashboard.alert type="success">{{ session('status') }}</x-dashboard.alert>
+    @endif
+    @if (session('error'))
+        <x-dashboard.alert type="danger">{{ session('error') }}</x-dashboard.alert>
+    @endif
+
     @if ($monnifyEnabled && $merchantBalance !== null)
         <x-dashboard.alert type="info" class="mb-4">
             Merchant disbursement balance: <strong>₦{{ number_format($merchantBalance, 2) }}</strong>
+            @if ($monnifyEnv === 'sandbox')
+                <span class="block mt-1 text-xs">Sandbox mode — payouts use Monnify test disbursements. Status should move to processing or completed after approve; errors appear above.</span>
+            @endif
         </x-dashboard.alert>
     @endif
 
@@ -48,9 +70,10 @@
                             <x-dashboard.menu-item type="button" variant="success" @click="$dispatch('open-modal', 'approve-wd-{{ $w->id }}')">Approve &amp; Send</x-dashboard.menu-item>
                             <x-dashboard.menu-item type="button" variant="danger" @click="$dispatch('open-modal', 'reject-wd-{{ $w->id }}')">Reject</x-dashboard.menu-item>
                         </x-dashboard.row-actions>
+
                         <x-dashboard.modal name="approve-wd-{{ $w->id }}" title="Approve & Send?" confirm-label="Approve & Send" :form-action="route('admin.withdrawals.approve', $w)">
                             <div class="space-y-3 text-sm">
-                                <p>This initiates a <strong>real bank transfer</strong>.</p>
+                                <p>This initiates a bank transfer via Monnify.</p>
                                 <ul class="list-disc pl-5 space-y-1">
                                     <li>User: {{ \App\Models\User::labelFor($w->user) }}</li>
                                     <li>Amount: ₦{{ number_format($w->amount, 2) }}</li>
@@ -84,6 +107,7 @@
             </tr>
         @endforeach
     </x-dashboard.table>
+
     <x-slot:pagination>
         <x-dashboard.pagination :paginator="$withdrawals" />
     </x-slot:pagination>

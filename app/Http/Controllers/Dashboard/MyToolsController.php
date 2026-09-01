@@ -58,8 +58,7 @@ class MyToolsController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return view('dashboard.user.my-tools.index', [
-            'activeTab' => 'websites',
+        return $this->toolsView($request, 'websites', [
             'tools' => $tools,
             'domains' => null,
             'filters' => [
@@ -107,12 +106,25 @@ class MyToolsController extends Controller
             ->sortByDesc(fn ($row) => $row->created_at?->timestamp ?? 0)
             ->values();
 
-        return view('dashboard.user.my-tools.index', [
-            'activeTab' => 'domains',
+        return $this->toolsView($request, 'domains', [
             'tools' => null,
             'domains' => $domains,
             'filters' => [],
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function toolsView(Request $request, string $activeTab, array $data): View
+    {
+        if ($request->headers->get('X-Dashboard-Tab') === '1') {
+            return view('dashboard.user.my-tools._panel-'.$activeTab, $data);
+        }
+
+        return view('dashboard.user.my-tools.index', array_merge($data, [
+            'activeTab' => $activeTab,
+        ]));
     }
 
     public function show(Request $request, UserTool $tool): View

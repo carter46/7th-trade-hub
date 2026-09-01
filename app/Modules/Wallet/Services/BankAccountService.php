@@ -25,6 +25,7 @@ class BankAccountService
 
     public function __construct(
         private PaymentRailInterface $rail,
+        private BankCatalogService $bankCatalog,
         private AuditLogService $audit,
         private EmailService $email,
     ) {}
@@ -130,6 +131,8 @@ class BankAccountService
             throw new InvalidArgumentException('Bank verification is temporarily unavailable.');
         }
 
+        $this->assertAllowedBank($bankCode, $bankName);
+
         $resolved = $this->rail->resolveAccount($accountNumber, $bankCode);
 
         return [
@@ -155,6 +158,8 @@ class BankAccountService
         if (! $this->rail->isConfigured()) {
             throw new InvalidArgumentException('Bank verification is temporarily unavailable.');
         }
+
+        $this->assertAllowedBank($bankCode, $bankName);
 
         // Never trust client name/account — re-resolve with Monnify at confirm time.
         $resolved = $this->rail->resolveAccount($accountNumber, $bankCode);
@@ -248,5 +253,26 @@ class BankAccountService
                 'otp' => __('Verify the email code before continuing.'),
             ]);
         }
+    }
+
+    private function assertAllowedBank(string $bankCode, string $bankName): void
+    {
+        $allowed = collect($this->bankCatalog->allowedBanks());
+
+        if ($allowed->contains(fn (array $bank) => $bank['code'] === $bankCode)) {
+            return;
+        }
+
+        $nameMatch = $allowed->contains(
+            fn (array $bank) => mb_strtolower($bank['name']) === mb_strtolower(trim($bankName))
+        );
+
+        if ($nameMatch) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'bank_code' => __('This bank is not supported for withdrawals.'),
+        ]);
     }
 }

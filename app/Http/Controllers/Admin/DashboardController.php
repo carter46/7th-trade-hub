@@ -315,16 +315,25 @@ class DashboardController extends Controller
 
         if ($canFinance) {
             $fundings = $pulse['fundings'] ?? [];
+            $pendingWithdrawals = (int) ($pulse['pending_withdrawals'] ?? 0);
+            $description = isset($fundings['sum'])
+                ? '₦'.number_format((float) $fundings['sum'], 0).' funding volume'
+                : ($fundings['description'] ?? $rangeLabel);
+            if ($pendingWithdrawals > 0) {
+                $description .= ' · '.number_format($pendingWithdrawals).' pending withdrawal'
+                    .($pendingWithdrawals === 1 ? '' : 's');
+            }
             $items[] = [
                 'label' => 'Wallets Funded',
                 'value' => $fundings['formatted'] ?? '0',
                 'accent' => 'indigo',
                 'delta' => $fundings['delta'] ?? null,
                 'delta_label' => $fundings['delta_label'] ?? 'vs prior period',
-                'description' => isset($fundings['sum'])
-                    ? '₦'.number_format((float) $fundings['sum'], 0).' volume'
-                    : ($fundings['description'] ?? $rangeLabel),
+                'description' => $description,
                 'sparkline' => $fundings['sparkline'] ?? ($growth['fundings']['values'] ?? []),
+                'badge' => $pendingWithdrawals > 0
+                    ? ['label' => number_format($pendingWithdrawals).' pending', 'class' => 'bg-amber-50 text-amber-700']
+                    : null,
                 'href' => route('admin.fundings'),
             ];
         }

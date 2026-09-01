@@ -4,18 +4,26 @@
 
 @section('content')
 <x-layout.page
-    title="Withdrawal {{ $withdrawal->reference }}"
-    subtitle="Status: {{ $withdrawal->status }}{{ $withdrawal->internal_status ? ' / '.$withdrawal->internal_status : '' }}"
+    title="Withdrawal"
+    :subtitle="'Status: '.$withdrawal->status.($withdrawal->internal_status ? ' / '.$withdrawal->internal_status : '')"
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
         ['Withdraw', route('dashboard.withdrawal.index')],
-        [$withdrawal->reference, null],
+        ['Receipt', null],
     ]"
 >
+    <p class="-mt-2 font-mono text-xs leading-relaxed text-text-muted break-all sm:text-sm">
+        {{ $withdrawal->reference }}
+    </p>
+
     <div class="grid gap-6 lg:grid-cols-2">
         <x-dashboard.card>
             <dl class="space-y-2 text-sm">
+                <div class="flex flex-col gap-1 sm:flex-row sm:justify-between sm:gap-3">
+                    <dt class="shrink-0 text-text-muted">Reference</dt>
+                    <dd class="font-mono text-xs break-all sm:text-right sm:text-sm">{{ $withdrawal->reference }}</dd>
+                </div>
                 <div class="flex justify-between"><dt class="text-text-muted">Amount</dt><dd class="font-medium">₦{{ number_format($withdrawal->amount, 2) }}</dd></div>
                 <div class="flex justify-between"><dt class="text-text-muted">Bank</dt><dd>{{ $withdrawal->bank_name }}</dd></div>
                 <div class="flex justify-between"><dt class="text-text-muted">Account</dt><dd>{{ $withdrawal->maskedAccountNumber() }}</dd></div>

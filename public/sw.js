@@ -1,12 +1,14 @@
 "use strict";
 
-const CACHE_NAME = "offline-cache-v3";
+const CACHE_NAME = "offline-cache-v4";
 const OFFLINE_URL = "/offline.html";
 
 const filesToCache = [OFFLINE_URL];
 
-/** Never substitute offline.html for these navigations (payments, webhooks). */
+/** Never substitute offline.html for these navigations (payments, webhooks, dashboard). */
 const OFFLINE_EXEMPT_PATHS = [
+    "/dashboard/",
+    "/admin/",
     "/dashboard/deposit/callback",
     "/payment/callback",
     "/webhooks/",
@@ -16,7 +18,7 @@ function isOfflineExempt(url) {
     try {
         const path = new URL(url).pathname;
 
-        return OFFLINE_EXEMPT_PATHS.some((prefix) => path.includes(prefix));
+        return OFFLINE_EXEMPT_PATHS.some((prefix) => path.startsWith(prefix) || path.includes(prefix));
     } catch {
         return false;
     }
@@ -46,11 +48,12 @@ self.addEventListener("activate", (event) => {
     );
 });
 
-function offlineExemptFallback(requestUrl) {
+function offlineExemptFallback(requestUrl, label) {
     const safeUrl = String(requestUrl).replace(/"/g, '&quot;');
+    const title = label || "Could not reach the server";
 
     return new Response(
-        '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Confirming payment</title></head><body style="font-family:system-ui,sans-serif;padding:2rem;text-align:center"><h1>Could not reach the server</h1><p>Your payment may still have gone through. Try again or open your deposits.</p><p><a href="' + safeUrl + '">Retry this page</a></p><p><a href="/dashboard/deposit">Go to deposits</a></p></body></html>',
+        '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + title + '</title></head><body style="font-family:system-ui,sans-serif;padding:2rem;text-align:center"><h1>' + title + '</h1><p>Check your connection, then try again.</p><p><a href="' + safeUrl + '">Retry this page</a></p><p><a href="/dashboard">Go to dashboard</a></p></body></html>',
         { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } },
     );
 }
@@ -65,11 +68,7 @@ self.addEventListener("fetch", (event) => {
 
         event.respondWith(
             fetch(event.request)
-                .then((response) => {
-                    // Pass through all HTTP responses (redirects, 4xx, 5xx).
-                    // Only network failures should show the offline page.
-                    return response;
-                })
+                .then((response) => response)
                 .catch(() => {
                     if (exempt) {
                         return offlineExemptFallback(event.request.url);

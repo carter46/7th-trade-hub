@@ -5,6 +5,8 @@ namespace App\Modules\Wallet\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Wallet\Payments\Contracts\PaymentRailInterface;
 use App\Modules\Wallet\Services\BankAccountService;
+use App\Modules\Wallet\Services\BankCatalogService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -13,6 +15,7 @@ class BankAccountController extends Controller
 {
     public function __construct(
         private BankAccountService $banks,
+        private BankCatalogService $bankCatalog,
         private PaymentRailInterface $rail,
     ) {}
 
@@ -72,7 +75,7 @@ class BankAccountController extends Controller
             ->with('status', __('Email verified. Enter your new bank account.'));
     }
 
-    public function resolve(Request $request): RedirectResponse
+    public function resolve(Request $request): RedirectResponse|JsonResponse
     {
         $validated = $request->validate([
             'bank_code' => ['required', 'string', 'max:20'],
@@ -88,7 +91,15 @@ class BankAccountController extends Controller
                 $validated['account_number'],
             );
         } catch (\Throwable $e) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $e->getMessage()], 422);
+            }
+
             return back()->withInput()->with('error', $e->getMessage());
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json(['resolved' => $resolved]);
         }
 
         return redirect()
@@ -131,14 +142,6 @@ class BankAccountController extends Controller
      */
     private function safeBanks(): array
     {
-        try {
-            if ($this->rail->isConfigured()) {
-                return $this->rail->listBanks();
-            }
-        } catch (\Throwable) {
-            //
-        }
-
-        return [];
+        return $this->bankCatalog->allowedBanks();
     }
 }

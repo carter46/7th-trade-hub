@@ -73,6 +73,7 @@ class ReportingService
                     'description' => 'New registrations',
                 ],
                 'pending_kyc' => $this->ops->pendingKyc(),
+                'pending_withdrawals' => $this->ops->pendingWithdrawals(),
                 'pending_escrows' => $this->ops->pendingEscrows(),
                 'escrow_locked_ngn' => $this->ops->lockedEscrowVolume(),
                 'support_waiting' => $this->ops->supportWaiting(),

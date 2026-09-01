@@ -1219,7 +1219,10 @@ document.addEventListener('alpine:init', () => {
         _abort: null,
         _seq: 0,
         _onPopState: null,
-        async navigate(event, href, id) {
+        async navigate(event, href, id, replaceHistory = false) {
+            if (event?.preventDefault) {
+                event.preventDefault();
+            }
             const panel = document.querySelector(this.panelSelector);
             if (!panel) {
                 window.location.href = href;
@@ -1258,7 +1261,12 @@ document.addEventListener('alpine:init', () => {
                 }
                 panel.innerHTML = html;
                 this.activeId = id;
-                history.pushState({ dashboardTab: id }, '', href);
+                const state = { dashboardTab: id };
+                if (replaceHistory) {
+                    history.replaceState(state, '', href);
+                } else {
+                    history.pushState(state, '', href);
+                }
                 if (window.Alpine?.initTree) {
                     window.Alpine.initTree(panel);
                 }
@@ -1276,8 +1284,10 @@ document.addEventListener('alpine:init', () => {
             }
         },
         init() {
-            this._onPopState = () => {
-                window.location.reload();
+            this._onPopState = (event) => {
+                const href = window.location.href;
+                const id = event.state?.dashboardTab ?? this.activeId;
+                this.navigate(null, href, id, true);
             };
             window.addEventListener('popstate', this._onPopState);
         },
@@ -1287,6 +1297,89 @@ document.addEventListener('alpine:init', () => {
             }
             if (this._onPopState) {
                 window.removeEventListener('popstate', this._onPopState);
+            }
+        },
+    }));
+
+    Alpine.data('bankReplaceResolve', (resolveUrl, csrfToken, banks = []) => ({
+        banks: Array.isArray(banks) ? banks : [],
+        bankQuery: '',
+        bankOpen: false,
+        bankCode: '',
+        bankName: '',
+        accountNumber: '',
+        resolving: false,
+        resolved: null,
+        error: '',
+        _resolveTimer: null,
+        get filteredBanks() {
+            const q = String(this.bankQuery || '').trim().toLowerCase();
+            const list = this.banks.filter((bank) => {
+                const name = String(bank?.name || '').toLowerCase();
+                return q === '' ? true : name.includes(q);
+            });
+            return list.slice(0, q === '' ? 12 : 20);
+        },
+        selectBank(bank) {
+            this.bankCode = bank.code;
+            this.bankName = bank.name;
+            this.bankQuery = bank.name;
+            this.bankOpen = false;
+            this.resolved = null;
+            this.error = '';
+            this.tryResolve();
+        },
+        clearBank() {
+            this.bankCode = '';
+            this.bankName = '';
+            this.bankQuery = '';
+            this.bankOpen = false;
+            this.resolved = null;
+            this.error = '';
+        },
+        tryResolve() {
+            clearTimeout(this._resolveTimer);
+            this.error = '';
+            const digits = String(this.accountNumber || '').replace(/\D/g, '');
+            if (!this.bankCode || digits.length < 10) {
+                this.resolved = null;
+                return;
+            }
+            this._resolveTimer = setTimeout(() => this.resolveAccount(digits), 300);
+        },
+        async resolveAccount(digits) {
+            this.resolving = true;
+            this.error = '';
+            try {
+                const res = await fetch(resolveUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({
+                        bank_code: this.bankCode,
+                        bank_name: this.bankName,
+                        account_number: digits,
+                    }),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    this.resolved = null;
+                    this.error = data.message || 'Could not resolve this account.';
+                    return;
+                }
+                this.resolved = data.resolved || null;
+                if (this.resolved) {
+                    this.accountNumber = this.resolved.accountNumber;
+                }
+            } catch {
+                this.resolved = null;
+                this.error = 'Network error. Check your connection and try again.';
+            } finally {
+                this.resolving = false;
             }
         },
     }));

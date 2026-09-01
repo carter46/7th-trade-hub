@@ -129,6 +129,12 @@
             var reloadScheduled = false;
             var maxAutoReloads = 2;
             var reloadKey = 'offline-reload:' + window.location.pathname + window.location.search;
+            var probeStopped = false;
+
+            function isDashboardPath() {
+                var path = window.location.pathname || '';
+                return path.indexOf('/dashboard') === 0 || path.indexOf('/admin') === 0;
+            }
 
             function isPaymentCallback() {
                 var path = window.location.pathname || '';
@@ -182,15 +188,18 @@
                 }
             }
 
-            function scheduleReload() {
-                if (reloadScheduled) {
+            function scheduleReload(finalUrl) {
+                if (reloadScheduled || probeStopped) {
                     return;
                 }
 
                 if (reloadCount() >= maxAutoReloads) {
+                    probeStopped = true;
                     setStatus('Connection looks OK. Use Try again or open the dashboard.');
                     if (messageEl) {
-                        messageEl.textContent = 'Automatic reload stopped to avoid a loop. Your payment may already be complete.';
+                        messageEl.textContent = isDashboardPath()
+                            ? 'Automatic reload stopped to avoid a loop. Use Try again or go to the dashboard.'
+                            : 'Automatic reload stopped to avoid a loop. Your payment may already be complete.';
                     }
                     if (homeLink && isPaymentCallback()) {
                         homeLink.textContent = 'Go to wallet / deposits';
@@ -206,13 +215,14 @@
                     titleEl.textContent = 'Back online';
                 }
 
+                var target = finalUrl || resumeTarget();
                 window.setTimeout(function () {
-                    window.location.replace(resumeTarget());
+                    window.location.replace(target);
                 }, 400);
             }
 
             function probe() {
-                if (checking || reloadScheduled) {
+                if (checking || reloadScheduled || probeStopped) {
                     return Promise.resolve(false);
                 }
 
@@ -225,10 +235,21 @@
                     method: 'GET',
                     cache: 'no-store',
                     credentials: 'same-origin',
+                    redirect: 'follow',
                     headers: { 'X-Offline-Probe': '1' },
                 })
                     .then(function (response) {
                         if (response && response.ok) {
+                            var finalUrl = response.url || '';
+                            if (finalUrl && finalUrl.indexOf('/offline.html') === -1 && finalUrl !== window.location.href) {
+                                scheduleReload(finalUrl);
+                                return true;
+                            }
+                            if (isDashboardPath() && reloadCount() >= maxAutoReloads) {
+                                probeStopped = true;
+                                setStatus('Use Try again or open the dashboard.');
+                                return false;
+                            }
                             scheduleReload();
                             return true;
                         }
@@ -290,7 +311,7 @@
             }
 
             window.setInterval(function () {
-                if (!reloadScheduled && reloadCount() < maxAutoReloads) {
+                if (!reloadScheduled && !probeStopped && reloadCount() < maxAutoReloads) {
                     probe();
                 }
             }, 8000);

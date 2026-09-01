@@ -3,6 +3,12 @@
 @section('title', 'My Tools')
 
 @section('content')
+@php
+    $tabs = [
+        ['id' => 'websites', 'label' => 'My Websites', 'href' => route('dashboard.my-tools')],
+        ['id' => 'domains', 'label' => 'My Domains', 'href' => route('dashboard.my-tools.domains')],
+    ];
+@endphp
 <x-layout.page
     title="My Tools"
     subtitle="Websites and domains you own — separate from order history."
@@ -12,20 +18,10 @@
         ['My Tools', null],
     ]"
 >
-    @include('dashboard.user.my-tools._tabs', ['activeTab' => $activeTab])
+    <x-dashboard.ajax-tabs variant="pills" :tabs="$tabs" :active="$activeTab" />
 
-    <div class="mt-6">
-        @if ($activeTab === 'domains')
-            <p class="mb-4 max-w-3xl text-sm leading-relaxed text-text-secondary">
-                Each domain has its own nameserver configuration. Use Manage to point a domain at your hosting or DNS provider.
-            </p>
-            @include('dashboard.user.my-tools._domains-table')
-        @else
-            <p class="mb-4 max-w-3xl text-sm leading-relaxed text-text-secondary">
-                Website packages and templates you have purchased appear here for setup, access, and renewal. Order receipts stay under Service orders.
-            </p>
-            @include('dashboard.user.my-tools._websites-table')
-        @endif
+    <div id="dashboard-tab-panel" class="mt-6">
+        @include('dashboard.user.my-tools._panel-'.$activeTab)
     </div>
 </x-layout.page>
 @endsection
