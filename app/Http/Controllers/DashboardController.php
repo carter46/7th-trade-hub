@@ -58,6 +58,13 @@ class DashboardController extends Controller
             ->orderByDesc('id')
             ->first();
 
+        $recentlyPurchasedTools = UserTool::query()
+            ->ownedBy($user->id)
+            ->with(['product.heroMedia'])
+            ->orderByDesc('purchased_at')
+            ->limit(6)
+            ->get();
+
         return view('dashboard.user.overview', [
             'wallet' => $wallet,
             'balanceNgn' => $balanceNgn,
@@ -70,6 +77,7 @@ class DashboardController extends Controller
             'myListingsCount' => $myListingsCount,
             'featuredServices' => $featuredServices,
             'marketplacePicks' => $marketplacePicks,
+            'recentlyPurchasedTools' => $recentlyPurchasedTools,
             'kycLevel' => $user->kyc_level,
             'openCryptoSell' => $openCryptoSell,
         ]);

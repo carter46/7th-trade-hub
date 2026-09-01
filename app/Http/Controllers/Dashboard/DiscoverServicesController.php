@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Enums\PlatformProductType;
 use App\Http\Controllers\Controller;
-use App\Models\OrderItem;
 use App\Models\PlatformProduct;
 use App\Modules\Catalog\Services\CatalogBrowseService;
 use App\Modules\Catalog\Services\CatalogContentResolver;
@@ -17,7 +16,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use InvalidArgumentException;
@@ -47,7 +45,7 @@ class DiscoverServicesController extends Controller
             $searchResults = PlatformProduct::query()
                 ->visibleToPublic()
                 ->ofTypeMany($types)
-                ->with(['productType.serviceCategory', 'activeVariants'])
+                ->with(['productType.serviceCategory', 'activeVariants', 'heroMedia'])
                 ->where(function ($inner) use ($q) {
                     $inner->where('title', 'like', "%{$q}%")
                         ->orWhere('short_description', 'like', "%{$q}%");
@@ -58,39 +56,12 @@ class DiscoverServicesController extends Controller
                 ->withQueryString();
         }
 
-        $purchasedProductIds = collect();
-        if (Schema::hasTable('order_items')) {
-            $purchasedProductIds = OrderItem::query()
-                ->whereHas('order', function ($q) use ($user) {
-                    $q->where('user_id', $user->id)
-                        ->whereIn('status', ['paid', 'completed', 'processing', 'delivered']);
-                })
-                ->where(function ($q) {
-                    $q->where('item_type', 'platform_product')
-                        ->orWhereNotNull('platform_product_variant_id');
-                })
-                ->with('variant:id,platform_product_id')
-                ->orderByDesc('id')
-                ->limit(20)
-                ->get()
-                ->map(fn (OrderItem $item) => $item->item_type === 'platform_product'
-                    ? $item->item_id
-                    : $item->variant?->platform_product_id)
-                ->filter()
-                ->unique();
-        }
-
-        $recentlyPurchased = $purchasedProductIds->isNotEmpty()
-            ? PlatformProduct::query()->visibleToPublic()->whereIn('id', $purchasedProductIds)->limit(6)->get()
-            : collect();
-
         $wallet = $user->wallet ?? null;
 
         return view('dashboard.user.discover.services', compact(
             'groups',
             'searchResults',
             'q',
-            'recentlyPurchased',
             'wallet',
         ));
     }

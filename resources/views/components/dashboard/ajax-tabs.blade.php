@@ -24,6 +24,7 @@
         <a
             href="{{ $tab['href'] }}"
             data-tab-id="{{ $id }}"
+            data-no-page-loader
             @click.prevent="navigate($event, '{{ $tab['href'] }}', '{{ $id }}')"
             :aria-current="activeId === '{{ $id }}' ? 'page' : null"
             @class([

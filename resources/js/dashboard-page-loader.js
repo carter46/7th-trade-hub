@@ -235,7 +235,7 @@ function isInternalNavLink(anchor) {
     if (!anchor || anchor.tagName !== 'A') {
         return false;
     }
-    if (anchor.hasAttribute('data-no-page-loader')) {
+    if (anchor.hasAttribute('data-no-page-loader') || anchor.hasAttribute('data-tab-id')) {
         return false;
     }
     if (anchor.target && anchor.target.toLowerCase() === '_blank') {

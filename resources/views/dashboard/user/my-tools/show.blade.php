@@ -38,22 +38,24 @@
     </x-slot:actions>
 
     <div class="space-y-6">
-        <x-dashboard.card class="overflow-hidden !p-0">
-            <div class="grid gap-0 lg:grid-cols-[minmax(0,280px)_1fr]">
-                <div class="relative aspect-[4/3] bg-muted lg:aspect-auto lg:min-h-[220px]">
-                    @if ($heroUrl)
-                        <img
-                            src="{{ $heroUrl }}"
-                            alt="{{ $product?->title ?? $tool->resolvedDisplayName() }}"
-                            class="h-full w-full object-cover"
-                        >
-                    @else
-                        <div class="flex h-full min-h-[180px] items-center justify-center bg-gradient-to-br from-primary/20 via-muted to-elevated">
-                            <x-ui.icon name="monitor" class="h-12 w-12 text-primary/50" />
-                        </div>
-                    @endif
+        <x-dashboard.card>
+            <div class="grid gap-4 lg:grid-cols-[minmax(0,240px)_1fr] lg:gap-6">
+                <div class="rounded-xl border border-border-subtle bg-muted/40 p-3 sm:p-4">
+                    <div class="relative aspect-[4/3] overflow-hidden rounded-lg bg-muted lg:min-h-[200px]">
+                        @if ($heroUrl)
+                            <img
+                                src="{{ $heroUrl }}"
+                                alt="{{ $product?->title ?? $tool->resolvedDisplayName() }}"
+                                class="absolute inset-0 h-full w-full object-cover"
+                            >
+                        @else
+                            <div class="flex h-full min-h-[180px] items-center justify-center bg-gradient-to-br from-primary/20 via-muted to-elevated">
+                                <x-ui.icon name="monitor" class="h-12 w-12 text-primary/50" />
+                            </div>
+                        @endif
+                    </div>
                 </div>
-                <div class="space-y-4 p-5 sm:p-6">
+                <div class="space-y-4">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wider text-primary">Your service</p>
                         <h2 class="mt-1 text-2xl font-bold text-text-primary">{{ $product?->title ?? $tool->resolvedDisplayName() }}</h2>

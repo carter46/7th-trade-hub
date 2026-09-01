@@ -14,7 +14,7 @@
 >
     <div class="space-y-6">
         @if(!empty($typeCards) && $typeCards->isNotEmpty())
-            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
                 @foreach($typeCards as $card)
                     @php
                         $image = $card['card_image'] ?? null;
@@ -30,19 +30,21 @@
                         $label = $card['label'] ?? $card['slug'] ?? 'Service';
                         $initials = strtoupper(mb_substr(preg_replace('/[^A-Za-z0-9]/', '', $label) ?: 'S', 0, 2));
                     @endphp
-                    <x-dashboard.card :padding="false" class="overflow-hidden">
-                        <div class="relative aspect-[2/1] overflow-hidden bg-muted">
-                            @if($imageSrc)
-                                <img src="{{ $imageSrc }}" alt="" class="h-full w-full object-cover">
-                            @else
-                                <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/40 via-muted to-elevated">
-                                    <span class="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/15 text-xs font-bold text-white" aria-hidden="true">
-                                        {{ $initials }}
-                                    </span>
-                                </div>
-                            @endif
+                    <x-dashboard.card :padding="false" class="flex h-full flex-col overflow-hidden">
+                        <div class="p-3">
+                            <div class="relative aspect-[4/3] overflow-hidden rounded-lg bg-muted">
+                                @if($imageSrc)
+                                    <img src="{{ $imageSrc }}" alt="" class="h-full w-full object-cover">
+                                @else
+                                    <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/40 via-muted to-elevated">
+                                        <span class="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/15 text-xs font-bold text-white" aria-hidden="true">
+                                            {{ $initials }}
+                                        </span>
+                                    </div>
+                                @endif
+                            </div>
                         </div>
-                        <div class="space-y-2 p-4">
+                        <div class="flex flex-1 flex-col space-y-2 px-4 pb-4">
                             <div class="font-semibold text-text-primary">{{ $label }}</div>
                             @if(!empty($card['short_description']))
                                 <p class="text-sm text-text-secondary line-clamp-2">{{ $card['short_description'] }}</p>
@@ -51,9 +53,11 @@
                                 <p class="text-xs text-text-muted">{{ $card['meta'] }}</p>
                             @endif
                             @if(!empty($card['href']))
-                                <x-dashboard.button :href="$card['href']" size="xs">
-                                    {{ $card['cta'] ?? 'View products' }}
-                                </x-dashboard.button>
+                                <div class="mt-auto pt-2">
+                                    <x-dashboard.button :href="$card['href']" size="xs" class="w-full sm:w-auto">
+                                        {{ $card['cta'] ?? 'View products' }}
+                                    </x-dashboard.button>
+                                </div>
                             @endif
                         </div>
                     </x-dashboard.card>
@@ -75,35 +79,9 @@
             @if(!$products || $products->isEmpty())
                 <p class="text-text-muted">No products found.</p>
             @else
-                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
                     @foreach($products as $product)
-                        @php
-                            $heroUrl = media_url($product->heroMedia, $product->hero_image, 'medium');
-                            $initials = strtoupper(mb_substr(preg_replace('/[^A-Za-z0-9]/', '', $product->title) ?: 'P', 0, 2));
-                        @endphp
-                        <x-dashboard.card :padding="false" class="overflow-hidden">
-                            <a href="{{ route('dashboard.services.product', $product->slug) }}" class="relative block aspect-[2/1] bg-muted">
-                                @if($heroUrl)
-                                    <img src="{{ $heroUrl }}" alt="" class="h-full w-full object-contain">
-                                @else
-                                    <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/40 via-muted to-elevated">
-                                        <span class="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/15 text-xs font-bold text-white" aria-hidden="true">
-                                            {{ $initials }}
-                                        </span>
-                                    </div>
-                                @endif
-                            </a>
-                            <div class="space-y-2 p-4">
-                                <div class="font-semibold text-text-primary">{{ $product->title }}</div>
-                                @if(filled($product->short_description))
-                                    <p class="text-sm text-text-secondary line-clamp-2">{{ $product->short_description }}</p>
-                                @endif
-                                <div class="flex items-center justify-between gap-2 pt-1">
-                                    <span class="font-semibold text-primary">From ₦{{ number_format($product->displayPrice(), 0) }}</span>
-                                    <x-dashboard.button :href="route('dashboard.services.product', $product->slug)" size="xs">View</x-dashboard.button>
-                                </div>
-                            </div>
-                        </x-dashboard.card>
+                        @include('dashboard.user.partials.service-product-card', ['product' => $product])
                     @endforeach
                 </div>
                 <div class="mt-4">

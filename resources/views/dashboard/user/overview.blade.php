@@ -83,13 +83,27 @@
                 :action="['href' => route('dashboard.services'), 'label' => 'Browse services']"
             />
         @else
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
                 @foreach($featuredServices as $product)
                     @include('dashboard.user.partials.service-product-card', ['product' => $product])
                 @endforeach
             </div>
         @endif
     </section>
+
+    @if(($recentlyPurchasedTools ?? collect())->isNotEmpty())
+        <section class="mt-8 space-y-4">
+            <div>
+                <h2 class="text-lg font-semibold text-text-primary">Recently purchased</h2>
+                <p class="mt-1 text-sm text-text-secondary">Jump back to services in My Tools.</p>
+            </div>
+            <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+                @foreach($recentlyPurchasedTools as $tool)
+                    @include('dashboard.user.partials.recently-purchased-tool-card', ['tool' => $tool])
+                @endforeach
+            </div>
+        </section>
+    @endif
 
     <section class="mt-8 space-y-4">
         <div class="flex flex-wrap items-end justify-between gap-3">
@@ -108,16 +122,18 @@
                 :action="['href' => route('dashboard.marketplace'), 'label' => 'Browse marketplace']"
             />
         @else
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
                 @foreach($marketplacePicks as $listing)
-                    <x-dashboard.card class="h-full">
+                    <x-dashboard.card class="flex h-full flex-col">
                         <a href="{{ route('dashboard.marketplace.show', $listing->slug) }}" class="font-semibold text-text-primary line-clamp-2 hover:text-primary">{{ $listing->title }}</a>
                         <div class="mt-1 text-xs text-text-muted">{{ $listing->marketplaceProduct?->name ?? 'Listing' }}</div>
                         @if(filled($listing->description))
                             <p class="mt-2 text-sm text-text-secondary line-clamp-2">{{ $listing->description }}</p>
                         @endif
-                        <div class="mt-3 text-primary font-bold">₦{{ number_format((float) $listing->price, 0) }}</div>
-                        <x-dashboard.button class="mt-3" :href="route('dashboard.marketplace.show', $listing->slug)" size="sm">View listing</x-dashboard.button>
+                        <div class="mt-auto flex flex-col gap-2 pt-3">
+                            <div class="text-primary font-bold">₦{{ number_format((float) $listing->price, 0) }}</div>
+                            <x-dashboard.button :href="route('dashboard.marketplace.show', $listing->slug)" size="sm" class="w-full sm:w-auto">View listing</x-dashboard.button>
+                        </div>
                     </x-dashboard.card>
                 @endforeach
             </div>
