@@ -265,7 +265,7 @@
                                 {{ $row->created_at?->diffForHumans() }}
                                 · {{ $row->notification_type }}
                                 · {{ $row->channel }}
-                                · <span @class(['font-medium', 'text-success' => $row->status === 'sent', 'text-danger' => $row->status === 'failed'])>{{ $row->status }}</span>
+                                · <span class="font-medium {{ $row->status === 'sent' ? 'text-success' : ($row->status === 'failed' ? 'text-danger' : '') }}">{{ $row->status }}</span>
                                 @if($row->profile) · {{ $row->profile }}@endif
                                 @if($row->recipient) · {{ $row->recipient }}@endif
                             </p>
@@ -653,7 +653,12 @@
             <p class="text-sm text-text-secondary mb-4">
                 Let customers pay for platform services by bank transfer at checkout. Not used for wallet funding — wallet top-ups are gateway-only.
             </p>
-            <form method="POST" action="{{ route('admin.settings.manual-bank-transfer') }}" class="space-y-4">
+            @if(empty($manualBankTransferSaveUrl))
+                <x-dashboard.alert type="warning">
+                    Manual bank transfer save route is not registered. Run <code class="text-xs">php artisan route:clear</code> after deploy, then reload.
+                </x-dashboard.alert>
+            @else
+            <form method="POST" action="{{ $manualBankTransferSaveUrl }}" class="space-y-4">
                 @csrf
                 <input type="hidden" name="manual_bank_transfer_enabled" value="0">
                 <x-dashboard.toggle
@@ -691,6 +696,7 @@
                 </div>
                 <x-dashboard.button type="submit" variant="primary">Save manual bank transfer settings</x-dashboard.button>
             </form>
+            @endif
         </x-dashboard.card>
 
     </div>

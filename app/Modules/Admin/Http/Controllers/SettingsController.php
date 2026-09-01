@@ -24,6 +24,7 @@ use App\Services\Communications\Social\SocialLinkRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 use Throwable;
@@ -59,21 +60,13 @@ class SettingsController extends Controller
                 : collect(),
             'manualBankTransfer' => SystemSetting::manualBankTransferDetails(),
             'manualBankTransferEnabled' => SystemSetting::manualBankTransferEnabled(),
+            'manualBankTransferSaveUrl' => Route::has('admin.settings.manual-bank-transfer')
+                ? route('admin.settings.manual-bank-transfer')
+                : null,
             'brevo' => $brevo,
             'laravelMail' => $laravelMail,
-            'recentEmailFailures' => Schema::hasTable('email_delivery_attempts')
-                ? EmailDeliveryAttempt::query()
-                    ->where('success', false)
-                    ->latest('created_at')
-                    ->limit(10)
-                    ->get()
-                : collect(),
-            'recentNotificationDeliveries' => Schema::hasTable('notification_delivery_logs')
-                ? NotificationDeliveryLog::query()
-                    ->latest('created_at')
-                    ->limit(25)
-                    ->get()
-                : collect(),
+            'recentEmailFailures' => $this->safeRecentEmailFailures(),
+            'recentNotificationDeliveries' => $this->safeRecentNotificationDeliveries(),
             'analyticsGoogle' => AnalyticsProvider::forProvider(AnalyticsProvider::PROVIDER_GOOGLE_ANALYTICS),
             'analyticsClarity' => AnalyticsProvider::forProvider(AnalyticsProvider::PROVIDER_MICROSOFT_CLARITY),
             'googleIdentity' => IntegrationProvider::forProvider(IntegrationProvider::GOOGLE_IDENTITY),
@@ -783,6 +776,45 @@ class SettingsController extends Controller
             return back()->withInput()->withErrors([
                 'monnify_test' => $e->getMessage(),
             ]);
+        }
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, EmailDeliveryAttempt>
+     */
+    private function safeRecentEmailFailures(): \Illuminate\Support\Collection
+    {
+        if (! Schema::hasTable('email_delivery_attempts')) {
+            return collect();
+        }
+
+        try {
+            return EmailDeliveryAttempt::query()
+                ->where('success', false)
+                ->latest('created_at')
+                ->limit(10)
+                ->get();
+        } catch (Throwable) {
+            return collect();
+        }
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, NotificationDeliveryLog>
+     */
+    private function safeRecentNotificationDeliveries(): \Illuminate\Support\Collection
+    {
+        if (! Schema::hasTable('notification_delivery_logs')) {
+            return collect();
+        }
+
+        try {
+            return NotificationDeliveryLog::query()
+                ->latest('created_at')
+                ->limit(25)
+                ->get();
+        } catch (Throwable) {
+            return collect();
         }
     }
 
