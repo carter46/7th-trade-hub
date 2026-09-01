@@ -9,7 +9,7 @@ use App\Http\Controllers\Admin\MediaLibraryController;
 use App\Http\Controllers\Admin\MonitoringController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Account\AccountController;
-use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Dashboard\ManualOrderPaymentController;
 use App\Http\Controllers\Dev\DevUiController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RobotsController;
@@ -18,7 +18,7 @@ use App\Modules\Admin\Http\Controllers\AuditLogController;
 use App\Modules\Admin\Http\Controllers\CryptoSellController as AdminCryptoSellController;
 use App\Modules\Admin\Http\Controllers\CryptoDepositWalletController;
 use App\Modules\Admin\Http\Controllers\IncomingDepositController;
-use App\Modules\Admin\Http\Controllers\OtcPricingController;
+use App\Modules\Admin\Http\Controllers\OrderAdminController;
 use App\Modules\Admin\Http\Controllers\EscrowController as AdminEscrowController;
 use App\Modules\Admin\Http\Controllers\KycController as AdminKycController;
 use App\Modules\Admin\Http\Controllers\ListingAdminController;
@@ -198,10 +198,6 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
             ->name('.deposit.store-checkout');
         Route::get('/deposit/callback', [DepositController::class, 'callback'])->name('.deposit.callback');
         Route::get('/deposit/reserved', [DepositController::class, 'reservedAccount'])->name('.deposit.reserved');
-        Route::get('/deposit/bank', [DepositController::class, 'createBank'])->name('.deposit.create-bank');
-        Route::post('/deposit/bank', [DepositController::class, 'storeBank'])
-            ->middleware('throttle:10,1')
-            ->name('.deposit.store-bank');
         Route::get('/deposit/{funding}', [DepositController::class, 'show'])->name('.deposit.show');
         Route::get('/banks', [BankAccountController::class, 'index'])->name('.banks.index');
         Route::get('/banks/replace', [BankAccountController::class, 'replaceForm'])->name('.banks.replace');
@@ -254,6 +250,10 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
     Route::get('/services/browse/{segment}', [\App\Http\Controllers\Dashboard\DiscoverServicesController::class, 'browse'])->name('.services.browse');
     Route::redirect('/discover/services', '/dashboard/services', 301)->name('.discover.services');
     Route::get('/service-orders', [DashboardController::class, 'serviceOrders'])->name('.service-orders');
+    Route::get('/orders/{order}/manual-payment', [ManualOrderPaymentController::class, 'show'])->name('.orders.manual-payment');
+    Route::post('/orders/{order}/manual-payment', [ManualOrderPaymentController::class, 'submitProof'])
+        ->middleware('throttle:10,1')
+        ->name('.orders.manual-payment.submit');
 
     Route::get('/my-tools', [\App\Http\Controllers\Dashboard\MyToolsController::class, 'index'])->name('.my-tools');
     Route::get('/my-tools/domains', [\App\Http\Controllers\Dashboard\MyToolsController::class, 'domains'])->name('.my-tools.domains');
@@ -402,6 +402,13 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
 
     Route::middleware('permission:finance.manage')->group(function () {
         Route::get('/fundings', [AdminWalletFundingController::class, 'index'])->name('.fundings');
+        Route::get('/orders', [OrderAdminController::class, 'index'])->name('.orders');
+        Route::get('/orders/create', [OrderAdminController::class, 'create'])->name('.orders.create');
+        Route::post('/orders', [OrderAdminController::class, 'store'])->name('.orders.store');
+        Route::get('/orders/{order}/proof', [OrderAdminController::class, 'downloadPaymentProof'])->name('.orders.proof');
+        Route::get('/orders/{order}', [OrderAdminController::class, 'show'])->name('.orders.show');
+        Route::post('/orders/{order}/confirm', [OrderAdminController::class, 'confirmManualPayment'])->name('.orders.confirm');
+        Route::post('/orders/{order}/reject', [OrderAdminController::class, 'rejectManualPayment'])->name('.orders.reject');
         Route::post('/fundings/{funding}/approve', [AdminWalletFundingController::class, 'approve'])->name('.fundings.approve');
         Route::post('/fundings/{funding}/reject', [AdminWalletFundingController::class, 'reject'])->name('.fundings.reject');
         Route::post('/fundings/{funding}/reverse', [AdminWalletFundingController::class, 'reverse'])->name('.fundings.reverse');
@@ -553,6 +560,7 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::post('/settings/google-identity/test', [AdminSettingsController::class, 'testGoogleIdentity'])->name('.settings.google-identity.test');
         Route::post('/settings/monnify', [AdminSettingsController::class, 'updateMonnify'])->name('.settings.monnify');
         Route::post('/settings/monnify/test', [AdminSettingsController::class, 'testMonnify'])->name('.settings.monnify.test');
+        Route::post('/settings/manual-bank-transfer', [AdminSettingsController::class, 'updateManualBankTransfer'])->name('.settings.manual-bank-transfer');
         Route::get('/blockchain-monitoring', [BlockchainMonitoringController::class, 'index'])->name('.blockchain-monitoring');
         Route::post('/blockchain-monitoring', [BlockchainMonitoringController::class, 'update'])->name('.blockchain-monitoring.update');
         Route::post('/blockchain-monitoring/test', [BlockchainMonitoringController::class, 'test'])->name('.blockchain-monitoring.test');

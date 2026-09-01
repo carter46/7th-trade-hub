@@ -1070,5 +1070,12 @@ WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `name` = 'fees.manage' AND `
 -- ALTER TABLE `withdrawals` ADD COLUMN `provider_meta` json DEFAULT NULL AFTER `provider_auth_attempts`;
 -- UPDATE `withdrawals` SET `internal_status` = 'awaiting_provider_authorization', `provider` = COALESCE(`provider`, 'monnify') WHERE `provider_status` = 'PENDING_AUTHORIZATION' AND `internal_status` = 'processing' AND `status` NOT IN ('completed', 'rejected', 'failed');
 
+-- Manual bank transfer order payments (platform services)
+-- ALTER TABLE `orders` MODIFY `payment_method` varchar(40) DEFAULT NULL;
+-- ALTER TABLE `orders` ADD COLUMN `payment_submitted_at` timestamp NULL DEFAULT NULL AFTER `checkout_expires_at`;
+-- ALTER TABLE `orders` ADD COLUMN `payment_confirmed_at` timestamp NULL DEFAULT NULL AFTER `payment_submitted_at`;
+-- ALTER TABLE `orders` ADD COLUMN `payment_confirmed_by` bigint unsigned DEFAULT NULL AFTER `payment_confirmed_at`;
+-- ALTER TABLE `orders` ADD COLUMN `payment_metadata` json DEFAULT NULL AFTER `payment_confirmed_by`;
+
 COMMIT;
 

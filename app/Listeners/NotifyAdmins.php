@@ -6,6 +6,7 @@ use App\Events\EscrowDisputed;
 use App\Events\ListingApproved;
 use App\Events\ListingRejected;
 use App\Events\OrderCompleted;
+use App\Events\OrderManualBankTransferSubmitted;
 use App\Events\TicketOpened;
 use App\Events\TicketReplied;
 use App\Events\UserRegistered;
@@ -92,6 +93,7 @@ class NotifyAdmins
             WalletWithdrawalCompleted::class => $this->withdrawalCompletedPayload($event),
             WithdrawalPayoutFailed::class => $this->withdrawalFailedPayload($event),
             OrderCompleted::class => $this->orderCompletedPayload($event),
+            OrderManualBankTransferSubmitted::class => $this->orderManualBankTransferSubmittedPayload($event),
             default => null,
         };
 
@@ -285,6 +287,33 @@ class NotifyAdmins
             'meta' => ['withdrawal_id' => $event->withdrawalId, 'user_id' => $event->userId, 'event' => $event::class],
             'permission' => 'finance.manage',
             'dedupeKey' => $type.'.'.$event->withdrawalId,
+        ];
+    }
+
+    private function orderManualBankTransferSubmittedPayload(OrderManualBankTransferSubmitted $event): array
+    {
+        $order = Order::query()->find($event->orderId);
+
+        return [
+            'type' => 'order.manual_bank_transfer_submitted',
+            'title' => 'Manual bank transfer order',
+            'body' => sprintf(
+                'User #%d placed order %s for %s %s awaiting bank transfer confirmation.',
+                $event->userId,
+                $event->reference,
+                $event->currency,
+                number_format($event->amount, 2),
+            ),
+            'actionUrl' => Route::has('admin.orders.show') && $order
+                ? route('admin.orders.show', $order)
+                : (Route::has('admin.orders') ? route('admin.orders', ['filter' => 'awaiting_bank']) : null),
+            'meta' => [
+                'order_id' => $event->orderId,
+                'user_id' => $event->userId,
+                'event' => $event::class,
+            ],
+            'permission' => 'finance.manage',
+            'dedupeKey' => 'order.manual_bank_transfer_submitted.'.$event->orderId,
         ];
     }
 

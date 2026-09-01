@@ -6,7 +6,6 @@ use App\Models\AuditLog;
 use App\Models\KycSubmission;
 use App\Models\Listing;
 use App\Models\User;
-use App\Models\WalletFunding;
 use App\Models\Withdrawal;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -91,17 +90,12 @@ class FullJourneyTest extends TestCase
         $this->actingAs($buyer)->post(route('dashboard.wallet.create'));
         $buyer->refresh();
 
-        $this->actingAs($buyer)
-            ->from(route('dashboard.deposit.create-bank'))
-            ->post(route('dashboard.deposit.store-bank'), [
-                'amount' => 10000,
-                'bank_name' => 'GTBank',
-                'transfer_reference' => 'E2E-DEP-001',
-            ])
-            ->assertRedirect(route('dashboard.deposit.index'));
-
-        $funding = WalletFunding::where('user_id', $buyer->id)->first();
-        $this->actingAs($admin)->post(route('admin.fundings.approve', $funding));
+        app(\App\Modules\Wallet\Services\WalletService::class)->adminAdjust(
+            $buyer->wallet,
+            10000,
+            'E2E test funding',
+            $admin->id,
+        );
 
         $buyer->wallet->refresh();
         $this->assertEquals(10000.0, (float) $buyer->wallet->balance);

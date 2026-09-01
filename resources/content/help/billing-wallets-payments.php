@@ -5,7 +5,7 @@ return [
     'category_key' => 'billing',
     'title' => 'Billing, Wallets and Payments',
     'intro' => 'Fund your Naira wallet, understand deposits and withdrawals, and follow payment statuses through checkout and history.',
-    'summary' => 'All platform purchases and escrow holds use your NGN wallet. Bank deposits and crypto sells credit the wallet after review.',
+    'summary' => 'Wallet top-ups use Monnify checkout or reserved accounts (plus crypto sells). Platform service orders can also be paid by bank transfer at checkout when enabled.',
     'updated_at' => '2026-07-20',
     'hero_image' => 'assets/images/crytpo_exchange.jpg',
     'printable' => true,
@@ -21,7 +21,7 @@ return [
             'nav' => 'Funding the Naira wallet',
             'title' => 'Funding the Naira wallet',
             'blocks' => [
-                ['type' => 'paragraph', 'content' => 'Open Dashboard → Wallet to see your available balance and funding options. You can add NGN via bank deposit or by selling crypto to the platform.'],
+                ['type' => 'paragraph', 'content' => 'Fund your wallet via Monnify checkout or your reserved account (when available). Crypto sells also credit NGN after admin review. Manual bank transfer is not used for wallet top-ups — it is only for paying platform service orders at checkout when the admin enables it.'],
                 [
                     'type' => 'screenshot',
                     'title' => 'Wallet page',
@@ -34,10 +34,10 @@ return [
         ],
         [
             'id' => 'bank-deposits',
-            'nav' => 'Bank deposits',
-            'title' => 'Bank deposits',
+            'nav' => 'Wallet funding',
+            'title' => 'Wallet funding',
             'blocks' => [
-                ['type' => 'paragraph', 'content' => 'Submit a bank deposit request with the amount and proof as instructed. Admin reviews and credits your wallet when the transfer is confirmed.'],
+                ['type' => 'paragraph', 'content' => 'Use Dashboard → Wallet → Fund wallet for Monnify card/transfer checkout or your dedicated reserved account. Crypto sells are a separate OTC flow. Bank transfer at checkout is for platform service orders only, not wallet deposits.'],
                 [
                     'type' => 'screenshot',
                     'title' => 'Deposit page',
@@ -71,7 +71,7 @@ return [
             'nav' => 'Checkout payments',
             'title' => 'Checkout payments',
             'blocks' => [
-                ['type' => 'paragraph', 'content' => 'At checkout, the platform deducts the order total from your wallet. Insufficient balance will block payment until you fund more NGN.'],
+                ['type' => 'paragraph', 'content' => 'At checkout you can pay from wallet balance, via the payment gateway, or by bank transfer to the company account (when enabled). Marketplace escrow still uses wallet balance.'],
                 [
                     'type' => 'screenshot',
                     'title' => 'Checkout',

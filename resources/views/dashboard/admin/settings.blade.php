@@ -325,7 +325,9 @@
                             <x-dashboard.input name="identities[{{ $identity->profile }}][from_name]" label="From name" :value="old('identities.'.$identity->profile.'.from_name', $identity->from_name)" />
                             <x-dashboard.input name="identities[{{ $identity->profile }}][from_email]" type="email" label="From email" :value="old('identities.'.$identity->profile.'.from_email', $identity->from_email)" />
                             <x-dashboard.input name="identities[{{ $identity->profile }}][reply_to_email]" type="email" label="Reply-To" :value="old('identities.'.$identity->profile.'.reply_to_email', $identity->reply_to_email)" />
-                            <x-dashboard.input name="identities[{{ $identity->profile }}][notify_to_email]" type="email" label="Notify inbox (admin alerts)" :value="old('identities.'.$identity->profile.'.notify_to_email', $identity->notify_to_email)" />
+                            @if(\Illuminate\Support\Facades\Schema::hasColumn('email_identities', 'notify_to_email'))
+                                <x-dashboard.input name="identities[{{ $identity->profile }}][notify_to_email]" type="email" label="Notify inbox (admin alerts)" :value="old('identities.'.$identity->profile.'.notify_to_email', $identity->notify_to_email)" />
+                            @endif
                             <label class="flex items-center gap-2 text-sm text-text-secondary pb-2">
                                 <input type="hidden" name="identities[{{ $identity->profile }}][enabled]" value="0">
                                 <input type="checkbox" name="identities[{{ $identity->profile }}][enabled]" value="1" @checked(old('identities.'.$identity->profile.'.enabled', $identity->enabled))>
@@ -640,6 +642,54 @@
                     <span x-text="testing ? 'Testing…' : 'Test connection'">Test connection</span>
                 </x-dashboard.button>
                 <p class="text-sm break-words" x-show="status" x-text="status" x-cloak :class="ok === true ? 'text-success' : 'text-danger'"></p>
+            </form>
+        </x-dashboard.card>
+
+        @php
+            $manualBank = $manualBankTransfer ?? [];
+        @endphp
+        <x-dashboard.card variant="solid">
+            <h2 class="text-lg font-semibold text-text-primary mb-1">Manual bank transfer (order payments)</h2>
+            <p class="text-sm text-text-secondary mb-4">
+                Let customers pay for platform services by bank transfer at checkout. Not used for wallet funding — wallet top-ups are gateway-only.
+            </p>
+            <form method="POST" action="{{ route('admin.settings.manual-bank-transfer') }}" class="space-y-4">
+                @csrf
+                <input type="hidden" name="manual_bank_transfer_enabled" value="0">
+                <x-dashboard.toggle
+                    name="manual_bank_transfer_enabled"
+                    label="Enable manual bank transfer at checkout"
+                    :checked="old('manual_bank_transfer_enabled', $manualBankTransferEnabled ?? false)"
+                    value="1"
+                />
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <x-dashboard.input
+                        name="manual_bank_transfer_bank_name"
+                        label="Bank name"
+                        :value="old('manual_bank_transfer_bank_name', $manualBank['bank_name'] ?? '')"
+                    />
+                    <x-dashboard.input
+                        name="manual_bank_transfer_account_number"
+                        label="Account number"
+                        :value="old('manual_bank_transfer_account_number', $manualBank['account_number'] ?? '')"
+                    />
+                    <x-dashboard.input
+                        name="manual_bank_transfer_account_name"
+                        label="Account name"
+                        class="sm:col-span-2"
+                        :value="old('manual_bank_transfer_account_name', $manualBank['account_name'] ?? '')"
+                    />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-text-primary mb-1">Transfer instructions</label>
+                    <textarea
+                        name="manual_bank_transfer_instructions"
+                        rows="4"
+                        class="w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary"
+                    >{{ old('manual_bank_transfer_instructions', $manualBank['instructions'] ?? '') }}</textarea>
+                    <p class="mt-1 text-xs text-text-muted">Shown on the pending payment page after checkout.</p>
+                </div>
+                <x-dashboard.button type="submit" variant="primary">Save manual bank transfer settings</x-dashboard.button>
             </form>
         </x-dashboard.card>
 

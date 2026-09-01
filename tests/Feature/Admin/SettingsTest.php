@@ -190,4 +190,35 @@ class SettingsTest extends TestCase
             ->assertDontSee('mempool.space');
     }
 
+    public function test_admin_settings_page_loads(): void
+    {
+        $admin = User::factory()->create(['email_verified_at' => now()]);
+        $admin->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->get(route('admin.settings'))
+            ->assertOk()
+            ->assertSee('Manual bank transfer');
+    }
+
+    public function test_admin_can_save_manual_bank_transfer_settings(): void
+    {
+        $admin = User::factory()->create(['email_verified_at' => now()]);
+        $admin->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->post(route('admin.settings.manual-bank-transfer'), [
+                'manual_bank_transfer_enabled' => '1',
+                'manual_bank_transfer_bank_name' => 'GTBank',
+                'manual_bank_transfer_account_number' => '0123456789',
+                'manual_bank_transfer_account_name' => '7th Trade Hub Ltd',
+                'manual_bank_transfer_instructions' => 'Use your order reference as narration.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertTrue(SystemSetting::manualBankTransferEnabled());
+        $this->assertSame('GTBank', SystemSetting::get('manual_bank_transfer_bank_name'));
+    }
+
 }

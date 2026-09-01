@@ -13,14 +13,13 @@
 >
     <x-slot:actions>
         <x-dashboard.button :href="route('dashboard.deposit.create-checkout')" icon="deposit">Fund wallet</x-dashboard.button>
-        <x-dashboard.button :href="route('dashboard.deposit.create-bank')" variant="secondary" icon="deposit">Manual bank</x-dashboard.button>
         <x-dashboard.button :href="route('dashboard.crypto-sell.create')" variant="secondary" icon="bitcoin">Sell Crypto</x-dashboard.button>
     </x-slot:actions>
 
     <x-dashboard.table
         :empty="$fundings->isEmpty()"
         empty-title="No deposits yet"
-        empty-description="Fund via Monnify Checkout or submit a manual bank deposit."
+        empty-description="Fund via Monnify Checkout or your reserved account."
         empty-icon="deposit"
         :empty-action="['href' => route('dashboard.deposit.create-checkout'), 'label' => 'Fund wallet']"
         striped

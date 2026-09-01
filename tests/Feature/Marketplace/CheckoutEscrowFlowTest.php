@@ -93,7 +93,7 @@ class CheckoutEscrowFlowTest extends TestCase
 
         $this->actingAs($buyer)
             ->post(route('dashboard.checkout.store', $listing))
-            ->assertRedirect(route('dashboard.deposit.create-bank'))
+            ->assertRedirect(route('dashboard.deposit.create-checkout'))
             ->assertSessionHas('error');
     }
 }

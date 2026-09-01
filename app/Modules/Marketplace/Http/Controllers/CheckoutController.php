@@ -40,7 +40,7 @@ class CheckoutController extends Controller
             $message = $e->getMessage();
 
             if (str_contains(strtolower($message), 'balance') || str_contains(strtolower($message), 'wallet')) {
-                return redirect()->route('dashboard.deposit.create-bank')->with('error', $message);
+                return redirect()->route('dashboard.deposit.create-checkout')->with('error', $message);
             }
 
             return redirect()

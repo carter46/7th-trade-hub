@@ -6,7 +6,8 @@
 @php
     $hasWallet = (bool) ($wallet ?? null);
     $gatewayOn = (bool) ($gatewayEnabled ?? false);
-    $defaultMethod = $hasWallet ? 'wallet' : ($gatewayOn ? 'gateway' : 'wallet');
+    $manualBankOn = (bool) ($manualBankTransferEnabled ?? false);
+    $defaultMethod = $hasWallet ? 'wallet' : ($gatewayOn ? 'gateway' : ($manualBankOn ? 'manual_bank_transfer' : 'wallet'));
     $variantPayload = $variants->map(fn ($v) => [
         'id' => $v->id,
         'price' => (float) $v->price,
@@ -52,6 +53,7 @@
         'walletBalance' => $hasWallet ? (float) $wallet->balance : 0,
         'hasWallet' => $hasWallet,
         'gatewayEnabled' => $gatewayOn,
+        'manualBankTransferEnabled' => $manualBankOn,
     ];
 @endphp
 <x-layout.page
@@ -81,10 +83,10 @@
             <x-dashboard.alert type="warning">
                 <a href="{{ route('verification.notice') }}" class="underline font-medium">Verify your email</a> before purchasing.
             </x-dashboard.alert>
-        @elseif(! $hasWallet && ! $gatewayOn)
+        @elseif(! $hasWallet && ! $gatewayOn && ! $manualBankOn)
             <x-dashboard.alert type="warning">
                 No payment method is available. <a href="{{ route('dashboard.wallet') }}" class="underline font-medium">Create a wallet</a>
-                or ask an admin to enable card/transfer checkout.
+                or ask an admin to enable card/transfer or bank transfer checkout.
             </x-dashboard.alert>
         @else
             <form
@@ -319,6 +321,16 @@
                                 </span>
                             </label>
                         @endif
+                        @if($manualBankOn)
+                            <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-border-default px-4 py-3"
+                                   :class="paymentMethod === 'manual_bank_transfer' ? 'border-primary bg-primary/5' : 'hover:border-primary/40'">
+                                <input type="radio" name="payment_method" value="manual_bank_transfer" x-model="paymentMethod" class="mt-1 accent-primary" @checked($defaultMethod === 'manual_bank_transfer')>
+                                <span>
+                                    <span class="block text-sm font-medium text-text-primary">Bank transfer</span>
+                                    <span class="block text-xs text-text-muted">Pay directly to our company account — we confirm manually</span>
+                                </span>
+                            </label>
+                        @endif
                     </div>
                     <p
                         x-show="paymentMethod === 'wallet' && walletShortfall > 0"
@@ -336,7 +348,7 @@
                 </div>
 
                 <x-dashboard.button type="submit" icon="orders" class="w-full" x-bind:disabled="!canSubmit">
-                    <span x-text="paymentMethod === 'gateway' ? 'Continue to payment' : 'Pay from wallet'">Pay from wallet</span>
+                    <span x-text="paymentMethod === 'gateway' ? 'Continue to payment' : (paymentMethod === 'manual_bank_transfer' ? 'Place order & view bank details' : 'Pay from wallet')">Pay from wallet</span>
                 </x-dashboard.button>
             </form>
         @endif

@@ -7,6 +7,7 @@ use App\Models\AnalyticsProvider;
 use App\Models\EmailDeliveryAttempt;
 use App\Models\EmailIdentity;
 use App\Models\IntegrationProvider;
+use App\Models\SystemSetting;
 use App\Models\MediaUsage;
 use App\Models\NotificationDeliveryLog;
 use App\Models\SocialLink;
@@ -53,7 +54,11 @@ class SettingsController extends Controller
             'contact' => $contact,
             'liveChat' => $chat,
             'socialLinks' => SocialLink::query()->orderBy('sort_order')->orderBy('id')->get(),
-            'emailIdentities' => EmailIdentity::query()->orderBy('id')->get(),
+            'emailIdentities' => Schema::hasTable('email_identities')
+                ? EmailIdentity::query()->orderBy('id')->get()
+                : collect(),
+            'manualBankTransfer' => SystemSetting::manualBankTransferDetails(),
+            'manualBankTransferEnabled' => SystemSetting::manualBankTransferEnabled(),
             'brevo' => $brevo,
             'laravelMail' => $laravelMail,
             'recentEmailFailures' => Schema::hasTable('email_delivery_attempts')
@@ -300,16 +305,23 @@ class SettingsController extends Controller
         $laravel->status = $laravel->enabled ? 'connected' : 'idle';
         $laravel->save();
 
+        $hasNotifyInbox = Schema::hasTable('email_identities')
+            && Schema::hasColumn('email_identities', 'notify_to_email');
+
         foreach ($validated['identities'] ?? [] as $profile => $row) {
+            $payload = [
+                'from_name' => $row['from_name'],
+                'from_email' => $row['from_email'],
+                'reply_to_email' => $row['reply_to_email'] ?? null,
+                'enabled' => (bool) ($row['enabled'] ?? true),
+            ];
+            if ($hasNotifyInbox) {
+                $payload['notify_to_email'] = $row['notify_to_email'] ?? null;
+            }
+
             EmailIdentity::query()->updateOrCreate(
                 ['profile' => $profile],
-                [
-                    'from_name' => $row['from_name'],
-                    'from_email' => $row['from_email'],
-                    'reply_to_email' => $row['reply_to_email'] ?? null,
-                    'notify_to_email' => $row['notify_to_email'] ?? null,
-                    'enabled' => (bool) ($row['enabled'] ?? true),
-                ]
+                $payload,
             );
         }
 
@@ -625,6 +637,45 @@ class SettingsController extends Controller
         }
 
         return back()->with('status', $result['message']);
+    }
+
+    public function updateManualBankTransfer(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'manual_bank_transfer_enabled' => ['nullable', 'boolean'],
+            'manual_bank_transfer_bank_name' => ['nullable', 'string', 'max:120'],
+            'manual_bank_transfer_account_number' => ['nullable', 'string', 'max:40'],
+            'manual_bank_transfer_account_name' => ['nullable', 'string', 'max:120'],
+            'manual_bank_transfer_instructions' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $enabled = $request->boolean('manual_bank_transfer_enabled');
+
+        if ($enabled) {
+            foreach ([
+                'manual_bank_transfer_bank_name' => 'Bank name',
+                'manual_bank_transfer_account_number' => 'Account number',
+                'manual_bank_transfer_account_name' => 'Account name',
+            ] as $field => $label) {
+                if (blank($validated[$field] ?? null)) {
+                    return back()->withInput()->withErrors([
+                        $field => $label.' is required when manual bank transfer is enabled.',
+                    ]);
+                }
+            }
+        }
+
+        SystemSetting::set('manual_bank_transfer_enabled', $enabled);
+        SystemSetting::set('manual_bank_transfer_bank_name', $validated['manual_bank_transfer_bank_name'] ?? '');
+        SystemSetting::set('manual_bank_transfer_account_number', $validated['manual_bank_transfer_account_number'] ?? '');
+        SystemSetting::set('manual_bank_transfer_account_name', $validated['manual_bank_transfer_account_name'] ?? '');
+        SystemSetting::set('manual_bank_transfer_instructions', $validated['manual_bank_transfer_instructions'] ?? '');
+
+        $this->audit->log(auth()->id(), 'settings.manual_bank_transfer.updated', null, null, [
+            'enabled' => $enabled,
+        ], $request->ip());
+
+        return back()->with('status', __('Manual bank transfer settings saved.'));
     }
 
     public function updateMonnify(Request $request): RedirectResponse

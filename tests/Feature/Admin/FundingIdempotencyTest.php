@@ -24,7 +24,7 @@ class FundingIdempotencyTest extends TestCase
         $funding = WalletFunding::create([
             'user_id' => $user->id,
             'wallet_id' => $wallet->id,
-            'method' => 'bank',
+            'method' => 'monnify_checkout',
             'amount' => 5000,
             'currency' => 'NGN',
             'status' => 'pending',

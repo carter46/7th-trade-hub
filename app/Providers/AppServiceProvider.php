@@ -12,6 +12,7 @@ use App\Events\EscrowReleased;
 use App\Events\ListingApproved;
 use App\Events\ListingRejected;
 use App\Events\OrderCompleted;
+use App\Events\OrderManualBankTransferSubmitted;
 use App\Events\TicketOpened;
 use App\Events\TicketReplied;
 use App\Events\UserRegistered;
@@ -62,6 +63,7 @@ class AppServiceProvider extends ServiceProvider
         WithdrawalAwaitingProviderAuthorization::class,
         WithdrawalPayoutFailed::class,
         OrderCompleted::class,
+        OrderManualBankTransferSubmitted::class,
         EscrowOpened::class,
         EscrowReleased::class,
         EscrowDisputed::class,

@@ -130,7 +130,7 @@ return [
                 [
                     'type' => 'faq',
                     'items' => [
-                        ['q' => 'Do I need a wallet balance to buy?', 'a' => 'Yes. Fund via bank deposit or crypto sell, then return to checkout.'],
+                        ['q' => 'Do I need a wallet balance to buy?', 'a' => 'Not always. You can pay with wallet, gateway checkout, or bank transfer for services when enabled. Marketplace purchases still use wallet balance.'],
                         ['q' => 'Can guests browse services?', 'a' => 'Yes. Checkout requires an account and sufficient wallet balance.'],
                         ['q' => 'Where do I get help with a failed order?', 'a' => 'Open a support ticket or use Contact Us with your order reference.'],
                     ],

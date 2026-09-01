@@ -47,4 +47,31 @@ class SystemSetting extends Model
     {
         return max(1, (int) static::get('kyc_required_level_'.$feature, $default));
     }
+
+    public static function manualBankTransferEnabled(): bool
+    {
+        return static::enabled('manual_bank_transfer_enabled', false);
+    }
+
+    public static function manualBankTransferConfigured(): bool
+    {
+        $details = static::manualBankTransferDetails();
+
+        return filled($details['bank_name'])
+            && filled($details['account_number'])
+            && filled($details['account_name']);
+    }
+
+    /**
+     * @return array{bank_name: string, account_number: string, account_name: string, instructions: string}
+     */
+    public static function manualBankTransferDetails(): array
+    {
+        return [
+            'bank_name' => (string) static::get('manual_bank_transfer_bank_name', ''),
+            'account_number' => (string) static::get('manual_bank_transfer_account_number', ''),
+            'account_name' => (string) static::get('manual_bank_transfer_account_name', ''),
+            'instructions' => (string) static::get('manual_bank_transfer_instructions', ''),
+        ];
+    }
 }

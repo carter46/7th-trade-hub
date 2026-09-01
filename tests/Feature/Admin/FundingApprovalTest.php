@@ -21,7 +21,7 @@ class FundingApprovalTest extends TestCase
         return $admin;
     }
 
-    public function test_admin_can_approve_bank_deposit(): void
+    public function test_admin_cannot_approve_legacy_bank_wallet_deposit(): void
     {
         $user = User::factory()->kycApproved()->create(['email_verified_at' => now()]);
         $user->assignRole('user');
@@ -40,17 +40,17 @@ class FundingApprovalTest extends TestCase
 
         $this->actingAs($this->admin())
             ->post(route('admin.fundings.approve', $funding))
-            ->assertRedirect();
+            ->assertRedirect()
+            ->assertSessionHas('error');
 
         $user->wallet->refresh();
         $funding->refresh();
 
-        $this->assertSame('approved', $funding->status);
-        $this->assertEquals(5000.0, (float) $user->wallet->balance);
-        $this->assertDatabaseHas('audit_logs', ['action' => 'funding.approved']);
+        $this->assertSame('pending', $funding->status);
+        $this->assertEquals(0.0, (float) $user->wallet->balance);
     }
 
-    public function test_admin_can_reverse_approved_deposit(): void
+    public function test_admin_can_reverse_approved_gateway_deposit(): void
     {
         $user = User::factory()->kycApproved()->create(['email_verified_at' => now()]);
         $user->assignRole('user');
@@ -60,7 +60,7 @@ class FundingApprovalTest extends TestCase
         $funding = WalletFunding::create([
             'user_id' => $user->id,
             'wallet_id' => $user->wallet->id,
-            'method' => 'bank',
+            'method' => 'monnify_checkout',
             'amount' => 3000,
             'currency' => 'NGN',
             'status' => 'pending',

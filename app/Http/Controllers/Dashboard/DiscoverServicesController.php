@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Enums\PlatformProductType;
 use App\Http\Controllers\Controller;
+use App\Models\Order;
 use App\Models\PlatformProduct;
 use App\Modules\Catalog\Services\CatalogBrowseService;
 use App\Modules\Catalog\Services\CatalogContentResolver;
@@ -297,6 +298,7 @@ class DiscoverServicesController extends Controller
             'wallet' => $request->user()->wallet,
             'renewTool' => $renewTool,
             'gatewayEnabled' => $this->checkoutService->gatewayEnabled(),
+            'manualBankTransferEnabled' => $this->checkoutService->manualBankTransferEnabledForCheckout(),
         ]);
     }
 
@@ -308,6 +310,7 @@ class DiscoverServicesController extends Controller
             ->firstOrFail();
 
         $gatewayEnabled = $this->checkoutService->gatewayEnabled();
+        $manualBankEnabled = $this->checkoutService->manualBankTransferEnabledForCheckout();
         $hasWallet = (bool) $request->user()->wallet;
 
         $allowedMethods = [];
@@ -317,9 +320,12 @@ class DiscoverServicesController extends Controller
         if ($gatewayEnabled) {
             $allowedMethods[] = 'gateway';
         }
+        if ($manualBankEnabled) {
+            $allowedMethods[] = Order::PAYMENT_MANUAL_BANK_TRANSFER;
+        }
 
         if ($allowedMethods === []) {
-            return back()->withInput()->with('error', 'No payment method is available. Create a wallet or ask support to enable card/transfer checkout.');
+            return back()->withInput()->with('error', 'No payment method is available. Create a wallet, enable card/transfer checkout, or ask support about bank transfer for orders.');
         }
 
         $rules = [
@@ -344,7 +350,7 @@ class DiscoverServicesController extends Controller
         $data = $request->validate($rules);
 
         $data['payment_method'] = $data['payment_method']
-            ?? ($hasWallet ? 'wallet' : ($gatewayEnabled ? 'gateway' : null));
+            ?? ($hasWallet ? 'wallet' : ($gatewayEnabled ? 'gateway' : ($manualBankEnabled ? Order::PAYMENT_MANUAL_BANK_TRANSFER : null)));
 
         if (! $data['payment_method'] || ! in_array($data['payment_method'], $allowedMethods, true)) {
             return back()->withInput()->with('error', 'Choose a valid payment method.');
@@ -384,6 +390,12 @@ class DiscoverServicesController extends Controller
             }
 
             return redirect()->away($order->checkout_url);
+        }
+
+        if ($order->payment_method === Order::PAYMENT_MANUAL_BANK_TRANSFER && $order->status === 'pending') {
+            return redirect()
+                ->route('dashboard.orders.manual-payment', $order)
+                ->with('status', 'Order '.$order->reference.' created. Complete your bank transfer using the instructions below.');
         }
 
         if (! empty($data['renew_user_tool_id'])) {

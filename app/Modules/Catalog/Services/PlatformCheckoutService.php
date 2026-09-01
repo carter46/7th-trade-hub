@@ -4,10 +4,12 @@ namespace App\Modules\Catalog\Services;
 
 use App\Enums\PlatformProductType;
 use App\Events\OrderCompleted;
+use App\Events\OrderManualBankTransferSubmitted;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PlatformProduct;
 use App\Models\PlatformProductVariant;
+use App\Models\SystemSetting;
 use App\Models\User;
 use App\Models\UserTool;
 use App\Modules\Wallet\Payments\Contracts\PaymentRailInterface;
@@ -37,14 +39,28 @@ class PlatformCheckoutService
         return $this->paymentRail->isConfigured();
     }
 
-    /**
-     * @param  array{variant_id?: int|null, quantity: int, domain_mode?: string|null, domain_name?: string|null, idempotency_key?: string|null, renew_user_tool_id?: int|null, payment_method?: string|null, redirect_url?: string|null}  $data
-     */
-    public function purchase(User $buyer, PlatformProduct $product, array $data): Order
+    public function manualBankTransferEnabledForCheckout(): bool
     {
-        $method = ($data['payment_method'] ?? 'wallet') === 'gateway' ? 'gateway' : 'wallet';
+        return SystemSetting::manualBankTransferEnabled()
+            && SystemSetting::manualBankTransferConfigured();
+    }
 
-        if ($method === 'gateway') {
+    /**
+     * @param  array{variant_id?: int|null, quantity: int, domain_mode?: string|null, domain_name?: string|null, idempotency_key?: string|null, renew_user_tool_id?: int|null, payment_method?: string|null, redirect_url?: string|null, admin_mark_paid?: bool|null}  $data
+     */
+    public function purchase(User $buyer, PlatformProduct $product, array $data, bool $allowManualWithoutToggle = false): Order
+    {
+        $requested = (string) ($data['payment_method'] ?? 'wallet');
+
+        if ($requested === Order::PAYMENT_MANUAL_BANK_TRANSFER) {
+            if (! $allowManualWithoutToggle && ! $this->manualBankTransferEnabledForCheckout()) {
+                throw new InvalidArgumentException('Manual bank transfer is not available.');
+            }
+
+            return $this->purchaseViaManualBankTransfer($buyer, $product, $data);
+        }
+
+        if ($requested === 'gateway') {
             return $this->purchaseViaGateway($buyer, $product, $data);
         }
 
@@ -52,19 +68,46 @@ class PlatformCheckoutService
     }
 
     /**
+     * Admin creates a manual-bank-transfer order for a user (works even when checkout toggle is off).
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function createManualBankTransferOrderForUser(User $buyer, PlatformProduct $product, array $data, bool $markPaidImmediately, ?int $adminId = null): Order
+    {
+        $data['payment_method'] = Order::PAYMENT_MANUAL_BANK_TRANSFER;
+        $data['notify_manual_bank_submitted'] = false;
+
+        $order = $this->purchase($buyer, $product, $data, allowManualWithoutToggle: true);
+
+        if ($markPaidImmediately) {
+            return $this->fulfillPaidCatalogOrder($order, [Order::PAYMENT_MANUAL_BANK_TRANSFER], $adminId);
+        }
+
+        return $order;
+    }
+
+    /**
      * Complete a pending gateway order after Monnify verify/webhook.
      */
     public function fulfillPaidGatewayOrder(Order $order): Order
     {
-        return DB::transaction(function () use ($order) {
+        return $this->fulfillPaidCatalogOrder($order, ['gateway']);
+    }
+
+    /**
+     * @param  list<string>  $allowedMethods
+     */
+    public function fulfillPaidCatalogOrder(Order $order, array $allowedMethods, ?int $confirmedBy = null): Order
+    {
+        return DB::transaction(function () use ($order, $allowedMethods, $confirmedBy) {
             $locked = Order::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
 
             if ($locked->status === 'paid') {
                 return $locked->load('items.variant');
             }
 
-            if ($locked->source !== 'platform' || $locked->payment_method !== 'gateway') {
-                throw new InvalidArgumentException('Order is not a gateway platform purchase.');
+            if ($locked->source !== 'platform' || ! in_array($locked->payment_method, $allowedMethods, true)) {
+                throw new InvalidArgumentException('Order is not a fulfillable platform purchase.');
             }
 
             if (! in_array($locked->status, ['pending', 'processing'], true)) {
@@ -74,7 +117,12 @@ class PlatformCheckoutService
             $this->consumeReservedDomainQuotes($locked);
 
             $this->walletService->creditPlatformFromGatewaySale($locked, (float) $locked->total_amount);
+
             $locked->status = 'paid';
+            $locked->payment_confirmed_at = now();
+            if ($confirmedBy) {
+                $locked->payment_confirmed_by = $confirmedBy;
+            }
             $locked->save();
 
             $locked->load('items.variant');
@@ -88,6 +136,68 @@ class PlatformCheckoutService
 
             return $locked;
         });
+    }
+
+    public function cancelManualBankTransferOrder(Order $order, ?string $reason = null): Order
+    {
+        return DB::transaction(function () use ($order, $reason) {
+            $locked = Order::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->payment_method !== Order::PAYMENT_MANUAL_BANK_TRANSFER) {
+                throw new InvalidArgumentException('Order is not a manual bank transfer purchase.');
+            }
+
+            if ($locked->status === 'paid') {
+                throw new InvalidArgumentException('Paid orders cannot be cancelled.');
+            }
+
+            $this->domainQuotes->releaseReservationForOrder((int) $locked->id);
+
+            $meta = $locked->payment_metadata ?? [];
+            if ($reason) {
+                $meta['cancel_reason'] = $reason;
+            }
+            $locked->update([
+                'status' => 'cancelled',
+                'payment_metadata' => $meta,
+            ]);
+
+            return $locked->fresh();
+        });
+    }
+
+    /**
+     * @param  array<string, mixed>  $proofMeta
+     */
+    public function submitManualBankTransferProof(Order $order, array $proofMeta): Order
+    {
+        if ($order->source !== 'platform') {
+            throw new InvalidArgumentException('This order cannot accept payment proof.');
+        }
+
+        if ($order->payment_method !== Order::PAYMENT_MANUAL_BANK_TRANSFER || $order->status !== 'pending') {
+            throw new InvalidArgumentException('This order cannot accept payment proof.');
+        }
+
+        $firstSubmission = $order->payment_submitted_at === null;
+
+        $meta = array_merge($order->payment_metadata ?? [], $proofMeta);
+        $order->update([
+            'payment_metadata' => $meta,
+            'payment_submitted_at' => now(),
+        ]);
+
+        if ($firstSubmission) {
+            OrderManualBankTransferSubmitted::dispatch(
+                (int) $order->id,
+                (int) $order->user_id,
+                (float) $order->total_amount,
+                (string) ($order->currency ?? 'NGN'),
+                (string) $order->reference,
+            );
+        }
+
+        return $order->fresh();
     }
 
     private function consumeReservedDomainQuotes(Order $order): void
@@ -314,6 +424,97 @@ class PlatformCheckoutService
         ]);
 
         return $order->fresh();
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function purchaseViaManualBankTransfer(User $buyer, PlatformProduct $product, array $data): Order
+    {
+        $idempotencyKey = $data['idempotency_key'] ?? null;
+        $notifyAdmins = (bool) ($data['notify_manual_bank_submitted'] ?? true);
+        if ($idempotencyKey) {
+            $existing = Order::query()
+                ->where('user_id', $buyer->id)
+                ->where('idempotency_key', $idempotencyKey)
+                ->first();
+            if ($existing) {
+                return $existing;
+            }
+        }
+
+        $createdNew = false;
+
+        try {
+            $order = DB::transaction(function () use ($buyer, $product, $data, $idempotencyKey, &$createdNew) {
+                if ($idempotencyKey) {
+                    $existing = Order::query()
+                        ->where('user_id', $buyer->id)
+                        ->where('idempotency_key', $idempotencyKey)
+                        ->lockForUpdate()
+                        ->first();
+                    if ($existing) {
+                        return $existing;
+                    }
+                }
+
+                $checkout = $this->buildCheckout($buyer, $product, $data, deferDomainConsumption: true);
+
+                $order = Order::create([
+                    'source' => 'platform',
+                    'user_id' => $buyer->id,
+                    'listing_id' => null,
+                    'reference' => 'PLT-'.strtoupper(Str::random(8)),
+                    'amount' => $checkout['total'],
+                    'total_amount' => $checkout['total'],
+                    'status' => 'pending',
+                    'payment_method' => Order::PAYMENT_MANUAL_BANK_TRANSFER,
+                    'payment_provider' => 'manual',
+                    'idempotency_key' => $idempotencyKey,
+                ]);
+
+                foreach ($checkout['pending_domain_quotes'] ?? [] as $pending) {
+                    $this->domainQuotes->reserveForGateway(
+                        $buyer,
+                        $pending['token'],
+                        $pending['fqdn'],
+                        (int) $order->id,
+                        $pending['product_id'],
+                    );
+                }
+
+                foreach ($checkout['lines'] as $line) {
+                    OrderItem::create([
+                        'order_id' => $order->id,
+                        'item_type' => 'platform_product',
+                        'item_id' => $line['product_id'],
+                        'quantity' => $line['quantity'],
+                        'unit_price' => $line['unit_price'],
+                        'line_total' => $line['line_total'],
+                        'platform_product_variant_id' => $line['variant_id'],
+                        'options' => $line['options'],
+                    ]);
+                }
+
+                $createdNew = true;
+
+                return $order;
+            });
+        } catch (UniqueConstraintViolationException $e) {
+            return $this->recoverIdempotent($buyer, $idempotencyKey, $e);
+        }
+
+        if ($createdNew && $notifyAdmins) {
+            OrderManualBankTransferSubmitted::dispatch(
+                (int) $order->id,
+                (int) $order->user_id,
+                (float) $order->total_amount,
+                'NGN',
+                (string) $order->reference,
+            );
+        }
+
+        return $order;
     }
 
     /**

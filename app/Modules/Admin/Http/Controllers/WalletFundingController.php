@@ -34,6 +34,10 @@ class WalletFundingController extends Controller
 
     public function approve(WalletFunding $funding, Request $request): RedirectResponse
     {
+        if ($funding->method === 'bank') {
+            return back()->with('error', __('Manual bank wallet deposits are no longer accepted. Use gateway funding or confirm an order payment under Orders.'));
+        }
+
         $walletBefore = $funding->wallet?->replicate();
 
         try {

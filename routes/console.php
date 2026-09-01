@@ -1,29 +1,39 @@
 <?php
 
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
+
+/**
+ * Shared hosting (e.g. Hostinger) often disables proc_open.
+ * Schedule::command() shells out via Symfony Process — use in-process Artisan::call instead.
+ */
+$scheduleCommand = function (string $command, string $name) {
+    Schedule::call(fn () => Artisan::call($command))
+        ->name($name);
+};
 
 Schedule::call(function () {
     DB::table('email_verification_codes')->where('expires_at', '<', now())->delete();
 })->daily()->name('prune-expired-otp-codes');
 
-Schedule::command('app:expire-crypto-quotes')->everyFiveMinutes()->withoutOverlapping();
-Schedule::command('app:prune-notifications')->weekly()->sundays()->at('03:00');
-Schedule::command('support:prune-attachments')->hourly()->withoutOverlapping();
-Schedule::command('app:warm-crypto-prices')->everyFiveMinutes()->withoutOverlapping();
-Schedule::command('crypto:poll-deposits')->everyMinute()->withoutOverlapping();
-Schedule::command('crypto:poll-balances')->everyFiveMinutes()->withoutOverlapping();
-Schedule::command('cache:prune-stale-tags')->daily();
+$scheduleCommand('app:expire-crypto-quotes', 'app:expire-crypto-quotes')->everyFiveMinutes();
+$scheduleCommand('app:prune-notifications', 'app:prune-notifications')->weekly()->sundays()->at('03:00');
+$scheduleCommand('support:prune-attachments', 'support:prune-attachments')->hourly();
+$scheduleCommand('app:warm-crypto-prices', 'app:warm-crypto-prices')->everyFiveMinutes();
+$scheduleCommand('crypto:poll-deposits', 'crypto:poll-deposits')->everyMinute();
+$scheduleCommand('crypto:poll-balances', 'crypto:poll-balances')->everyFiveMinutes();
+$scheduleCommand('cache:prune-stale-tags', 'cache:prune-stale-tags')->daily();
 
-Schedule::command('wallet:expire-listing-holds')->hourly()->withoutOverlapping();
-Schedule::command('monnify:reconcile')->everyFiveMinutes()->withoutOverlapping();
+$scheduleCommand('wallet:expire-listing-holds', 'wallet:expire-listing-holds')->hourly();
+$scheduleCommand('monnify:reconcile', 'monnify:reconcile')->everyFiveMinutes();
 
-Schedule::command('analytics:rollup-kpis')->hourly()->withoutOverlapping();
-Schedule::command('analytics:prune-activity')->daily()->at('04:00');
-Schedule::command('analytics:sync-ga')->daily()->at('05:00');
-Schedule::command('monitoring:heartbeat')->everyFiveMinutes()->withoutOverlapping();
-Schedule::command('users:purge-anonymized')->hourly()->withoutOverlapping();
-Schedule::command('site-integrations:expire-user-tools')->everyFiveMinutes()->withoutOverlapping();
+$scheduleCommand('analytics:rollup-kpis', 'analytics:rollup-kpis')->hourly();
+$scheduleCommand('analytics:prune-activity', 'analytics:prune-activity')->daily()->at('04:00');
+$scheduleCommand('analytics:sync-ga', 'analytics:sync-ga')->daily()->at('05:00');
+$scheduleCommand('monitoring:heartbeat', 'monitoring:heartbeat')->everyFiveMinutes();
+$scheduleCommand('users:purge-anonymized', 'users:purge-anonymized')->hourly();
+$scheduleCommand('site-integrations:expire-user-tools', 'site-integrations:expire-user-tools')->everyFiveMinutes();
 
 Schedule::call(function () {
     \Illuminate\Support\Facades\Cache::forget('sitemap.xml.v2');

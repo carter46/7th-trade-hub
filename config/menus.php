@@ -172,6 +172,7 @@ return [
             'sort' => 50,
             'children' => [
                 ['route' => 'admin.fundings', 'match' => ['admin.fundings', 'admin.fundings.*'], 'label' => 'Deposits', 'icon' => 'deposit', 'keywords' => ['fundings', 'bank'], 'permission' => 'finance.manage', 'sort' => 10],
+                ['route' => 'admin.orders', 'match' => ['admin.orders', 'admin.orders.*'], 'label' => 'Orders', 'icon' => 'orders', 'keywords' => ['platform', 'manual bank', 'services'], 'permission' => 'finance.manage', 'sort' => 12],
                 ['route' => 'admin.withdrawals', 'match' => ['admin.withdrawals', 'admin.withdrawals.*'], 'label' => 'Withdrawals', 'icon' => 'withdraw', 'keywords' => ['payouts'], 'permission' => 'finance.manage', 'sort' => 20],
                 ['route' => 'admin.reconciliation', 'match' => ['admin.reconciliation', 'admin.reconciliation.*'], 'label' => 'Reconciliation', 'icon' => 'audit', 'keywords' => ['monnify', 'webhooks', 'fix'], 'permission' => 'finance.manage', 'sort' => 25],
                 ['route' => 'admin.wallet-adjustment', 'match' => ['admin.wallet-adjustment', 'admin.wallet-adjustment.*'], 'label' => 'Wallet Adjustments', 'icon' => 'wallet-adjust', 'keywords' => ['credit', 'debit', 'adjust'], 'permission' => 'finance.manage', 'sort' => 30],

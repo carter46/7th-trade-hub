@@ -14,8 +14,7 @@
 >
     @if (! $monnifyEnabled)
         <x-dashboard.alert type="warning" class="mb-4">
-            Online checkout is not configured yet. You can still
-            <a href="{{ route('dashboard.deposit.create-bank') }}" class="underline">submit a manual bank deposit</a>.
+            Online checkout is not configured yet. Please contact support for wallet funding options.
         </x-dashboard.alert>
     @else
         <x-dashboard.card class="mb-6">
