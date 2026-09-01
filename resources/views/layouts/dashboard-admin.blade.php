@@ -21,6 +21,6 @@
     <x-dashboard.media-library-modal />
     <x-ui.toast />
     @stack('scripts')
-    @RegisterServiceWorkerScript
+    @include('partials.dashboard.unregister-service-worker')
 </body>
 </html>

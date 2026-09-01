@@ -10,6 +10,7 @@ use App\Modules\Wallet\Services\WalletService;
 use App\Modules\Wallet\Services\WithdrawalPayoutService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Illuminate\Validation\ValidationException;
 
@@ -46,6 +47,14 @@ class WithdrawalAdminController extends Controller
 
     public function approve(Withdrawal $withdrawal, Request $request): RedirectResponse
     {
+        Log::info('admin.withdrawal.approve.request', [
+            'withdrawal_id' => $withdrawal->id,
+            'reference' => $withdrawal->reference,
+            'admin_id' => auth()->id(),
+            'status' => $withdrawal->status,
+            'internal_status' => $withdrawal->internal_status,
+        ]);
+
         try {
             $validated = $request->validate([
                 'approval_note' => ['nullable', 'string', 'max:500'],
@@ -66,6 +75,12 @@ class WithdrawalAdminController extends Controller
             );
         } catch (\Throwable $e) {
             report($e);
+            Log::error('admin.withdrawal.approve.failed', [
+                'withdrawal_id' => $withdrawal->id,
+                'reference' => $withdrawal->reference,
+                'admin_id' => auth()->id(),
+                'message' => $e->getMessage(),
+            ]);
             $withdrawal->refresh();
             if ($withdrawal->status === 'completed' || $withdrawal->internal_status === 'completed') {
                 return back()->with('status', __('Withdrawal already completed.'));
@@ -94,6 +109,13 @@ class WithdrawalAdminController extends Controller
         $msg = $withdrawal->internal_status === 'completed'
             ? __('Withdrawal approved and completed.')
             : __('Withdrawal approved and sent to Monnify. Waiting for payout confirmation.');
+
+        Log::info('admin.withdrawal.approve.success', [
+            'withdrawal_id' => $withdrawal->id,
+            'reference' => $withdrawal->reference,
+            'status' => $withdrawal->status,
+            'internal_status' => $withdrawal->internal_status,
+        ]);
 
         return back()->with('status', $msg);
     }

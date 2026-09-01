@@ -42,6 +42,6 @@
         <x-ui.toast />
     </div>
     @include('partials.tracking.body-end')
-    @RegisterServiceWorkerScript
+    @include('partials.dashboard.unregister-service-worker')
 </body>
 </html>

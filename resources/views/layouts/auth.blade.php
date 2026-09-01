@@ -38,6 +38,6 @@
     <div class="relative z-10">
         <x-ui.toast />
     </div>
-    @RegisterServiceWorkerScript
+    @include('partials.dashboard.unregister-service-worker')
 </body>
 </html>

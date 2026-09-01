@@ -26,6 +26,6 @@
     <x-dashboard.command-palette role="user" />
     <x-ui.toast />
     @stack('scripts')
-    @RegisterServiceWorkerScript
+    @include('partials.dashboard.unregister-service-worker')
 </body>
 </html>

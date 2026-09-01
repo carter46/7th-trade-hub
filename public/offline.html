@@ -35,16 +35,6 @@
             background: linear-gradient(180deg, var(--brand-soft) 0%, #fff 40%);
         }
 
-        .spinner {
-            width: 3.5rem;
-            height: 3.5rem;
-            margin: 0 auto 1.25rem;
-            border: 3px solid rgba(11, 106, 57, 0.15);
-            border-top-color: var(--brand);
-            border-radius: 50%;
-            animation: spin 0.9s linear infinite;
-        }
-
         h1 {
             margin: 0 0 0.5rem;
             font-size: 1.35rem;
@@ -57,12 +47,6 @@
             font-size: 0.95rem;
             line-height: 1.5;
             color: #555;
-        }
-
-        .status {
-            margin-top: 1rem;
-            font-size: 0.85rem;
-            color: #777;
         }
 
         .actions {
@@ -82,240 +66,38 @@
             font-weight: 600;
             text-decoration: none;
             display: inline-block;
+            cursor: pointer;
         }
 
         button {
             color: #fff;
             background: var(--brand);
-            cursor: pointer;
         }
 
         button:hover { background: #095a30; }
-        button:disabled { opacity: 0.65; cursor: wait; }
 
         .link-btn {
             color: var(--brand);
             background: transparent;
             border: 1px solid rgba(11, 106, 57, 0.25);
         }
-
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        @media (prefers-reduced-motion: reduce) {
-            .spinner { animation: none; border-top-color: rgba(11, 106, 57, 0.35); }
-        }
     </style>
 </head>
 <body>
     <div class="card">
-        <div class="spinner" aria-hidden="true"></div>
-        <h1 id="title">You're offline</h1>
-        <p id="message">We couldn't reach the server. We'll try again automatically when your connection is back.</p>
-        <p class="status" id="status" aria-live="polite">Checking connection…</p>
+        <h1>You're offline</h1>
+        <p>We couldn't reach the server. Check your connection, then try again.</p>
         <div class="actions">
             <button type="button" id="retry">Try again</button>
-            <a class="link-btn" id="home-link" href="/dashboard">Go to dashboard</a>
+            <a class="link-btn" href="/">Go to homepage</a>
+            <a class="link-btn" href="/dashboard">Go to dashboard</a>
         </div>
     </div>
 
     <script>
-        (function () {
-            var titleEl = document.getElementById('title');
-            var messageEl = document.getElementById('message');
-            var statusEl = document.getElementById('status');
-            var retryBtn = document.getElementById('retry');
-            var homeLink = document.getElementById('home-link');
-            var checking = false;
-            var reloadScheduled = false;
-            var maxAutoReloads = 2;
-            var reloadKey = 'offline-reload:' + window.location.pathname + window.location.search;
-            var probeStopped = false;
-
-            function isDashboardPath() {
-                var path = window.location.pathname || '';
-                return path.indexOf('/dashboard') === 0 || path.indexOf('/admin') === 0;
-            }
-
-            function isPaymentCallback() {
-                var path = window.location.pathname || '';
-                var search = window.location.search || '';
-
-                return path.indexOf('/callback') !== -1
-                    || search.indexOf('paymentReference=') !== -1
-                    || search.indexOf('payment_reference=') !== -1;
-            }
-
-            function reloadCount() {
-                try {
-                    return Number(sessionStorage.getItem(reloadKey) || '0');
-                } catch {
-                    return 0;
-                }
-            }
-
-            function incrementReloadCount() {
-                try {
-                    sessionStorage.setItem(reloadKey, String(reloadCount() + 1));
-                } catch {
-                    // ignore
-                }
-            }
-
-            function probeTarget() {
-                if (isPaymentCallback()) {
-                    return '/dashboard';
-                }
-
-                var target = window.location.pathname + window.location.search;
-                if (!target || target === '/offline.html') {
-                    return '/';
-                }
-
-                return target;
-            }
-
-            function resumeTarget() {
-                if (isPaymentCallback()) {
-                    return window.location.pathname + window.location.search;
-                }
-
-                return window.location.pathname + window.location.search;
-            }
-
-            function setStatus(text) {
-                if (statusEl) {
-                    statusEl.textContent = text;
-                }
-            }
-
-            function scheduleReload(finalUrl) {
-                if (reloadScheduled || probeStopped) {
-                    return;
-                }
-
-                if (reloadCount() >= maxAutoReloads) {
-                    probeStopped = true;
-                    setStatus('Connection looks OK. Use Try again or open the dashboard.');
-                    if (messageEl) {
-                        messageEl.textContent = isDashboardPath()
-                            ? 'Automatic reload stopped to avoid a loop. Use Try again or go to the dashboard.'
-                            : 'Automatic reload stopped to avoid a loop. Your payment may already be complete.';
-                    }
-                    if (homeLink && isPaymentCallback()) {
-                        homeLink.textContent = 'Go to wallet / deposits';
-                        homeLink.href = '/dashboard/deposit';
-                    }
-                    return;
-                }
-
-                reloadScheduled = true;
-                incrementReloadCount();
-                setStatus('Connection restored. Reloading…');
-                if (titleEl) {
-                    titleEl.textContent = 'Back online';
-                }
-
-                var target = finalUrl || resumeTarget();
-                window.setTimeout(function () {
-                    window.location.replace(target);
-                }, 400);
-            }
-
-            function probe() {
-                if (checking || reloadScheduled || probeStopped) {
-                    return Promise.resolve(false);
-                }
-
-                checking = true;
-                if (retryBtn) {
-                    retryBtn.disabled = true;
-                }
-
-                return fetch(probeTarget(), {
-                    method: 'GET',
-                    cache: 'no-store',
-                    credentials: 'same-origin',
-                    redirect: 'follow',
-                    headers: { 'X-Offline-Probe': '1' },
-                })
-                    .then(function (response) {
-                        if (response && response.ok) {
-                            var finalUrl = response.url || '';
-                            if (finalUrl && finalUrl.indexOf('/offline.html') === -1 && finalUrl !== window.location.href) {
-                                scheduleReload(finalUrl);
-                                return true;
-                            }
-                            if (isDashboardPath() && reloadCount() >= maxAutoReloads) {
-                                probeStopped = true;
-                                setStatus('Use Try again or open the dashboard.');
-                                return false;
-                            }
-                            scheduleReload();
-                            return true;
-                        }
-
-                        setStatus('Still offline. Retrying…');
-                        return false;
-                    })
-                    .catch(function () {
-                        setStatus('Still offline. Retrying…');
-                        return false;
-                    })
-                    .finally(function () {
-                        checking = false;
-                        if (retryBtn && !reloadScheduled) {
-                            retryBtn.disabled = false;
-                        }
-                    });
-            }
-
-            function onOnline() {
-                if (titleEl) {
-                    titleEl.textContent = 'Reconnecting…';
-                }
-                if (messageEl) {
-                    messageEl.textContent = 'Your device is back online. Loading the site…';
-                }
-                probe();
-            }
-
-            window.addEventListener('online', onOnline);
-
-            if (retryBtn) {
-                retryBtn.addEventListener('click', function () {
-                    if (isPaymentCallback()) {
-                        setStatus('Retrying payment return…');
-                        window.location.replace(resumeTarget());
-                        return;
-                    }
-
-                    setStatus('Checking connection…');
-                    probe();
-                });
-            }
-
-            if (isPaymentCallback()) {
-                if (messageEl) {
-                    messageEl.textContent = 'We could not finish confirming your payment. If you completed checkout, open deposits or try again.';
-                }
-                if (homeLink) {
-                    homeLink.textContent = 'Go to wallet / deposits';
-                    homeLink.href = '/dashboard/deposit';
-                }
-            }
-
-            if (navigator.onLine) {
-                probe();
-            } else {
-                setStatus('Waiting for internet…');
-            }
-
-            window.setInterval(function () {
-                if (!reloadScheduled && !probeStopped && reloadCount() < maxAutoReloads) {
-                    probe();
-                }
-            }, 8000);
-        })();
+        document.getElementById('retry')?.addEventListener('click', function () {
+            window.location.reload();
+        });
     </script>
 </body>
 </html>
