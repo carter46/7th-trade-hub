@@ -109,7 +109,7 @@
                 </div>
 
                 @if ($formAction)
-                    <form method="POST" action="{{ $formAction }}" class="mt-4" x-data="{ submitting: false }" @submit="submitting = true">
+                    <form method="POST" action="{{ $formAction }}" class="mt-4" x-data="{ submitting: false }" @submit="if (submitting) { $event.preventDefault(); return; } submitting = true;">
                         @csrf
                         @if (strtoupper($method) !== 'POST')
                             @method($method)
@@ -129,8 +129,8 @@
                             @isset($footer)
                                 {{ $footer }}
                             @else
-                                <x-ui.button type="button" variant="secondary" @click="closeModal()">{{ $cancelLabel }}</x-ui.button>
-                                <x-ui.button type="submit" :variant="$confirmVariant" x-bind:disabled="submitting">
+                                <x-ui.button type="button" variant="secondary" @click="$dispatch('close-modal', '{{ $name }}')">{{ $cancelLabel }}</x-ui.button>
+                                <x-ui.button type="submit" :variant="$confirmVariant" aria-busy="false" x-bind:aria-busy="submitting ? 'true' : 'false'">
                                     <span class="inline-flex items-center gap-2">
                                         <span x-show="submitting" x-cloak><x-ui.icon name="spinner" class="w-4 h-4 animate-spin" /></span>
                                         {{ $confirmLabel }}

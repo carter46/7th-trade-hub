@@ -11,6 +11,7 @@ use App\Modules\Wallet\Services\WithdrawalPayoutService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Validation\ValidationException;
 
 class WithdrawalAdminController extends Controller
 {
@@ -45,10 +46,14 @@ class WithdrawalAdminController extends Controller
 
     public function approve(Withdrawal $withdrawal, Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'approval_note' => ['nullable', 'string', 'max:500'],
-            'confirm_send' => ['required', 'accepted'],
-        ]);
+        try {
+            $validated = $request->validate([
+                'approval_note' => ['nullable', 'string', 'max:500'],
+                'confirm_send' => ['required', 'accepted'],
+            ]);
+        } catch (ValidationException $e) {
+            return back()->with('error', $e->validator->errors()->first() ?: __('Confirmation is required.'));
+        }
 
         $walletBefore = $withdrawal->wallet?->replicate();
 
@@ -60,6 +65,7 @@ class WithdrawalAdminController extends Controller
                 $validated['approval_note'] ?? null,
             );
         } catch (\Throwable $e) {
+            report($e);
             $withdrawal->refresh();
             if ($withdrawal->status === 'completed' || $withdrawal->internal_status === 'completed') {
                 return back()->with('status', __('Withdrawal already completed.'));

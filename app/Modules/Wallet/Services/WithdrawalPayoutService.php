@@ -38,11 +38,10 @@ class WithdrawalPayoutService
         }
 
         if ($this->rail->isConfigured()) {
-            // Capture initiate errors so fail/unlock can commit before rethrowing.
-            $initiateError = null;
+            $payoutReference = null;
+            $transferPayload = null;
 
-            // Serialize sends + re-check merchant float under a short advisory lock.
-            DB::transaction(function () use ($withdrawal, $adminId, $ip, $note, &$initiateError) {
+            DB::transaction(function () use ($withdrawal, $adminId, $ip, $note, &$payoutReference, &$transferPayload) {
                 $withdrawal = Withdrawal::where('id', $withdrawal->id)->lockForUpdate()->firstOrFail();
 
                 if (! in_array($withdrawal->status, ['pending'], true)
@@ -61,40 +60,39 @@ class WithdrawalPayoutService
                 $this->wallets->markWithdrawalApproved($withdrawal, $adminId, $ip, $note);
                 $withdrawal->refresh();
 
-                $reference = $withdrawal->provider_payout_reference
+                $payoutReference = $withdrawal->provider_payout_reference
                     ?: ('WPO-'.strtoupper((string) Str::ulid()));
 
-                $withdrawal->update(['provider_payout_reference' => $reference]);
+                $withdrawal->update(['provider_payout_reference' => $payoutReference]);
 
-                try {
-                    $result = $this->rail->initiateTransfer([
-                        'amount' => $withdrawal->amount,
-                        'reference' => $reference,
-                        'bankCode' => $withdrawal->bank_code,
-                        'accountNumber' => $withdrawal->account_number,
-                        'accountName' => $withdrawal->account_name,
-                        'narration' => 'Withdrawal '.$withdrawal->reference,
-                        'async' => true,
-                    ]);
-                } catch (MonnifyApiException $e) {
-                    if (! $this->handleInitiateError($withdrawal, $e)) {
-                        // Failed + unlocked inside this transaction — rethrow after commit.
-                        $initiateError = $e;
-                    }
-
-                    return;
-                }
-
-                $providerStatus = (string) ($result['status'] ?? 'PENDING');
-                $this->wallets->markWithdrawalProcessing($withdrawal, $providerStatus);
-
-                if (in_array(strtoupper($providerStatus), ['SUCCESS', 'COMPLETED'], true)) {
-                    $this->wallets->completeWithdrawalPayout($withdrawal->fresh());
-                }
+                $transferPayload = [
+                    'amount' => $withdrawal->amount,
+                    'reference' => $payoutReference,
+                    'bankCode' => $withdrawal->bank_code,
+                    'accountNumber' => $withdrawal->account_number,
+                    'accountName' => $withdrawal->account_name,
+                    'narration' => 'Withdrawal '.$withdrawal->reference,
+                    'async' => true,
+                ];
             });
 
-            if ($initiateError instanceof MonnifyApiException) {
-                throw $initiateError;
+            $withdrawal->refresh();
+
+            try {
+                $result = $this->rail->initiateTransfer($transferPayload ?? []);
+            } catch (MonnifyApiException $e) {
+                if (! $this->handleInitiateError($withdrawal, $e)) {
+                    throw $e;
+                }
+
+                return;
+            }
+
+            $providerStatus = (string) ($result['status'] ?? 'PENDING');
+            $this->wallets->markWithdrawalProcessing($withdrawal, $providerStatus);
+
+            if (in_array(strtoupper($providerStatus), ['SUCCESS', 'COMPLETED'], true)) {
+                $this->wallets->completeWithdrawalPayout($withdrawal->fresh());
             }
 
             return;
