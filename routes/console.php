@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schedule;
  * Schedule::command() shells out via Symfony Process — use in-process Artisan::call instead.
  */
 $scheduleCommand = function (string $command, string $name) {
-    Schedule::call(fn () => Artisan::call($command))
+    return Schedule::call(fn () => Artisan::call($command))
         ->name($name);
 };
 
