@@ -9,7 +9,6 @@
 @endphp
 <x-layout.page
     title="Order {{ $order->reference }}"
-    :subtitle="($order->listing?->title ?? 'Listing unavailable').' · '.\App\Models\User::nameFor($counterpart)"
     width="default"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

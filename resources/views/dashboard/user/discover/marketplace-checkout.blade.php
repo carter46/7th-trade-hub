@@ -5,7 +5,6 @@
 @section('content')
 <x-layout.page
     title="Checkout"
-    :subtitle="$listing->title"
     width="default"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

@@ -1,5 +1,11 @@
 const LOADER_ID = 'dashboard-page-loader';
+const LOADER_SESSION_KEY = 'dashboard-page-loader';
 const LOADER_COLOR = { r: 11, g: 106, b: 57 };
+const MIN_VISIBLE_MS = 200;
+const LEAVE_TRANSITION_MS = 850;
+
+let shownAt = 0;
+let hideScheduled = false;
 
 function buildLoaderMarkup() {
     return `
@@ -36,6 +42,14 @@ function ensureLoaderElement() {
 
 let animationFrameId = 0;
 let animationActive = false;
+
+function stopLoaderAnimation() {
+    animationActive = false;
+    if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = 0;
+    }
+}
 
 function startLoaderAnimation(root) {
     const canvas = root.querySelector('.dashboard-page-loader__canvas');
@@ -77,7 +91,6 @@ function startLoaderAnimation(root) {
 
         ctx.clearRect(0, 0, size, size);
 
-        // Positioning / orbit circle — intentionally strong for visibility.
         ctx.beginPath();
         ctx.arc(center, center, radius, 0, Math.PI * 2);
         ctx.strokeStyle = 'rgba(11, 106, 57, 0.32)';
@@ -130,11 +143,40 @@ function startLoaderAnimation(root) {
 
     animationFrameId = requestAnimationFrame(drawFrame);
 }
+
+function markLoaderSessionActive() {
+    try {
+        sessionStorage.setItem(LOADER_SESSION_KEY, '1');
+    } catch {
+        // Ignore storage errors (private mode, etc.).
+    }
+}
+
+function clearLoaderSession() {
+    try {
+        sessionStorage.removeItem(LOADER_SESSION_KEY);
+    } catch {
+        // Ignore storage errors.
+    }
+}
+
+function loaderSessionActive() {
+    try {
+        return sessionStorage.getItem(LOADER_SESSION_KEY) === '1';
+    } catch {
+        return false;
+    }
+}
+
 export function showDashboardPageLoader() {
     const root = ensureLoaderElement();
     if (!root) {
         return;
     }
+
+    shownAt = performance.now();
+    hideScheduled = false;
+    markLoaderSessionActive();
 
     root.classList.remove('is-leaving');
     root.style.opacity = '1';
@@ -142,6 +184,50 @@ export function showDashboardPageLoader() {
     root.setAttribute('aria-busy', 'true');
     document.body.classList.add('dashboard-page-loading');
     startLoaderAnimation(root);
+}
+
+export function hideDashboardPageLoader() {
+    const root = document.getElementById(LOADER_ID);
+    clearLoaderSession();
+    document.body.classList.remove('dashboard-page-loading');
+
+    if (!root) {
+        return;
+    }
+
+    stopLoaderAnimation();
+    root.classList.add('is-leaving');
+    root.setAttribute('aria-busy', 'false');
+
+    window.setTimeout(() => {
+        root.remove();
+    }, LEAVE_TRANSITION_MS);
+}
+
+function scheduleHideWhenLayoutReady() {
+    if (hideScheduled) {
+        return;
+    }
+    hideScheduled = true;
+
+    const runHide = () => {
+        const elapsed = performance.now() - (shownAt || 0);
+        const wait = Math.max(0, MIN_VISIBLE_MS - elapsed);
+
+        window.setTimeout(() => {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    hideDashboardPageLoader();
+                });
+            });
+        }, wait);
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', runHide, { once: true });
+    } else {
+        runHide();
+    }
 }
 
 function isInternalNavLink(anchor) {
@@ -207,6 +293,19 @@ export function initDashboardPageLoader() {
     }
 
     window.showDashboardPageLoader = showDashboardPageLoader;
+    window.hideDashboardPageLoader = hideDashboardPageLoader;
+
+    if (loaderSessionActive() || document.body.classList.contains('dashboard-page-loading')) {
+        showDashboardPageLoader();
+    }
+
+    scheduleHideWhenLayoutReady();
+
+    window.addEventListener('pageshow', (event) => {
+        if (event.persisted) {
+            hideDashboardPageLoader();
+        }
+    });
 
     document.addEventListener('click', (event) => {
         if (event.defaultPrevented || event.button !== 0) {

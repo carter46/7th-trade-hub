@@ -11,7 +11,6 @@
 @endphp
 <x-layout.page
     title="My Tools"
-    subtitle="Websites and domains you own — separate from order history."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

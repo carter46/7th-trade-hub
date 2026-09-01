@@ -11,7 +11,6 @@
 @endphp
 <x-layout.page
     title="{{ $tool->resolvedDisplayName() }}"
-    subtitle="{{ $tool->product?->title }}"
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

@@ -5,7 +5,6 @@
 @section('content')
 <x-layout.page
     title="Sell Crypto (OTC)"
-    subtitle="Quotes lock when created. Resume any active order from here."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

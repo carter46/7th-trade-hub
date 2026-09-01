@@ -5,7 +5,6 @@
 @section('content')
 @php
     $title = $title ?? 'Orders';
-    $subtitle = $subtitle ?? 'View and manage your purchases.';
     $breadcrumbParent = $breadcrumbParent ?? null;
     $emptyTitle = $emptyTitle ?? 'No orders yet';
     $emptyDescription = $emptyDescription ?? 'Your purchases will appear here.';
@@ -18,7 +17,6 @@
 @endphp
 <x-layout.page
     :title="$title"
-    :subtitle="$subtitle"
     width="full"
     :breadcrumb="$crumbs"
 >

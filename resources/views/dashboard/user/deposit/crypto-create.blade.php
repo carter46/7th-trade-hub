@@ -5,7 +5,6 @@
 @section('content')
 <x-layout.page
     title="Sell Crypto"
-    subtitle="Enter a USD amount. Your Naira quote locks when you sell."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

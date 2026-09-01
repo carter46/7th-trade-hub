@@ -5,7 +5,6 @@
 @section('content')
 <x-layout.page
     title="Welcome back, {{ auth()->user()->name ?? 'User' }}"
-    subtitle="Here's what's happening with your account today."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

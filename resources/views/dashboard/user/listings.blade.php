@@ -5,7 +5,6 @@
 @section('content')
 <x-layout.page
     title="My Listings"
-    subtitle="Create, submit, and track your marketplace listings."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

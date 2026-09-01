@@ -5,7 +5,6 @@
 @section('content')
 <x-layout.page
     title="Withdraw to Bank"
-    subtitle="Funds are locked until your request is processed. Destination is your verified bank snapshot."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

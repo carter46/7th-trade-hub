@@ -56,7 +56,6 @@
 @endphp
 <x-layout.page
     title="Checkout"
-    :subtitle="$product->title"
     width="default"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

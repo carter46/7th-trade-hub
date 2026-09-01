@@ -5,7 +5,6 @@
 @section('content')
 <x-layout.page
     title="Deposit History"
-    subtitle="Bank transfers and funding requests."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

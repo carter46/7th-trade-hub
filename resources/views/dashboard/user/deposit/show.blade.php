@@ -5,7 +5,6 @@
 @section('content')
 <x-layout.page
     title="Deposit"
-    :subtitle="'Status: '.$funding->status.($funding->internal_status ? ' / '.$funding->internal_status : '')"
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

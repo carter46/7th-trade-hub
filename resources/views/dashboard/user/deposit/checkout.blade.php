@@ -5,7 +5,6 @@
 @section('content')
 <x-layout.page
     title="Fund wallet"
-    subtitle="Pay with Monnify Checkout or use a reserved account when allowed."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

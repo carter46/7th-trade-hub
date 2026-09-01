@@ -5,7 +5,6 @@
 @section('content')
 <x-layout.page
     title="Transaction History"
-    subtitle="Your full wallet ledger."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

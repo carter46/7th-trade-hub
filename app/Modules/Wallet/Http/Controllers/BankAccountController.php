@@ -134,7 +134,7 @@ class BankAccountController extends Controller
 
         return redirect()
             ->route('dashboard.banks.index')
-            ->with('status', __('Withdrawal bank updated.'));
+            ->with('status', __('My bank updated.'));
     }
 
     /**

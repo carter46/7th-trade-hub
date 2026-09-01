@@ -5,7 +5,6 @@
 @section('content')
 <x-layout.page
     title="New Message"
-    subtitle="Send a private message to another user."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

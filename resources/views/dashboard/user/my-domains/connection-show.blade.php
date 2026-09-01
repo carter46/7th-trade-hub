@@ -10,7 +10,6 @@
 @endphp
 <x-layout.page
     :title="$connection->fqdn"
-    subtitle="Connected domain — verify nameservers to finish ownership."
     width="default"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

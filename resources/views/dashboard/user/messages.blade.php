@@ -8,7 +8,6 @@
 @endphp
 <x-layout.page
     title="Escrow Conversations"
-    subtitle="Chat with the other party on marketplace escrow orders. Replies are only open while escrow is active."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

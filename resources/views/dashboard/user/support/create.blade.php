@@ -5,7 +5,6 @@
 @section('content')
 <x-layout.page
     title="New Support Ticket"
-    subtitle="Describe your issue. You can attach screenshots or documents (kept for 72 hours)."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

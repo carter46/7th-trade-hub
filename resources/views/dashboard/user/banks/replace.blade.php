@@ -6,11 +6,10 @@
 @php $step = session('bank_replace_step', old('_step', 'password')); @endphp
 <x-layout.page
     title="Replace Bank Account"
-    subtitle="Password → email OTP → Monnify name enquiry → confirm."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
-        ['Banks', route('dashboard.banks.index')],
+        ['My Bank', route('dashboard.banks.index')],
         ['Replace', null],
     ]"
 >

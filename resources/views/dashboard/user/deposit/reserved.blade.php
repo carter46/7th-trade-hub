@@ -5,7 +5,6 @@
 @section('content')
 <x-layout.page
     title="Reserved deposit account"
-    subtitle="Transfer any amount to this account. Your wallet is credited after Monnify confirms payment."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

@@ -8,7 +8,6 @@
 @endphp
 <x-layout.page
     title="{{ $sell->tracking_code ?: 'Sell #'.$sell->id }}"
-    subtitle="Send crypto to the address below. This page updates automatically."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

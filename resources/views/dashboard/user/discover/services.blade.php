@@ -5,20 +5,12 @@
 @section('content')
 <x-layout.page
     title="Services"
-    subtitle="Browse platform services and pay from your wallet."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
         ['Services', null],
     ]"
 >
-    <x-slot:actions>
-        @if($wallet)
-            <span class="text-sm text-text-muted mr-2">Wallet: <strong class="text-text-primary">₦{{ number_format((float) $wallet->balance, 0) }}</strong></span>
-        @endif
-        <x-dashboard.button :href="route('dashboard.service-orders')" variant="secondary" size="sm" icon="orders">My Orders</x-dashboard.button>
-    </x-slot:actions>
-
     <div class="space-y-8">
         <x-dashboard.card>
             <form method="GET" class="flex flex-wrap gap-3">

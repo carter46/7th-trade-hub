@@ -1,15 +1,14 @@
 @extends('layouts.dashboard-user')
 
-@section('title', 'Withdrawal bank')
+@section('title', 'My Bank')
 
 @section('content')
 <x-layout.page
-    title="Withdrawal bank"
-    subtitle="One active verified bank. Replace only — never edit in place."
+    title="My Bank"
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
-        ['Banks', null],
+        ['My Bank', null],
     ]"
 >
     <x-dashboard.card>
@@ -27,11 +26,11 @@
                 </div>
             @else
                 <x-dashboard.alert type="warning" class="mt-6">
-                    You cannot replace your withdrawal bank while a withdrawal request is pending or being processed.
+                    You cannot replace your bank while a withdrawal request is pending or being processed.
                 </x-dashboard.alert>
             @endif
         @else
-            <p class="text-sm text-text-secondary mb-4">No withdrawal bank on file.</p>
+            <p class="text-sm text-text-secondary mb-4">No bank account on file.</p>
             @if (! $monnifyReady)
                 <x-dashboard.alert type="warning" class="mb-4">Bank verification is not available yet. Try again later.</x-dashboard.alert>
             @endif

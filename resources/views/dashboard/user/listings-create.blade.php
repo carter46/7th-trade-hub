@@ -14,7 +14,6 @@
 @endphp
 <x-layout.page
     title="Create Listing"
-    subtitle="Pick a product category, then save a draft for review."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

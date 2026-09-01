@@ -5,7 +5,6 @@
 @section('content')
 <x-layout.page
     title="Withdrawal History"
-    subtitle="Bank payout requests and their status."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
@@ -16,7 +15,7 @@
         @if (! ($hasOpen ?? false))
             <x-dashboard.button :href="route('dashboard.withdrawal.create')" icon="withdraw">New withdrawal</x-dashboard.button>
         @endif
-        <x-dashboard.button :href="route('dashboard.banks.index')" variant="secondary" icon="withdraw">Withdrawal bank</x-dashboard.button>
+        <x-dashboard.button :href="route('dashboard.banks.index')" variant="secondary" icon="withdraw">My Bank</x-dashboard.button>
     </x-slot:actions>
 
     @if ($hasOpen ?? false)

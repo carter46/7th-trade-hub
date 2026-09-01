@@ -5,7 +5,6 @@
 @section('content')
 <x-layout.page
     title="KYC Verification"
-    subtitle="Level 1 is required to create your wallet."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

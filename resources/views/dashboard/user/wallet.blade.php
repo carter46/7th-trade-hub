@@ -5,7 +5,6 @@
 @section('content')
 <x-layout.page
     title="Wallet"
-    subtitle="Your NGN platform wallet."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
@@ -36,7 +35,12 @@
                 label="Balance (NGN)"
                 :value="'₦' . number_format($wallet->balance, 2)"
                 icon="wallet"
-            />
+            >
+                <div class="mt-4 flex flex-col gap-2">
+                    <x-dashboard.button :href="route('dashboard.deposit.index')" variant="secondary" size="sm" icon="deposit">Deposit Money</x-dashboard.button>
+                    <x-dashboard.button :href="route('dashboard.withdrawal.create')" variant="secondary" size="sm" icon="withdraw">Withdraw to Bank</x-dashboard.button>
+                </div>
+            </x-dashboard.stats-card>
             <x-dashboard.stats-card
                 label="Locked (Held)"
                 :value="'₦' . number_format($wallet->locked_balance, 2)"
@@ -48,10 +52,8 @@
                 icon="wallet"
             />
             <x-dashboard.card class="flex flex-col justify-center gap-3 min-h-[120px]">
-                <x-dashboard.button :href="route('dashboard.deposit.index')" variant="secondary" size="sm" icon="deposit">Deposit Money</x-dashboard.button>
-                <x-dashboard.button :href="route('dashboard.banks.index')" variant="secondary" size="sm" icon="withdraw">Withdrawal Bank</x-dashboard.button>
+                <x-dashboard.button :href="route('dashboard.banks.index')" variant="secondary" size="sm" icon="withdraw">My Bank</x-dashboard.button>
                 <x-dashboard.button :href="route('dashboard.crypto-sell.index')" variant="secondary" size="sm" icon="bitcoin">Sell Crypto</x-dashboard.button>
-                <x-dashboard.button :href="route('dashboard.withdrawal.create')" variant="secondary" size="sm" icon="withdraw">Withdraw to Bank</x-dashboard.button>
                 <x-dashboard.button :href="route('dashboard.history')" variant="ghost" size="sm" icon="history">Transaction History</x-dashboard.button>
             </x-dashboard.card>
         </x-dashboard.stat-grid>

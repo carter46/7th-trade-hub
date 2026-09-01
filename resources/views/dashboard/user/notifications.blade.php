@@ -15,7 +15,6 @@
 @endphp
 <x-layout.page
     title="Notifications"
-    subtitle="Updates on orders, listings, and messages."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

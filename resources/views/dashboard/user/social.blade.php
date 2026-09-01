@@ -5,7 +5,6 @@
 @section('content')
 <x-layout.page
     title="Social Services"
-    subtitle="Manage your social media services."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

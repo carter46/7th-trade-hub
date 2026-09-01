@@ -9,7 +9,6 @@
 @endphp
 <x-layout.page
     :title="$registration->fqdn"
-    subtitle="Manage domain registration and nameservers."
     width="default"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

@@ -5,7 +5,6 @@
 @section('content')
 <x-layout.page
     title="Deposit Money"
-    subtitle="Bank transfer — upload proof after payment."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

@@ -26,7 +26,6 @@
 @endphp
 <x-layout.page
     :title="$product->title"
-    :subtitle="$product->short_description"
     width="full"
     :breadcrumb="$crumbs"
 >
@@ -47,12 +46,7 @@
         }"
         @endif
     >
-        <div class="flex flex-wrap items-center justify-between gap-3">
-            <div class="flex flex-wrap items-center gap-2">
-                @if($wallet)
-                    <span class="text-sm text-text-muted">Wallet: <strong class="text-text-primary">₦{{ number_format((float) $wallet->balance, 0) }}</strong></span>
-                @endif
-            </div>
+        <div class="flex flex-wrap items-center justify-end gap-3">
             <div class="flex flex-wrap items-center gap-2">
                 @php
                     $demoIntegration = $product->siteIntegration;

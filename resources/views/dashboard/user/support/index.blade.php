@@ -18,7 +18,6 @@
 @endphp
 <x-layout.page
     title="Support Center"
-    subtitle="Contact us, browse help, or open a ticket when you need hands-on assistance."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

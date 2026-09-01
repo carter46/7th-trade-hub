@@ -5,7 +5,6 @@
 @section('content')
 <x-layout.page
     :title="$title"
-    :subtitle="$subtitle"
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
@@ -13,12 +12,6 @@
         [$title, null],
     ]"
 >
-    <x-slot:actions>
-        @if($wallet)
-            <span class="text-sm text-text-muted">Wallet: <strong class="text-text-primary">₦{{ number_format((float) $wallet->balance, 0) }}</strong></span>
-        @endif
-    </x-slot:actions>
-
     <div class="space-y-6">
         @if(!empty($typeCards) && $typeCards->isNotEmpty())
             <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

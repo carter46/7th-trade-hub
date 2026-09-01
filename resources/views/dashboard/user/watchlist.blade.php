@@ -5,7 +5,6 @@
 @section('content')
 <x-layout.page
     title="Watchlist"
-    subtitle="Listings you saved for later."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

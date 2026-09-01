@@ -5,7 +5,6 @@
 @section('content')
 <x-layout.page
     title="Withdrawal"
-    :subtitle="'Status: '.$withdrawal->status.($withdrawal->internal_status ? ' / '.$withdrawal->internal_status : '')"
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

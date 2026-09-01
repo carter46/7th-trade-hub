@@ -5,7 +5,6 @@
 @section('content')
 <x-layout.page
     :title="$listing->title"
-    :subtitle="$listing->marketplaceProduct?->name"
     width="default"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
@@ -14,9 +13,6 @@
     ]"
 >
     <x-slot:actions>
-        @if($wallet)
-            <span class="text-sm text-text-muted">₦{{ number_format((float) $wallet->balance, 0) }}</span>
-        @endif
         <x-dashboard.button :href="route('dashboard.marketplace.checkout', $listing->slug)" size="sm">Buy now</x-dashboard.button>
     </x-slot:actions>
 

@@ -5,7 +5,6 @@
 @section('content')
 <x-layout.page
     title="Marketplace"
-    subtitle="Browse and buy listings with your wallet. Funds stay in escrow until you confirm delivery."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
@@ -13,9 +12,6 @@
     ]"
 >
     <x-slot:actions>
-        @if($wallet)
-            <span class="text-sm text-text-muted mr-2">Wallet: <strong class="text-text-primary">₦{{ number_format((float) $wallet->balance, 0) }}</strong></span>
-        @endif
         <x-dashboard.button :href="route('dashboard.listings.create')" size="sm" icon="plus">Sell</x-dashboard.button>
     </x-slot:actions>
 

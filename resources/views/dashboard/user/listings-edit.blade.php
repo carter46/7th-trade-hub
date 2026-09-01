@@ -14,7 +14,6 @@
 @endphp
 <x-layout.page
     title="Edit Listing"
-    subtitle="Version {{ $version->version_number }} — {{ $version->status }}"
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],

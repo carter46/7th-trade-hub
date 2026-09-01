@@ -5,7 +5,6 @@
 @section('content')
 <x-layout.page
     title="Sales"
-    subtitle="Orders for your marketplace listings."
     width="full"
     :breadcrumb="[
         ['Dashboard', route('dashboard')],
