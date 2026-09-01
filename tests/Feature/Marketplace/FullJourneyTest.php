@@ -28,7 +28,7 @@ class FullJourneyTest extends TestCase
         $admin = $this->admin();
 
         // Seller: KYC → wallet → listing → publish
-        $seller = User::factory()->create(['email_verified_at' => now()]);
+        $seller = User::factory()->create(['email_verified_at' => now(), 'password' => \Illuminate\Support\Facades\Hash::make('password-123')]);
         $seller->assignRole('user');
 
         $this->actingAs($seller)
@@ -159,10 +159,20 @@ class FullJourneyTest extends TestCase
         ]);
 
         $this->actingAs($seller)
-            ->post(route('dashboard.withdrawal.store'), [
+            ->post(route('dashboard.withdrawal.otp'), [
+                'password' => 'password-123',
                 'amount' => $withdrawAmount,
                 'user_bank_account_id' => $bank->id,
             ])
+            ->assertRedirect();
+
+        \Illuminate\Support\Facades\DB::table('security_verification_codes')
+            ->where('user_id', $seller->id)
+            ->where('purpose', \App\Modules\Wallet\Services\SecurityVerificationService::PURPOSE_WITHDRAWAL_REQUEST)
+            ->update(['code_hash' => \Illuminate\Support\Facades\Hash::make('123456')]);
+
+        $this->actingAs($seller)
+            ->post(route('dashboard.withdrawal.verify-otp'), ['otp' => '123456'])
             ->assertRedirect();
 
         $withdrawal = Withdrawal::where('user_id', $seller->id)->first();

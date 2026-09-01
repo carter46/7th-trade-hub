@@ -52,7 +52,9 @@
             <tr>
                 <x-dashboard.td class="min-w-0 max-w-[9rem] sm:max-w-none">
                     <div class="font-medium text-text-primary">{{ \App\Models\User::labelFor($w->user) }}</div>
-                    <div class="mt-0.5 font-mono text-[10px] leading-snug text-text-muted break-all">{{ $w->reference }}</div>
+                    <div class="mt-0.5 font-mono text-[10px] leading-snug text-text-muted break-all">
+                        <a href="{{ route('admin.withdrawals.show', $w) }}" class="underline">{{ $w->reference }}</a>
+                    </div>
                 </x-dashboard.td>
                 <x-dashboard.td class="whitespace-nowrap">₦{{ number_format($w->amount, 2) }}</x-dashboard.td>
                 <x-dashboard.td class="hidden text-sm sm:table-cell">
@@ -63,6 +65,9 @@
                     <x-dashboard.badge :status="$w->status" />
                     @if ($w->internal_status)
                         <div class="text-xs text-text-muted mt-1">{{ $w->internal_status }}</div>
+                    @endif
+                    @if ($w->needsProviderAuthorization())
+                        <div class="mt-1 text-xs font-medium text-amber-600">Needs Monnify OTP</div>
                     @endif
                 </x-dashboard.td>
                 <x-dashboard.td>
@@ -83,6 +88,10 @@
                             @csrf
                             <x-dashboard.button type="submit" size="sm" variant="secondary">Retry payout</x-dashboard.button>
                         </form>
+                    @elseif ($w->needsProviderAuthorization())
+                        <a href="{{ route('admin.withdrawals.show', $w) }}" class="inline-block">
+                            <x-dashboard.button size="sm" variant="primary">Enter Monnify OTP</x-dashboard.button>
+                        </a>
                     @endif
                 </x-dashboard.td>
             </tr>

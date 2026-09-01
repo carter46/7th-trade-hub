@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\Marketplace;
+namespace Tests\Feature\Wallet;
 
 use App\Models\User;
 use App\Models\UserBankAccount;
@@ -13,11 +13,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
-class WithdrawalFlowTest extends TestCase
+class WithdrawalConfirmationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_withdrawal_request_locks_balance_and_admin_approval_completes_payout(): void
+    private function userWithBank(): array
     {
         $user = User::factory()->kycApproved()->create([
             'email_verified_at' => now(),
@@ -25,9 +25,7 @@ class WithdrawalFlowTest extends TestCase
         ]);
         $user->assignRole('user');
         app(WalletProvisioningService::class)->createWallet($user);
-        $user->refresh();
-
-        app(WalletService::class)->adminAdjust($user->wallet, 10000, 'Test credit', 1);
+        app(WalletService::class)->adminAdjust($user->fresh()->wallet, 5000, 'Test', 1);
 
         $bank = UserBankAccount::create([
             'user_id' => $user->id,
@@ -40,13 +38,28 @@ class WithdrawalFlowTest extends TestCase
             'active' => true,
         ]);
 
+        return [$user->fresh(), $bank];
+    }
+
+    public function test_withdrawal_requires_password_and_otp(): void
+    {
+        [$user, $bank] = $this->userWithBank();
+
+        $this->actingAs($user)
+            ->post(route('dashboard.withdrawal.otp'), [
+                'password' => 'wrong-password',
+                'amount' => 1000,
+                'user_bank_account_id' => $bank->id,
+            ])
+            ->assertSessionHasErrors('password');
+
         $this->actingAs($user)
             ->post(route('dashboard.withdrawal.otp'), [
                 'password' => 'password-123',
-                'amount' => 3000,
+                'amount' => 1000,
                 'user_bank_account_id' => $bank->id,
             ])
-            ->assertRedirect();
+            ->assertRedirect(route('dashboard.withdrawal.create'));
 
         DB::table('security_verification_codes')
             ->where('user_id', $user->id)
@@ -57,31 +70,25 @@ class WithdrawalFlowTest extends TestCase
             ->post(route('dashboard.withdrawal.verify-otp'), ['otp' => '123456'])
             ->assertRedirect();
 
-        $user->wallet->refresh();
-        $this->assertEquals(10000.0, (float) $user->wallet->balance);
-        $this->assertEquals(3000.0, (float) $user->wallet->locked_balance);
-        $this->assertEquals(7000.0, $user->wallet->availableBalance());
-
         $withdrawal = Withdrawal::where('user_id', $user->id)->first();
         $this->assertNotNull($withdrawal);
-        $this->assertSame('pending', $withdrawal->status);
-        $this->assertSame('GTBank', $withdrawal->bank_name);
-        $this->assertSame('0123456789', $withdrawal->account_number);
-
-        $admin = User::factory()->create(['email_verified_at' => now()]);
-        $admin->assignRole('admin');
-
-        $this->actingAs($admin)
-            ->post(route('admin.withdrawals.approve', $withdrawal), [
-                'confirm_send' => '1',
-            ])
-            ->assertRedirect();
+        $this->assertSame('pending_review', $withdrawal->internal_status);
+        $this->assertEquals(1000.0, (float) $withdrawal->amount);
 
         $user->wallet->refresh();
-        $withdrawal->refresh();
+        $this->assertEquals(1000.0, (float) $user->wallet->locked_balance);
+    }
 
-        $this->assertSame('completed', $withdrawal->status);
-        $this->assertEquals(7000.0, (float) $user->wallet->balance);
-        $this->assertEquals(0.0, (float) $user->wallet->locked_balance);
+    public function test_direct_store_redirects_to_stepped_flow(): void
+    {
+        [$user, $bank] = $this->userWithBank();
+
+        $this->actingAs($user)
+            ->post(route('dashboard.withdrawal.store'), [
+                'amount' => 500,
+                'user_bank_account_id' => $bank->id,
+            ])
+            ->assertRedirect(route('dashboard.withdrawal.create'))
+            ->assertSessionHas('error');
     }
 }

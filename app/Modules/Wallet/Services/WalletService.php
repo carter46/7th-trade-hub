@@ -390,7 +390,31 @@ class WalletService
                 'internal_status' => 'processing',
                 'provider_status' => $providerStatus ?? $withdrawal->provider_status,
             ]);
-            PaymentTimelineEvent::record($withdrawal, 'sent_to_provider', 'Sent to Monnify');
+            PaymentTimelineEvent::record($withdrawal, 'sent_to_provider', 'Sent to payment provider');
+        });
+    }
+
+    /**
+     * @param  array<string, mixed>  $providerMeta
+     */
+    public function markWithdrawalAwaitingProviderAuthorization(
+        Withdrawal $withdrawal,
+        ?string $providerStatus,
+        array $providerMeta,
+        string $provider = 'monnify',
+    ): void {
+        DB::transaction(function () use ($withdrawal, $providerStatus, $providerMeta, $provider) {
+            $withdrawal = Withdrawal::where('id', $withdrawal->id)->lockForUpdate()->firstOrFail();
+            $withdrawal->update([
+                'status' => 'processing',
+                'internal_status' => Withdrawal::INTERNAL_AWAITING_PROVIDER_AUTH,
+                'provider_status' => $providerStatus ?? 'PENDING_AUTHORIZATION',
+                'provider' => $provider,
+                'provider_meta' => $providerMeta,
+            ]);
+            PaymentTimelineEvent::record($withdrawal, 'awaiting_provider_auth', 'Awaiting payment provider OTP authorization', [
+                'provider_status' => $providerStatus,
+            ]);
         });
     }
 
@@ -404,7 +428,8 @@ class WalletService
                     ?? throw new InvalidArgumentException('Completed withdrawal has no ledger entry.');
             }
 
-            if (! in_array($withdrawal->internal_status, ['approved', 'processing', 'pending_review', null], true)
+            $completableInternal = ['approved', 'processing', 'pending_review', Withdrawal::INTERNAL_AWAITING_PROVIDER_AUTH, null];
+            if (! in_array($withdrawal->internal_status, $completableInternal, true)
                 && ! in_array($withdrawal->status, ['pending', 'approved', 'processing'], true)) {
                 throw new InvalidArgumentException('Withdrawal cannot be completed from current status.');
             }
@@ -572,12 +597,13 @@ class WalletService
             }
 
             if (! in_array($withdrawal->status, ['pending', 'approved'], true)
-                && ! in_array($withdrawal->internal_status, ['pending_review', 'approved', null], true)) {
+                && ! in_array($withdrawal->internal_status, ['pending_review', 'approved', null], true)
+                && $withdrawal->internal_status !== Withdrawal::INTERNAL_AWAITING_PROVIDER_AUTH) {
                 throw new InvalidArgumentException('Withdrawal cannot be rejected from current status.');
             }
 
             if (in_array($withdrawal->status, ['processing'], true)
-                || $withdrawal->internal_status === 'processing') {
+                && $withdrawal->internal_status !== Withdrawal::INTERNAL_AWAITING_PROVIDER_AUTH) {
                 throw new InvalidArgumentException('Cannot reject a withdrawal that is already processing.');
             }
 

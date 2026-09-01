@@ -12,7 +12,14 @@ class Withdrawal extends Model
 
     public const OPEN_STATUSES = ['pending', 'approved', 'processing'];
 
-    public const OPEN_INTERNAL = ['pending_review', 'approved', 'processing'];
+    public const INTERNAL_AWAITING_PROVIDER_AUTH = 'awaiting_provider_authorization';
+
+    public const OPEN_INTERNAL = [
+        'pending_review',
+        'approved',
+        'processing',
+        self::INTERNAL_AWAITING_PROVIDER_AUTH,
+    ];
 
     protected function casts(): array
     {
@@ -20,6 +27,8 @@ class Withdrawal extends Model
             'amount' => 'decimal:2',
             'approved_at' => 'datetime',
             'account_number' => 'encrypted',
+            'provider_meta' => 'array',
+            'provider_auth_attempts' => 'integer',
         ];
     }
 
@@ -57,6 +66,56 @@ class Withdrawal extends Model
     public function isProcessing(): bool
     {
         return $this->status === 'processing' || $this->internal_status === 'processing';
+    }
+
+    public function needsProviderAuthorization(): bool
+    {
+        if ($this->isProviderAuthorizationExpired()) {
+            return false;
+        }
+
+        if ($this->internal_status === self::INTERNAL_AWAITING_PROVIDER_AUTH) {
+            return true;
+        }
+
+        if ($this->isTerminal()) {
+            return false;
+        }
+
+        return strtoupper((string) $this->provider_status) === 'PENDING_AUTHORIZATION';
+    }
+
+    public function isProviderAuthorizationExpired(): bool
+    {
+        return strtoupper((string) $this->provider_status) === 'EXPIRED';
+    }
+
+    public function canBeRejectedByAdmin(): bool
+    {
+        if ($this->isTerminal()) {
+            return false;
+        }
+
+        if ($this->internal_status === self::INTERNAL_AWAITING_PROVIDER_AUTH) {
+            return true;
+        }
+
+        return in_array($this->status, ['pending', 'approved'], true)
+            || in_array($this->internal_status, ['pending_review', 'approved'], true);
+    }
+
+    public function isTerminal(): bool
+    {
+        return in_array($this->status, ['completed', 'rejected', 'failed'], true)
+            || in_array($this->internal_status, ['completed', 'failed'], true);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function providerInitiateSnapshot(): array
+    {
+        return (array) (($this->provider_meta ?? [])['initiate'] ?? []);
     }
 
     public function maskedAccountNumber(): string

@@ -10,24 +10,18 @@ use App\Modules\Wallet\Payments\Contracts\PaymentRailInterface;
 use App\Services\Communications\Email\EmailProfile;
 use App\Services\Communications\Email\EmailService;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\View;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
 class BankAccountService
 {
-    public const PURPOSE_REPLACE = 'bank_replace';
-
-    private const OTP_EXPIRY_MINUTES = 10;
-
-    private const OTP_MAX_ATTEMPTS = 5;
-
     public function __construct(
         private PaymentRailInterface $rail,
         private BankCatalogService $bankCatalog,
         private AuditLogService $audit,
         private EmailService $email,
+        private SecurityVerificationService $security,
     ) {}
 
     public function hasOpenWithdrawal(User $user): bool
@@ -54,25 +48,11 @@ class BankAccountService
     {
         $this->assertCanReplace($user);
 
-        if (! $user->hasPasswordSet() || ! Hash::check($password, $user->password)) {
-            throw ValidationException::withMessages([
-                'password' => __('The password is incorrect.'),
-            ]);
-        }
-
-        $code = sprintf('%06d', random_int(0, 999999));
-
-        DB::table('security_verification_codes')->where('user_id', $user->id)->where('purpose', self::PURPOSE_REPLACE)->delete();
-        DB::table('security_verification_codes')->insert([
-            'user_id' => $user->id,
-            'purpose' => self::PURPOSE_REPLACE,
-            'code_hash' => Hash::make($code),
-            'expires_at' => now()->addMinutes(self::OTP_EXPIRY_MINUTES),
-            'attempts' => 0,
-            'payload' => null,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $code = $this->security->start(
+            $user,
+            SecurityVerificationService::PURPOSE_BANK_REPLACE,
+            $password,
+        );
 
         $html = View::make('emails.bank-replace-otp', ['code' => $code, 'user' => $user])->render();
         $this->email->sendMailableHtml(
@@ -86,37 +66,7 @@ class BankAccountService
 
     public function verifyOtp(User $user, string $otp): void
     {
-        $row = DB::table('security_verification_codes')
-            ->where('user_id', $user->id)
-            ->where('purpose', self::PURPOSE_REPLACE)
-            ->where('expires_at', '>', now())
-            ->orderByDesc('created_at')
-            ->first();
-
-        if (! $row) {
-            throw ValidationException::withMessages([
-                'otp' => __('The verification code has expired. Please request a new one.'),
-            ]);
-        }
-
-        if ($row->attempts >= self::OTP_MAX_ATTEMPTS) {
-            DB::table('security_verification_codes')->where('id', $row->id)->delete();
-            throw ValidationException::withMessages([
-                'otp' => __('Too many attempts. Please start again.'),
-            ]);
-        }
-
-        if (! Hash::check($otp, $row->code_hash)) {
-            DB::table('security_verification_codes')->where('id', $row->id)->increment('attempts');
-            throw ValidationException::withMessages([
-                'otp' => __('The verification code is invalid.'),
-            ]);
-        }
-
-        DB::table('security_verification_codes')->where('id', $row->id)->update([
-            'payload' => json_encode(['otp_verified' => true]),
-            'updated_at' => now(),
-        ]);
+        $this->security->verify($user, SecurityVerificationService::PURPOSE_BANK_REPLACE, $otp);
     }
 
     /**
@@ -125,7 +75,7 @@ class BankAccountService
     public function resolveNewBank(User $user, string $bankCode, string $bankName, string $accountNumber): array
     {
         $this->assertCanReplace($user);
-        $this->assertOtpVerified($user);
+        $this->security->assertVerified($user, SecurityVerificationService::PURPOSE_BANK_REPLACE);
 
         if (! $this->rail->isConfigured()) {
             throw new InvalidArgumentException('Bank verification is temporarily unavailable.');
@@ -153,7 +103,7 @@ class BankAccountService
         ?string $userAgent = null,
     ): UserBankAccount {
         $this->assertCanReplace($user);
-        $this->assertOtpVerified($user);
+        $this->security->assertVerified($user, SecurityVerificationService::PURPOSE_BANK_REPLACE);
 
         if (! $this->rail->isConfigured()) {
             throw new InvalidArgumentException('Bank verification is temporarily unavailable.');
@@ -161,7 +111,6 @@ class BankAccountService
 
         $this->assertAllowedBank($bankCode, $bankName);
 
-        // Never trust client name/account — re-resolve with Monnify at confirm time.
         $resolved = $this->rail->resolveAccount($accountNumber, $bankCode);
         $accountNumber = (string) $resolved['accountNumber'];
         $bankCode = (string) $resolved['bankCode'];
@@ -191,7 +140,7 @@ class BankAccountService
 
             DB::table('security_verification_codes')
                 ->where('user_id', $user->id)
-                ->where('purpose', self::PURPOSE_REPLACE)
+                ->where('purpose', SecurityVerificationService::PURPOSE_BANK_REPLACE)
                 ->delete();
 
             $this->audit->log(
@@ -236,23 +185,6 @@ class BankAccountService
 
             return $new;
         });
-    }
-
-    private function assertOtpVerified(User $user): void
-    {
-        $row = DB::table('security_verification_codes')
-            ->where('user_id', $user->id)
-            ->where('purpose', self::PURPOSE_REPLACE)
-            ->where('expires_at', '>', now())
-            ->orderByDesc('created_at')
-            ->first();
-
-        $payload = $row ? json_decode((string) $row->payload, true) : null;
-        if (! $row || ! ($payload['otp_verified'] ?? false)) {
-            throw ValidationException::withMessages([
-                'otp' => __('Verify the email code before continuing.'),
-            ]);
-        }
     }
 
     private function assertAllowedBank(string $bankCode, string $bankName): void

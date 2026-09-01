@@ -1064,5 +1064,11 @@ WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `name` = 'fees.manage' AND `
 -- ALTER TABLE `audit_logs` ADD INDEX `audit_logs_model_type_model_id_index` (`model_type`,`model_id`);
 -- ALTER TABLE `users` ADD FULLTEXT INDEX `users_search_fulltext` (`name`,`email`,`username`);
 
+-- Withdrawal provider authorization (Monnify OTP flow)
+-- ALTER TABLE `withdrawals` ADD COLUMN `provider` varchar(40) DEFAULT NULL AFTER `provider_status`;
+-- ALTER TABLE `withdrawals` ADD COLUMN `provider_auth_attempts` tinyint unsigned NOT NULL DEFAULT 0 AFTER `provider`;
+-- ALTER TABLE `withdrawals` ADD COLUMN `provider_meta` json DEFAULT NULL AFTER `provider_auth_attempts`;
+-- UPDATE `withdrawals` SET `internal_status` = 'awaiting_provider_authorization', `provider` = COALESCE(`provider`, 'monnify') WHERE `provider_status` = 'PENDING_AUTHORIZATION' AND `internal_status` = 'processing' AND `status` NOT IN ('completed', 'rejected', 'failed');
+
 COMMIT;
 

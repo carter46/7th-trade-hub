@@ -31,6 +31,12 @@ Manual verification on staging:
 - [ ] Confirm delivery / admin release escrow
 - [ ] Withdrawal → admin approve
 
+## Monnify disbursements (withdrawals)
+
+- [ ] With MFA enabled (default): after admin **Approve & send**, enter the Monnify OTP on **Admin → Withdrawals → detail** (not the Monnify dashboard UI).
+- [ ] If Monnify summary status is `EXPIRED`, do **not** reuse an old OTP — use **Retry payout** for a new `WPO-*` reference.
+- [ ] Optional production automation: email Monnify support to disable disbursement MFA and whitelist server IP (user password + email OTP on withdrawal requests still required).
+
 ## Operations
 
 - [ ] Backups scheduled

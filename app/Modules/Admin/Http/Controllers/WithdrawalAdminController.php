@@ -106,9 +106,11 @@ class WithdrawalAdminController extends Controller
             ])),
         );
 
-        $msg = $withdrawal->internal_status === 'completed'
-            ? __('Withdrawal approved and completed.')
-            : __('Withdrawal approved and sent to Monnify. Waiting for payout confirmation.');
+        $msg = match (true) {
+            $withdrawal->internal_status === 'completed' => __('Withdrawal approved and completed.'),
+            $withdrawal->needsProviderAuthorization() => __('Withdrawal sent to Monnify. Enter the Monnify OTP on the withdrawal detail page to authorize the transfer.'),
+            default => __('Withdrawal approved and sent to payment provider. Waiting for payout confirmation.'),
+        };
 
         Log::info('admin.withdrawal.approve.success', [
             'withdrawal_id' => $withdrawal->id,
@@ -117,7 +119,66 @@ class WithdrawalAdminController extends Controller
             'internal_status' => $withdrawal->internal_status,
         ]);
 
+        if ($withdrawal->needsProviderAuthorization()) {
+            return redirect()
+                ->route('admin.withdrawals.show', $withdrawal)
+                ->with('status', $msg);
+        }
+
         return back()->with('status', $msg);
+    }
+
+    public function show(Withdrawal $withdrawal): View
+    {
+        if ($withdrawal->needsProviderAuthorization() && ! $withdrawal->isTerminal()) {
+            $withdrawal = $this->payouts->refreshProviderStatus($withdrawal);
+        }
+
+        $withdrawal->load(['user', 'approver', 'timelineEvents']);
+
+        $merchantBalance = null;
+        if ($this->rail->isConfigured()) {
+            try {
+                $merchantBalance = $this->payouts->merchantBalance();
+            } catch (\Throwable) {
+                $merchantBalance = null;
+            }
+        }
+
+        return view('dashboard.admin.withdrawals.show', [
+            'withdrawal' => $withdrawal,
+            'merchantBalance' => $merchantBalance,
+            'monnifyEnabled' => $this->rail->isConfigured(),
+            'maxAuthAttempts' => 5,
+        ]);
+    }
+
+    public function authorizeProvider(Withdrawal $withdrawal, Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'authorization_code' => ['required', 'string', 'min:4', 'max:12'],
+        ]);
+
+        try {
+            $this->payouts->authorizeProviderTransfer(
+                $withdrawal,
+                $validated['authorization_code'],
+                (int) auth()->id(),
+            );
+        } catch (\Throwable $e) {
+            return redirect()
+                ->route('admin.withdrawals.show', $withdrawal)
+                ->with('error', $e->getMessage());
+        }
+
+        $withdrawal->refresh();
+        $msg = $withdrawal->status === 'completed'
+            ? __('Monnify transfer authorized and withdrawal completed.')
+            : __('Monnify OTP accepted. Payout is processing — status will update when the provider confirms.');
+
+        return redirect()
+            ->route('admin.withdrawals.show', $withdrawal)
+            ->with('status', $msg);
     }
 
     public function reject(Withdrawal $withdrawal, Request $request): RedirectResponse

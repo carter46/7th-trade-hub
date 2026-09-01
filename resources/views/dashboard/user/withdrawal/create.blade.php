@@ -3,6 +3,7 @@
 @section('title', 'Withdraw')
 
 @section('content')
+@php $step = session('withdrawal_step', old('_step', 'confirm')); @endphp
 <x-layout.page
     title="Withdraw to Bank"
     width="full"
@@ -20,12 +21,26 @@
             <a href="{{ route('dashboard.banks.index') }}" class="mt-2 inline-block text-sm underline">Manage bank</a>
         </div>
         <p class="mb-4 text-sm text-text-secondary">Available: ₦{{ number_format($wallet->availableBalance(), 2) }}</p>
-        <form method="POST" action="{{ route('dashboard.withdrawal.store') }}" class="w-full space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
-            @csrf
-            <input type="hidden" name="user_bank_account_id" value="{{ $bank->id }}">
-            <x-dashboard.input label="Amount (NGN)" type="number" name="amount" min="100" step="0.01" required />
-            <x-dashboard.button type="submit" icon="withdraw" x-bind:disabled="submitting">Request Withdrawal</x-dashboard.button>
-        </form>
+
+        @if ($step === 'confirm')
+            <form method="POST" action="{{ route('dashboard.withdrawal.otp') }}" class="space-y-4">
+                @csrf
+                <input type="hidden" name="user_bank_account_id" value="{{ $bank->id }}">
+                <x-dashboard.input label="Amount (NGN)" type="number" name="amount" min="100" step="0.01" :value="old('amount')" required />
+                <x-dashboard.input type="password" name="password" label="Confirm your password" required autocomplete="current-password" />
+                <x-dashboard.button type="submit" icon="withdraw">Send email code</x-dashboard.button>
+            </form>
+        @elseif ($step === 'otp')
+            <form method="POST" action="{{ route('dashboard.withdrawal.verify-otp') }}" class="space-y-4">
+                @csrf
+                <x-dashboard.input name="otp" label="6-digit verification code" maxlength="6" required />
+                <x-dashboard.button type="submit" icon="withdraw">Verify and submit withdrawal</x-dashboard.button>
+            </form>
+            <p class="mt-4 text-xs text-text-muted">Check your email for the code. To change the amount, <a href="{{ route('dashboard.withdrawal.create') }}" class="underline">start again</a>.</p>
+        @else
+            <p class="text-sm text-text-secondary">Start again from the beginning.</p>
+            <x-dashboard.button :href="route('dashboard.withdrawal.create')" class="mt-4">Restart</x-dashboard.button>
+        @endif
     </x-dashboard.card>
 </x-layout.page>
 @endsection

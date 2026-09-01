@@ -219,6 +219,8 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
         Route::post('/crypto-sell/{cryptoSellRequest}/refresh', [CryptoSellController::class, 'refreshQuote'])->name('.crypto-sell.refresh');
         Route::get('/withdrawal', [WithdrawalController::class, 'index'])->name('.withdrawal.index');
         Route::get('/withdrawal/create', [WithdrawalController::class, 'create'])->name('.withdrawal.create');
+        Route::post('/withdrawal/otp', [WithdrawalController::class, 'sendOtp'])->middleware('throttle:5,10')->name('.withdrawal.otp');
+        Route::post('/withdrawal/verify-otp', [WithdrawalController::class, 'verifyOtp'])->middleware('throttle:10,10')->name('.withdrawal.verify-otp');
         Route::post('/withdrawal', [WithdrawalController::class, 'store'])->name('.withdrawal.store');
         Route::get('/withdrawal/{withdrawal}', [WithdrawalController::class, 'show'])->name('.withdrawal.show');
         Route::get('/history', [HistoryController::class, 'index'])->name('.history');
@@ -422,7 +424,9 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::get('/otc-pricing', [OtcPricingController::class, 'edit'])->name('.otc-pricing');
         Route::post('/otc-pricing', [OtcPricingController::class, 'update'])->name('.otc-pricing.update');
         Route::get('/withdrawals', [WithdrawalAdminController::class, 'index'])->name('.withdrawals');
+        Route::get('/withdrawals/{withdrawal}', [WithdrawalAdminController::class, 'show'])->name('.withdrawals.show');
         Route::post('/withdrawals/{withdrawal}/approve', [WithdrawalAdminController::class, 'approve'])->name('.withdrawals.approve');
+        Route::post('/withdrawals/{withdrawal}/authorize-provider', [WithdrawalAdminController::class, 'authorizeProvider'])->name('.withdrawals.authorize-provider');
         Route::post('/withdrawals/{withdrawal}/reject', [WithdrawalAdminController::class, 'reject'])->name('.withdrawals.reject');
         Route::post('/withdrawals/{withdrawal}/retry', [WithdrawalAdminController::class, 'retry'])->name('.withdrawals.retry');
         Route::get('/reconciliation', [ReconciliationController::class, 'index'])->name('.reconciliation');

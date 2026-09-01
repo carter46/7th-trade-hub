@@ -7,6 +7,7 @@ use App\Models\PaymentWebhook;
 use App\Models\WalletFunding;
 use App\Models\Withdrawal;
 use App\Modules\Wallet\Payments\Contracts\PaymentRailInterface;
+use App\Modules\Wallet\Payments\Monnify\MonnifyDisbursementMapper;
 use App\Modules\Wallet\Services\DepositCheckoutService;
 use App\Modules\Wallet\Services\WalletService;
 use Illuminate\Http\RedirectResponse;
@@ -40,7 +41,12 @@ class ReconciliationController extends Controller
             ->with('user')
             ->where(function ($q) {
                 $q->whereIn('status', ['processing', 'approved', 'failed'])
-                    ->orWhereIn('internal_status', ['processing', 'approved', 'failed']);
+                    ->orWhereIn('internal_status', [
+                        'processing',
+                        'approved',
+                        'failed',
+                        Withdrawal::INTERNAL_AWAITING_PROVIDER_AUTH,
+                    ]);
             })
             ->orderByDesc('created_at')
             ->limit(50)
@@ -114,12 +120,17 @@ class ReconciliationController extends Controller
 
         try {
             $status = $this->rail->getTransferStatus($withdrawal->provider_payout_reference);
-            $st = strtoupper((string) ($status['status'] ?? ''));
-            $withdrawal->update(['provider_status' => $st]);
+            $st = MonnifyDisbursementMapper::status($status);
+            $meta = $withdrawal->provider_meta ?? [];
+            $meta['last_summary'] = MonnifyDisbursementMapper::snapshot($status);
+            $withdrawal->update([
+                'provider_status' => $st ?: $withdrawal->provider_status,
+                'provider_meta' => $meta,
+            ]);
 
-            if (in_array($st, ['SUCCESS', 'COMPLETED'], true)) {
+            if (MonnifyDisbursementMapper::isSuccess($st)) {
                 $this->wallets->completeWithdrawalPayout($withdrawal);
-            } elseif (in_array($st, ['FAILED', 'EXPIRED'], true)) {
+            } elseif (MonnifyDisbursementMapper::isTerminalFailure($st)) {
                 $this->wallets->failWithdrawalPayout($withdrawal, 'Reconciled as '.$st);
             }
         } catch (\Throwable $e) {
@@ -188,10 +199,13 @@ class ReconciliationController extends Controller
 
     private function withdrawalDifference(Withdrawal $w, ?PaymentWebhook $webhook): string
     {
+        if ($w->internal_status === Withdrawal::INTERNAL_AWAITING_PROVIDER_AUTH) {
+            return 'Awaiting Monnify OTP';
+        }
         if ($w->internal_status === 'processing' && ! $webhook) {
             return 'Processing / Webhook Missing';
         }
-        if (strtoupper((string) $w->provider_status) === 'SUCCESS' && $w->internal_status !== 'completed') {
+        if (MonnifyDisbursementMapper::isSuccess((string) $w->provider_status) && $w->internal_status !== 'completed') {
             return 'Paid / Not Completed';
         }
 

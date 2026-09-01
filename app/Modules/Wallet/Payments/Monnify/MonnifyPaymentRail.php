@@ -3,9 +3,10 @@
 namespace App\Modules\Wallet\Payments\Monnify;
 
 use App\Modules\Wallet\Payments\Contracts\PaymentRailInterface;
+use App\Modules\Wallet\Payments\Contracts\SupportsTransferAuthorization;
 use RuntimeException;
 
-class MonnifyPaymentRail implements PaymentRailInterface
+class MonnifyPaymentRail implements PaymentRailInterface, SupportsTransferAuthorization
 {
     public function __construct(private MonnifyClient $client) {}
 
@@ -131,6 +132,21 @@ class MonnifyPaymentRail implements PaymentRailInterface
     {
         $json = $this->client->get('/api/v2/disbursements/single/summary', [
             'reference' => $reference,
+        ]);
+
+        return $json['responseBody'] ?? [];
+    }
+
+    public function requiresTransferAuthorization(array $initiateResult): bool
+    {
+        return MonnifyDisbursementMapper::requiresAuthorization($initiateResult);
+    }
+
+    public function authorizeTransfer(string $reference, string $authorizationCode): array
+    {
+        $json = $this->client->post('/api/v2/disbursements/single/validate-otp', [
+            'reference' => $reference,
+            'authorizationCode' => $authorizationCode,
         ]);
 
         return $json['responseBody'] ?? [];

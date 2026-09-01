@@ -19,6 +19,7 @@ use App\Events\UserVerified;
 use App\Events\WalletFunded;
 use App\Events\WalletFundingSubmitted;
 use App\Events\WalletWithdrawalCompleted;
+use App\Events\WithdrawalAwaitingProviderAuthorization;
 use App\Events\WithdrawalPayoutFailed;
 use App\Events\WithdrawalRequested;
 use App\Listeners\CreateUserToolsFromOrder;
@@ -31,6 +32,7 @@ use App\Listeners\WriteAuditLogFromEvent;
 use App\Modules\Admin\Services\AuditLogService;
 use App\Modules\Marketplace\Services\CheckoutService;
 use App\Modules\Wallet\Contracts\WalletProviderInterface;
+use App\Modules\Wallet\Payments\PayoutGateway;
 use App\Modules\Wallet\Providers\ManualProvider;
 use App\Modules\Wallet\Services\CryptoPriceService;
 use App\Modules\Wallet\Services\WalletProvisioningService;
@@ -57,6 +59,7 @@ class AppServiceProvider extends ServiceProvider
         WalletFundingSubmitted::class,
         WalletWithdrawalCompleted::class,
         WithdrawalRequested::class,
+        WithdrawalAwaitingProviderAuthorization::class,
         WithdrawalPayoutFailed::class,
         OrderCompleted::class,
         EscrowOpened::class,
@@ -79,6 +82,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             \App\Modules\Wallet\Payments\Contracts\PaymentRailInterface::class,
             \App\Modules\Wallet\Payments\Monnify\MonnifyPaymentRail::class
+        );
+        $this->app->bind(
+            PayoutGateway::class,
+            fn ($app) => PayoutGateway::from($app->make(\App\Modules\Wallet\Payments\Contracts\PaymentRailInterface::class))
         );
         $this->app->singleton(CryptoPriceService::class);
         $this->app->singleton(\App\Modules\Wallet\Services\ExchangeQuoteService::class);

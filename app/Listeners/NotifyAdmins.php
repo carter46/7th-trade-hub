@@ -13,6 +13,7 @@ use App\Events\UserVerified;
 use App\Events\WalletFunded;
 use App\Events\WalletFundingSubmitted;
 use App\Events\WalletWithdrawalCompleted;
+use App\Events\WithdrawalAwaitingProviderAuthorization;
 use App\Events\WithdrawalPayoutFailed;
 use App\Events\WithdrawalRequested;
 use App\Models\Order;
@@ -87,6 +88,7 @@ class NotifyAdmins
             WalletFundingSubmitted::class => $this->depositSubmittedPayload($event),
             WalletFunded::class => $this->depositCreditedPayload($event),
             WithdrawalRequested::class => $this->withdrawalRequestedPayload($event),
+            WithdrawalAwaitingProviderAuthorization::class => $this->withdrawalAwaitingProviderAuthPayload($event),
             WalletWithdrawalCompleted::class => $this->withdrawalCompletedPayload($event),
             WithdrawalPayoutFailed::class => $this->withdrawalFailedPayload($event),
             OrderCompleted::class => $this->orderCompletedPayload($event),
@@ -211,6 +213,32 @@ class NotifyAdmins
             'meta' => ['withdrawal_id' => $event->withdrawalId, 'user_id' => $event->userId, 'event' => $event::class],
             'permission' => 'finance.manage',
             'dedupeKey' => 'wallet.withdrawal_requested.'.$event->withdrawalId,
+        ];
+    }
+
+    private function withdrawalAwaitingProviderAuthPayload(WithdrawalAwaitingProviderAuthorization $event): array
+    {
+        $detailUrl = Route::has('admin.withdrawals.show')
+            ? route('admin.withdrawals.show', $event->withdrawalId)
+            : (Route::has('admin.withdrawals') ? route('admin.withdrawals') : null);
+
+        return [
+            'type' => 'wallet.withdrawal_awaiting_provider_auth',
+            'title' => 'Withdrawal needs Monnify OTP',
+            'body' => sprintf(
+                'Withdrawal %s (₦%s) is pending Monnify authorization. Enter the OTP from your Monnify merchant email.',
+                $event->providerPayoutReference,
+                number_format($event->amount, 2),
+            ),
+            'actionUrl' => $detailUrl,
+            'meta' => [
+                'withdrawal_id' => $event->withdrawalId,
+                'user_id' => $event->userId,
+                'provider_payout_reference' => $event->providerPayoutReference,
+                'event' => $event::class,
+            ],
+            'permission' => 'finance.manage',
+            'dedupeKey' => 'wallet.withdrawal_awaiting_provider_auth.'.$event->withdrawalId,
         ];
     }
 
