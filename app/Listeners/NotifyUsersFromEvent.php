@@ -2,12 +2,16 @@
 
 namespace App\Listeners;
 
+use App\Events\OrderCompleted;
 use App\Events\TicketReplied;
 use App\Events\WalletFunded;
 use App\Events\WalletWithdrawalCompleted;
+use App\Events\WithdrawalPayoutFailed;
+use App\Models\Order;
 use App\Models\SupportTicket;
 use App\Models\User;
 use App\Services\Notifications\NotificationDispatcher;
+use App\Services\Notifications\NotificationEmailRenderer;
 use App\Services\Notifications\NotificationMessage;
 use Illuminate\Support\Facades\Route;
 
@@ -18,13 +22,18 @@ use Illuminate\Support\Facades\Route;
  */
 class NotifyUsersFromEvent
 {
-    public function __construct(private NotificationDispatcher $dispatcher) {}
+    public function __construct(
+        private NotificationDispatcher $dispatcher,
+        private NotificationEmailRenderer $emailRenderer,
+    ) {}
 
     public function handle(object $event): void
     {
         match ($event::class) {
             WalletFunded::class => $this->walletFunded($event),
             WalletWithdrawalCompleted::class => $this->walletWithdrawalCompleted($event),
+            WithdrawalPayoutFailed::class => $this->withdrawalPayoutFailed($event),
+            OrderCompleted::class => $this->orderCompleted($event),
             TicketReplied::class => $this->ticketReplied($event),
             default => null,
         };
@@ -40,15 +49,15 @@ class NotifyUsersFromEvent
         $this->dispatcher->notifyUser(
             $user,
             new NotificationMessage(
-                type: 'wallet.funded',
-                title: __('Wallet funded'),
+                type: 'wallet.deposit_credited',
+                title: __('Deposit credited'),
                 body: __('Your wallet was credited with :amount :currency.', [
                     'amount' => number_format($event->amount, 2),
                     'currency' => $event->currency,
                 ]),
                 actionUrl: Route::has('dashboard.wallet') ? route('dashboard.wallet') : null,
                 meta: ['transaction_id' => $event->transactionId],
-                emailSubject: __('Wallet funded'),
+                emailSubject: __('Deposit credited'),
             ),
             ['database', 'mail']
         );
@@ -78,6 +87,85 @@ class NotifyUsersFromEvent
                     'transaction_id' => $event->transactionId,
                 ],
                 emailSubject: __('Withdrawal completed'),
+            ),
+            ['database', 'mail']
+        );
+    }
+
+    private function withdrawalPayoutFailed(WithdrawalPayoutFailed $event): void
+    {
+        $user = User::query()->find($event->userId);
+        if (! $user) {
+            return;
+        }
+
+        $type = match ($event->outcome) {
+            'expired' => 'wallet.withdrawal_expired',
+            'reversed' => 'wallet.withdrawal_reversed',
+            default => 'wallet.withdrawal_failed',
+        };
+
+        $title = match ($event->outcome) {
+            'expired' => __('Withdrawal expired'),
+            'reversed' => __('Withdrawal reversed'),
+            default => __('Withdrawal failed'),
+        };
+
+        $body = match ($event->outcome) {
+            'expired' => __('Your withdrawal of :amount :currency expired. Funds have been returned to your wallet.', [
+                'amount' => number_format($event->amount, 2),
+                'currency' => $event->currency,
+            ]),
+            'reversed' => __('Your withdrawal of :amount :currency was reversed. Please contact support if you need assistance.', [
+                'amount' => number_format($event->amount, 2),
+                'currency' => $event->currency,
+            ]),
+            default => __('Your withdrawal of :amount :currency could not be completed. Funds have been returned to your wallet.', [
+                'amount' => number_format($event->amount, 2),
+                'currency' => $event->currency,
+            ]),
+        };
+
+        $this->dispatcher->notifyUser(
+            $user,
+            new NotificationMessage(
+                type: $type,
+                title: $title,
+                body: $body,
+                actionUrl: Route::has('dashboard.withdrawal.index')
+                    ? route('dashboard.withdrawal.index')
+                    : (Route::has('dashboard.wallet') ? route('dashboard.wallet') : null),
+                meta: ['withdrawal_id' => $event->withdrawalId],
+                emailSubject: $title,
+            ),
+            ['database', 'mail']
+        );
+    }
+
+    private function orderCompleted(OrderCompleted $event): void
+    {
+        $order = Order::query()->with(['items', 'user'])->find($event->orderId);
+        if (! $order?->user) {
+            return;
+        }
+
+        $context = $this->emailRenderer->orderContext($order);
+
+        $this->dispatcher->notifyUser(
+            $order->user,
+            new NotificationMessage(
+                type: 'order.completed',
+                title: __('Order confirmed'),
+                body: __('Thank you for your purchase. Order :ref for ₦:amount has been confirmed.', [
+                    'ref' => $order->reference,
+                    'amount' => number_format((float) ($order->total_amount ?? $order->amount), 2),
+                ]),
+                actionUrl: Route::has('dashboard.orders') ? route('dashboard.orders') : null,
+                meta: [
+                    'order_id' => $order->id,
+                    'email_context' => $context,
+                ],
+                emailSubject: __('Order :ref confirmed', ['ref' => $order->reference]),
             ),
             ['database', 'mail']
         );

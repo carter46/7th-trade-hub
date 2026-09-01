@@ -285,7 +285,7 @@ class DepositMonitorService
             priority: 'normal',
             permission: 'finance.manage',
             dedupeKey: 'detect:'.$row->tx_hash,
-        ), ['database']);
+        ), \App\Services\Notifications\AdminNotificationChannels::FINANCE);
 
         return true;
     }
@@ -339,7 +339,7 @@ class DepositMonitorService
                                 priority: 'high',
                                 permission: 'finance.manage',
                                 dedupeKey: 'ready:'.$row->tx_hash,
-                            ), ['database']);
+                            ), \App\Services\Notifications\AdminNotificationChannels::FINANCE);
                         } else {
                             $order->save();
                         }
@@ -461,6 +461,6 @@ class DepositMonitorService
             priority: 'high',
             permission: 'finance.manage',
             dedupeKey: 'offline:'.$network.':'.now()->format('Y-m-d-H'),
-        ), ['database']);
+        ), \App\Services\Notifications\AdminNotificationChannels::FINANCE);
     }
 }

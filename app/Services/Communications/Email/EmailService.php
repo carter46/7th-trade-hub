@@ -3,11 +3,12 @@
 namespace App\Services\Communications\Email;
 
 use App\Jobs\RetryFailedEmailJob;
-use App\Models\AdminNotification;
 use App\Models\EmailIdentity;
 use App\Models\IntegrationProvider;
 use App\Services\Communications\Email\Providers\BrevoApiProvider;
 use App\Services\Communications\Email\Providers\LaravelMailProvider;
+use App\Services\Notifications\NotificationDispatcher;
+use App\Services\Notifications\NotificationMessage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
 use Throwable;
@@ -18,6 +19,7 @@ class EmailService
         private BrevoApiProvider $brevo,
         private LaravelMailProvider $laravelMail,
         private EmailDeliveryLogger $logger,
+        private NotificationDispatcher $notifications,
     ) {}
 
     /**
@@ -210,16 +212,23 @@ class EmailService
     private function notifyAdminsOfFailure(OutgoingEmail $email, string $error): void
     {
         try {
-            AdminNotification::query()->create([
-                'type' => 'email.delivery_failed',
-                'title' => 'Email delivery failed',
-                'body' => mb_substr('Subject: '.$email->subject.' — '.$error, 0, 2000),
-                'action_url' => route('admin.settings'),
-                'meta' => [
-                    'template' => $email->templateKey,
-                    'to' => $email->to,
-                ],
-            ]);
+            $this->notifications->notifyAdmins(
+                new NotificationMessage(
+                    type: 'email.delivery_failed',
+                    title: 'Email delivery failed',
+                    body: mb_substr('Subject: '.$email->subject.' — '.$error, 0, 2000),
+                    actionUrl: route('admin.settings'),
+                    meta: [
+                        'template' => $email->templateKey,
+                        'to' => $email->to,
+                        'event' => 'email.send_failed',
+                    ],
+                    permission: 'system.manage',
+                    dedupeKey: 'email.delivery_failed.'.md5($email->subject.$error.implode(',', array_column($email->to, 'email'))),
+                    emailSubject: 'Email delivery failed',
+                ),
+                ['database']
+            );
         } catch (Throwable $e) {
             Log::error('email.admin_notify_failed', ['error' => $e->getMessage()]);
         }

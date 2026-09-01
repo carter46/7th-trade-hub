@@ -8,6 +8,7 @@ use App\Models\EmailDeliveryAttempt;
 use App\Models\EmailIdentity;
 use App\Models\IntegrationProvider;
 use App\Models\MediaUsage;
+use App\Models\NotificationDeliveryLog;
 use App\Models\SocialLink;
 use App\Modules\Admin\Services\AuditLogService;
 use App\Services\Analytics\Providers\GoogleAnalyticsProvider;
@@ -60,6 +61,12 @@ class SettingsController extends Controller
                     ->where('success', false)
                     ->latest('created_at')
                     ->limit(10)
+                    ->get()
+                : collect(),
+            'recentNotificationDeliveries' => Schema::hasTable('notification_delivery_logs')
+                ? NotificationDeliveryLog::query()
+                    ->latest('created_at')
+                    ->limit(25)
                     ->get()
                 : collect(),
             'analyticsGoogle' => AnalyticsProvider::forProvider(AnalyticsProvider::PROVIDER_GOOGLE_ANALYTICS),
@@ -262,6 +269,7 @@ class SettingsController extends Controller
             'identities.*.from_name' => ['required', 'string', 'max:120'],
             'identities.*.from_email' => ['required', 'email', 'max:255'],
             'identities.*.reply_to_email' => ['nullable', 'email', 'max:255'],
+            'identities.*.notify_to_email' => ['nullable', 'email', 'max:255'],
             'identities.*.enabled' => ['nullable', 'boolean'],
         ]);
 
@@ -299,6 +307,7 @@ class SettingsController extends Controller
                     'from_name' => $row['from_name'],
                     'from_email' => $row['from_email'],
                     'reply_to_email' => $row['reply_to_email'] ?? null,
+                    'notify_to_email' => $row['notify_to_email'] ?? null,
                     'enabled' => (bool) ($row['enabled'] ?? true),
                 ]
             );

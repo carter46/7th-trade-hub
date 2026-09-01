@@ -191,6 +191,16 @@ class DepositController extends Controller
 
         \App\Models\PaymentTimelineEvent::record($funding, 'created', 'Created');
 
+        \Illuminate\Support\Facades\DB::afterCommit(function () use ($funding) {
+            \App\Events\WalletFundingSubmitted::dispatch(
+                (int) $funding->id,
+                (int) $funding->user_id,
+                (float) $funding->amount,
+                (string) $funding->currency,
+                'bank'
+            );
+        });
+
         return redirect()->route('dashboard.deposit.index')
             ->with('status', __('Deposit submitted. We will credit your wallet after verification.'));
     }

@@ -255,6 +255,31 @@
                 </div>
             @endif
 
+            @if(isset($recentNotificationDeliveries) && $recentNotificationDeliveries->isNotEmpty())
+                <div class="rounded-xl border border-border-subtle p-4 mb-6 space-y-2">
+                    <h3 class="font-semibold text-text-primary">Admin notification delivery log</h3>
+                    <p class="text-sm text-text-secondary">Recent mail and in-app admin alert delivery attempts (dedupe, skip, sent, failed).</p>
+                    @foreach($recentNotificationDeliveries as $row)
+                        <div class="text-sm text-text-secondary border-t border-border-subtle pt-2 first:border-0 first:pt-0">
+                            <p class="text-text-primary">
+                                {{ $row->created_at?->diffForHumans() }}
+                                · {{ $row->notification_type }}
+                                · {{ $row->channel }}
+                                · <span @class(['font-medium', 'text-success' => $row->status === 'sent', 'text-danger' => $row->status === 'failed'])>{{ $row->status }}</span>
+                                @if($row->profile) · {{ $row->profile }}@endif
+                                @if($row->recipient) · {{ $row->recipient }}@endif
+                            </p>
+                            @if($row->dedupe_key)
+                                <p class="text-xs text-text-muted">dedupe: {{ $row->dedupe_key }}</p>
+                            @endif
+                            @if($row->failure_reason)
+                                <p class="text-danger break-words">{{ $row->failure_reason }}</p>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+
             <form method="POST" action="{{ route('admin.settings.email') }}" class="space-y-6">
                 @csrf
                 <div class="rounded-xl border border-border-subtle p-4 space-y-4">
@@ -300,6 +325,7 @@
                             <x-dashboard.input name="identities[{{ $identity->profile }}][from_name]" label="From name" :value="old('identities.'.$identity->profile.'.from_name', $identity->from_name)" />
                             <x-dashboard.input name="identities[{{ $identity->profile }}][from_email]" type="email" label="From email" :value="old('identities.'.$identity->profile.'.from_email', $identity->from_email)" />
                             <x-dashboard.input name="identities[{{ $identity->profile }}][reply_to_email]" type="email" label="Reply-To" :value="old('identities.'.$identity->profile.'.reply_to_email', $identity->reply_to_email)" />
+                            <x-dashboard.input name="identities[{{ $identity->profile }}][notify_to_email]" type="email" label="Notify inbox (admin alerts)" :value="old('identities.'.$identity->profile.'.notify_to_email', $identity->notify_to_email)" />
                             <label class="flex items-center gap-2 text-sm text-text-secondary pb-2">
                                 <input type="hidden" name="identities[{{ $identity->profile }}][enabled]" value="0">
                                 <input type="checkbox" name="identities[{{ $identity->profile }}][enabled]" value="1" @checked(old('identities.'.$identity->profile.'.enabled', $identity->enabled))>

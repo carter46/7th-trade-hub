@@ -10,6 +10,7 @@ use App\Models\WalletFunding;
 use App\Models\Withdrawal;
 use App\Modules\Catalog\Services\PlatformCheckoutService;
 use App\Modules\Wallet\Services\WalletService;
+use App\Services\Notifications\AdminPaymentAlertNotifier;
 use Illuminate\Support\Facades\Log;
 
 class MonnifyWebhookProcessor
@@ -20,6 +21,7 @@ class MonnifyWebhookProcessor
         private MonnifyClient $client,
         private MonnifyPaymentRail $rail,
         private WalletService $wallets,
+        private AdminPaymentAlertNotifier $paymentAlerts,
     ) {}
 
     /**
@@ -230,6 +232,7 @@ class MonnifyWebhookProcessor
             }
 
             app(\App\Modules\Wallet\Services\DepositCheckoutService::class)->creditReservedPayment($verified);
+            $this->paymentAlerts->gatewayUnmatched($paymentReference, ['webhook_id' => $webhook->id]);
 
             return;
         }
@@ -245,6 +248,12 @@ class MonnifyWebhookProcessor
                 'expected' => $funding->amount,
                 'paid' => $amountPaid,
             ]);
+            $this->paymentAlerts->amountMismatch(
+                'Funding #'.$funding->id,
+                (string) $funding->amount,
+                $amountPaid,
+                ['funding_id' => $funding->id, 'webhook_id' => $webhook->id]
+            );
 
             return;
         }
@@ -270,6 +279,12 @@ class MonnifyWebhookProcessor
                 'expected' => $order->total_amount,
                 'paid' => $amountPaid,
             ]);
+            $this->paymentAlerts->amountMismatch(
+                'Order #'.$order->id,
+                (string) $order->total_amount,
+                $amountPaid,
+                ['order_id' => $order->id]
+            );
 
             return;
         }
@@ -338,6 +353,7 @@ class MonnifyWebhookProcessor
         }
 
         if (in_array($status, ['FAILED', 'EXPIRED'], true)) {
+            $this->paymentAlerts->disbursementFailed($reference, $status, ['withdrawal_id' => $withdrawal->id]);
             $this->wallets->failWithdrawalPayout($withdrawal, 'Monnify disbursement '.$status);
 
             return;
@@ -350,6 +366,14 @@ class MonnifyWebhookProcessor
                     'reference' => $reference,
                 ]);
                 PaymentTimelineEvent::record($withdrawal, 'reversed_alert', 'Reversed after completion — admin review required');
+                $this->paymentAlerts->disbursementReversed($reference, ['withdrawal_id' => $withdrawal->id]);
+                \App\Events\WithdrawalPayoutFailed::dispatch(
+                    (int) $withdrawal->id,
+                    (int) $withdrawal->user_id,
+                    (float) $withdrawal->amount,
+                    'reversed',
+                    (string) ($withdrawal->currency ?: 'NGN')
+                );
             } else {
                 $this->wallets->failWithdrawalPayout($withdrawal, 'Monnify disbursement reversed');
             }

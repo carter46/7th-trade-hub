@@ -149,7 +149,7 @@ class WalletBalanceMonitorService
                     priority: 'high',
                     permission: 'finance.manage',
                     dedupeKey: 'treasury-inc:'.$wallet->id.':'.round($balance, 8),
-                ), ['database']);
+                ), \App\Services\Notifications\AdminNotificationChannels::FINANCE);
             }
 
             return;
@@ -181,7 +181,7 @@ class WalletBalanceMonitorService
             priority: 'high',
             permission: 'finance.manage',
             dedupeKey: 'treasury-dec:'.$wallet->id.':'.round($balance, 8),
-        ), ['database']);
+        ), \App\Services\Notifications\AdminNotificationChannels::FINANCE);
     }
 
     private function depositAmountSince(CryptoDepositWallet $wallet, mixed $since): float

@@ -11,12 +11,9 @@ use App\Services\Communications\Email\EmailProfile;
 use App\Services\Communications\Email\Providers\LaravelMailProvider;
 use App\Services\Communications\LiveChat\LiveChatManager;
 use App\Services\Media\MediaUsageService;
-use App\Services\Notifications\Channels\MailChannel;
-use App\Services\Notifications\NotificationMessage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use ReflectionMethod;
 use Tests\TestCase;
 
 class CommunicationsAuditFixesTest extends TestCase
@@ -106,17 +103,12 @@ class CommunicationsAuditFixesTest extends TestCase
 
     public function test_mail_channel_maps_ticket_notifications_to_support_profile(): void
     {
-        $channel = app(MailChannel::class);
-        $method = new ReflectionMethod(MailChannel::class, 'profileFor');
-        $method->setAccessible(true);
+        $resolver = app(\App\Services\Notifications\EmailIdentityResolver::class);
 
-        $profile = $method->invoke($channel, new NotificationMessage(
-            type: 'ticket.replied',
-            title: 'Support replied',
-            body: 'Body',
-        ));
-
-        $this->assertSame(EmailProfile::Support, $profile);
+        $this->assertSame(
+            EmailProfile::Support,
+            $resolver->resolveProfileForType('ticket.replied')
+        );
     }
 
     public function test_branding_media_replace_rewrites_system_settings(): void

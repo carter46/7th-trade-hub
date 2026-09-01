@@ -6,6 +6,7 @@ const LEAVE_TRANSITION_MS = 850;
 
 let shownAt = 0;
 let hideScheduled = false;
+let unloadPending = false;
 
 function buildLoaderMarkup() {
     return `
@@ -307,6 +308,13 @@ export function initDashboardPageLoader() {
         }
     });
 
+    window.addEventListener('focus', () => {
+        if (unloadPending) {
+            unloadPending = false;
+            hideDashboardPageLoader();
+        }
+    });
+
     document.addEventListener('click', (event) => {
         if (event.defaultPrevented || event.button !== 0) {
             return;
@@ -332,6 +340,7 @@ export function initDashboardPageLoader() {
     }, true);
 
     window.addEventListener('beforeunload', () => {
+        unloadPending = true;
         showDashboardPageLoader();
     });
 }

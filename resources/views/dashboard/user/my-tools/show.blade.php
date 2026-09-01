@@ -5,9 +5,20 @@
 @section('content')
 @php
     use App\Enums\UserToolStatus;
+
+    $product = $tool->product;
     $isPending = $tool->status === UserToolStatus::PendingSetup;
     $isExpired = $tool->status === UserToolStatus::Expired;
     $isActive = $tool->status === UserToolStatus::Active;
+    $heroUrl = $product
+        ? (media_url($product->heroMedia, $product->hero_image, 'large')
+            ?? media_url($product->heroMedia, $product->hero_image, 'medium'))
+        : null;
+    $paidAmount = $tool->orderItem?->line_total
+        ?? $tool->order?->total_amount
+        ?? $tool->variant?->price;
+    $planLabel = $tool->variant?->displayLabel() ?? ($tool->duration_months ? $tool->duration_months.' months' : '—');
+    $pendingLabel = 'Pending';
 @endphp
 <x-layout.page
     title="{{ $tool->resolvedDisplayName() }}"
@@ -26,91 +37,160 @@
         @endif
     </x-slot:actions>
 
-    @if ($isPending)
-        <x-dashboard.card>
-            <h2 class="text-lg font-semibold text-text-primary">Pending setup</h2>
-            <p class="mt-2 text-sm text-text-secondary">
-                Payment received. Our team is configuring your service. Access details will appear here once setup is complete.
-            </p>
-            <dl class="mt-6 grid gap-3 sm:grid-cols-2 text-sm">
-                <div>
-                    <dt class="text-text-muted">Plan</dt>
-                    <dd class="font-medium">{{ $tool->variant?->displayLabel() ?? ($tool->duration_months ? $tool->duration_months.' months' : '—') }}</dd>
+    <div class="space-y-6">
+        <x-dashboard.card class="overflow-hidden !p-0">
+            <div class="grid gap-0 lg:grid-cols-[minmax(0,280px)_1fr]">
+                <div class="relative aspect-[4/3] bg-muted lg:aspect-auto lg:min-h-[220px]">
+                    @if ($heroUrl)
+                        <img
+                            src="{{ $heroUrl }}"
+                            alt="{{ $product?->title ?? $tool->resolvedDisplayName() }}"
+                            class="h-full w-full object-cover"
+                        >
+                    @else
+                        <div class="flex h-full min-h-[180px] items-center justify-center bg-gradient-to-br from-primary/20 via-muted to-elevated">
+                            <x-ui.icon name="monitor" class="h-12 w-12 text-primary/50" />
+                        </div>
+                    @endif
                 </div>
-                <div>
-                    <dt class="text-text-muted">Purchased</dt>
-                    <dd class="font-medium">{{ $tool->purchased_at?->format('j M Y') ?? '—' }}</dd>
+                <div class="space-y-4 p-5 sm:p-6">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-primary">Your service</p>
+                        <h2 class="mt-1 text-2xl font-bold text-text-primary">{{ $product?->title ?? $tool->resolvedDisplayName() }}</h2>
+                        @if (filled($product?->short_description))
+                            <p class="mt-2 text-sm text-text-secondary">{{ $product->short_description }}</p>
+                        @endif
+                    </div>
+                    <dl class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
+                        <div>
+                            <dt class="text-text-muted">Plan</dt>
+                            <dd class="font-medium text-text-primary">{{ $planLabel }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-text-muted">Amount paid</dt>
+                            <dd class="font-medium text-text-primary">
+                                @if ($paidAmount !== null)
+                                    ₦{{ number_format((float) $paidAmount, 2) }}
+                                @else
+                                    —
+                                @endif
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-text-muted">Purchased</dt>
+                            <dd class="font-medium text-text-primary">{{ $tool->purchased_at?->format('j M Y') ?? '—' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-text-muted">Status</dt>
+                            <dd><x-dashboard.badge :status="$tool->status->value" /></dd>
+                        </div>
+                    </dl>
                 </div>
-            </dl>
+            </div>
         </x-dashboard.card>
-    @else
+
+        @if ($isPending)
+            <p class="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-text-secondary">
+                Our team is configuring your service. Your admin login details will appear once done.
+            </p>
+        @endif
+
         <div class="grid gap-6 lg:grid-cols-2">
             <x-dashboard.card class="space-y-4">
-                <h2 class="text-lg font-semibold text-text-primary">Access</h2>
+                <h2 class="text-lg font-semibold text-text-primary">Admin access</h2>
                 <dl class="space-y-3 text-sm">
                     <div>
                         <dt class="text-text-muted">Site URL</dt>
-                        <dd>
+                        <dd class="font-medium text-text-primary">
                             @if ($tool->site_url)
-                                <a href="{{ $tool->site_url }}" class="text-primary underline" target="_blank" rel="noopener">{{ $tool->site_url }}</a>
+                                <a href="{{ $tool->site_url }}" class="text-primary underline break-all" target="_blank" rel="noopener">{{ $tool->site_url }}</a>
                             @else
-                                —
+                                <span class="text-text-muted">{{ $pendingLabel }}</span>
+                            @endif
+                        </dd>
+                    </div>
+                    @if ($tool->admin_login_url)
+                        <div>
+                            <dt class="text-text-muted">Admin login URL</dt>
+                            <dd class="break-all font-medium text-text-primary">{{ $tool->admin_login_url }}</dd>
+                        </div>
+                    @endif
+                    <div>
+                        <dt class="text-text-muted">Admin login email</dt>
+                        <dd class="font-medium text-text-primary">
+                            @if ($tool->admin_email)
+                                {{ $tool->admin_email }}
+                            @else
+                                <span class="text-text-muted">{{ $pendingLabel }}</span>
                             @endif
                         </dd>
                     </div>
                     <div>
-                        <dt class="text-text-muted">Admin login URL</dt>
-                        <dd class="break-all">{{ $tool->admin_login_url ?? '—' }}</dd>
-                    </div>
-                    <div>
-                        <dt class="text-text-muted">Admin email</dt>
-                        <dd>{{ $tool->admin_email ?? '—' }}</dd>
+                        <dt class="text-text-muted">Password</dt>
+                        <dd class="font-medium text-text-primary">
+                            @if ($tool->admin_password)
+                                <span class="text-text-secondary">Saved securely — use Copy password below</span>
+                            @else
+                                <span class="text-text-muted">{{ $pendingLabel }}</span>
+                            @endif
+                        </dd>
                     </div>
                 </dl>
-                <div class="flex flex-wrap gap-2 pt-2">
-                    @if ($tool->admin_password)
-                        <x-dashboard.button type="button" variant="secondary" size="sm" id="copy-tool-password" data-url="{{ route('dashboard.my-tools.password', $tool) }}">
-                            Copy password
-                        </x-dashboard.button>
-                    @endif
-                    @if ($tool->canLaunchAdmin())
-                        <form method="POST" action="{{ route('dashboard.my-tools.launch-admin', $tool) }}">
-                            @csrf
-                            <x-dashboard.button type="submit" size="sm">Login as admin</x-dashboard.button>
-                        </form>
-                    @endif
-                </div>
-                <p class="text-xs text-text-muted">Password is never shown on this page. Login as admin creates a session on your site automatically.</p>
+
+                @if (! $isPending)
+                    <div class="flex flex-wrap gap-2 pt-2">
+                        @if ($tool->admin_password)
+                            <x-dashboard.button type="button" variant="secondary" size="sm" id="copy-tool-password" data-url="{{ route('dashboard.my-tools.password', $tool) }}">
+                                Copy password
+                            </x-dashboard.button>
+                        @endif
+                        @if ($tool->canLaunchAdmin())
+                            <form method="POST" action="{{ route('dashboard.my-tools.launch-admin', $tool) }}">
+                                @csrf
+                                <x-dashboard.button type="submit" size="sm">Login as admin</x-dashboard.button>
+                            </form>
+                        @endif
+                    </div>
+                    <p class="text-xs text-text-muted">Password is never shown on this page. Login as admin creates a session on your site automatically.</p>
+                @endif
             </x-dashboard.card>
 
             <x-dashboard.card class="space-y-3">
                 <h2 class="text-lg font-semibold text-text-primary">Subscription</h2>
                 <dl class="space-y-3 text-sm">
                     <div>
-                        <dt class="text-text-muted">Status</dt>
-                        <dd>
-                            <x-dashboard.badge :status="$tool->status->value" />
-                            @if ($tool->isExpiringSoon())
-                                <span class="ml-1 text-amber-600">Expiring soon</span>
-                            @endif
-                        </dd>
-                    </div>
-                    <div>
                         <dt class="text-text-muted">Plan</dt>
-                        <dd>{{ $tool->variant?->displayLabel() ?? ($tool->duration_months ? $tool->duration_months.' months' : '—') }}</dd>
+                        <dd class="font-medium text-text-primary">{{ $planLabel }}</dd>
                     </div>
                     <div>
                         <dt class="text-text-muted">Purchased</dt>
-                        <dd>{{ $tool->purchased_at?->format('j M Y') ?? '—' }}</dd>
+                        <dd class="font-medium text-text-primary">{{ $tool->purchased_at?->format('j M Y') ?? '—' }}</dd>
                     </div>
                     <div>
                         <dt class="text-text-muted">Expires</dt>
-                        <dd>{{ $tool->expires_at?->format('j M Y') ?? '—' }}</dd>
+                        <dd class="font-medium text-text-primary">
+                            @if ($tool->expires_at)
+                                {{ $tool->expires_at->format('j M Y') }}
+                                @if ($tool->isExpiringSoon())
+                                    <span class="ml-1 text-amber-600">Expiring soon</span>
+                                @endif
+                            @elseif ($isPending)
+                                <span class="text-text-muted">Starts after setup</span>
+                            @else
+                                —
+                            @endif
+                        </dd>
                     </div>
+                    @if ($tool->order?->reference)
+                        <div>
+                            <dt class="text-text-muted">Order reference</dt>
+                            <dd class="font-mono text-xs text-text-primary">{{ $tool->order->reference }}</dd>
+                        </div>
+                    @endif
                 </dl>
             </x-dashboard.card>
         </div>
-    @endif
+    </div>
 </x-layout.page>
 
 @push('scripts')

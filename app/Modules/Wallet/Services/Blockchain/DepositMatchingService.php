@@ -171,7 +171,7 @@ class DepositMatchingService
             priority: 'normal',
             permission: 'finance.manage',
             dedupeKey: 'matched:'.$row->tx_hash,
-        ), ['database']);
+        ), \App\Services\Notifications\AdminNotificationChannels::FINANCE);
 
         return true;
     }
@@ -193,7 +193,7 @@ class DepositMatchingService
             priority: 'high',
             permission: 'finance.manage',
             dedupeKey: $dedupe ?? 'unmatched:'.$row->tx_hash,
-        ), ['database']);
+        ), \App\Services\Notifications\AdminNotificationChannels::FINANCE);
     }
 
     private function networksCompatible(string $a, string $b): bool

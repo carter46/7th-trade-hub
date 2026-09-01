@@ -130,7 +130,7 @@ class MyToolsController extends Controller
     public function show(Request $request, UserTool $tool): View
     {
         abort_unless($tool->user_id === $request->user()->id, 404);
-        $tool->load(['product', 'variant', 'integration']);
+        $tool->load(['product.heroMedia', 'variant', 'integration', 'order', 'orderItem']);
 
         return view('dashboard.user.my-tools.show', [
             'tool' => $tool,

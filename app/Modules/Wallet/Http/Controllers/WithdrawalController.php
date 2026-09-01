@@ -148,6 +148,15 @@ class WithdrawalController extends Controller
             return back()->withInput()->with('error', $e->getMessage());
         }
 
+        \Illuminate\Support\Facades\DB::afterCommit(function () use ($withdrawal) {
+            \App\Events\WithdrawalRequested::dispatch(
+                (int) $withdrawal->id,
+                (int) $withdrawal->user_id,
+                (float) $withdrawal->amount,
+                (string) $withdrawal->currency
+            );
+        });
+
         return redirect()->route('dashboard.withdrawal.show', $withdrawal)
             ->with('status', __('Withdrawal request submitted.'));
     }

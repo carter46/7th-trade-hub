@@ -23,6 +23,7 @@ class EmailIdentity extends Model
         'from_name',
         'from_email',
         'reply_to_email',
+        'notify_to_email',
         'is_default',
         'enabled',
     ];

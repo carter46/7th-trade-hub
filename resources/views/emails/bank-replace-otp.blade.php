@@ -1,10 +1,11 @@
-<p style="font-family: sans-serif; font-size: 15px; color: #222;">
-    Someone requested to replace your withdrawal bank account on {{ config('app.name') }}.
-</p>
-<p style="font-family: sans-serif; font-size: 15px; color: #222;">
-    Your verification code is:
-</p>
-<p style="font-family: sans-serif; font-size: 28px; letter-spacing: 4px; font-weight: bold;">{{ $code }}</p>
-<p style="font-family: sans-serif; font-size: 13px; color: #666;">
-    This code expires in 10 minutes. If this wasn't you, contact support immediately.
-</p>
+@extends('emails.layouts.transactional')
+
+@section('title', 'Verify bank account change')
+@section('heading', 'Verify bank account change')
+
+@section('content')
+    <p style="margin:0 0 16px;">Someone requested to replace your withdrawal bank account.</p>
+    <p style="margin:0 0 8px;">Your verification code is:</p>
+    <p style="margin:0 0 16px;font-size:28px;font-weight:700;letter-spacing:0.2em;color:#0b6a39;">{{ $code }}</p>
+    <p style="margin:0;color:#6b7280;font-size:14px;">This code expires in 10 minutes. If this was not you, contact support immediately.</p>
+@endsection

@@ -17,7 +17,10 @@ use App\Events\TicketReplied;
 use App\Events\UserRegistered;
 use App\Events\UserVerified;
 use App\Events\WalletFunded;
+use App\Events\WalletFundingSubmitted;
 use App\Events\WalletWithdrawalCompleted;
+use App\Events\WithdrawalPayoutFailed;
+use App\Events\WithdrawalRequested;
 use App\Listeners\CreateUserToolsFromOrder;
 use App\Listeners\FulfillDomainRegistrations;
 use App\Listeners\DispatchMarketingAnalytics;
@@ -51,7 +54,10 @@ class AppServiceProvider extends ServiceProvider
         UserRegistered::class,
         UserVerified::class,
         WalletFunded::class,
+        WalletFundingSubmitted::class,
         WalletWithdrawalCompleted::class,
+        WithdrawalRequested::class,
+        WithdrawalPayoutFailed::class,
         OrderCompleted::class,
         EscrowOpened::class,
         EscrowReleased::class,

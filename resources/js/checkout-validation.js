@@ -128,6 +128,9 @@ export function createCheckoutValidationHelpers() {
 
             if (!this.canSubmit || this.walletShortfall > 0) {
                 this.submitError = this.buildSubmitBlockedMessage();
+                if (typeof window.hideDashboardPageLoader === 'function') {
+                    window.hideDashboardPageLoader();
+                }
                 window.dispatchEvent(new CustomEvent('toast', {
                     detail: { type: 'danger', message: this.submitError },
                 }));
@@ -138,6 +141,9 @@ export function createCheckoutValidationHelpers() {
                 const walletCheck = validateWalletPayment(this.total, this.walletBalance);
                 if (!walletCheck.valid) {
                     this.submitError = walletCheck.message;
+                    if (typeof window.hideDashboardPageLoader === 'function') {
+                        window.hideDashboardPageLoader();
+                    }
                     window.dispatchEvent(new CustomEvent('toast', {
                         detail: { type: 'danger', message: this.submitError },
                     }));

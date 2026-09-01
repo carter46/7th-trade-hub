@@ -5,15 +5,47 @@ namespace App\Services\Notifications\Channels;
 use App\Models\AdminNotification;
 use App\Models\User;
 use App\Models\UserNotification;
+use App\Services\Notifications\EmailIdentityResolver;
+use App\Services\Notifications\NotificationDedupeService;
+use App\Services\Notifications\NotificationDeliveryTracer;
 use App\Services\Notifications\NotificationMessage;
-use Illuminate\Support\Carbon;
 
 class DatabaseChannel implements NotificationChannel
 {
+    public function __construct(
+        private NotificationDedupeService $dedupe,
+        private NotificationDeliveryTracer $tracer,
+        private EmailIdentityResolver $identityResolver,
+    ) {}
+
     public function send(NotificationMessage $message, string $audience, ?iterable $recipients = null): void
     {
         if ($audience === 'admin') {
-            if ($message->dedupeKey && $this->adminDedupeExists($message)) {
+            $profile = $this->identityResolver->resolveProfileForType($message->type);
+
+            if ($this->dedupe->shouldSkip($message->type, $message->dedupeKey, 'database')) {
+                $this->tracer->record(
+                    notificationType: $message->type,
+                    channel: 'database',
+                    status: 'deduped',
+                    profile: $profile->value,
+                    dedupeKey: $message->dedupeKey,
+                    event: $message->meta['event'] ?? null,
+                );
+
+                return;
+            }
+
+            if (! $this->dedupe->tryClaim($message->type, $message->dedupeKey, 'database')) {
+                $this->tracer->record(
+                    notificationType: $message->type,
+                    channel: 'database',
+                    status: 'deduped',
+                    profile: $profile->value,
+                    dedupeKey: $message->dedupeKey,
+                    event: $message->meta['event'] ?? null,
+                );
+
                 return;
             }
 
@@ -28,6 +60,15 @@ class DatabaseChannel implements NotificationChannel
                     'priority' => $message->priority,
                 ], fn ($v) => $v !== null),
             ]);
+
+            $this->tracer->record(
+                notificationType: $message->type,
+                channel: 'database',
+                status: 'sent',
+                profile: $profile->value,
+                dedupeKey: $message->dedupeKey,
+                event: $message->meta['event'] ?? null,
+            );
 
             return;
         }
@@ -47,14 +88,4 @@ class DatabaseChannel implements NotificationChannel
         }
     }
 
-    private function adminDedupeExists(NotificationMessage $message): bool
-    {
-        $since = Carbon::now()->startOfDay();
-
-        return AdminNotification::query()
-            ->where('type', $message->type)
-            ->where('created_at', '>=', $since)
-            ->where('meta->dedupe_key', $message->dedupeKey)
-            ->exists();
-    }
 }

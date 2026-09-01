@@ -83,7 +83,7 @@ class NotificationDispatcher
                 }
 
                 if ($audience === 'admin'
-                    && ! in_array($channelName, ['database', 'in-app'], true)
+                    && ! in_array($channelName, ['database', 'in-app', 'mail'], true)
                     && $recipients->isEmpty()
                 ) {
                     continue;

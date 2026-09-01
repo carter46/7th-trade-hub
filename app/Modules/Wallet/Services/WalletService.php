@@ -8,6 +8,7 @@ use App\Enums\WalletHoldStatus;
 use App\Enums\WalletType;
 use App\Events\WalletFunded;
 use App\Events\WalletWithdrawalCompleted;
+use App\Events\WithdrawalPayoutFailed;
 use App\Models\Escrow;
 use App\Models\Order;
 use App\Models\PaymentTimelineEvent;
@@ -540,6 +541,22 @@ class WalletService
             ]);
 
             PaymentTimelineEvent::record($withdrawal, 'failed', 'Payout failed — funds unlocked');
+
+            $outcome = match (strtoupper((string) ($withdrawal->provider_status ?? ''))) {
+                'EXPIRED' => 'expired',
+                'REVERSED' => 'reversed',
+                default => 'failed',
+            };
+
+            DB::afterCommit(function () use ($withdrawal, $outcome) {
+                WithdrawalPayoutFailed::dispatch(
+                    (int) $withdrawal->id,
+                    (int) $withdrawal->user_id,
+                    (float) $withdrawal->amount,
+                    $outcome,
+                    (string) ($withdrawal->currency ?: 'NGN')
+                );
+            });
         });
     }
 
