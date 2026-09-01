@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\MonitoringController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Account\AccountController;
 use App\Http\Controllers\Dashboard\ManualOrderPaymentController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Dev\DevUiController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RobotsController;
