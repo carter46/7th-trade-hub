@@ -87,10 +87,17 @@
                     @endif
                 </x-dashboard.td>
                 <x-dashboard.td>
-                    {{ $product->title }}
-                    @if ($product->is_featured)
-                        <x-dashboard.badge status="warning">Featured</x-dashboard.badge>
-                    @endif
+                    <div class="min-w-0">
+                        <div class="font-medium text-text-primary">
+                            {{ $product->title }}
+                            @if ($product->is_featured)
+                                <x-dashboard.badge status="warning">Featured</x-dashboard.badge>
+                            @endif
+                        </div>
+                        <p class="mt-0.5 font-mono text-[10px] leading-tight text-text-muted" title="Catalog slug — fixed in code, not changed when you edit the title">
+                            {{ $product->slug }}
+                        </p>
+                    </div>
                 </x-dashboard.td>
                 <x-dashboard.td>{{ $product->productType?->name ?? ($product->product_type?->label() ?? '—') }}</x-dashboard.td>
                 <x-dashboard.td>{{ $product->sort_order }}</x-dashboard.td>
