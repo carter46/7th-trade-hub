@@ -44,5 +44,7 @@ Hostinger / shared hosting must run `php artisan schedule:run` via cron.
 ## Docs for merchants
 
 - [MERCHANT-GUIDE.md](./MERCHANT-GUIDE.md)
+- [ENDPOINTS-REFERENCE.md](./ENDPOINTS-REFERENCE.md)
 - [PROTOCOL-v1.md](./PROTOCOL-v1.md)
 - [openapi.yaml](./openapi.yaml)
+- [samples/](./samples/)

@@ -6,7 +6,10 @@ info:
     Hub APIs for one-time launch token validation and subscription polling,
     plus optional merchant→Hub webhook. Each integration has its own client_secret.
     Merchants also implement health, consume, and subscription/sync on their sites
-    (see docs/integrations/MERCHANT-GUIDE.md).
+    (see docs/integrations/ENDPOINTS-REFERENCE.md and MERCHANT-GUIDE.md).
+servers:
+  - url: https://7th-tradehub.online
+    description: Production Hub (replace with your SEVENTH_TRADEHUB_HUB_URL)
 paths:
   /api/site-integrations/v1/demo/tokens/validate:
     post:
@@ -50,6 +53,7 @@ paths:
                   expires_at: { type: string, format: date-time }
         "401": { description: Invalid client credentials }
         "422": { description: Invalid, expired, or used token }
+        "429": { description: Rate limited (60/min per IP on this prefix) }
   /api/site-integrations/v1/subscription:
     get:
       summary: Poll owned-tool subscription status (defense in depth)

@@ -22,10 +22,12 @@
 
 On **their** site (not in this repo):
 
-1. Health endpoint  
-2. Consume URL → call Hub validate → local session  
-3. Subscription sync + periodic poll + fail-closed shutdown  
+1. `POST /api/7th-tradehub/v1/health` — verify signed Hub POST  
+2. `GET /auth/7th-tradehub/demo/consume` → call Hub validate → local session  
+3. `POST /api/7th-tradehub/v1/subscription/sync` + periodic poll + fail-closed shutdown  
 4. Env config with credentials from Hub operator  
+
+Full endpoint spec: [ENDPOINTS-REFERENCE.md](ENDPOINTS-REFERENCE.md)
 
 ## Capabilities (extensible)
 

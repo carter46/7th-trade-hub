@@ -1,48 +1,72 @@
 # Merchant guide — integrate your website with 7th Trade Hub
 
-This guide is for developers of independent websites. Follow it the same way you would integrate a payment gateway: configure credentials, implement endpoints, test, go live.
+This guide is for developers of **independent websites** (merchants). Integrate the same way you would a payment gateway: configure credentials, implement endpoints, test with Hub, go live.
+
+**Quick lookup:** [ENDPOINTS-REFERENCE.md](ENDPOINTS-REFERENCE.md)  
+**Signing details:** [PROTOCOL-v1.md](PROTOCOL-v1.md)  
+**Sample code:** [samples/php/](samples/php/)
+
+---
 
 ## 1. Receive credentials from Hub
 
 A Hub operator creates either:
 
-- **Demo integration** (shared demo host for a catalog product), or  
-- **Owned tool** credentials after Setup on a customer purchase  
+- **Demo integration** — shared demo host for a Website Package catalog product (Admin → Demo Site Integrate), or
+- **Owned tool credentials** — generated when a customer (or admin) completes **Setup** on a purchased tool in My Tools.
 
-You receive:
+You receive (copy once — secrets are not shown again):
 
-| Key | Purpose |
-| --- | ------- |
+| Env variable | Purpose |
+| ------------ | ------- |
 | `SEVENTH_TRADEHUB_INTEGRATION_ID` | UUID for this integration |
 | `SEVENTH_TRADEHUB_CLIENT_ID` | Client id |
-| `SEVENTH_TRADEHUB_CLIENT_SECRET` | HMAC secret (Hub signs / you verify) |
-| `SEVENTH_TRADEHUB_WEBHOOK_SECRET` | Optional site→Hub webhook auth |
+| `SEVENTH_TRADEHUB_CLIENT_SECRET` | HMAC secret — verify Hub requests & authenticate to Hub |
+| `SEVENTH_TRADEHUB_WEBHOOK_SECRET` | Optional — authenticate site→Hub webhook |
 | `SEVENTH_TRADEHUB_HUB_URL` | Hub base URL, e.g. `https://7th-tradehub.online` |
 
 See [samples/env.example](samples/env.example).
 
-**Never mix demo and owned credentials.**
+**Never mix demo and owned credentials.** Each customer site gets its own owned keys at Setup.
+
+**Site URL requirements:** HTTPS only. Hub rejects localhost, private IPs, and non-public hosts when calling your site.
+
+---
 
 ## 2. Identity rules
 
 ### Demo
 
-Hub binds the signed identity to:
+Hub binds SSO to fixed emails configured in Demo Site Integrate:
 
-- Login as User → `demo_user_email`  
-- Login as Admin → `demo_admin_email`  
+- Login as User → `demo_user_email`
+- Login as Admin → `demo_admin_email`
 
 ### Owned tool
 
-Hub binds Login as admin to **`user_tools.admin_email`** configured at Setup. The browser must not supply a trusted email.
+Hub binds **Login as admin** to `user_tools.admin_email` entered at Setup. The browser must not supply a trusted email.
+
+---
 
 ## 3. Implement health
 
 `POST {your-site}/api/7th-tradehub/v1/health`
 
-- Verify Protocol v1 HMAC with your `client_secret` (see [PROTOCOL-v1.md](PROTOCOL-v1.md)).  
-- Respond `200` with `{ "ok": true, "capabilities": [...] }`.  
-- Hub Check Connection uses this URL derived from your base/site URL.
+Hub sends a **signed JSON body** (Protocol v1) with headers:
+
+- `X-7TH-Client-Id`
+- `X-7TH-Integration-Id`
+- `Content-Type: application/json`
+
+Your handler must:
+
+1. Verify HMAC with `SEVENTH_TRADEHUB_CLIENT_SECRET` ([samples/php/protocol-v1-verify.php](samples/php/protocol-v1-verify.php)).
+2. Reject expired assertions (`expires_at` in the past).
+3. Return HTTP **200** with `{ "ok": true, "capabilities": [...] }`.
+
+Full request/response: [ENDPOINTS-REFERENCE.md § Health](ENDPOINTS-REFERENCE.md#1-health--post-api7th-tradehubv1health).
+
+---
 
 ## 4. Implement consume (SSO)
 
@@ -52,61 +76,112 @@ Hub redirects the browser to:
 {your-site}/auth/7th-tradehub/demo/consume?token=...&integration_id=...
 ```
 
-(Path is fixed for Protocol v1 for both demo and owned launches.)
+Same path for demo **and** owned launches (Protocol v1).
 
-**Required:** call Hub:
+**Required:** server-side call to Hub (do not trust query `email` / `role`):
 
-`POST {HUB}/api/site-integrations/v1/demo/tokens/validate`
+```http
+POST {HUB}/api/site-integrations/v1/demo/tokens/validate
+Content-Type: application/json
+Accept: application/json
+X-7TH-Client-Id: {your client id}
+X-7TH-Client-Secret: {your client secret}
 
-Headers: `X-7TH-Client-Id`, `X-7TH-Client-Secret`  
-Body: `{ "token": "..." }`
+{"token":"..."}
+```
 
-On `valid: true`, create a local session for `identity.email` only, then redirect to your dashboard/admin. Refuse if subscription is locally expired (owned).
+On HTTP 200 and `"valid": true`, create a local session for `identity.email` only, then redirect to your dashboard/admin.
 
-Do **not** trust query `email` / `role` parameters from the browser.
+- Token lifetime: **120 seconds**, single use.
+- Sample: [samples/php/consume-validate.php](samples/php/consume-validate.php).
+- For owned tools: refuse login if subscription is locally expired.
 
-## 5. Subscription (owned tools)
+---
 
-### Push
+## 5. Subscription (owned tools only)
 
-Hub POSTs signed body to:
+### Push — Hub → you
 
 `POST {your-site}/api/7th-tradehub/v1/subscription/sync`
 
-Store `subscription.status` and `subscription.expires_at`. Prefer newer `expires_at` / `updated_at` — **never let an older `active` overwrite a newer `expired`.**
+Signed body includes `subscription.status`, `subscription.expires_at`, `subscription.updated_at`.
 
-### Poll (required defense in depth)
+Store locally. When applying updates, prefer newer `updated_at` / `expires_at` — **never let an older `active` overwrite a newer `expired`.**
 
-Every few minutes:
+### Poll — you → Hub (required)
 
-`GET {HUB}/api/site-integrations/v1/subscription`  
-Headers: `X-7TH-Client-Id`, `X-7TH-Client-Secret`, `X-7TH-Integration-Id`
+Every **5–15 minutes** (cron):
 
-If Hub reports expired (or `expires_at` past), shut down even if push was missed.
+```http
+GET {HUB}/api/site-integrations/v1/subscription
+Accept: application/json
+X-7TH-Client-Id: ...
+X-7TH-Client-Secret: ...
+X-7TH-Integration-Id: ...
+```
+
+Sample: [samples/php/poll-subscription.php](samples/php/poll-subscription.php).
+
+If Hub reports `expired` or `expires_at` is past → shut down even if push was missed.
 
 ### Shutdown
 
-When expired: block routes with maintenance UI, refuse new logins including SSO consume.
+When expired: maintenance UI, block routes, refuse new logins including SSO consume.
+
+---
 
 ## 6. Optional webhook to Hub
 
-`POST {HUB}/webhooks/site-integrations/{integration_id}`  
-Header: `X-7TH-Webhook-Secret`  
-No CSRF cookie required; secret authenticates the call.
+```http
+POST {HUB}/webhooks/site-integrations/{integration_id}
+X-7TH-Webhook-Secret: {SEVENTH_TRADEHUB_WEBHOOK_SECRET}
+Content-Type: application/json
+
+{"event":"ping"}
+```
+
+No CSRF cookie; secret authenticates the call. Response: `{ "ok": true }`.
+
+---
 
 ## 7. Test with Hub
 
-1. Operator runs **Check connection**.  
-2. Demo: View Demo → Login as User/Admin.  
-3. Owned: Setup → Login as admin from My Tools.  
-4. Confirm expiry: poll returns expired after clock; site shuts down.
+1. Operator runs **Check connection** (Admin → Demo Site Integrate, or admin user Tools tab for owned).
+2. **Demo:** View Demo → Login as User / Admin on product page.
+3. **Owned:** My Tools → Setup → Login as admin.
+4. Confirm expiry: after `expires_at`, poll returns `expired` and site shuts down.
+
+---
 
 ## 8. Rotate credentials
 
-If Hub rotates keys, update your env immediately. Subscription expiry is **not** changed by rotation.
+If Hub rotates keys, update your env immediately. Subscription expiry is **not** reset by rotation.
+
+For owned tools, **Reconfigure** updates URLs/email/password without new keys; **Rotate credentials** issues new client/webhook secrets without extending subscription.
+
+---
+
+## Implementation checklist
+
+| Step | Done |
+| ---- | ---- |
+| Env vars set server-side only | ☐ |
+| Demo vs owned credentials separated | ☐ |
+| `POST …/health` verifies HMAC + returns `ok: true` | ☐ |
+| `GET …/demo/consume` calls Hub validate | ☐ |
+| Session uses `identity.email` from validate only | ☐ |
+| `POST …/subscription/sync` verifies HMAC (owned) | ☐ |
+| Poll cron configured (owned) | ☐ |
+| Expired → fail-closed shutdown | ☐ |
+| Hub Check connection passes | ☐ |
+
+Also see [checklists/MERCHANT-GO-LIVE.md](checklists/MERCHANT-GO-LIVE.md).
+
+---
 
 ## Next
 
-- [PROTOCOL-v1.md](PROTOCOL-v1.md)  
-- [checklists/MERCHANT-GO-LIVE.md](checklists/MERCHANT-GO-LIVE.md)  
-- [samples/php/](samples/php/)
+- [ENDPOINTS-REFERENCE.md](ENDPOINTS-REFERENCE.md)
+- [PROTOCOL-v1.md](PROTOCOL-v1.md)
+- [openapi.yaml](openapi.yaml)
+- [OPERATOR.md](OPERATOR.md) (Hub-side setup)

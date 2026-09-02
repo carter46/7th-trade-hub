@@ -31,8 +31,10 @@
 
 | Condition | Behavior |
 | --------- | -------- |
-| Invalid signature | 401; do not apply state |
-| Expired assertion | 401 |
-| Unknown integration_id | 404 |
+| Invalid signature on health/sync | 401; do not apply state |
+| Missing/wrong `X-7TH-Client-Id` or `X-7TH-Integration-Id` | 401 |
+| Expired assertion (`expires_at` past) | 401 |
+| Unknown `integration_id` | 404 |
 | Subscription expired | Refuse SSO; show shutdown UI |
 | Stale sync (older than stored) | Ignore; keep newer state |
+| Validate token missing/invalid | Do not create session; show error page |

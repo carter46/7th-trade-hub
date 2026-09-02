@@ -77,9 +77,36 @@ Replay: reject assertions whose `expires_at` is past. Prefer also tracking `nonc
 
 | Endpoint | Purpose |
 | -------- | ------- |
-| `POST /api/7th-tradehub/v1/health` | Connection check |
-| `GET /auth/7th-tradehub/demo/consume` | Auto-login entry |
-| `POST /api/7th-tradehub/v1/subscription/sync` | Receive Hub subscription push (owned) |
+| `POST /api/7th-tradehub/v1/health` | Connection check — verify signed Hub POST |
+| `GET /auth/7th-tradehub/demo/consume` | Auto-login entry (demo **and** owned) |
+| `POST /api/7th-tradehub/v1/subscription/sync` | Receive Hub subscription push (owned only) |
+
+See [ENDPOINTS-REFERENCE.md](ENDPOINTS-REFERENCE.md) for headers, bodies, and responses.
+
+### Hub → site request headers
+
+When Hub calls your health or subscription/sync endpoints:
+
+| Header | Purpose |
+| ------ | ------- |
+| `Content-Type` | `application/json` |
+| `X-7TH-Client-Id` | Your client id |
+| `X-7TH-Integration-Id` | Your integration UUID |
+
+Body is a full signed Protocol v1 assertion (including `signature`).
+
+### Health assertion fields
+
+- `context`: `demo` or `owned_tool`
+- `role`: `health`
+- `identity.email`: `health@7th-tradehub.local` (informational)
+- `expires_at`: reject if past (Hub uses ~2 minute window)
+
+### Subscription sync assertion fields
+
+- `context`: `owned_tool`
+- `role`: `subscription`
+- `subscription`: `{ tool_id, public_id, status, expires_at, updated_at }`
 
 ## Hub endpoints for sites
 
@@ -88,6 +115,30 @@ Replay: reject assertions whose `expires_at` is past. Prefer also tracking `nonc
 | `POST /api/site-integrations/v1/demo/tokens/validate` | Consume one-time token |
 | `GET /api/site-integrations/v1/subscription` | Poll subscription |
 | `POST /webhooks/site-integrations/{integration_id}` | Optional site→Hub ping (`X-7TH-Webhook-Secret`; CSRF exempt) |
+
+Hub `/api/site-integrations/v1/*` routes are rate-limited to **60 requests/minute** per IP.
+
+### Launch token rules
+
+- Plain token in redirect URL; Hub stores **SHA-256 hash** only.
+- TTL: **120 seconds** from issue.
+- Single use — second validate returns 422.
+- Validate API works for demo **and** owned tokens when correct client credentials are supplied.
+
+### Validate response (success)
+
+```json
+{
+  "valid": true,
+  "protocol": "7th-tradehub",
+  "version": 1,
+  "context": "demo",
+  "role": "admin",
+  "identity": { "email": "…" },
+  "integration_id": "…",
+  "expires_at": "…"
+}
+```
 
 ## Capabilities
 
