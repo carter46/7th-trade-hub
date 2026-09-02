@@ -82,7 +82,11 @@ Hub sends a signed Protocol v1 JSON body.
 }
 ```
 
-Return your actual supported capabilities (see [PROTOCOL-v1.md](PROTOCOL-v1.md)). Any non-200 or `ok !== true` fails Hub **Check connection**.
+Return your actual supported capabilities (see [PROTOCOL-v1.md § Capabilities](PROTOCOL-v1.md#capabilities)). Any non-200 or `ok !== true` fails Hub **Check connection**.
+
+**Recommended error responses:** [ERRORS.md § Merchant error JSON](ERRORS.md#recommended-merchant-error-json-health--sync)
+
+**Clock skew:** reject when `expires_at` is past — no grace window; use NTP ([PROTOCOL-v1.md § Clock skew](PROTOCOL-v1.md#clock-skew)).
 
 ---
 

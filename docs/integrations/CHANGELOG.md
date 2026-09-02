@@ -12,3 +12,4 @@
 - HTTPS-only outbound URLs with SSRF protections
 - Merchant docs: ENDPOINTS-REFERENCE, expanded MERCHANT-GUIDE, PHP verify/poll samples
 - Public docs at `/developers/integrations`; operator + merchant notes (pre-create users, exact paths, SSO vs password login)
+- Index FAQ (`/demo/` paths), capabilities table, clock skew, rotation flow, smoke test, samples index, merchant error JSON

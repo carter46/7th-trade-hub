@@ -43,6 +43,13 @@ class IntegrationDocsControllerTest extends TestCase
         $response->assertSee('seventh_tradehub_validate_token', false);
     }
 
+    public function test_samples_directory_redirects_to_index(): void
+    {
+        $response = $this->get('/developers/integrations/samples');
+
+        $response->assertRedirect('/developers/integrations/samples/README');
+    }
+
     public function test_integration_docs_rejects_path_traversal(): void
     {
         $response = $this->get('/developers/integrations/../../.env');

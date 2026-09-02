@@ -204,9 +204,20 @@ No CSRF cookie; secret authenticates the call. Response: `{ "ok": true }`.
 
 ## 9. Rotate credentials
 
-If Hub rotates keys, update your env immediately. Subscription expiry is **not** reset by rotation.
+If Hub rotates keys, update your stored secrets immediately. Subscription expiry is **not** reset by rotation.
 
 For owned tools, **Reconfigure** updates URLs/email/password without new keys; **Rotate credentials** issues new client/webhook secrets without extending subscription.
+
+### Rotation without downtime (recommended)
+
+1. Hub operator clicks **Rotate keys** (or owned **Rotate credentials**) and copies the new Client Secret / Webhook Secret.
+2. Merchant updates secrets in env, DB, or admin settings — **keep the old secret available briefly** if your deploy is rolling.
+3. Merchant verifies health locally (HMAC still works with new secret).
+4. Hub operator runs **Check connection** — must pass with new secrets active on the merchant site.
+5. Remove old secret from merchant storage once Check connection passes.
+6. Confirm SSO (consume → validate) still works — validate uses the same client id/secret headers.
+
+**Note:** During a brief overlap window, Hub only accepts the **current** secret on file. Update the merchant site **before** or **immediately when** rotating on Hub to avoid failed checks and SSO.
 
 ---
 

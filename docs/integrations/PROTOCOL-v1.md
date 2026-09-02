@@ -145,8 +145,28 @@ Hub `/api/site-integrations/v1/*` routes are rate-limited to **60 requests/minut
 
 ## Capabilities
 
-- Demo: `health`, `demo_user_login`, `demo_admin_login`
-- Owned: `health`, `subscription_sync`, `shutdown_on_expiry`, `owned_admin_login`
+Return the flags your site actually supports. Hub **Check connection** only requires HTTP 200 and `"ok": true`; capabilities are informational for operators and future Hub features.
+
+| Capability | Demo | Owned | Meaning |
+| ------------ | ---- | ----- | ------- |
+| `health` | ✓ | ✓ | Health endpoint implemented |
+| `demo_user_login` | ✓ | — | SSO for demo user role |
+| `demo_admin_login` | ✓ | — | SSO for demo admin role |
+| `subscription_sync` | — | ✓ | Push sync endpoint implemented |
+| `shutdown_on_expiry` | — | ✓ | Site shuts down when subscription expires |
+| `owned_admin_login` | — | ✓ | SSO for purchased tool admin |
+
+**Demo example:** `["health", "demo_user_login", "demo_admin_login"]`  
+**Owned example:** `["health", "subscription_sync", "shutdown_on_expiry", "owned_admin_login"]`
+
+Omitting a capability does not fail Check connection today, but misreporting (e.g. claiming `subscription_sync` without an endpoint) will break Setup/sync later.
+
+## Clock skew
+
+Treat `expires_at` as expired when `expires_at < now()` on the merchant server.
+
+- **No grace window** in Protocol v1 — do not add ±30s tolerance unless you document it for your own app only; Hub assertions use short TTLs (~2 minutes for health).
+- Keep merchant and Hub servers on NTP; clock drift causes false rejections on health/sync and token validate failures.
 
 ## Subscription expiry (defense in depth)
 

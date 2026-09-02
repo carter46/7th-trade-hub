@@ -38,3 +38,60 @@
 | Subscription expired | Refuse SSO; show shutdown UI |
 | Stale sync (older than stored) | Ignore; keep newer state |
 | Validate token missing/invalid | Do not create session; show error page |
+
+## Recommended merchant error JSON (health / sync)
+
+Hub **Check connection** only checks HTTP status and `"ok": true` on health. A consistent error body helps your logs and future Hub tooling.
+
+**401 — invalid signature or expired assertion**
+
+```json
+{
+  "ok": false,
+  "error": "invalid_signature",
+  "message": "HMAC verification failed."
+}
+```
+
+```json
+{
+  "ok": false,
+  "error": "assertion_expired",
+  "message": "expires_at is in the past."
+}
+```
+
+**401 — wrong integration or client headers**
+
+```json
+{
+  "ok": false,
+  "error": "unauthorized",
+  "message": "Client id or integration id does not match."
+}
+```
+
+**404 — unknown integration**
+
+```json
+{
+  "ok": false,
+  "error": "not_found",
+  "message": "Unknown integration_id."
+}
+```
+
+**200 success (health)**
+
+```json
+{
+  "ok": true,
+  "capabilities": ["health", "demo_user_login", "demo_admin_login"]
+}
+```
+
+Subscription sync may return `{ "ok": true }` or an empty 200 body — Hub treats HTTP success as acceptance.
+
+## Webhook events (site → Hub)
+
+Protocol v1 documents **`ping`** only. Send `{ "event": "ping" }` to verify connectivity. Additional event types may be added in future protocol versions; unsupported events should return 422 with a clear message if you implement a generic receiver.

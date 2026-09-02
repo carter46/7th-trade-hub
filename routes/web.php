@@ -114,6 +114,7 @@ Route::redirect('/privacy', '/legal?doc=privacy')->name('privacy');
 
 Route::prefix('developers/integrations')->name('developers.integrations.')->group(function (): void {
     Route::get('/', [IntegrationDocsController::class, 'index'])->name('index');
+    Route::redirect('/samples', '/developers/integrations/samples/README')->name('samples');
     Route::get('/download/{path}', [IntegrationDocsController::class, 'download'])
         ->where('path', '.+')
         ->name('download');

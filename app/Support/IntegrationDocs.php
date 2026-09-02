@@ -28,6 +28,8 @@ class IntegrationDocs
             ['path' => 'OPERATOR', 'title' => 'Operator guide', 'group' => 'Hub operators'],
             ['path' => 'checklists/MERCHANT-GO-LIVE', 'title' => 'Go-live checklist', 'group' => 'Checklists'],
             ['path' => 'checklists/SECURITY', 'title' => 'Security checklist', 'group' => 'Checklists'],
+            ['path' => 'samples/README', 'title' => 'Samples index', 'group' => 'Samples'],
+            ['path' => 'samples/SMOKE-TEST', 'title' => 'Smoke test', 'group' => 'Samples'],
             ['path' => 'samples/env.example', 'title' => 'Env sample', 'group' => 'Samples'],
             ['path' => 'samples/php/protocol-v1-verify.php', 'title' => 'PHP: HMAC verify', 'group' => 'Samples'],
             ['path' => 'samples/php/consume-validate.php', 'title' => 'PHP: Token validate', 'group' => 'Samples'],

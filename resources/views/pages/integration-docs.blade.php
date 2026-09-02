@@ -82,6 +82,17 @@
             display: block;
             overflow-x: auto;
         }
+        .integration-docs .prose blockquote {
+            border-left: 4px solid rgb(245 158 11);
+            background: rgb(245 158 11 / 0.08);
+            border-radius: 0.75rem;
+            padding: 1rem 1.25rem;
+            font-style: normal;
+        }
+        .integration-docs .prose blockquote p {
+            margin: 0.25rem 0;
+            color: inherit;
+        }
     </style>
 
     <div class="integration-docs-layout">
@@ -116,6 +127,10 @@
         </aside>
 
         <article class="integration-docs-article integration-docs">
+            <div class="mb-4 flex flex-wrap items-center gap-2 text-xs text-text-muted">
+                <span class="rounded-full border border-border-default bg-muted/40 px-2.5 py-1 font-medium">Protocol v1</span>
+                <span>7th-tradehub</span>
+            </div>
             <div class="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border-default pb-4">
                 <h1 class="text-2xl font-semibold text-text-primary">{{ $document['title'] }}</h1>
                 @if (($document['extension'] ?? '') !== 'md')
