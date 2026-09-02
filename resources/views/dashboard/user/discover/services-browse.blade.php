@@ -28,39 +28,15 @@
                             }
                         }
                         $label = $card['label'] ?? $card['slug'] ?? 'Service';
-                        $initials = strtoupper(mb_substr(preg_replace('/[^A-Za-z0-9]/', '', $label) ?: 'S', 0, 2));
                     @endphp
-                    <x-dashboard.card :padding="false" class="flex h-full flex-col overflow-hidden">
-                        <div class="p-3">
-                            <div class="relative aspect-[4/3] overflow-hidden rounded-lg bg-muted">
-                                @if($imageSrc)
-                                    <img src="{{ $imageSrc }}" alt="" class="h-full w-full object-cover">
-                                @else
-                                    <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/40 via-muted to-elevated">
-                                        <span class="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/15 text-xs font-bold text-white" aria-hidden="true">
-                                            {{ $initials }}
-                                        </span>
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
-                        <div class="flex flex-1 flex-col space-y-2 px-4 pb-4">
-                            <div class="font-semibold text-text-primary">{{ $label }}</div>
-                            @if(!empty($card['short_description']))
-                                <p class="text-sm text-text-secondary line-clamp-2">{{ $card['short_description'] }}</p>
-                            @endif
-                            @if(!empty($card['meta']))
-                                <p class="text-xs text-text-muted">{{ $card['meta'] }}</p>
-                            @endif
-                            @if(!empty($card['href']))
-                                <div class="mt-auto pt-2">
-                                    <x-dashboard.button :href="$card['href']" size="xs" class="w-full sm:w-auto">
-                                        {{ $card['cta'] ?? 'View products' }}
-                                    </x-dashboard.button>
-                                </div>
-                            @endif
-                        </div>
-                    </x-dashboard.card>
+                    @include('dashboard.user.partials.catalog-grid-card', [
+                        'href' => $card['href'] ?? '#',
+                        'label' => $label,
+                        'description' => $card['short_description'] ?? null,
+                        'imageSrc' => $imageSrc,
+                        'meta' => $card['meta'] ?? null,
+                        'ctaLabel' => $card['cta'] ?? 'View products',
+                    ])
                 @endforeach
             </x-dashboard.card-grid>
         @else

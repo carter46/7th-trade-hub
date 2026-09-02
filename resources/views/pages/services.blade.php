@@ -60,11 +60,11 @@
                     description="No services match “{{ $q }}”. Try another term or browse a category below."
                 />
             @else
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+                <x-ui.card-grid :count="$searchResults->count()">
                     @foreach($searchResults as $product)
                         @include('partials.catalog.product-card', ['product' => $product])
                     @endforeach
-                </div>
+                </x-ui.card-grid>
                 <div class="mt-8">{{ $searchResults->links() }}</div>
             @endif
         </div>

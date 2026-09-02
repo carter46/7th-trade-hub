@@ -21,13 +21,15 @@
             ])
         </div>
 
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            @forelse($products as $product)
-                @include('partials.catalog.product-card', ['product' => $product])
-            @empty
-                <p class="text-slate-400 col-span-full">No website packages match your filters.</p>
-            @endforelse
-        </div>
+        @if($products->isEmpty())
+            <p class="text-slate-400">No website packages match your filters.</p>
+        @else
+            <x-ui.card-grid :count="$products->count()">
+                @foreach($products as $product)
+                    @include('partials.catalog.product-card', ['product' => $product])
+                @endforeach
+            </x-ui.card-grid>
+        @endif
         <div class="mt-8">{{ $products->links() }}</div>
     </div>
 </section>
