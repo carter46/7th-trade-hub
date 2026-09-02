@@ -31,6 +31,7 @@
                 'canDemoUser' => $canDemoUser,
                 'canDemoAdmin' => $canDemoAdmin,
                 'dashboard' => true,
+                'modalName' => $modalName,
             ])
         </x-dashboard.modal>
     @else

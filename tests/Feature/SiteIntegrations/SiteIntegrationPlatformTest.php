@@ -418,4 +418,107 @@ class SiteIntegrationPlatformTest extends TestCase
 
         $this->assertSame(UserToolStatus::Expired, $tool->fresh()->status);
     }
+
+    public function test_setup_defers_health_check_and_leaves_connection_unchecked(): void
+    {
+        $product = $this->seedWebsiteProduct();
+        $user = User::factory()->create(['email_verified_at' => now()]);
+
+        $tool = UserTool::query()->create([
+            'user_id' => $user->id,
+            'platform_product_id' => $product->id,
+            'platform_product_variant_id' => $product->activeVariants->first()->id,
+            'status' => UserToolStatus::PendingSetup,
+            'purchased_at' => now(),
+            'duration_months' => 3,
+            'instance_sequence' => 1,
+            'display_name' => $product->title,
+        ]);
+
+        Http::fake();
+
+        $result = app(UserToolProvisioningService::class)->setup($tool, [
+            'site_url' => 'https://customer.example.com',
+            'admin_login_url' => 'https://customer.example.com/admin',
+            'admin_email' => 'owner-admin@example.com',
+            'admin_password' => 'SecretPass123!',
+        ]);
+
+        Http::assertNothingSent();
+        $this->assertSame('unchecked', $result['tool']->integration->connection_status);
+        $this->assertStringContainsString('Install on the merchant site', $result['credentials']['connection_message']);
+    }
+
+    public function test_unknown_integration_maps_to_pending_merchant_status(): void
+    {
+        $product = $this->seedWebsiteProduct();
+        $user = User::factory()->create(['email_verified_at' => now()]);
+
+        $tool = UserTool::query()->create([
+            'user_id' => $user->id,
+            'platform_product_id' => $product->id,
+            'platform_product_variant_id' => $product->activeVariants->first()->id,
+            'status' => UserToolStatus::Active,
+            'purchased_at' => now()->subDay(),
+            'configured_at' => now()->subDay(),
+            'expires_at' => now()->addMonths(3),
+            'duration_months' => 3,
+            'site_url' => 'https://customer.example.com',
+            'admin_login_url' => 'https://customer.example.com/admin',
+            'admin_email' => 'owner-admin@example.com',
+            'admin_password' => 'SecretPass123!',
+            'instance_sequence' => 1,
+        ]);
+
+        UserToolIntegration::query()->create([
+            'user_tool_id' => $tool->id,
+            'integration_id' => (string) Str::uuid(),
+            'client_id' => 'th_owned',
+            'client_secret' => 'owned-secret',
+            'webhook_secret' => 'wh-owned',
+            'capabilities' => UserToolIntegration::defaultCapabilities(),
+        ]);
+
+        Http::fake([
+            'https://customer.example.com/*' => Http::response(['ok' => false, 'error' => 'unknown_integration'], 404),
+        ]);
+
+        app(\App\Services\SiteIntegrations\ConnectionCheckService::class)
+            ->checkOwned($tool->fresh('integration'));
+
+        $this->assertSame('pending_merchant', $tool->fresh('integration')->integration->connection_status);
+    }
+
+    public function test_can_launch_admin_when_pending_merchant_but_not_on_hard_error(): void
+    {
+        $product = $this->seedWebsiteProduct();
+        $user = User::factory()->create(['email_verified_at' => now()]);
+
+        $tool = UserTool::query()->create([
+            'user_id' => $user->id,
+            'platform_product_id' => $product->id,
+            'status' => UserToolStatus::Active,
+            'purchased_at' => now()->subDay(),
+            'configured_at' => now()->subDay(),
+            'expires_at' => now()->addMonths(3),
+            'site_url' => 'https://customer.example.com',
+            'admin_email' => 'owner-admin@example.com',
+            'instance_sequence' => 1,
+        ]);
+
+        UserToolIntegration::query()->create([
+            'user_tool_id' => $tool->id,
+            'integration_id' => (string) Str::uuid(),
+            'client_id' => 'th_owned',
+            'client_secret' => 'owned-secret',
+            'webhook_secret' => 'wh-owned',
+            'capabilities' => UserToolIntegration::defaultCapabilities(),
+            'connection_status' => 'pending_merchant',
+        ]);
+
+        $this->assertTrue($tool->fresh('integration')->canLaunchAdmin());
+
+        $tool->integration->update(['connection_status' => 'error']);
+        $this->assertFalse($tool->fresh('integration')->canLaunchAdmin());
+    }
 }

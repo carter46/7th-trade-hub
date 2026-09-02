@@ -162,7 +162,7 @@ class UserTool extends Model
 
         return $integration
             && $integration->hasCapability(UserToolIntegration::CAP_OWNED_ADMIN_LOGIN)
-            && $integration->connection_status !== 'error';
+            && ! in_array($integration->connection_status, ['error'], true);
     }
 
     public function canRevealAdminPassword(): bool

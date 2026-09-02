@@ -40,22 +40,20 @@
     <div class="space-y-6">
         <x-dashboard.card>
             <div class="grid gap-4 lg:grid-cols-[minmax(0,240px)_1fr] lg:gap-6">
-                <div class="rounded-xl border border-border-subtle bg-muted/40 p-3 sm:p-4">
-                    <div class="relative aspect-[4/3] overflow-hidden rounded-lg bg-muted lg:min-h-[200px]">
-                        @if ($heroUrl)
-                            <img
-                                src="{{ $heroUrl }}"
-                                alt="{{ $product?->title ?? $tool->resolvedDisplayName() }}"
-                                class="absolute inset-0 h-full w-full object-cover"
-                            >
-                        @else
-                            <div class="flex h-full min-h-[180px] items-center justify-center bg-gradient-to-br from-primary/20 via-muted to-elevated">
-                                <x-ui.icon name="monitor" class="h-12 w-12 text-primary/50" />
-                            </div>
-                        @endif
-                    </div>
+                <div class="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-muted/40 p-3 sm:p-4">
+                    @if ($heroUrl)
+                        <img
+                            src="{{ $heroUrl }}"
+                            alt="{{ $product?->title ?? $tool->resolvedDisplayName() }}"
+                            class="block h-auto max-h-48 w-full max-w-full rounded-lg object-cover lg:max-h-56"
+                        >
+                    @else
+                        <div class="flex min-h-[180px] items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 via-muted to-elevated">
+                            <x-ui.icon name="monitor" class="h-12 w-12 text-primary/50" />
+                        </div>
+                    @endif
                 </div>
-                <div class="space-y-4">
+                <div class="min-w-0 space-y-4">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wider text-primary">Your service</p>
                         <h2 class="mt-1 text-2xl font-bold text-text-primary">{{ $product?->title ?? $tool->resolvedDisplayName() }}</h2>
@@ -103,9 +101,12 @@
                 <dl class="space-y-3 text-sm">
                     <div>
                         <dt class="text-text-muted">Site URL</dt>
-                        <dd class="font-medium text-text-primary">
+                        <dd class="mt-1 space-y-2">
                             @if ($tool->site_url)
-                                <a href="{{ $tool->site_url }}" class="text-primary underline break-all" target="_blank" rel="noopener">{{ $tool->site_url }}</a>
+                                <p class="break-all font-mono text-sm text-text-primary">{{ $tool->site_url }}</p>
+                                <x-dashboard.button :href="$tool->site_url" size="sm" variant="secondary" target="_blank" rel="noopener">
+                                    Open Site
+                                </x-dashboard.button>
                             @else
                                 <span class="text-text-muted">{{ $pendingLabel }}</span>
                             @endif
@@ -114,7 +115,12 @@
                     @if ($tool->admin_login_url)
                         <div>
                             <dt class="text-text-muted">Admin login URL</dt>
-                            <dd class="break-all font-medium text-text-primary">{{ $tool->admin_login_url }}</dd>
+                            <dd class="mt-1 space-y-2">
+                                <p class="break-all font-mono text-sm text-text-primary">{{ $tool->admin_login_url }}</p>
+                                <x-dashboard.button :href="$tool->admin_login_url" size="sm" variant="secondary" target="_blank" rel="noopener">
+                                    Open Admin Login
+                                </x-dashboard.button>
+                            </dd>
                         </div>
                     @endif
                     <div>
@@ -147,13 +153,13 @@
                             </x-dashboard.button>
                         @endif
                         @if ($tool->canLaunchAdmin())
-                            <form method="POST" action="{{ route('dashboard.my-tools.launch-admin', $tool) }}" target="_blank" rel="noopener">
+                            <form method="POST" action="{{ route('dashboard.my-tools.launch-admin', $tool) }}" target="_blank" rel="noopener" data-no-page-loader>
                                 @csrf
-                                <x-dashboard.button type="submit" size="sm">Login as admin</x-dashboard.button>
+                                <x-dashboard.button type="submit" size="sm">Admin Auto Login</x-dashboard.button>
                             </form>
                         @endif
                     </div>
-                    <p class="text-xs text-text-muted">Password is never shown on this page. Login as admin opens your site in a new tab.</p>
+                    <p class="text-xs text-text-muted">Password is never shown on this page. Admin Auto Login opens your site in a new tab and succeeds only after the merchant has installed your owned credentials and your admin account exists on that site.</p>
                 @endif
             </x-dashboard.card>
 

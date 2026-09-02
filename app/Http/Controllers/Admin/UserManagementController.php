@@ -257,7 +257,18 @@ class UserManagementController extends Controller
 
         $result = app(\App\Services\SiteIntegrations\ConnectionCheckService::class)->checkOwned($tool->load('integration'));
 
-        return back()->with($result['ok'] ? 'status' : 'error', $result['message']);
+        $tool->load('integration');
+        $status = $tool->integration?->connection_status;
+
+        if ($result['ok']) {
+            return back()->with('status', $result['message']);
+        }
+
+        if ($status === 'pending_merchant') {
+            return back()->with('warning', $result['message']);
+        }
+
+        return back()->with('error', $result['message']);
     }
 
     public function listings(User $user, Request $request): View

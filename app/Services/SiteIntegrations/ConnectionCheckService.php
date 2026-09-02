@@ -77,10 +77,16 @@ class ConnectionCheckService
             'owned_tool',
         );
 
-        $integration->connection_status = $result['ok'] ? 'ok' : 'error';
+        $connectionStatus = $result['ok'] ? 'ok' : $this->resolveOwnedConnectionStatus($result);
+
+        $integration->connection_status = $connectionStatus;
         $integration->last_checked_at = now();
         $integration->last_error = $result['ok'] ? null : $result['message'];
         $integration->save();
+
+        if ($result['ok']) {
+            app(SubscriptionSyncService::class)->push($tool->fresh(['integration']));
+        }
 
         SiteIntegrationCheckLog::create([
             'owner_type' => 'owned',
@@ -253,6 +259,20 @@ class ConnectionCheckService
             'message' => 'Health check failed: '.implode('; ', $parts),
             'payload' => $payload,
         ];
+    }
+
+    /**
+     * @param  array{ok: bool, http_status: int|null, message: string, payload: array<string, mixed>|null}  $result
+     */
+    private function resolveOwnedConnectionStatus(array $result): string
+    {
+        $error = $result['payload']['error'] ?? null;
+
+        if ($error === 'unknown_integration') {
+            return 'pending_merchant';
+        }
+
+        return 'error';
     }
 
     private function isRedirectStatus(int $status): bool

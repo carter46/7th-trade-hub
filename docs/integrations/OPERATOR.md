@@ -22,7 +22,7 @@ Path: **Dashboard → Services → My Tools**
 
 - After buying an internal catalog service (website packages require quantity **1**), a tool appears as **Pending setup**.
 - Orders remain under **Service orders**; My Tools is ownership/access.
-- When configured: site URL, admin URL, admin email, **Copy password** (POST only, active+live subscriptions), **Login as admin** (auto session).
+- When configured: site URL, admin URL, admin email, **Copy password** (POST only, active+live subscriptions), **Admin Auto Login** (SSO via one-time token; succeeds only after merchant installs owned credentials).
 - **Expiring soon** is shown when active and ≤ 7 days remain — not a stored status.
 - **Renew** extends the same tool instance (quantity 1).
 
@@ -30,12 +30,16 @@ Path: **Dashboard → Services → My Tools**
 
 Path: `/admin/users/{id}/tools`
 
-1. For **pending** tools, click **Setup** (starts subscription clock once).
+1. For **pending** tools, open the **Setup** action from the row menu (starts subscription clock once).
 2. Enter HTTPS site URL, admin login URL, admin email, admin password.
-3. Save generates **unique provisioning credentials** and runs Check Connection + subscription push outside the DB write.
-4. For already-configured tools use **Reconfigure** (URLs/email/password — does **not** reset `expires_at`) or **Rotate credentials** (new keys — does **not** extend subscription).
+3. **Save & generate keys** creates unique provisioning credentials (shown once). Hub does **not** run Check connection automatically — give credentials to the merchant developer first.
+4. Merchant installs the owned row (`context=owned_tool`) on their site, then click **Check connection** from the row menu. Status may show **pending_merchant** until credentials are installed.
+5. After Check connection passes, **Admin Auto Login** on the user's My Tools page can succeed (merchant must also have the admin email as a local user).
+6. For already-configured tools use **Reconfigure** (URLs/email/password — does **not** reset `expires_at`) or **Rotate keys** (new keys — does **not** extend subscription).
 
-Ensure the Setup **admin email** exists as an admin user on the merchant site before testing Login as admin.
+Ensure the Setup **admin email** exists as an admin user on the merchant site before testing Admin Auto Login.
+
+**Note:** `pending_merchant` means the merchant has not installed Hub credentials yet — it is not proof that SSO will work. Admin Auto Login still requires full merchant-side token validation.
 
 ## Expiry job
 

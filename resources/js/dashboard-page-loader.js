@@ -281,6 +281,9 @@ function shouldShowLoaderForForm(form) {
     if (form.dataset.ajaxForm !== undefined) {
         return false;
     }
+    if (form.target && form.target.toLowerCase() === '_blank') {
+        return false;
+    }
     if ((form.method || 'get').toLowerCase() === 'dialog') {
         return false;
     }

@@ -75,7 +75,9 @@ class SubscriptionSyncService
 
             if (! $ok) {
                 $integration->last_error = 'Subscription sync failed: HTTP '.$response->status();
-                $integration->connection_status = 'error';
+                if ($integration->connection_status !== 'pending_merchant') {
+                    $integration->connection_status = 'error';
+                }
                 $integration->save();
             }
 
@@ -86,7 +88,9 @@ class SubscriptionSyncService
             ];
         } catch (InvalidArgumentException $e) {
             $integration->last_error = 'Subscription sync blocked: '.$e->getMessage();
-            $integration->connection_status = 'error';
+            if ($integration->connection_status !== 'pending_merchant') {
+                $integration->connection_status = 'error';
+            }
             $integration->save();
 
             return [
@@ -96,7 +100,9 @@ class SubscriptionSyncService
             ];
         } catch (Throwable $e) {
             $integration->last_error = 'Subscription sync error: '.$e->getMessage();
-            $integration->connection_status = 'error';
+            if ($integration->connection_status !== 'pending_merchant') {
+                $integration->connection_status = 'error';
+            }
             $integration->save();
 
             return [

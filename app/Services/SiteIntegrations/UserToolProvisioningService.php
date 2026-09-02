@@ -155,17 +155,15 @@ class UserToolProvisioningService
             return $locked->fresh(['integration']);
         });
 
-        // HTTP outside the DB transaction
-        $check = $this->connectionCheck->checkOwned($tool->fresh(['integration']));
-        $this->subscriptionSync->push($tool->fresh(['integration']));
-
+        // HTTP outside the DB transaction — defer health check and subscription sync until
+        // merchant installs credentials (operator runs Check connection manually).
         return [
             'tool' => $tool->fresh(['integration', 'product', 'variant']),
             'credentials' => [
                 ...$creds,
                 'webhook_url' => url('/webhooks/site-integrations/'.$creds['integration_id']),
-                'connection_ok' => $check['ok'],
-                'connection_message' => $check['message'],
+                'connection_status' => 'unchecked',
+                'connection_message' => 'Credentials generated. Install on the merchant site, then run Check connection.',
             ],
         ];
     }
@@ -215,7 +213,6 @@ class UserToolProvisioningService
         });
 
         $this->connectionCheck->checkOwned($tool->fresh(['integration']));
-        $this->subscriptionSync->push($tool->fresh(['integration']));
 
         return ['tool' => $tool->fresh(['integration', 'product', 'variant'])];
     }
@@ -265,7 +262,6 @@ class UserToolProvisioningService
         });
 
         $check = $this->connectionCheck->checkOwned($tool->fresh(['integration']));
-        $this->subscriptionSync->push($tool->fresh(['integration']));
 
         return [
             'tool' => $tool->fresh(['integration', 'product', 'variant']),
@@ -273,6 +269,7 @@ class UserToolProvisioningService
                 ...$creds,
                 'webhook_url' => url('/webhooks/site-integrations/'.$creds['integration_id']),
                 'connection_ok' => $check['ok'],
+                'connection_status' => $tool->fresh(['integration'])->integration?->connection_status,
                 'connection_message' => $check['message'],
             ],
         ];

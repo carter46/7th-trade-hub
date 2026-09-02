@@ -45,71 +45,18 @@
         </form>
     </x-slot:actions>
 
-    <x-dashboard.card class="border border-primary/20 bg-gradient-to-br from-primary/10 via-elevated to-muted/40">
-        <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
-            <div>
-                <h3 class="text-sm font-semibold text-text-primary">API credentials</h3>
-                <p class="mt-1 text-xs text-text-secondary">
-                    Give these values to the merchant site. Use <strong>Rotate keys</strong> if secrets may have leaked.
-                    <a href="{{ route('developers.integrations.show', ['path' => 'MERCHANT-GUIDE']) }}" class="text-primary hover:underline" target="_blank" rel="noopener">Integration docs</a>
-                </p>
-            </div>
-            <x-dashboard.badge :status="$integration->status->value" />
-        </div>
-
-        <div class="space-y-3" x-data="{
-            async copy(text, key) {
-                try {
-                    await navigator.clipboard.writeText(text || '');
-                    this.copied = key;
-                    setTimeout(() => { if (this.copied === key) this.copied = null; }, 1600);
-                } catch (e) {
-                    alert('Copy failed');
-                }
-            },
-            copied: null,
-            reveal: {},
-        }">
-            @foreach ($credentialRows as $i => $row)
-                @php $value = (string) ($row['value'] ?? ''); @endphp
-                <div class="rounded-xl border border-border-default/80 bg-elevated/80 px-3 py-3 sm:px-4">
-                    <div class="mb-1.5 flex items-center justify-between gap-2">
-                        <p class="text-xs font-medium uppercase tracking-wide text-text-muted">{{ $row['label'] }}</p>
-                        <div class="flex items-center gap-1.5">
-                            @if ($row['secret'])
-                                <button
-                                    type="button"
-                                    class="rounded-lg px-2 py-1 text-xs font-medium text-text-secondary hover:bg-muted hover:text-text-primary"
-                                    x-on:click="reveal[{{ $i }}] = !reveal[{{ $i }}]"
-                                    x-text="reveal[{{ $i }}] ? 'Hide' : 'Show'"
-                                ></button>
-                            @endif
-                            <button
-                                type="button"
-                                class="rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary hover:bg-primary/15"
-                                x-on:click="copy(@js($value), {{ $i }})"
-                            >
-                                <span x-show="copied !== {{ $i }}">Copy</span>
-                                <span x-cloak x-show="copied === {{ $i }}">Copied</span>
-                            </button>
-                        </div>
-                    </div>
-                    @if ($row['secret'])
-                        <p class="break-all font-mono text-xs text-text-primary" x-text="reveal[{{ $i }}] ? @js($value) : @js(str_repeat('•', min(28, max(8, strlen($value)))))"></p>
-                    @else
-                        <p class="break-all font-mono text-xs text-text-primary">{{ $value }}</p>
-                    @endif
-                </div>
-            @endforeach
-        </div>
-
-        <p class="mt-4 text-xs text-text-muted">
-            Connection: <span class="font-medium text-text-secondary">{{ $integration->connection_status ?? 'unchecked' }}</span>
-            @if ($integration->last_error)
-                — {{ $integration->last_error }}
-            @endif
-        </p>
-    </x-dashboard.card>
+@php
+    $integrationDocsSubtitle = 'Give these values to the merchant site. Use <strong>Rotate keys</strong> if secrets may have leaked. '
+        .'<a href="'.route('developers.integrations.show', ['path' => 'MERCHANT-GUIDE']).'" class="text-primary hover:underline" target="_blank" rel="noopener">Integration docs</a>';
+@endphp
+    <x-dashboard.integration-credentials-card
+        title="API credentials"
+        :subtitle="$integrationDocsSubtitle"
+        :credential-rows="$credentialRows"
+        :badge-status="$integration->status->value"
+        :connection-status="$integration->connection_status ?? 'unchecked'"
+        :connection-message="$integration->last_error"
+    />
 
     <div class="grid gap-6 lg:grid-cols-2">
         <x-dashboard.card>
