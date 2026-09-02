@@ -10,8 +10,11 @@ use App\Models\SystemSetting;
 use App\Models\User;
 use App\Models\Wallet;
 use App\Modules\Wallet\Services\WalletService;
+use App\Services\Communications\Email\EmailService;
+use App\Services\Communications\Email\SendResult;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Mockery;
 use Tests\TestCase;
 
 class ManualBankTransferOrderTest extends TestCase
@@ -206,5 +209,169 @@ class ManualBankTransferOrderTest extends TestCase
                 'transfer_reference' => 'TXN-12345',
             ])
             ->assertNotFound();
+    }
+
+    public function test_manual_payment_page_requires_proof_only(): void
+    {
+        SystemSetting::set('manual_bank_transfer_enabled', true);
+        SystemSetting::set('manual_bank_transfer_bank_name', 'Test Bank');
+        SystemSetting::set('manual_bank_transfer_account_number', '0123456789');
+        SystemSetting::set('manual_bank_transfer_account_name', '7th Trade Hub');
+
+        $product = $this->seedSimpleProduct();
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $user->assignRole('user');
+
+        $this->actingAs($user)
+            ->post(route('dashboard.services.purchase', $product->slug), [
+                'variant_id' => $product->activeVariants->first()->id,
+                'quantity' => 1,
+                'idempotency_key' => (string) Str::uuid(),
+                'payment_method' => Order::PAYMENT_MANUAL_BANK_TRANSFER,
+            ]);
+
+        $order = Order::query()->where('user_id', $user->id)->firstOrFail();
+
+        $this->actingAs($user)
+            ->post(route('dashboard.orders.manual-payment.submit', $order), [], [
+                'Accept' => 'application/json',
+            ])
+            ->assertStatus(422);
+
+        $file = \Illuminate\Http\UploadedFile::fake()->image('proof.jpg');
+
+        $this->actingAs($user)
+            ->post(route('dashboard.orders.manual-payment.submit', $order), [
+                'proof' => $file,
+            ], [
+                'Accept' => 'application/json',
+            ])
+            ->assertOk()
+            ->assertJson(['ok' => true]);
+
+        $order->refresh();
+        $this->assertNotNull($order->payment_submitted_at);
+        $this->assertArrayHasKey('proof_path', $order->payment_metadata ?? []);
+    }
+
+    public function test_third_manual_payment_expiry_cancels_order(): void
+    {
+        SystemSetting::set('manual_bank_transfer_enabled', true);
+        SystemSetting::set('manual_bank_transfer_bank_name', 'Test Bank');
+        SystemSetting::set('manual_bank_transfer_account_number', '0123456789');
+        SystemSetting::set('manual_bank_transfer_account_name', '7th Trade Hub');
+
+        $product = $this->seedSimpleProduct();
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $user->assignRole('user');
+
+        $this->actingAs($user)
+            ->post(route('dashboard.services.purchase', $product->slug), [
+                'variant_id' => $product->activeVariants->first()->id,
+                'quantity' => 1,
+                'idempotency_key' => (string) Str::uuid(),
+                'payment_method' => Order::PAYMENT_MANUAL_BANK_TRANSFER,
+            ]);
+
+        $order = Order::query()->where('user_id', $user->id)->firstOrFail();
+        $order->update([
+            'payment_metadata' => [
+                'manual_payment_session' => 3,
+                'manual_payment_expires_at' => now()->subMinute()->toIso8601String(),
+                'manual_payment_expired' => true,
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->postJson(route('dashboard.orders.manual-payment.expire', $order))
+            ->assertOk()
+            ->assertJson(['status' => 'cancelled']);
+
+        $this->assertSame('cancelled', $order->fresh()->status);
+    }
+
+    public function test_checkout_does_not_notify_admin_until_proof_submitted(): void
+    {
+        $this->financeAdmin();
+        $this->mockSuccessfulMail();
+        $this->seedManualBankSettings();
+
+        $product = $this->seedSimpleProduct();
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $user->assignRole('user');
+
+        $this->actingAs($user)
+            ->post(route('dashboard.services.purchase', $product->slug), [
+                'variant_id' => $product->activeVariants->first()->id,
+                'quantity' => 1,
+                'idempotency_key' => (string) Str::uuid(),
+                'payment_method' => Order::PAYMENT_MANUAL_BANK_TRANSFER,
+            ]);
+
+        $this->assertDatabaseMissing('admin_notifications', ['type' => 'order.manual_bank_transfer_proof']);
+        $this->assertDatabaseMissing('admin_notifications', ['type' => 'order.manual_bank_transfer_failed']);
+
+        $order = Order::query()->where('user_id', $user->id)->firstOrFail();
+        $file = \Illuminate\Http\UploadedFile::fake()->image('proof.jpg');
+
+        $this->actingAs($user)
+            ->post(route('dashboard.orders.manual-payment.submit', $order), [
+                'proof' => $file,
+            ], [
+                'Accept' => 'application/json',
+            ])
+            ->assertOk();
+
+        $this->assertDatabaseHas('admin_notifications', ['type' => 'order.manual_bank_transfer_proof']);
+    }
+
+    public function test_final_manual_payment_expiry_notifies_admin_of_failure(): void
+    {
+        $this->financeAdmin();
+        $this->mockSuccessfulMail();
+        $this->seedManualBankSettings();
+
+        $product = $this->seedSimpleProduct();
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $user->assignRole('user');
+
+        $this->actingAs($user)
+            ->post(route('dashboard.services.purchase', $product->slug), [
+                'variant_id' => $product->activeVariants->first()->id,
+                'quantity' => 1,
+                'idempotency_key' => (string) Str::uuid(),
+                'payment_method' => Order::PAYMENT_MANUAL_BANK_TRANSFER,
+            ]);
+
+        $order = Order::query()->where('user_id', $user->id)->firstOrFail();
+        $order->update([
+            'payment_metadata' => [
+                'manual_payment_session' => 3,
+                'manual_payment_expires_at' => now()->subMinute()->toIso8601String(),
+                'manual_payment_expired' => true,
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->postJson(route('dashboard.orders.manual-payment.expire', $order))
+            ->assertOk()
+            ->assertJson(['status' => 'cancelled']);
+
+        $this->assertDatabaseHas('admin_notifications', ['type' => 'order.manual_bank_transfer_failed']);
+    }
+
+    private function seedManualBankSettings(): void
+    {
+        SystemSetting::set('manual_bank_transfer_enabled', true);
+        SystemSetting::set('manual_bank_transfer_bank_name', 'Test Bank');
+        SystemSetting::set('manual_bank_transfer_account_number', '0123456789');
+        SystemSetting::set('manual_bank_transfer_account_name', '7th Trade Hub');
+    }
+
+    private function mockSuccessfulMail(): void
+    {
+        $mock = Mockery::mock(EmailService::class);
+        $mock->shouldReceive('sendMailableHtml')->andReturn(SendResult::ok('test', 'msg-1'));
+        $this->app->instance(EmailService::class, $mock);
     }
 }

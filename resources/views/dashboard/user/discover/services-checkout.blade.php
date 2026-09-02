@@ -348,7 +348,7 @@
                 </div>
 
                 <x-dashboard.button type="submit" icon="orders" class="w-full" x-bind:disabled="!canSubmit">
-                    <span x-text="paymentMethod === 'gateway' ? 'Continue to payment' : (paymentMethod === 'manual_bank_transfer' ? 'Place order & view bank details' : 'Pay from wallet')">Pay from wallet</span>
+                    <span x-text="paymentMethod === 'wallet' ? 'Pay from wallet' : 'Continue to payment'">Continue to payment</span>
                 </x-dashboard.button>
             </form>
         @endif

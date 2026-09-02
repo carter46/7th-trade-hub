@@ -6,6 +6,7 @@ use App\Events\EscrowDisputed;
 use App\Events\ListingApproved;
 use App\Events\ListingRejected;
 use App\Events\OrderCompleted;
+use App\Events\OrderManualBankTransferPaymentFailed;
 use App\Events\OrderManualBankTransferSubmitted;
 use App\Events\TicketOpened;
 use App\Events\TicketReplied;
@@ -94,6 +95,7 @@ class NotifyAdmins
             WithdrawalPayoutFailed::class => $this->withdrawalFailedPayload($event),
             OrderCompleted::class => $this->orderCompletedPayload($event),
             OrderManualBankTransferSubmitted::class => $this->orderManualBankTransferSubmittedPayload($event),
+            OrderManualBankTransferPaymentFailed::class => $this->orderManualBankTransferPaymentFailedPayload($event),
             default => null,
         };
 
@@ -295,10 +297,10 @@ class NotifyAdmins
         $order = Order::query()->find($event->orderId);
 
         return [
-            'type' => 'order.manual_bank_transfer_submitted',
-            'title' => 'Manual bank transfer order',
+            'type' => 'order.manual_bank_transfer_proof',
+            'title' => 'Payment proof submitted',
             'body' => sprintf(
-                'User #%d placed order %s for %s %s awaiting bank transfer confirmation.',
+                'User #%d submitted bank transfer proof for order %s (%s %s). Review and confirm payment.',
                 $event->userId,
                 $event->reference,
                 $event->currency,
@@ -313,7 +315,36 @@ class NotifyAdmins
                 'event' => $event::class,
             ],
             'permission' => 'finance.manage',
-            'dedupeKey' => 'order.manual_bank_transfer_submitted.'.$event->orderId,
+            'dedupeKey' => 'order.manual_bank_transfer_proof.'.$event->orderId,
+        ];
+    }
+
+    private function orderManualBankTransferPaymentFailedPayload(OrderManualBankTransferPaymentFailed $event): array
+    {
+        $order = Order::query()->find($event->orderId);
+
+        return [
+            'type' => 'order.manual_bank_transfer_failed',
+            'title' => 'Manual bank transfer failed',
+            'body' => sprintf(
+                'Order %s for user #%d (%s %s) was cancelled: %s',
+                $event->reference,
+                $event->userId,
+                $event->currency,
+                number_format($event->amount, 2),
+                $event->reason,
+            ),
+            'actionUrl' => Route::has('admin.orders.show') && $order
+                ? route('admin.orders.show', $order)
+                : (Route::has('admin.orders') ? route('admin.orders', ['filter' => 'failed_bank']) : null),
+            'meta' => [
+                'order_id' => $event->orderId,
+                'user_id' => $event->userId,
+                'reason' => $event->reason,
+                'event' => $event::class,
+            ],
+            'permission' => 'finance.manage',
+            'dedupeKey' => 'order.manual_bank_transfer_failed.'.$event->orderId,
         ];
     }
 

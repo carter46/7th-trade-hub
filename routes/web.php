@@ -252,6 +252,12 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
     Route::redirect('/discover/services', '/dashboard/services', 301)->name('.discover.services');
     Route::get('/service-orders', [DashboardController::class, 'serviceOrders'])->name('.service-orders');
     Route::get('/orders/{order}/manual-payment', [ManualOrderPaymentController::class, 'show'])->name('.orders.manual-payment');
+    Route::post('/orders/{order}/manual-payment/expire', [ManualOrderPaymentController::class, 'expireSession'])
+        ->middleware('throttle:30,1')
+        ->name('.orders.manual-payment.expire');
+    Route::post('/orders/{order}/manual-payment/restart', [ManualOrderPaymentController::class, 'restartSession'])
+        ->middleware('throttle:10,1')
+        ->name('.orders.manual-payment.restart');
     Route::post('/orders/{order}/manual-payment', [ManualOrderPaymentController::class, 'submitProof'])
         ->middleware('throttle:10,1')
         ->name('.orders.manual-payment.submit');

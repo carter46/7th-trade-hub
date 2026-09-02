@@ -72,8 +72,15 @@
                 <x-dashboard.td>₦{{ number_format($order->total_amount ?? $order->amount, 2) }}</x-dashboard.td>
                 <x-dashboard.td>
                     <x-dashboard.badge :status="$order->status === 'cancelled' ? 'danger' : $order->status">
-                        {{ $order->status }}
+                        @if ($order->status === 'cancelled' && $order->payment_method === \App\Models\Order::PAYMENT_MANUAL_BANK_TRANSFER)
+                            payment failed
+                        @else
+                            {{ $order->status }}
+                        @endif
                     </x-dashboard.badge>
+                    @if ($order->status === 'pending' && $order->payment_method === \App\Models\Order::PAYMENT_MANUAL_BANK_TRANSFER && $order->payment_submitted_at)
+                        <div class="text-xs text-amber-700 mt-0.5">Under review</div>
+                    @endif
                 </x-dashboard.td>
                 <x-dashboard.td class="text-text-secondary text-sm">{{ $order->escrow?->status ?? '—' }}</x-dashboard.td>
                 <x-dashboard.td class="text-text-secondary text-sm">{{ $order->created_at->format('M j, Y H:i') }}</x-dashboard.td>
@@ -132,6 +139,12 @@
                         @else
                             <span class="text-text-muted text-xs">Paid</span>
                         @endif
+                    @elseif ($order->source === 'platform' && $order->status === 'pending' && $order->payment_method === \App\Models\Order::PAYMENT_MANUAL_BANK_TRANSFER && ! $order->payment_submitted_at)
+                        <x-dashboard.button :href="route('dashboard.orders.manual-payment', $order)" size="xs" variant="primary">Complete payment</x-dashboard.button>
+                    @elseif ($order->source === 'platform' && $order->status === 'pending' && $order->payment_method === \App\Models\Order::PAYMENT_MANUAL_BANK_TRANSFER && $order->payment_submitted_at)
+                        <span class="text-xs text-amber-700">Payment under review</span>
+                    @elseif ($order->source === 'platform' && $order->status === 'cancelled' && $order->payment_method === \App\Models\Order::PAYMENT_MANUAL_BANK_TRANSFER)
+                        <span class="text-xs text-danger">Payment not completed</span>
                     @endif
                 </x-dashboard.td>
             </tr>

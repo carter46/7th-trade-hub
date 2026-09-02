@@ -9,6 +9,7 @@ import { initDashboardPageLoader } from './dashboard-page-loader';
 import { assignAlpineHelpers, createDomainSearchHelpers, extractQuoteError } from './domain-search-shared';
 import { createCheckoutValidationHelpers } from './checkout-validation';
 import { registerAdminConnectionTest } from './admin-connection-test';
+import { registerManualBankPayment } from './manual-bank-payment';
 import Alpine from 'alpinejs';
 import Chart from 'chart.js/auto';
 
@@ -26,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('alpine:init', () => {
     registerPullToRefresh(Alpine);
     registerAdminConnectionTest(Alpine);
+    registerManualBankPayment(Alpine);
 
     Alpine.data('toastStore', (initial = []) => ({
         toasts: [],

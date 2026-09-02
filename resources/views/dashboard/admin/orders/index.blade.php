@@ -15,6 +15,7 @@
     <x-slot:actions>
         <x-dashboard.button :href="route('admin.orders.create')" icon="orders" size="sm">Create order</x-dashboard.button>
         <x-dashboard.button :href="route('admin.orders', ['filter' => 'awaiting_bank'])" variant="secondary" size="sm">Awaiting bank</x-dashboard.button>
+        <x-dashboard.button :href="route('admin.orders', ['filter' => 'failed_bank'])" variant="secondary" size="sm">Failed bank</x-dashboard.button>
         <x-dashboard.button :href="route('admin.orders')" variant="secondary" size="sm">All orders</x-dashboard.button>
     </x-slot:actions>
 
@@ -38,7 +39,13 @@
                 <x-dashboard.td>
                     <x-dashboard.badge :status="$order->status" />
                     @if($order->isAwaitingManualBankTransfer())
-                        <span class="mt-1 block text-xs font-medium text-amber-700">Awaiting bank transfer</span>
+                        @if($order->payment_submitted_at)
+                            <span class="mt-1 block text-xs font-medium text-amber-700">Proof submitted — review</span>
+                        @else
+                            <span class="mt-1 block text-xs font-medium text-amber-700">Awaiting bank transfer</span>
+                        @endif
+                    @elseif($order->payment_method === \App\Models\Order::PAYMENT_MANUAL_BANK_TRANSFER && $order->status === 'cancelled')
+                        <span class="mt-1 block text-xs font-medium text-danger">Payment not completed</span>
                     @endif
                 </x-dashboard.td>
                 <x-dashboard.td>

@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\SystemSetting;
 use App\Modules\Catalog\Services\PlatformCheckoutService;
 use App\Services\Media\MediaUploadService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -24,28 +25,72 @@ class ManualOrderPaymentController extends Controller
             return $this->denyManualPayment($order);
         }
 
+        $order = $this->checkout->initializeManualPaymentWindow($order);
+
+        if (! $order->payment_submitted_at) {
+            $result = $this->checkout->processManualPaymentExpiry($order);
+            if ($result['status'] === 'cancelled') {
+                return redirect()
+                    ->route('dashboard')
+                    ->with('manual_payment_order_cancelled', $result['message'] ?? 'Your order was cancelled.');
+            }
+            $order = $order->fresh();
+        }
+
         return view('dashboard.user.orders.manual-payment', [
             'order' => $order,
             'bankDetails' => SystemSetting::manualBankTransferDetails(),
+            'secondsRemaining' => $this->checkout->manualPaymentSecondsRemaining($order),
+            'paymentExpired' => $this->checkout->isManualPaymentExpired($order),
+            'paymentSession' => (int) ($order->payment_metadata['manual_payment_session'] ?? 1),
+            'maxPaymentSessions' => PlatformCheckoutService::MANUAL_PAYMENT_MAX_SESSIONS,
         ]);
     }
 
-    public function submitProof(Order $order, Request $request): RedirectResponse
+    public function expireSession(Order $order): JsonResponse
+    {
+        if (! $this->canAccessManualPayment($order)) {
+            abort(403);
+        }
+
+        $result = $this->checkout->processManualPaymentExpiry($order);
+
+        return response()->json(array_merge($result, [
+            'seconds_remaining' => $this->checkout->manualPaymentSecondsRemaining($order->fresh()),
+        ]));
+    }
+
+    public function restartSession(Order $order): JsonResponse
+    {
+        if (! $this->canAccessManualPayment($order)) {
+            abort(403);
+        }
+
+        try {
+            $order = $this->checkout->restartManualPaymentWindow($order);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['ok' => false, 'message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'status' => 'active',
+            'seconds_remaining' => $this->checkout->manualPaymentSecondsRemaining($order),
+            'session' => (int) ($order->payment_metadata['manual_payment_session'] ?? 1),
+        ]);
+    }
+
+    public function submitProof(Order $order, Request $request): RedirectResponse|JsonResponse
     {
         if (! $this->canAccessManualPayment($order)) {
             return $this->denyManualPayment($order);
         }
 
         $validated = $request->validate([
-            'payer_bank_name' => ['required', 'string', 'max:100'],
-            'transfer_reference' => ['required', 'string', 'max:100'],
-            'proof' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
+            'proof' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
         ]);
 
-        $proofMeta = [
-            'payer_bank_name' => $validated['payer_bank_name'],
-            'transfer_reference' => $validated['transfer_reference'],
-        ];
+        $proofMeta = [];
 
         if ($request->hasFile('proof')) {
             $stored = $this->media->storeDocument($request->file('proof'), $request->user());
@@ -57,10 +102,20 @@ class ManualOrderPaymentController extends Controller
         try {
             $this->checkout->submitManualBankTransferProof($order, $proofMeta);
         } catch (\InvalidArgumentException $e) {
+            if ($request->expectsJson()) {
+                return response()->json(['ok' => false, 'message' => $e->getMessage()], 422);
+            }
+
             return back()->withInput()->with('error', $e->getMessage());
         }
 
-        return back()->with('status', __('Payment details submitted. We will confirm your transfer shortly.'));
+        $message = __('Your payment is being processed. We will review your transfer and confirm your order shortly.');
+
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true, 'message' => $message]);
+        }
+
+        return back()->with('status', $message);
     }
 
     private function canAccessManualPayment(Order $order): bool
@@ -88,8 +143,8 @@ class ManualOrderPaymentController extends Controller
         }
 
         if ($order->status === 'cancelled') {
-            return redirect()->route('dashboard.service-orders')
-                ->with('error', __('This order was cancelled.'));
+            return redirect()->route('dashboard')
+                ->with('manual_payment_order_cancelled', __('This order was cancelled.'));
         }
 
         abort(404);

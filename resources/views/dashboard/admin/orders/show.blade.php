@@ -39,6 +39,22 @@
                 @if ($order->payment_confirmed_at)
                     <div class="flex justify-between gap-4"><dt class="text-text-muted">Confirmed</dt><dd>{{ $order->payment_confirmed_at->format('M j, Y g:i A') }}</dd></div>
                 @endif
+                @if ($order->payment_method === \App\Models\Order::PAYMENT_MANUAL_BANK_TRANSFER)
+                    @php
+                        $paymentSession = (int) ($meta['manual_payment_session'] ?? 1);
+                        $maxSessions = \App\Modules\Catalog\Services\PlatformCheckoutService::MANUAL_PAYMENT_MAX_SESSIONS;
+                    @endphp
+                    <div class="flex justify-between gap-4"><dt class="text-text-muted">Payment attempts</dt><dd>{{ $paymentSession }} / {{ $maxSessions }}</dd></div>
+                    @if (! empty($meta['manual_payment_failed_at']))
+                        <div class="flex justify-between gap-4"><dt class="text-text-muted">Last window expired</dt><dd>{{ \Illuminate\Support\Carbon::parse($meta['manual_payment_failed_at'])->format('M j, Y g:i A') }}</dd></div>
+                    @endif
+                    @if (! empty($meta['manual_payment_cancelled_at']))
+                        <div class="flex justify-between gap-4"><dt class="text-text-muted">Cancelled at</dt><dd>{{ \Illuminate\Support\Carbon::parse($meta['manual_payment_cancelled_at'])->format('M j, Y g:i A') }}</dd></div>
+                    @endif
+                    @if (! empty($meta['cancel_reason']))
+                        <div class="flex justify-between gap-4"><dt class="text-text-muted">Cancel reason</dt><dd class="text-right">{{ $meta['cancel_reason'] }}</dd></div>
+                    @endif
+                @endif
                 @if ($order->paymentConfirmer)
                     <div class="flex justify-between gap-4"><dt class="text-text-muted">Confirmed by</dt><dd>{{ $order->paymentConfirmer->name }}</dd></div>
                 @endif

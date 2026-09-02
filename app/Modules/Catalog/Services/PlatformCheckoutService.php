@@ -4,6 +4,7 @@ namespace App\Modules\Catalog\Services;
 
 use App\Enums\PlatformProductType;
 use App\Events\OrderCompleted;
+use App\Events\OrderManualBankTransferPaymentFailed;
 use App\Events\OrderManualBankTransferSubmitted;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -25,6 +26,9 @@ use InvalidArgumentException;
 
 class PlatformCheckoutService
 {
+    public const MANUAL_PAYMENT_WINDOW_MINUTES = 10;
+
+    public const MANUAL_PAYMENT_MAX_SESSIONS = 3;
     public function __construct(
         private WalletService $walletService,
         private UserToolProvisioningService $userTools,
@@ -138,9 +142,11 @@ class PlatformCheckoutService
         });
     }
 
-    public function cancelManualBankTransferOrder(Order $order, ?string $reason = null): Order
+    public function cancelManualBankTransferOrder(Order $order, ?string $reason = null, bool $notifyAdminsOfFailure = false): Order
     {
-        return DB::transaction(function () use ($order, $reason) {
+        $alreadyCancelled = $order->status === 'cancelled';
+
+        $cancelled = DB::transaction(function () use ($order, $reason) {
             $locked = Order::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
 
             if ($locked->payment_method !== Order::PAYMENT_MANUAL_BANK_TRANSFER) {
@@ -151,12 +157,17 @@ class PlatformCheckoutService
                 throw new InvalidArgumentException('Paid orders cannot be cancelled.');
             }
 
+            if ($locked->status === 'cancelled') {
+                return $locked;
+            }
+
             $this->domainQuotes->releaseReservationForOrder((int) $locked->id);
 
             $meta = $locked->payment_metadata ?? [];
             if ($reason) {
                 $meta['cancel_reason'] = $reason;
             }
+            $meta['manual_payment_cancelled_at'] = now()->toIso8601String();
             $locked->update([
                 'status' => 'cancelled',
                 'payment_metadata' => $meta,
@@ -164,6 +175,33 @@ class PlatformCheckoutService
 
             return $locked->fresh();
         });
+
+        if ($notifyAdminsOfFailure && ! $alreadyCancelled) {
+            OrderManualBankTransferPaymentFailed::dispatch(
+                (int) $cancelled->id,
+                (int) $cancelled->user_id,
+                (float) $cancelled->total_amount,
+                (string) ($cancelled->currency ?? 'NGN'),
+                (string) $cancelled->reference,
+                (string) ($reason ?? 'Payment not completed.'),
+            );
+        }
+
+        app(\App\Modules\Admin\Services\AuditLogService::class)->log(
+            null,
+            'order.manual_bank_transfer.cancelled',
+            $cancelled,
+            null,
+            [
+                'order_id' => $cancelled->id,
+                'user_id' => $cancelled->user_id,
+                'reason' => $reason,
+                'auto_cancelled' => $notifyAdminsOfFailure,
+            ],
+            request()?->ip(),
+        );
+
+        return $cancelled;
     }
 
     /**
@@ -177,6 +215,10 @@ class PlatformCheckoutService
 
         if ($order->payment_method !== Order::PAYMENT_MANUAL_BANK_TRANSFER || $order->status !== 'pending') {
             throw new InvalidArgumentException('This order cannot accept payment proof.');
+        }
+
+        if ($this->isManualPaymentExpired($order)) {
+            throw new InvalidArgumentException('This payment window has expired.');
         }
 
         $firstSubmission = $order->payment_submitted_at === null;
@@ -196,6 +238,121 @@ class PlatformCheckoutService
                 (string) $order->reference,
             );
         }
+
+        return $order->fresh();
+    }
+
+    public function initializeManualPaymentWindow(Order $order): Order
+    {
+        $meta = $order->payment_metadata ?? [];
+
+        if (! isset($meta['manual_payment_expires_at'])) {
+            $meta['manual_payment_expires_at'] = now()->addMinutes(self::MANUAL_PAYMENT_WINDOW_MINUTES)->toIso8601String();
+            $meta['manual_payment_session'] = 1;
+            $meta['manual_payment_expired'] = false;
+            $order->update(['payment_metadata' => $meta]);
+        }
+
+        return $order->fresh();
+    }
+
+    public function manualPaymentSecondsRemaining(Order $order): int
+    {
+        $expiresAt = $order->payment_metadata['manual_payment_expires_at'] ?? null;
+        if (! is_string($expiresAt) || $expiresAt === '') {
+            return 0;
+        }
+
+        return max(0, (int) now()->diffInSeconds(\Illuminate\Support\Carbon::parse($expiresAt), false));
+    }
+
+    public function isManualPaymentExpired(Order $order): bool
+    {
+        if ($order->payment_submitted_at) {
+            return false;
+        }
+
+        $meta = $order->payment_metadata ?? [];
+        if (($meta['manual_payment_expired'] ?? false) === true) {
+            return true;
+        }
+
+        $expiresAt = $meta['manual_payment_expires_at'] ?? null;
+        if (! is_string($expiresAt) || $expiresAt === '') {
+            return false;
+        }
+
+        return now()->greaterThanOrEqualTo(\Illuminate\Support\Carbon::parse($expiresAt));
+    }
+
+    /**
+     * @return array{status: string, can_restart?: bool, session?: int, message?: string}
+     */
+    public function processManualPaymentExpiry(Order $order): array
+    {
+        $order = $order->fresh();
+
+        if ($order->status === 'cancelled') {
+            return [
+                'status' => 'cancelled',
+                'message' => 'Your order was cancelled because payment was not completed in time.',
+            ];
+        }
+
+        if ($order->payment_submitted_at) {
+            return ['status' => 'submitted'];
+        }
+
+        if (! $this->isManualPaymentExpired($order)) {
+            return ['status' => 'active'];
+        }
+
+        $meta = $order->payment_metadata ?? [];
+        $session = (int) ($meta['manual_payment_session'] ?? 1);
+
+        if ($session >= self::MANUAL_PAYMENT_MAX_SESSIONS) {
+            $this->cancelManualBankTransferOrder(
+                $order,
+                'Payment not received within the allowed time.',
+                notifyAdminsOfFailure: true,
+            );
+
+            return [
+                'status' => 'cancelled',
+                'message' => 'Your order is being cancelled because payment was not completed in time.',
+            ];
+        }
+
+        if (($meta['manual_payment_expired'] ?? false) !== true) {
+            $meta['manual_payment_expired'] = true;
+            $meta['manual_payment_failed_at'] = now()->toIso8601String();
+            $order->update(['payment_metadata' => $meta]);
+        }
+
+        return [
+            'status' => 'failed',
+            'can_restart' => true,
+            'session' => $session,
+        ];
+    }
+
+    public function restartManualPaymentWindow(Order $order): Order
+    {
+        if ($order->payment_submitted_at) {
+            throw new InvalidArgumentException('Payment proof was already submitted.');
+        }
+
+        $meta = $order->payment_metadata ?? [];
+        $session = (int) ($meta['manual_payment_session'] ?? 1);
+
+        if ($session >= self::MANUAL_PAYMENT_MAX_SESSIONS) {
+            throw new InvalidArgumentException('No payment restarts remaining.');
+        }
+
+        $meta['manual_payment_session'] = $session + 1;
+        $meta['manual_payment_expires_at'] = now()->addMinutes(self::MANUAL_PAYMENT_WINDOW_MINUTES)->toIso8601String();
+        $meta['manual_payment_expired'] = false;
+        $order->update(['payment_metadata' => $meta]);
 
         return $order->fresh();
     }
@@ -432,7 +589,6 @@ class PlatformCheckoutService
     private function purchaseViaManualBankTransfer(User $buyer, PlatformProduct $product, array $data): Order
     {
         $idempotencyKey = $data['idempotency_key'] ?? null;
-        $notifyAdmins = (bool) ($data['notify_manual_bank_submitted'] ?? true);
         if ($idempotencyKey) {
             $existing = Order::query()
                 ->where('user_id', $buyer->id)
@@ -443,10 +599,8 @@ class PlatformCheckoutService
             }
         }
 
-        $createdNew = false;
-
         try {
-            $order = DB::transaction(function () use ($buyer, $product, $data, $idempotencyKey, &$createdNew) {
+            $order = DB::transaction(function () use ($buyer, $product, $data, $idempotencyKey) {
                 if ($idempotencyKey) {
                     $existing = Order::query()
                         ->where('user_id', $buyer->id)
@@ -471,6 +625,11 @@ class PlatformCheckoutService
                     'payment_method' => Order::PAYMENT_MANUAL_BANK_TRANSFER,
                     'payment_provider' => 'manual',
                     'idempotency_key' => $idempotencyKey,
+                    'payment_metadata' => [
+                        'manual_payment_expires_at' => now()->addMinutes(self::MANUAL_PAYMENT_WINDOW_MINUTES)->toIso8601String(),
+                        'manual_payment_session' => 1,
+                        'manual_payment_expired' => false,
+                    ],
                 ]);
 
                 foreach ($checkout['pending_domain_quotes'] ?? [] as $pending) {
@@ -496,22 +655,10 @@ class PlatformCheckoutService
                     ]);
                 }
 
-                $createdNew = true;
-
                 return $order;
             });
         } catch (UniqueConstraintViolationException $e) {
             return $this->recoverIdempotent($buyer, $idempotencyKey, $e);
-        }
-
-        if ($createdNew && $notifyAdmins) {
-            OrderManualBankTransferSubmitted::dispatch(
-                (int) $order->id,
-                (int) $order->user_id,
-                (float) $order->total_amount,
-                'NGN',
-                (string) $order->reference,
-            );
         }
 
         return $order;

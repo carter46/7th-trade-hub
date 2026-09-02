@@ -36,6 +36,9 @@ class OrderAdminController extends Controller
         if ($request->string('filter')->toString() === 'awaiting_bank') {
             $query->where('payment_method', Order::PAYMENT_MANUAL_BANK_TRANSFER)
                 ->where('status', 'pending');
+        } elseif ($request->string('filter')->toString() === 'failed_bank') {
+            $query->where('payment_method', Order::PAYMENT_MANUAL_BANK_TRANSFER)
+                ->where('status', 'cancelled');
         }
 
         $orders = $query->paginate(20)->withQueryString();
