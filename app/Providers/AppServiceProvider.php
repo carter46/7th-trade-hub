@@ -233,11 +233,8 @@ class AppServiceProvider extends ServiceProvider
                 ]);
             }
 
-            // Regenerate PWA icons when missing or admin favicon is newer than generated files.
-            $pwa = app(\App\Services\Branding\PwaBrandingSync::class);
-            if ($pwa->shouldRegenerateIcons($branding)) {
-                $pwa->sync($branding);
-            }
+            // PWA icon files are regenerated via admin Site Settings save or `php artisan branding:sync-pwa`.
+            // Do not sync here on every request — GD + disk writes can timeout shared hosting.
         } catch (\Throwable) {
             // Database may be unavailable during early boot / package discovery.
         }

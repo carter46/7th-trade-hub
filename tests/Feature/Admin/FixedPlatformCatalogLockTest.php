@@ -203,7 +203,7 @@ class FixedPlatformCatalogLockTest extends TestCase
                     ['id' => $variant->id, 'price' => 5500, 'description' => 'Best for home use'],
                 ],
             ])
-            ->assertRedirect(route('admin.platform-products'));
+            ->assertRedirect(route('admin.platform-products.edit', $product));
 
         $product->refresh();
         $this->assertSame('Residential VPN Plus', $product->title);
@@ -233,7 +233,7 @@ class FixedPlatformCatalogLockTest extends TestCase
                     ['id' => $variant->id, 'price' => $variant->price],
                 ],
             ])
-            ->assertRedirect(route('admin.platform-products'));
+            ->assertRedirect(route('admin.platform-products.edit', $product));
 
         $this->assertFalse($product->fresh()->is_featured);
 
@@ -249,7 +249,7 @@ class FixedPlatformCatalogLockTest extends TestCase
                     ['id' => $variant->id, 'price' => $variant->price],
                 ],
             ])
-            ->assertRedirect(route('admin.platform-products'));
+            ->assertRedirect(route('admin.platform-products.edit', $product));
 
         $this->assertTrue($product->fresh()->is_featured);
 
@@ -292,7 +292,7 @@ class FixedPlatformCatalogLockTest extends TestCase
                     ['id' => $variant->id, 'price' => 5000, 'name' => 'Hacked Name'],
                 ],
             ])
-            ->assertRedirect(route('admin.platform-products'));
+            ->assertRedirect(route('admin.platform-products.edit', $product));
 
         $product->refresh();
         $this->assertSame('manual', $product->provider);

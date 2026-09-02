@@ -13,6 +13,7 @@ use App\Services\Domains\DomainQuoteService;
 use App\Services\Media\MediaPathService;
 use App\Services\Media\MediaUsageService;
 use App\Support\Domains\DomainProductTldPolicy;
+use App\Support\SortOrder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -207,7 +208,9 @@ class PlatformProductAdminController extends Controller
             app(\App\Services\Domains\DomainCacheInvalidator::class)->invalidateAllDomainPricingCaches();
         }
 
-        return redirect()->route('admin.platform-products')->with('status', 'Product updated.');
+        return redirect()
+            ->route('admin.platform-products.edit', $platformProduct)
+            ->with('status', 'Product updated.');
     }
 
     public function toggle(PlatformProduct $platformProduct): RedirectResponse

@@ -32,6 +32,12 @@
     ]"
 >
     <x-dashboard.card>
+        @if (session('status'))
+            <x-dashboard.alert type="success" class="mb-4">{{ session('status') }}</x-dashboard.alert>
+        @endif
+        @if (session('error'))
+            <x-dashboard.alert type="danger" class="mb-4">{{ session('error') }}</x-dashboard.alert>
+        @endif
         <form method="POST" action="{{ route('admin.platform-products.update', $product) }}" class="w-full space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
             @method('PUT')
