@@ -43,12 +43,6 @@ class DashboardController extends Controller
             ->limit(4)
             ->get();
 
-        $marketplacePicks = Listing::published()
-            ->with('marketplaceProduct')
-            ->orderByDesc('id')
-            ->limit(4)
-            ->get();
-
         $messagesCount = Message::where('to_user_id', $user->id)->whereNull('read_at')->count();
         $myListingsCount = $user->listings()->count();
 
@@ -57,13 +51,6 @@ class DashboardController extends Controller
             ->whereIn('status', CryptoSellRequest::OPEN_STATUSES)
             ->orderByDesc('id')
             ->first();
-
-        $recentlyPurchasedTools = UserTool::query()
-            ->ownedBy($user->id)
-            ->with(['product.heroMedia'])
-            ->orderByDesc('purchased_at')
-            ->limit(6)
-            ->get();
 
         return view('dashboard.user.overview', [
             'wallet' => $wallet,
@@ -76,8 +63,6 @@ class DashboardController extends Controller
             'messagesCount' => $messagesCount,
             'myListingsCount' => $myListingsCount,
             'featuredServices' => $featuredServices,
-            'marketplacePicks' => $marketplacePicks,
-            'recentlyPurchasedTools' => $recentlyPurchasedTools,
             'kycLevel' => $user->kyc_level,
             'openCryptoSell' => $openCryptoSell,
         ]);

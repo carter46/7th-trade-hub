@@ -1,6 +1,6 @@
 @php
     $siteName = $branding['site_name'] ?? config('app.name');
-    $logoUrl = media_url_from_id($branding['logo_light_media_id'] ?? null, null, 'medium');
+    $logoUrl = absolute_media_url_from_id($branding['logo_light_media_id'] ?? null, null, 'medium');
     $adminUrl = \Illuminate\Support\Facades\Route::has('admin.dashboard') ? route('admin.dashboard') : config('app.url');
 @endphp
 <!DOCTYPE html>

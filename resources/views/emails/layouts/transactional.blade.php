@@ -2,8 +2,8 @@
     $brandingRepo = app(\App\Services\Branding\SiteBrandingRepository::class);
     $contactRepo = app(\App\Services\Communications\Contact\PlatformContactRepository::class);
     $siteName = $brandingRepo->all()['site_name'] ?? config('app.name');
-    $logoUrl = media_url_from_id($brandingRepo->all()['logo_light_media_id'] ?? null, null, 'medium');
-    $siteUrl = config('app.url');
+    $logoUrl = absolute_media_url_from_id($brandingRepo->all()['logo_light_media_id'] ?? null, null, 'medium');
+    $siteUrl = absolute_url(config('app.url')) ?? config('app.url');
     $supportEmail = $contactRepo->all()['email_support'] ?? null;
     $pageTitle = trim($__env->yieldContent('title')) ?: $siteName;
     $heading = trim($__env->yieldContent('heading')) ?: $pageTitle;

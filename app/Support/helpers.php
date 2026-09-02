@@ -26,6 +26,42 @@ if (! function_exists('media_url_from_id')) {
     }
 }
 
+if (! function_exists('absolute_url')) {
+    /**
+     * Turn a root-relative or scheme-relative URL into a fully absolute URL for email clients and external links.
+     */
+    function absolute_url(?string $url): ?string
+    {
+        if (! is_string($url) || $url === '') {
+            return null;
+        }
+
+        if (preg_match('#^https?://#i', $url) || str_starts_with($url, 'data:')) {
+            return $url;
+        }
+
+        if (str_starts_with($url, '//')) {
+            $scheme = parse_url((string) config('app.url'), PHP_URL_SCHEME) ?: 'https';
+
+            return $scheme.':'.$url;
+        }
+
+        $base = rtrim((string) config('app.url'), '/');
+        if ($base === '' || ! preg_match('#^https?://#i', $base)) {
+            return $url;
+        }
+
+        return $base.(str_starts_with($url, '/') ? $url : '/'.$url);
+    }
+}
+
+if (! function_exists('absolute_media_url_from_id')) {
+    function absolute_media_url_from_id(?int $mediaId, ?string $legacyPath = null, string $variant = 'medium'): ?string
+    {
+        return absolute_url(media_url_from_id($mediaId, $legacyPath, $variant));
+    }
+}
+
 if (! function_exists('mask_secret')) {
     /**
      * Mask a stored secret for form placeholders (never put the real value in the input).

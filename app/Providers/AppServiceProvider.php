@@ -142,6 +142,7 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(OrderCompleted::class, CreateUserToolsFromOrder::class);
         Event::listen(OrderCompleted::class, FulfillDomainRegistrations::class);
         $this->applySiteBrandingConfig();
+        $this->configureProductionUrls();
 
         View::composer(['layouts.dashboard-user', 'layouts.dashboard-admin'], function ($view) {
             /** @var ThemeManager $themes */
@@ -210,6 +211,18 @@ class AppServiceProvider extends ServiceProvider
                 'googleIdentityConfig' => $googleIdentityConfig,
             ]);
         });
+    }
+
+    private function configureProductionUrls(): void
+    {
+        if (! $this->app->environment('production')) {
+            return;
+        }
+
+        $url = (string) config('app.url');
+        if ($url !== '' && str_starts_with($url, 'https://')) {
+            \Illuminate\Support\Facades\URL::forceScheme('https');
+        }
     }
 
     private function applySiteBrandingConfig(): void
