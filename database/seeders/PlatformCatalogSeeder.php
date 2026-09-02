@@ -34,7 +34,7 @@ class PlatformCatalogSeeder extends Seeder
             ],
             PlatformProductType::SocialService->value => [
                 'Instagram Growth Pack', 'TikTok Engagement Boost', 'YouTube Views Lite',
-                'Twitter Audience Pack', 'LinkedIn Lead Boost', 'Multi-Platform Starter',
+                'Twitter Audience Pack', 'Facebook Growth Pack',
             ],
             PlatformProductType::Domain->value => [
                 'Domain Registration',
@@ -63,7 +63,7 @@ class PlatformCatalogSeeder extends Seeder
             PlatformProductType::Proxy->value => ['proxy-residential'],
             PlatformProductType::Smtp->value => ['smtp-transactional'],
             PlatformProductType::Email->value => ['email-business'],
-            PlatformProductType::SocialService->value => ['social-growth', 'social-engagement', 'social-growth', 'social-engagement', 'social-growth', 'social-growth'],
+            PlatformProductType::SocialService->value => ['social-growth', 'social-engagement', 'social-growth', 'social-engagement', 'social-growth'],
             PlatformProductType::Domain->value => ['domain-registration'],
             PlatformProductType::EscrowService->value => ['escrow-standard', 'escrow-high-value', 'escrow-high-value', 'escrow-standard', 'escrow-standard', 'escrow-standard'],
         ];

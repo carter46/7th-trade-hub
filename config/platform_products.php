@@ -46,6 +46,13 @@ return [
         'nda-bundle',
         'sales-contract-pack',
     ],
+    'social_service' => [
+        'instagram-growth-pack',
+        'tiktok-engagement-boost',
+        'youtube-views-lite',
+        'twitter-audience-pack',
+        'facebook-growth-pack',
+    ],
     'website_template' => [],
     'vps' => [],
 ];
