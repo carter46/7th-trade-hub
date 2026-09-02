@@ -46,39 +46,6 @@
         }"
         @endif
     >
-        <div class="flex flex-wrap items-center justify-end gap-3">
-            <div class="flex flex-wrap items-center gap-2">
-                @php
-                    $demoIntegration = $product->siteIntegration;
-                    $canDemoUser = $demoIntegration?->isActive() && $demoIntegration->hasCapability(\App\Models\SiteIntegration::CAP_DEMO_USER_LOGIN) && filled($demoIntegration->demo_user_email);
-                    $canDemoAdmin = $demoIntegration?->isActive() && $demoIntegration->hasCapability(\App\Models\SiteIntegration::CAP_DEMO_ADMIN_LOGIN) && filled($demoIntegration->demo_admin_email);
-                @endphp
-                @if ($canDemoUser || $canDemoAdmin)
-                    <x-dashboard.button type="button" variant="secondary" size="sm" x-on:click="$dispatch('open-modal', 'view-demo-dash-{{ $product->id }}')">View Demo</x-dashboard.button>
-                    <x-dashboard.modal name="view-demo-dash-{{ $product->id }}" maxWidth="md">
-                        <div class="space-y-4 p-1">
-                            <h3 class="text-lg font-semibold text-text-primary">View demo</h3>
-                            <p class="text-sm text-text-secondary">Open the independent demo site without a password.</p>
-                            <div class="flex flex-col gap-2">
-                                @if ($canDemoUser)
-                                    <form method="POST" action="{{ route('dashboard.services.demo-launch', [$product, 'user']) }}">
-                                        @csrf
-                                        <x-dashboard.button type="submit" class="w-full" variant="secondary">Login as User</x-dashboard.button>
-                                    </form>
-                                @endif
-                                @if ($canDemoAdmin)
-                                    <form method="POST" action="{{ route('dashboard.services.demo-launch', [$product, 'admin']) }}">
-                                        @csrf
-                                        <x-dashboard.button type="submit" class="w-full">Login as Admin</x-dashboard.button>
-                                    </form>
-                                @endif
-                            </div>
-                        </div>
-                    </x-dashboard.modal>
-                @endif
-            </div>
-        </div>
-
         @if(session('error'))
             <x-dashboard.alert type="danger">{{ session('error') }}</x-dashboard.alert>
         @endif
@@ -100,6 +67,12 @@
                     @elseif(filled($product->short_description))
                         <p class="text-text-secondary">{{ $product->short_description }}</p>
                     @endif
+                    <div class="pt-1">
+                        @include('partials.catalog.product-demo-actions', [
+                            'product' => $product,
+                            'modalName' => 'view-demo-dash-'.$product->id,
+                        ])
+                    </div>
                 </div>
             </x-dashboard.card>
 

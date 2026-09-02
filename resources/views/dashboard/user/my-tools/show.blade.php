@@ -147,13 +147,13 @@
                             </x-dashboard.button>
                         @endif
                         @if ($tool->canLaunchAdmin())
-                            <form method="POST" action="{{ route('dashboard.my-tools.launch-admin', $tool) }}">
+                            <form method="POST" action="{{ route('dashboard.my-tools.launch-admin', $tool) }}" target="_blank" rel="noopener">
                                 @csrf
                                 <x-dashboard.button type="submit" size="sm">Login as admin</x-dashboard.button>
                             </form>
                         @endif
                     </div>
-                    <p class="text-xs text-text-muted">Password is never shown on this page. Login as admin creates a session on your site automatically.</p>
+                    <p class="text-xs text-text-muted">Password is never shown on this page. Login as admin opens your site in a new tab.</p>
                 @endif
             </x-dashboard.card>
 
