@@ -42,7 +42,7 @@
 
         <x-dashboard.button
             type="button"
-            variant="secondary"
+            variant="primary"
             class="w-full sm:w-auto"
             x-on:click="checkDomain()"
             x-bind:disabled="domainChecking || !canCheckDomain"

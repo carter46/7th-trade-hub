@@ -102,6 +102,10 @@ export function createDomainSearchHelpers() {
         get canCheckDomain() {
             return Boolean(this.domainLabel?.trim()) && !this.domainLabelError;
         },
+        get alternativeDomainSuggestions() {
+            const selected = this.domainTld;
+            return (this.domainSuggestions ?? []).filter((row) => row.tld !== selected);
+        },
         formatSuggestionPrice(amount) {
             return formatDomainNgn(amount);
         },
@@ -116,20 +120,6 @@ export function createDomainSearchHelpers() {
                 this.domainRetailPrice = Number(data.retail_price || 0);
                 this.domainMessage = `${data.fqdn} is available.`;
                 this.selectedSuggestionTld = this.domainTld;
-
-                const primaryTld = this.domainTld;
-                if (primaryTld && !suggestions.some((row) => row.tld === primaryTld)) {
-                    suggestions.unshift({
-                        tld: primaryTld,
-                        label: `.${primaryTld}`,
-                        fqdn: data.fqdn,
-                        retail_price: String(data.retail_price || 0),
-                        premium: Boolean(data.premium),
-                        quote_token: data.quote_token,
-                        available: true,
-                    });
-                }
-
                 this.domainSuggestions = suggestions;
                 return;
             }

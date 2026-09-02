@@ -216,7 +216,7 @@
                                         <input type="hidden" name="domain_quote_token" x-bind:value="domainQuoteToken">
                                         <x-dashboard.button
                                             type="button"
-                                            variant="secondary"
+                                            variant="primary"
                                             size="sm"
                                             x-on:click="checkDomain()"
                                             x-bind:disabled="domainChecking || !canCheckDomain"
@@ -253,7 +253,7 @@
 
                                     <x-dashboard.button
                                         type="button"
-                                        variant="secondary"
+                                        variant="primary"
                                         size="sm"
                                         x-on:click="scanConnectDomain()"
                                         x-bind:disabled="connectScanning || !(connectFqdnInput || '').trim()"
