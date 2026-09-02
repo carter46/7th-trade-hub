@@ -34,7 +34,7 @@
 
 <section class="max-w-marketing mx-auto px-5 sm:px-6 pb-12 sm:pb-16 space-y-8">
     <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-        <h2 class="text-xl font-bold font-display">All {{ $content['label'] }}</h2>
+        <h2 class="text-lg sm:text-xl font-bold font-display">All {{ $content['label'] }}</h2>
         <form method="GET" action="{{ $filterAction }}" class="flex flex-wrap gap-3 items-end">
             @if($categories->isNotEmpty())
                 <div class="min-w-[160px]">

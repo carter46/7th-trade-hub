@@ -16,7 +16,7 @@
 <section class="max-w-marketing mx-auto px-5 sm:px-6 pb-12 sm:pb-16 space-y-8">
     @if(! empty($typeCards) && $typeCards->isNotEmpty())
         <div class="flex flex-col gap-2">
-            <h2 class="text-xl font-bold font-display">Services in {{ $content['label'] }}</h2>
+            <h2 class="text-lg sm:text-xl font-bold font-display">Services in {{ $content['label'] }}</h2>
             <p class="text-sm text-slate-400">Choose a service to browse products and plans.</p>
         </div>
         <x-ui.card-grid :count="$typeCards->count()">
@@ -26,7 +26,7 @@
         </x-ui.card-grid>
     @else
         <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-            <h2 class="text-xl font-bold font-display">All {{ $content['label'] }}</h2>
+            <h2 class="text-lg sm:text-xl font-bold font-display">All {{ $content['label'] }}</h2>
             <form method="GET" action="{{ route('services.segment', $groupSlug) }}" class="flex flex-wrap gap-3 items-end">
                 @if(count($typeKeys) > 1)
                     <div class="min-w-[140px]">

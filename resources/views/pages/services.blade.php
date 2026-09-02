@@ -17,7 +17,7 @@
     <div class="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_center,rgba(11,106,57,0.12)_0%,transparent_70%)]" aria-hidden="true"></div>
 
     <div class="relative z-10 max-w-marketing mx-auto px-5 sm:px-6 text-center w-full">
-        <h1 class="font-display text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white mb-4 leading-tight">
+        <h1 class="font-display text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white mb-4 leading-tight">
             Secure Digital Services
         </h1>
         <p class="max-w-2xl mx-auto text-base sm:text-lg text-text-secondary mb-8 leading-relaxed">
@@ -51,7 +51,7 @@
     <section class="py-12 sm:py-16 bg-surface border-t border-border-subtle">
         <div class="max-w-marketing mx-auto px-5 sm:px-6">
             <div class="flex items-center justify-between mb-8 border-b border-border-subtle pb-4">
-                <h2 class="font-display text-2xl sm:text-3xl font-semibold text-white tracking-tight">Search results</h2>
+                <h2 class="font-display text-xl sm:text-3xl font-semibold text-white tracking-tight">Search results</h2>
             </div>
             @if($searchResults->isEmpty())
                 <x-ui.empty
@@ -75,7 +75,7 @@
 <section class="py-16 sm:py-20 bg-surface">
     <div class="max-w-marketing mx-auto px-5 sm:px-6">
         <div class="flex flex-wrap items-center justify-between gap-3 mb-8 border-b border-border-subtle pb-4">
-            <h2 class="font-display text-2xl sm:text-3xl font-semibold text-white tracking-tight">Browse Categories</h2>
+            <h2 class="font-display text-xl sm:text-3xl font-semibold text-white tracking-tight">Browse Categories</h2>
             <span class="text-xs font-medium text-text-secondary bg-elevated px-3 py-1 rounded-full border border-border-subtle">
                 Showing {{ $groupCount }} {{ \Illuminate\Support\Str::plural('Category', $groupCount) }}
             </span>

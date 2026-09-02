@@ -175,7 +175,7 @@
                             <span class="text-slate-400 font-normal">· {{ $product->productType->name }}</span>
                         @endif
                     </p>
-                    <h1 class="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 tracking-tight leading-tight">
+                    <h1 class="font-display text-xl sm:text-3xl lg:text-4xl font-bold text-slate-900 tracking-tight leading-tight">
                         {{ $product->title }}
                     </h1>
                 </div>
