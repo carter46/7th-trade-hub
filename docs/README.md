@@ -6,7 +6,8 @@ This folder holds **Hub-internal** product/ops docs and the **Site Integration**
 
 If you are integrating an independent banking, logistics, or other website with 7th Trade Hub, start here:
 
-→ **[integrations/README.md](integrations/README.md)**
+→ **[integrations/README.md](integrations/README.md)**  
+→ **Online:** `/developers/integrations` on the Hub site (same content)
 
 That package is the only documentation merchants need (payment-gateway style). Hub does **not** inspect or require your application repository.
 

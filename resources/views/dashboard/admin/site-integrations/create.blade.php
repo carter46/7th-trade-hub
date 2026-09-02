@@ -36,6 +36,7 @@
             <x-dashboard.input name="base_url" label="Demo site base URL" type="url" :value="old('base_url')" required placeholder="https://demo.example.com" />
             <x-dashboard.input name="demo_user_email" label="Demo user email" type="email" :value="old('demo_user_email')" />
             <x-dashboard.input name="demo_admin_email" label="Demo admin email" type="email" :value="old('demo_admin_email')" />
+            <p class="text-xs text-text-muted">Must match existing users on the merchant site — Hub does not create accounts there.</p>
             <fieldset class="space-y-2">
                 <legend class="text-sm font-medium text-text-primary">Capabilities</legend>
                 @foreach ($defaultCapabilities as $cap)

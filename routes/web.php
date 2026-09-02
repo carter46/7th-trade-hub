@@ -12,6 +12,7 @@ use App\Http\Controllers\Account\AccountController;
 use App\Http\Controllers\Dashboard\ManualOrderPaymentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Dev\DevUiController;
+use App\Http\Controllers\IntegrationDocsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RobotsController;
 use App\Http\Controllers\SitemapController;
@@ -110,6 +111,16 @@ Route::get('/legal', function (\Illuminate\Http\Request $request) {
 })->name('legal');
 Route::redirect('/terms', '/legal?doc=terms')->name('terms');
 Route::redirect('/privacy', '/legal?doc=privacy')->name('privacy');
+
+Route::prefix('developers/integrations')->name('developers.integrations.')->group(function (): void {
+    Route::get('/', [IntegrationDocsController::class, 'index'])->name('index');
+    Route::get('/download/{path}', [IntegrationDocsController::class, 'download'])
+        ->where('path', '.+')
+        ->name('download');
+    Route::get('/{path}', [IntegrationDocsController::class, 'show'])
+        ->where('path', '.+')
+        ->name('show');
+});
 
 Route::middleware('marketplace.public')->group(function (): void {
     Route::get('/marketplace', [MarketplaceController::class, 'index'])->name('marketplace');

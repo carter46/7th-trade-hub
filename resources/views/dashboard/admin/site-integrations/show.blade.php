@@ -51,6 +51,7 @@
                 <h3 class="text-sm font-semibold text-text-primary">API credentials</h3>
                 <p class="mt-1 text-xs text-text-secondary">
                     Give these values to the merchant site. Use <strong>Rotate keys</strong> if secrets may have leaked.
+                    <a href="{{ route('developers.integrations.show', ['path' => 'MERCHANT-GUIDE']) }}" class="text-primary hover:underline" target="_blank" rel="noopener">Integration docs</a>
                 </p>
             </div>
             <x-dashboard.badge :status="$integration->status->value" />
@@ -120,6 +121,7 @@
                 <x-dashboard.input name="base_url" label="Base URL" type="url" :value="old('base_url', $integration->base_url)" required />
                 <x-dashboard.input name="demo_user_email" label="Demo user email" type="email" :value="old('demo_user_email', $integration->demo_user_email)" />
                 <x-dashboard.input name="demo_admin_email" label="Demo admin email" type="email" :value="old('demo_admin_email', $integration->demo_admin_email)" />
+                <p class="text-xs text-text-muted">These emails must already exist on the merchant site with the correct roles — Hub SSO does not create users there.</p>
                 <div>
                     <label class="mb-1 block text-sm font-medium">Status</label>
                     <x-dashboard.select name="status">

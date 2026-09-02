@@ -17,6 +17,10 @@ Use this as a quick lookup while implementing. Normative signing rules: [PROTOCO
 
 Your `base_url` / `site_url` must be **HTTPS** and publicly reachable (no localhost/private IPs when Hub calls you).
 
+**Fixed paths:** Hub uses the paths above literally. Wire your router, rewrite rules, or file layout so these URLs reach your handlers. See [MERCHANT-GUIDE.md § Exact paths](MERCHANT-GUIDE.md#2-exact-paths-and-routing).
+
+**During shutdown:** Keep `POST …/health` (and owned `POST …/subscription/sync`) responding so Hub can run Check connection and push expiry updates even when customers see a maintenance page.
+
 ---
 
 ## Hub — you call
@@ -90,11 +94,11 @@ Hub redirects the user's browser:
 {your-site}/auth/7th-tradehub/demo/consume?token=…&integration_id=…
 ```
 
-**Do not trust** query parameters for identity. The path name includes `demo` for Protocol v1 but is used for **owned** launches too.
+**Do not trust** query parameters for identity. The path name includes `demo` for Protocol v1 but is used for **owned admin launches** too (there is no owned “login as user” from Hub).
 
 **Required server-side steps**
 
-1. Read `token` from query string.
+1. Read `token` and `integration_id` from the query string.
 2. `POST {HUB}/api/site-integrations/v1/demo/tokens/validate` with:
 
    | Header | Value |
@@ -106,8 +110,12 @@ Hub redirects the user's browser:
 
    Body: `{ "token": "…" }`
 
-3. On **HTTP 200** and `"valid": true`, log in locally as `identity.email` only.
-4. Redirect to your app dashboard/admin.
+3. On **HTTP 200** and `"valid": true`:
+   - Confirm validate response `integration_id` matches `SEVENTH_TRADEHUB_INTEGRATION_ID` (and query `integration_id` if present).
+   - Load local user by `identity.email` — user **must already exist** on your site; Hub does not provision accounts.
+   - Use validate response **`role`** (`user` or `admin`) for redirect; optionally verify local user role matches.
+   - Create session server-side without password/MFA/onboarding flows.
+4. Redirect to your user dashboard or admin area based on `role`.
 5. For **owned** tools: refuse login if your local subscription state is expired.
 
 **Launch token lifetime:** 120 seconds from issue; single use.

@@ -21,6 +21,8 @@ Use HTTP client with headers:
 
 POST to `{HUB}/api/site-integrations/v1/demo/tokens/validate` with `{ "token": "..." }`.
 
+On success: verify `integration_id` matches env, load **existing** local user by `identity.email`, use validate `role` for redirect, skip password/MFA flows.
+
 See [../samples/php/consume-validate.php](../samples/php/consume-validate.php).
 
 ## Health / sync middleware

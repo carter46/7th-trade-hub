@@ -58,6 +58,8 @@ Replay: reject assertions whose `expires_at` is past. Prefer also tracking `nonc
   - Demo user → `site_integrations.demo_user_email`
   - Demo admin → `site_integrations.demo_admin_email`
   - Owned admin → `user_tools.admin_email` from Setup
+- **Merchants must pre-create** local user records for those emails with appropriate roles. Hub never provisions users on merchant sites.
+- Owned integrations support **admin SSO only** (no owned user launch).
 
 ## Browser launch flow
 
@@ -71,7 +73,8 @@ Replay: reject assertions whose `expires_at` is past. Prefer also tracking `nonc
    `POST /api/site-integrations/v1/demo/tokens/validate`  
    Headers: `X-7TH-Client-Id`, `X-7TH-Client-Secret`
 
-4. Site creates a local session for `identity.email` and redirects to `/dashboard` or `/admin`.
+4. Site creates a local session for `identity.email`, using `role` from the validate response for redirect (not query params). Skip password/MFA/onboarding — SSO is server-validated only.
+5. Redirect to merchant dashboard (user) or admin area (admin).
 
 ## Site endpoints to implement
 

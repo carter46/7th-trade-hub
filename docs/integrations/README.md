@@ -10,6 +10,8 @@
 4. Copy patterns from [samples/php/](samples/php/)
 5. Go live with [checklists/MERCHANT-GO-LIVE.md](checklists/MERCHANT-GO-LIVE.md)
 
+**Browse online:** Hub hosts these docs at `/developers/integrations` (same content as this folder).
+
 ## Who should read what
 
 | Audience | Start here |

@@ -7,4 +7,7 @@
 - [ ] Fail closed on subscription unknown/expired
 - [ ] Do not expose Hub secrets in HTML or client JS
 - [ ] Prefer Hub validate for SSO (token is one-time)
+- [ ] Confirm validate `integration_id` matches env on consume
+- [ ] Hub-bound emails exist locally before SSO testing
+- [ ] SSO does not route through password / MFA / onboarding
 - [ ] TLS everywhere (Hub outbound requires HTTPS)

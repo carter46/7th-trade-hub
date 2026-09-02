@@ -19,6 +19,8 @@
 
     <p class="max-w-3xl text-sm leading-relaxed text-text-secondary">
         Connect independent demo sites to products. Credentials are per product and never used for customer purchases.
+        Share integration docs with merchant developers:
+        <a href="{{ route('developers.integrations.index') }}" class="font-medium text-primary hover:underline" target="_blank" rel="noopener">Developer documentation</a>.
     </p>
 
     <x-dashboard.table

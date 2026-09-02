@@ -11,3 +11,4 @@
 - Hub live `expires_at` enforcement on launch/poll
 - HTTPS-only outbound URLs with SSRF protections
 - Merchant docs: ENDPOINTS-REFERENCE, expanded MERCHANT-GUIDE, PHP verify/poll samples
+- Public docs at `/developers/integrations`; operator + merchant notes (pre-create users, exact paths, SSO vs password login)

@@ -8,7 +8,12 @@
 - [ ] Health checks `X-7TH-Client-Id` and `X-7TH-Integration-Id` headers match env
 - [ ] Consume route calls Hub `POST /api/site-integrations/v1/demo/tokens/validate`
 - [ ] Consume does not trust browser query `email` / `role`
+- [ ] Validate response `integration_id` matches env
 - [ ] Local session uses Hub `identity.email` from validate response only
+- [ ] Post-login redirect uses validate `role` (`user` vs `admin`)
+- [ ] Hub-bound emails pre-exist locally with correct roles
+- [ ] SSO bypasses password / MFA / onboarding flows
+- [ ] Health (and owned sync) respond during customer maintenance/shutdown UI
 - [ ] Subscription sync verifies signature (owned tools)
 - [ ] Poll cron hits `GET /api/site-integrations/v1/subscription` every 5–15 min (owned)
 - [ ] Shutdown UI blocks login when expired

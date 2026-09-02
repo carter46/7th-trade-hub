@@ -1,6 +1,6 @@
 <?php
 /**
- * Minimal merchant health + consume sketch (framework-agnostic PHP).
+ * Minimal merchant consume + Hub validate sketch (framework-agnostic PHP).
  * Copy patterns into your app; do not treat as production-complete.
  */
 
@@ -43,6 +43,38 @@ function seventh_tradehub_validate_token(string $token): ?array
     return is_array($body) && ($body['valid'] ?? false) === true ? $body : null;
 }
 
-// Example consume entry:
-// $body = seventh_tradehub_validate_token($_GET['token'] ?? '');
-// if ($body) { /* find local user by $body['identity']['email']; start session */ }
+/**
+ * @param array<string, mixed> $validated
+ */
+function seventh_tradehub_consume_matches_env(array $validated, ?string $queryIntegrationId = null): bool
+{
+    $expected = seventh_tradehub_env('SEVENTH_TRADEHUB_INTEGRATION_ID');
+    $fromResponse = (string) ($validated['integration_id'] ?? '');
+
+    if ($expected === '' || $fromResponse === '' || ! hash_equals($expected, $fromResponse)) {
+        return false;
+    }
+
+    if ($queryIntegrationId !== null && $queryIntegrationId !== '' && ! hash_equals($expected, $queryIntegrationId)) {
+        return false;
+    }
+
+    return true;
+}
+
+// Example consume entry (GET /auth/7th-tradehub/demo/consume):
+//
+// $token = $_GET['token'] ?? '';
+// $queryIntegrationId = $_GET['integration_id'] ?? null;
+// $validated = seventh_tradehub_validate_token($token);
+// if (! $validated || ! seventh_tradehub_consume_matches_env($validated, is_string($queryIntegrationId) ? $queryIntegrationId : null)) {
+//     http_response_code(403);
+//     exit('Invalid launch token.');
+// }
+//
+// $email = (string) ($validated['identity']['email'] ?? '');
+// $role = (string) ($validated['role'] ?? 'user');
+// // Load existing local user by $email — Hub does not create users on your site.
+// // Optionally verify local role matches $role.
+// // establishServerSideSession($user);  // skip password / MFA / onboarding
+// // header('Location: ' . ($role === 'admin' ? '/admin' : '/dashboard'));

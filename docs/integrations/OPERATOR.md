@@ -14,6 +14,8 @@ Path: **Admin → System → Demo Site Integrate**
 
 Never reuse these credentials for a customer purchase. Base URLs must be HTTPS and publicly reachable (private/localhost URLs are rejected).
 
+**Before Check connection:** confirm the merchant site has **local user accounts** for the demo user and demo admin emails you configure — Hub SSO binds to those addresses but does not create users on the merchant site.
+
 ## My Tools (user)
 
 Path: **Dashboard → Services → My Tools**
@@ -33,6 +35,8 @@ Path: `/admin/users/{id}/tools`
 3. Save generates **unique provisioning credentials** and runs Check Connection + subscription push outside the DB write.
 4. For already-configured tools use **Reconfigure** (URLs/email/password — does **not** reset `expires_at`) or **Rotate credentials** (new keys — does **not** extend subscription).
 
+Ensure the Setup **admin email** exists as an admin user on the merchant site before testing Login as admin.
+
 ## Expiry job
 
 Scheduled: `site-integrations:expire-user-tools` every five minutes.
@@ -42,6 +46,14 @@ Marks expired tools (with `lockForUpdate`) and pushes `status=expired`. Hub also
 Hostinger / shared hosting must run `php artisan schedule:run` via cron.
 
 ## Docs for merchants
+
+Share the public URL with external developers:
+
+```text
+{HUB}/developers/integrations
+```
+
+Repository copies (same content):
 
 - [MERCHANT-GUIDE.md](./MERCHANT-GUIDE.md)
 - [ENDPOINTS-REFERENCE.md](./ENDPOINTS-REFERENCE.md)
