@@ -211,6 +211,40 @@ class ManualBankTransferOrderTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_manual_payment_page_shows_bank_details_without_javascript(): void
+    {
+        SystemSetting::set('manual_bank_transfer_enabled', true);
+        SystemSetting::set('manual_bank_transfer_bank_name', 'Test Bank');
+        SystemSetting::set('manual_bank_transfer_account_number', '0123456789');
+        SystemSetting::set('manual_bank_transfer_account_name', '7th Trade Hub');
+        SystemSetting::set('manual_bank_transfer_instructions', 'Use your order reference as narration.');
+
+        $product = $this->seedSimpleProduct();
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $user->assignRole('user');
+
+        $this->actingAs($user)
+            ->post(route('dashboard.services.purchase', $product->slug), [
+                'variant_id' => $product->activeVariants->first()->id,
+                'quantity' => 1,
+                'idempotency_key' => (string) Str::uuid(),
+                'payment_method' => Order::PAYMENT_MANUAL_BANK_TRANSFER,
+            ]);
+
+        $order = Order::query()->where('user_id', $user->id)->firstOrFail();
+
+        $this->actingAs($user)
+            ->get(route('dashboard.orders.manual-payment', $order))
+            ->assertOk()
+            ->assertSee('Transfer to this account', false)
+            ->assertSee('Test Bank', false)
+            ->assertSee('0123456789', false)
+            ->assertSee('7th Trade Hub', false)
+            ->assertSee('Time remaining to complete payment', false)
+            ->assertSee('I Have Made This Payment', false)
+            ->assertSee('Use your order reference as narration.', false);
+    }
+
     public function test_manual_payment_page_requires_proof_only(): void
     {
         SystemSetting::set('manual_bank_transfer_enabled', true);
