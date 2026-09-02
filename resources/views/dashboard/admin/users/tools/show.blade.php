@@ -129,6 +129,22 @@
             </x-dashboard.card>
 
             <x-dashboard.card>
+                <h3 class="mb-4 text-sm font-semibold text-text-primary">Subscription expiry</h3>
+                <form method="POST" action="{{ route('admin.users.tools.expiry', [$user, $tool]) }}" class="space-y-4">
+                    @csrf
+                    <x-dashboard.input
+                        name="expires_at"
+                        label="Expires on"
+                        type="date"
+                        :value="old('expires_at', $tool->expires_at?->format('Y-m-d'))"
+                        required
+                    />
+                    <p class="text-xs text-text-muted">Adjust the paid window for this tool. Updates merchant subscription sync when the site is connected.</p>
+                    <x-dashboard.button type="submit" variant="secondary">Update expiry</x-dashboard.button>
+                </form>
+            </x-dashboard.card>
+
+            <x-dashboard.card class="lg:col-span-2">
                 <h3 class="mb-3 text-sm font-semibold">Connection logs</h3>
                 <div class="space-y-2">
                     @forelse ($logs as $log)

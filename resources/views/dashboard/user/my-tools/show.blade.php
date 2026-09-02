@@ -118,7 +118,7 @@
                             <dd class="mt-1 space-y-2">
                                 <p class="break-all font-mono text-sm text-text-primary">{{ $tool->admin_login_url }}</p>
                                 <x-dashboard.button :href="$tool->admin_login_url" size="sm" variant="secondary" target="_blank" rel="noopener">
-                                    Open Admin Login
+                                    Open admin login link
                                 </x-dashboard.button>
                             </dd>
                         </div>

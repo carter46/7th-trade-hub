@@ -4,15 +4,26 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreUserRequest;
+use App\Enums\PlatformProductType;
+use App\Enums\UserToolStatus;
 use App\Models\AuditLog;
 use App\Models\Escrow;
+use App\Models\Order;
+use App\Models\PlatformProduct;
+use App\Models\PlatformProductVariant;
+use App\Models\ProductType;
+use App\Models\ServiceCategory;
 use App\Models\SiteIntegrationCheckLog;
 use App\Models\User;
 use App\Modules\Admin\Services\AuditLogService;
+use App\Modules\Catalog\Services\PlatformCheckoutService;
 use App\Modules\Wallet\Services\WalletProvisioningService;
+use App\Services\SiteIntegrations\SubscriptionSyncService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -21,6 +32,8 @@ class UserManagementController extends Controller
     public function __construct(
         private AuditLogService $audit,
         private WalletProvisioningService $walletProvisioning,
+        private PlatformCheckoutService $checkout,
+        private SubscriptionSyncService $subscriptionSync,
     ) {}
 
     public function create(): View
@@ -294,6 +307,172 @@ class UserManagementController extends Controller
         }
 
         return $redirect->with('error', $result['message']);
+    }
+
+    public function manualPurchaseCatalog(Request $request): JsonResponse
+    {
+        $categoryId = $request->integer('service_category_id') ?: null;
+        $serviceId = $request->integer('product_type_id') ?: null;
+
+        $categories = ServiceCategory::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get(['id', 'name']);
+
+        $servicesQuery = ProductType::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order');
+
+        if ($categoryId) {
+            $servicesQuery->where('service_category_id', $categoryId);
+        }
+
+        $services = $servicesQuery->get(['id', 'name', 'service_category_id']);
+
+        $productsQuery = PlatformProduct::query()
+            ->visibleToPublic()
+            ->where('product_type', '!=', PlatformProductType::Domain)
+            ->with(['activeVariants' => fn ($q) => $q->orderBy('sort_order')])
+            ->orderBy('title');
+
+        if ($serviceId) {
+            $productsQuery->where('product_type_id', $serviceId);
+        } elseif ($categoryId) {
+            $productsQuery->whereHas('productType', fn ($q) => $q->where('service_category_id', $categoryId));
+        }
+
+        $products = $productsQuery->get()->map(fn (PlatformProduct $product) => [
+            'id' => $product->id,
+            'title' => $product->title,
+            'slug' => $product->slug,
+            'product_type' => $product->product_type->value,
+            'product_type_id' => $product->product_type_id,
+            'base_price' => (float) $product->base_price,
+            'variants' => $product->activeVariants->map(fn (PlatformProductVariant $variant) => [
+                'id' => $variant->id,
+                'label' => $variant->displayLabel(),
+                'price' => (float) $variant->price,
+                'duration_months' => $variant->duration_months,
+            ])->values(),
+        ])->values();
+
+        return response()->json([
+            'categories' => $categories,
+            'services' => $services,
+            'products' => $products,
+        ]);
+    }
+
+    public function manualPurchase(Request $request, User $user): RedirectResponse
+    {
+        $this->ensureMember($user);
+
+        $validated = $request->validate([
+            'product_slug' => ['required', 'string', 'max:255'],
+            'variant_id' => ['required', 'integer', 'exists:platform_product_variants,id'],
+            'mark_paid' => ['nullable', 'boolean'],
+            'domain_fqdn' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $product = PlatformProduct::query()
+            ->visibleToPublic()
+            ->where('slug', $validated['product_slug'])
+            ->firstOrFail();
+
+        if ($product->product_type === PlatformProductType::Domain) {
+            return redirect()
+                ->route('admin.users.show', $user)
+                ->with('error', 'Domain registration must use user checkout with an availability check.');
+        }
+
+        PlatformProductVariant::query()
+            ->whereKey($validated['variant_id'])
+            ->where('platform_product_id', $product->id)
+            ->where('is_active', true)
+            ->firstOrFail();
+
+        $data = [
+            'variant_id' => (int) $validated['variant_id'],
+            'quantity' => 1,
+            'idempotency_key' => (string) Str::uuid(),
+            'payment_method' => Order::PAYMENT_MANUAL_BANK_TRANSFER,
+            'admin_skip_domain_validation' => true,
+        ];
+
+        if ($product->product_type === PlatformProductType::WebsitePackage) {
+            $domainFqdn = trim((string) ($validated['domain_fqdn'] ?? ''));
+        if ($domainFqdn === '') {
+            return redirect()
+                ->route('admin.users.show', $user)
+                ->with('error', 'Enter the customer\'s existing domain for this website package.');
+        }
+
+            $data['domain_mode'] = 'connect';
+            $data['domain_fqdn'] = $domainFqdn;
+            $data['domain_connect_acknowledged'] = true;
+        } else {
+            $data['domain_mode'] = 'none';
+        }
+
+        try {
+            $order = $this->checkout->createManualBankTransferOrderForUser(
+                $user,
+                $product,
+                $data,
+                $request->boolean('mark_paid'),
+                (int) auth()->id(),
+            );
+        } catch (\InvalidArgumentException $e) {
+            return redirect()
+                ->route('admin.users.show', $user)
+                ->with('error', $e->getMessage());
+        }
+
+        $message = $request->boolean('mark_paid')
+            ? __('Order created and marked paid. Reference: :ref', ['ref' => $order->reference])
+            : __('Pending order created. Reference: :ref', ['ref' => $order->reference]);
+
+        return redirect()
+            ->route('admin.users.tools', $user)
+            ->with('status', $message);
+    }
+
+    public function adjustToolExpiry(Request $request, User $user, \App\Models\UserTool $tool): RedirectResponse
+    {
+        $this->ensureMember($user);
+        abort_unless($tool->user_id === $user->id, 404);
+
+        if ($tool->status === UserToolStatus::PendingSetup) {
+            return back()->with('error', 'Complete initial setup before adjusting expiry.');
+        }
+
+        $validated = $request->validate([
+            'expires_at' => ['required', 'date'],
+        ]);
+
+        $expiresAt = \Carbon\Carbon::parse($validated['expires_at'])->endOfDay();
+        $previous = $tool->expires_at?->toIso8601String();
+
+        $tool->expires_at = $expiresAt;
+        if ($expiresAt->isFuture() && $tool->status === UserToolStatus::Expired) {
+            $tool->status = UserToolStatus::Active;
+        } elseif ($expiresAt->isPast() && $tool->status === UserToolStatus::Active) {
+            $tool->status = UserToolStatus::Expired;
+        }
+        $tool->save();
+
+        if ($tool->integration && $tool->site_url) {
+            $this->subscriptionSync->push($tool->fresh(['integration']));
+        }
+
+        $this->audit->log(auth()->id(), 'user_tool.expiry_adjusted', $tool, null, [
+            'previous_expires_at' => $previous,
+            'expires_at' => $tool->expires_at?->toIso8601String(),
+        ], $request->ip(), ['module' => 'site_integrations']);
+
+        return redirect()
+            ->route('admin.users.tools.show', [$user, $tool])
+            ->with('status', 'Subscription expiry updated.');
     }
 
     public function listings(User $user, Request $request): View

@@ -371,6 +371,7 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::get('/users', [UserManagementController::class, 'index'])->name('.users');
         Route::get('/users/create', [UserManagementController::class, 'create'])->name('.users.create');
         Route::post('/users', [UserManagementController::class, 'store'])->name('.users.store');
+        Route::get('/users/manual-purchase/catalog', [UserManagementController::class, 'manualPurchaseCatalog'])->name('.users.manual-purchase.catalog');
         Route::get('/users/{user}', [UserManagementController::class, 'show'])->name('.users.show');
         Route::get('/users/{user}/edit', [UserManagementController::class, 'edit'])->name('.users.edit');
         Route::put('/users/{user}', [UserManagementController::class, 'update'])->name('.users.update');
@@ -378,11 +379,13 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::get('/users/{user}/transactions', [UserManagementController::class, 'transactions'])->name('.users.transactions');
         Route::get('/users/{user}/orders', [UserManagementController::class, 'orders'])->name('.users.orders');
         Route::get('/users/{user}/tools', [UserManagementController::class, 'tools'])->name('.users.tools');
+        Route::post('/users/{user}/manual-purchase', [UserManagementController::class, 'manualPurchase'])->name('.users.manual-purchase');
         Route::get('/users/{user}/tools/{tool}', [UserManagementController::class, 'manageTool'])->name('.users.tools.show');
         Route::post('/users/{user}/tools/{tool}/setup', [UserManagementController::class, 'setupTool'])->name('.users.tools.setup');
         Route::post('/users/{user}/tools/{tool}/reconfigure', [UserManagementController::class, 'reconfigureTool'])->name('.users.tools.reconfigure');
         Route::post('/users/{user}/tools/{tool}/rotate', [UserManagementController::class, 'rotateToolCredentials'])->name('.users.tools.rotate');
         Route::post('/users/{user}/tools/{tool}/check', [UserManagementController::class, 'checkTool'])->name('.users.tools.check');
+        Route::post('/users/{user}/tools/{tool}/expiry', [UserManagementController::class, 'adjustToolExpiry'])->name('.users.tools.expiry');
         Route::get('/users/{user}/listings', [UserManagementController::class, 'listings'])->name('.users.listings');
         Route::get('/users/{user}/escrows', [UserManagementController::class, 'escrows'])->name('.users.escrows');
         Route::get('/users/{user}/tickets', [UserManagementController::class, 'tickets'])->name('.users.tickets');

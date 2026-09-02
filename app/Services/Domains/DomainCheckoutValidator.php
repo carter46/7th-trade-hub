@@ -42,6 +42,10 @@ class DomainCheckoutValidator
         }
 
         if ($mode === 'connect') {
+            if (! empty($data['admin_skip_domain_validation'])) {
+                return $this->validateConnectExistingAdmin($user, $data);
+            }
+
             return $this->validateConnectExisting($user, $data);
         }
 
@@ -127,6 +131,38 @@ class DomainCheckoutValidator
             'tld' => $parsed['tld'],
             'sld' => $parsed['sld'],
             'nameservers_at_scan' => $lookup['nameservers'],
+            'acknowledged' => true,
+        ];
+    }
+
+    /**
+     * Admin manual purchase — record existing domain without live DNS lookup.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{mode: string, fqdn: string, tld: string, sld: string, nameservers_at_scan: list<string>, acknowledged: bool}
+     */
+    private function validateConnectExistingAdmin(User $user, array $data): array
+    {
+        $fqdnInput = trim((string) ($data['domain_fqdn'] ?? $data['domain_name'] ?? ''));
+        if ($fqdnInput === '') {
+            throw new InvalidArgumentException('Enter the existing domain (e.g. example.com).');
+        }
+
+        $fqdnInput = preg_replace('#^https?://#i', '', $fqdnInput) ?? $fqdnInput;
+        $fqdnInput = rtrim(explode('/', $fqdnInput, 2)[0], '/.');
+
+        $parsed = DomainFqdn::fromFqdn($fqdnInput);
+
+        if ($this->connections->isClaimedByAnotherUser($parsed['fqdn'], $user->id)) {
+            throw new InvalidArgumentException('This domain is already connected to another account on 7th Trade Hub.');
+        }
+
+        return [
+            'mode' => 'connect',
+            'fqdn' => $parsed['fqdn'],
+            'tld' => $parsed['tld'],
+            'sld' => $parsed['sld'],
+            'nameservers_at_scan' => [],
             'acknowledged' => true,
         ];
     }

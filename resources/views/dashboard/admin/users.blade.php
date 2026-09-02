@@ -19,6 +19,13 @@
         <x-dashboard.button :href="route('admin.users.create')" size="sm">Create user</x-dashboard.button>
     </x-slot:actions>
 
+    @if (session('status'))
+        <x-dashboard.alert type="success" class="mb-4">{{ session('status') }}</x-dashboard.alert>
+    @endif
+    @if (session('error'))
+        <x-dashboard.alert type="danger" class="mb-4">{{ session('error') }}</x-dashboard.alert>
+    @endif
+
     <x-dashboard.card class="mb-4">
         <form method="GET" action="{{ route('admin.users') }}" class="flex flex-wrap gap-3 items-end">
             <input type="hidden" name="status" value="{{ $status }}">
@@ -118,5 +125,7 @@
             </x-slot:footer>
         </x-dashboard.modal>
     </div>
+
+    @include('dashboard.admin.users._manual-purchase-modal')
 </x-layout.page>
 @endsection
