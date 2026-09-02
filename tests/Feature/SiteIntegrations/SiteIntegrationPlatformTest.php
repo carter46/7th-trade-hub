@@ -521,4 +521,89 @@ class SiteIntegrationPlatformTest extends TestCase
         $tool->integration->update(['connection_status' => 'error']);
         $this->assertFalse($tool->fresh('integration')->canLaunchAdmin());
     }
+
+    public function test_admin_can_view_owned_tool_manage_page(): void
+    {
+        $admin = User::factory()->admin()->create(['email_verified_at' => now()]);
+        $member = User::factory()->create(['email_verified_at' => now()]);
+        $member->assignRole('user');
+
+        $product = $this->seedWebsiteProduct();
+        $tool = UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'platform_product_variant_id' => $product->activeVariants->first()->id,
+            'status' => UserToolStatus::Active,
+            'purchased_at' => now()->subDay(),
+            'configured_at' => now()->subDay(),
+            'expires_at' => now()->addMonths(3),
+            'duration_months' => 3,
+            'site_url' => 'https://customer.example.com',
+            'admin_login_url' => 'https://customer.example.com/admin',
+            'admin_email' => 'owner-admin@example.com',
+            'admin_password' => 'SecretPass123!',
+            'instance_sequence' => 1,
+        ]);
+
+        UserToolIntegration::query()->create([
+            'user_tool_id' => $tool->id,
+            'integration_id' => (string) Str::uuid(),
+            'client_id' => 'th_owned',
+            'client_secret' => 'owned-secret',
+            'webhook_secret' => 'wh-owned',
+            'capabilities' => UserToolIntegration::defaultCapabilities(),
+            'connection_status' => 'unchecked',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.users.tools.show', [$member, $tool]))
+            ->assertOk()
+            ->assertSee('Owned tool credentials')
+            ->assertSee('Check connection')
+            ->assertSee($tool->public_id);
+    }
+
+    public function test_check_tool_redirects_to_manage_page_with_pending_merchant_warning(): void
+    {
+        $admin = User::factory()->admin()->create(['email_verified_at' => now()]);
+        $member = User::factory()->create(['email_verified_at' => now()]);
+        $member->assignRole('user');
+
+        $product = $this->seedWebsiteProduct();
+        $tool = UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'platform_product_variant_id' => $product->activeVariants->first()->id,
+            'status' => UserToolStatus::Active,
+            'purchased_at' => now()->subDay(),
+            'configured_at' => now()->subDay(),
+            'expires_at' => now()->addMonths(3),
+            'duration_months' => 3,
+            'site_url' => 'https://customer.example.com',
+            'admin_login_url' => 'https://customer.example.com/admin',
+            'admin_email' => 'owner-admin@example.com',
+            'admin_password' => 'SecretPass123!',
+            'instance_sequence' => 1,
+        ]);
+
+        UserToolIntegration::query()->create([
+            'user_tool_id' => $tool->id,
+            'integration_id' => (string) Str::uuid(),
+            'client_id' => 'th_owned',
+            'client_secret' => 'owned-secret',
+            'webhook_secret' => 'wh-owned',
+            'capabilities' => UserToolIntegration::defaultCapabilities(),
+        ]);
+
+        Http::fake([
+            'https://customer.example.com/*' => Http::response(['ok' => false, 'error' => 'unknown_integration'], 404),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.tools.check', [$member, $tool]))
+            ->assertRedirect(route('admin.users.tools.show', [$member, $tool]))
+            ->assertSessionHas('warning');
+
+        $this->assertSame('pending_merchant', $tool->fresh('integration')->integration->connection_status);
+    }
 }

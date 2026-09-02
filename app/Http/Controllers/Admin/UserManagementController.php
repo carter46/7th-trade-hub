@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreUserRequest;
 use App\Models\AuditLog;
 use App\Models\Escrow;
+use App\Models\SiteIntegrationCheckLog;
 use App\Models\User;
 use App\Modules\Admin\Services\AuditLogService;
 use App\Modules\Wallet\Services\WalletProvisioningService;
@@ -181,6 +182,30 @@ class UserManagementController extends Controller
         ]);
     }
 
+    public function manageTool(User $user, \App\Models\UserTool $tool): View
+    {
+        $this->ensureMember($user);
+        abort_unless($tool->user_id === $user->id, 404);
+
+        $tool->load(['product', 'variant', 'integration']);
+
+        $logs = $tool->integration
+            ? SiteIntegrationCheckLog::query()
+                ->where('owner_type', 'owned')
+                ->where('owner_id', $tool->integration->id)
+                ->orderByDesc('id')
+                ->limit(20)
+                ->get()
+            : collect();
+
+        return view('dashboard.admin.users.tools.show', [
+            'user' => $user,
+            'tool' => $tool,
+            'logs' => $logs,
+            'freshCredentials' => session('fresh_tool_credentials'),
+        ]);
+    }
+
     public function setupTool(Request $request, User $user, \App\Models\UserTool $tool): RedirectResponse
     {
         $this->ensureMember($user);
@@ -201,10 +226,9 @@ class UserManagementController extends Controller
         }
 
         return redirect()
-            ->route('admin.users.tools', $user)
+            ->route('admin.users.tools.show', [$user, $tool])
             ->with('status', 'Tool configured.')
-            ->with('fresh_tool_credentials', $result['credentials'])
-            ->with('configured_tool_id', $tool->id);
+            ->with('fresh_tool_credentials', $result['credentials']);
     }
 
     public function reconfigureTool(Request $request, User $user, \App\Models\UserTool $tool): RedirectResponse
@@ -227,7 +251,7 @@ class UserManagementController extends Controller
         }
 
         return redirect()
-            ->route('admin.users.tools', $user)
+            ->route('admin.users.tools.show', [$user, $tool])
             ->with('status', 'Tool reconfigured. Subscription expiry was not changed.');
     }
 
@@ -244,10 +268,9 @@ class UserManagementController extends Controller
         }
 
         return redirect()
-            ->route('admin.users.tools', $user)
+            ->route('admin.users.tools.show', [$user, $tool])
             ->with('status', 'Integration credentials rotated. Update the merchant site env.')
-            ->with('fresh_tool_credentials', $result['credentials'])
-            ->with('configured_tool_id', $tool->id);
+            ->with('fresh_tool_credentials', $result['credentials']);
     }
 
     public function checkTool(Request $request, User $user, \App\Models\UserTool $tool): RedirectResponse
@@ -260,15 +283,17 @@ class UserManagementController extends Controller
         $tool->load('integration');
         $status = $tool->integration?->connection_status;
 
+        $redirect = redirect()->route('admin.users.tools.show', [$user, $tool]);
+
         if ($result['ok']) {
-            return back()->with('status', $result['message']);
+            return $redirect->with('status', $result['message']);
         }
 
         if ($status === 'pending_merchant') {
-            return back()->with('warning', $result['message']);
+            return $redirect->with('warning', $result['message']);
         }
 
-        return back()->with('error', $result['message']);
+        return $redirect->with('error', $result['message']);
     }
 
     public function listings(User $user, Request $request): View

@@ -262,14 +262,15 @@ class UserToolProvisioningService
         });
 
         $check = $this->connectionCheck->checkOwned($tool->fresh(['integration']));
+        $checkedTool = $tool->fresh(['integration']);
 
         return [
-            'tool' => $tool->fresh(['integration', 'product', 'variant']),
+            'tool' => $checkedTool->load(['product', 'variant']),
             'credentials' => [
                 ...$creds,
                 'webhook_url' => url('/webhooks/site-integrations/'.$creds['integration_id']),
                 'connection_ok' => $check['ok'],
-                'connection_status' => $tool->fresh(['integration'])->integration?->connection_status,
+                'connection_status' => $checkedTool->integration?->connection_status,
                 'connection_message' => $check['message'],
             ],
         ];

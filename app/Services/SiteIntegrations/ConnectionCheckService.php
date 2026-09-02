@@ -19,6 +19,7 @@ class ConnectionCheckService
     public function __construct(
         private ProtocolV1Signer $signer,
         private IntegrationHttpClient $http,
+        private SubscriptionSyncService $subscriptionSync,
     ) {}
 
     /**
@@ -85,7 +86,7 @@ class ConnectionCheckService
         $integration->save();
 
         if ($result['ok']) {
-            app(SubscriptionSyncService::class)->push($tool->fresh(['integration']));
+            $this->subscriptionSync->push($tool->fresh(['integration']));
         }
 
         SiteIntegrationCheckLog::create([

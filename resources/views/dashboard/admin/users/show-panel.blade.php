@@ -79,38 +79,13 @@
         </x-dashboard.table>
         <x-dashboard.pagination :paginator="$orders" />
     @elseif ($activeTab === 'tools')
-        @if (session('fresh_tool_credentials'))
-            @php
-                $creds = session('fresh_tool_credentials');
-                $configuredTool = ($tools ?? collect())->firstWhere('id', session('configured_tool_id'));
-                $ownedCredentialRows = [
-                    ['label' => 'Integration ID', 'value' => $creds['integration_id'] ?? '', 'secret' => false],
-                    ['label' => 'Client ID', 'value' => $creds['client_id'] ?? '', 'secret' => false],
-                    ['label' => 'Client Secret', 'value' => $creds['client_secret'] ?? '', 'secret' => true],
-                    ['label' => 'Webhook Secret', 'value' => $creds['webhook_secret'] ?? '', 'secret' => true],
-                    ['label' => 'Webhook URL', 'value' => $creds['webhook_url'] ?? '', 'secret' => false],
-                ];
-                if ($configuredTool?->site_url) {
-                    $ownedCredentialRows[] = ['label' => 'Site URL', 'value' => $configuredTool->site_url, 'secret' => false];
-                }
-            @endphp
-            <x-dashboard.integration-credentials-card
-                class="mb-4"
-                title="Provisioning credentials (copy now)"
-                subtitle="These secrets are shown once. Give them to the site developer for config.php / .env."
-                :credential-rows="$ownedCredentialRows"
-                :show-setup-steps="true"
-                :connection-status="$creds['connection_status'] ?? null"
-                :connection-message="$creds['connection_message'] ?? null"
-                :connection-ok="$creds['connection_ok'] ?? null"
-            />
-        @endif
         <x-dashboard.table :empty="($tools ?? collect())->isEmpty()" empty-title="No tools" empty-description="Purchased internal catalog services appear here after checkout." striped>
             <x-slot:head>
                 <x-dashboard.th>Tool</x-dashboard.th>
                 <x-dashboard.th>Status</x-dashboard.th>
                 <x-dashboard.th>Expires</x-dashboard.th>
-                <x-dashboard.th>Actions</x-dashboard.th>
+                <x-dashboard.th>Connection</x-dashboard.th>
+                <x-dashboard.th></x-dashboard.th>
             </x-slot:head>
             @foreach (($tools ?? collect()) as $tool)
                 @php $isPendingSetup = $tool->status->value === 'pending_setup'; @endphp
@@ -126,67 +101,15 @@
                         @endif
                     </x-dashboard.td>
                     <x-dashboard.td class="text-xs text-text-muted">{{ $tool->expires_at?->format('j M Y') ?? '—' }}</x-dashboard.td>
+                    <x-dashboard.td class="text-xs text-text-muted">{{ $tool->integration?->connection_status ?? '—' }}</x-dashboard.td>
                     <x-dashboard.td>
-                        <x-dashboard.row-actions>
-                            <button
-                                type="button"
-                                role="menuitem"
-                                class="block w-full rounded-lg px-3 py-2 text-left text-sm text-text-primary hover:bg-muted/60 focus-ring"
-                                @click.stop="close(); $dispatch('open-modal', 'setup-tool-{{ $tool->id }}')"
-                            >
-                                {{ $isPendingSetup ? 'Setup' : 'Reconfigure' }}
-                            </button>
-                            @if ($tool->site_url)
-                                <form method="POST" action="{{ route('admin.users.tools.check', [$user, $tool]) }}">
-                                    @csrf
-                                    <x-dashboard.menu-item type="submit">Check connection</x-dashboard.menu-item>
-                                </form>
-                            @endif
-                            @if (! $isPendingSetup && $tool->integration)
-                                <form method="POST" action="{{ route('admin.users.tools.rotate', [$user, $tool]) }}" onsubmit="return confirm('Rotate API credentials? The merchant site env must be updated.');">
-                                    @csrf
-                                    <x-dashboard.menu-item type="submit">Rotate keys</x-dashboard.menu-item>
-                                </form>
-                            @endif
-
-                            <x-slot:outside>
-                                @php
-                                    $toolFormAction = $isPendingSetup
-                                        ? route('admin.users.tools.setup', [$user, $tool])
-                                        : route('admin.users.tools.reconfigure', [$user, $tool]);
-                                @endphp
-                                <x-dashboard.modal
-                                    name="setup-tool-{{ $tool->id }}"
-                                    :title="($isPendingSetup ? 'Setup' : 'Reconfigure').' '.$tool->resolvedDisplayName()"
-                                    :form-action="$toolFormAction"
-                                    maxWidth="lg"
-                                >
-                                    <x-slot:form>
-                                        <x-dashboard.input name="site_url" label="Website URL" type="url" :value="old('site_url', $tool->site_url)" required />
-                                        <x-dashboard.input name="admin_login_url" label="Admin login URL" type="url" :value="old('admin_login_url', $tool->admin_login_url)" required />
-                                        <x-dashboard.input name="admin_email" label="Admin email" type="email" :value="old('admin_email', $tool->admin_email)" required />
-                                        <x-dashboard.input
-                                            name="admin_password"
-                                            label="Admin password"
-                                            type="text"
-                                            :required="$isPendingSetup"
-                                            autocomplete="off"
-                                        />
-                                        @if ($isPendingSetup)
-                                            <p class="text-xs text-text-muted">Saving starts the subscription clock and generates unique provisioning API keys for this customer site (never demo credentials).</p>
-                                        @else
-                                            <p class="text-xs text-text-muted">Reconfigure updates URLs and admin identity. It does <strong>not</strong> extend the paid subscription. Leave password blank to keep the current one.</p>
-                                        @endif
-                                    </x-slot:form>
-                                    <x-slot:footer>
-                                        <x-ui.button type="button" variant="secondary" @click="$dispatch('close-modal', 'setup-tool-{{ $tool->id }}')">Cancel</x-ui.button>
-                                        <x-ui.button type="submit" variant="primary">
-                                            {{ $isPendingSetup ? 'Save & generate keys' : 'Save reconfiguration' }}
-                                        </x-ui.button>
-                                    </x-slot:footer>
-                                </x-dashboard.modal>
-                            </x-slot:outside>
-                        </x-dashboard.row-actions>
+                        <x-dashboard.button
+                            :href="route('admin.users.tools.show', [$user, $tool])"
+                            size="sm"
+                            variant="secondary"
+                        >
+                            {{ $isPendingSetup ? 'Setup' : 'Manage' }}
+                        </x-dashboard.button>
                     </x-dashboard.td>
                 </tr>
             @endforeach

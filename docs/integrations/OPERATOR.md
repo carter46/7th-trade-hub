@@ -30,12 +30,12 @@ Path: **Dashboard → Services → My Tools**
 
 Path: `/admin/users/{id}/tools`
 
-1. For **pending** tools, open the **Setup** action from the row menu (starts subscription clock once).
-2. Enter HTTPS site URL, admin login URL, admin email, admin password.
-3. **Save & generate keys** creates unique provisioning credentials (shown once). Hub does **not** run Check connection automatically — give credentials to the merchant developer first.
-4. Merchant installs the owned row (`context=owned_tool`) on their site, then click **Check connection** from the row menu. Status may show **pending_merchant** until credentials are installed.
+1. For **pending** tools, click **Setup** on the Tools tab (opens the tool manage page).
+2. Enter HTTPS site URL, admin login URL, admin email, admin password, then **Save & generate keys**.
+3. Copy credentials from the manage page and give them to the merchant developer. Hub does **not** run Check connection automatically.
+4. Merchant installs the owned row (`context=owned_tool`) on their site, then use **Check connection** on the manage page. Status may show **pending_merchant** until credentials are installed.
 5. After Check connection passes, **Admin Auto Login** on the user's My Tools page can succeed (merchant must also have the admin email as a local user).
-6. For already-configured tools use **Reconfigure** (URLs/email/password — does **not** reset `expires_at`) or **Rotate keys** (new keys — does **not** extend subscription).
+6. For already-configured tools use **Manage** on the Tools tab — reconfigure, rotate keys, and connection logs live on that page.
 
 Ensure the Setup **admin email** exists as an admin user on the merchant site before testing Admin Auto Login.
 

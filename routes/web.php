@@ -378,6 +378,7 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::get('/users/{user}/transactions', [UserManagementController::class, 'transactions'])->name('.users.transactions');
         Route::get('/users/{user}/orders', [UserManagementController::class, 'orders'])->name('.users.orders');
         Route::get('/users/{user}/tools', [UserManagementController::class, 'tools'])->name('.users.tools');
+        Route::get('/users/{user}/tools/{tool}', [UserManagementController::class, 'manageTool'])->name('.users.tools.show');
         Route::post('/users/{user}/tools/{tool}/setup', [UserManagementController::class, 'setupTool'])->name('.users.tools.setup');
         Route::post('/users/{user}/tools/{tool}/reconfigure', [UserManagementController::class, 'reconfigureTool'])->name('.users.tools.reconfigure');
         Route::post('/users/{user}/tools/{tool}/rotate', [UserManagementController::class, 'rotateToolCredentials'])->name('.users.tools.rotate');
