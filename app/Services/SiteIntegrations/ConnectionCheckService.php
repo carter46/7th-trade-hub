@@ -6,12 +6,16 @@ use App\Models\SiteIntegration;
 use App\Models\SiteIntegrationCheckLog;
 use App\Models\UserTool;
 use App\Models\UserToolIntegration;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Throwable;
 
 class ConnectionCheckService
 {
+    private const BODY_EXCERPT_LIMIT = 400;
+
     public function __construct(
         private ProtocolV1Signer $signer,
         private IntegrationHttpClient $http,
@@ -61,30 +65,32 @@ class ConnectionCheckService
                 'message' => 'Missing site URL or provisioning integration.',
                 'payload' => null,
             ];
-        } else {
-            $result = $this->ping(
-                $tool->healthUrl(),
-                $integration->integration_id,
-                $integration->client_id,
-                $integration->client_secret,
-                'owned_tool',
-            );
 
-            $integration->connection_status = $result['ok'] ? 'ok' : 'error';
-            $integration->last_checked_at = now();
-            $integration->last_error = $result['ok'] ? null : $result['message'];
-            $integration->save();
-
-            SiteIntegrationCheckLog::create([
-                'owner_type' => 'owned',
-                'owner_id' => $integration->id,
-                'direction' => 'hub_to_site',
-                'ok' => $result['ok'],
-                'http_status' => $result['http_status'],
-                'message' => $result['message'],
-                'payload_summary' => $result['payload'],
-            ]);
+            return $result;
         }
+
+        $result = $this->ping(
+            $tool->healthUrl(),
+            $integration->integration_id,
+            $integration->client_id,
+            $integration->client_secret,
+            'owned_tool',
+        );
+
+        $integration->connection_status = $result['ok'] ? 'ok' : 'error';
+        $integration->last_checked_at = now();
+        $integration->last_error = $result['ok'] ? null : $result['message'];
+        $integration->save();
+
+        SiteIntegrationCheckLog::create([
+            'owner_type' => 'owned',
+            'owner_id' => $integration->id,
+            'direction' => 'hub_to_site',
+            'ok' => $result['ok'],
+            'http_status' => $result['http_status'],
+            'message' => $result['message'],
+            'payload_summary' => $result['payload'],
+        ]);
 
         return $result;
     }
@@ -94,6 +100,7 @@ class ConnectionCheckService
      */
     private function ping(string $url, string $integrationId, string $clientId, string $clientSecret, string $context): array
     {
+        // Sign only — never include client_secret in diagnostics/logs.
         $payload = $this->signer->sign([
             'integration_id' => $integrationId,
             'context' => $context,
@@ -104,6 +111,8 @@ class ConnectionCheckService
             'issued_at' => now()->toIso8601String(),
             'expires_at' => now()->addMinutes(2)->toIso8601String(),
         ], $clientSecret);
+
+        $startedAt = microtime(true);
 
         try {
             $response = $this->http->postJson(
@@ -116,34 +125,196 @@ class ConnectionCheckService
                 15
             );
 
-            $body = $response->json();
-            $ok = $response->successful() && (($body['ok'] ?? false) === true);
-
-            return [
-                'ok' => $ok,
-                'http_status' => $response->status(),
-                'message' => $ok
-                    ? 'Connection successful.'
-                    : ('Health check failed: '.($body['message'] ?? $response->body() ?: 'HTTP '.$response->status())),
-                'payload' => is_array($body) ? [
-                    'ok' => $body['ok'] ?? null,
-                    'capabilities' => $body['capabilities'] ?? null,
-                ] : null,
-            ];
+            return $this->interpretHealthResponse($url, $response, $startedAt);
         } catch (InvalidArgumentException $e) {
             return [
                 'ok' => false,
                 'http_status' => null,
-                'message' => 'Connection blocked: '.$e->getMessage(),
-                'payload' => null,
+                'message' => 'Connection blocked: '.$e->getMessage().'; URL: '.$url,
+                'payload' => [
+                    'request_url' => $url,
+                    'network_error' => $e->getMessage(),
+                ],
             ];
-        } catch (Throwable $e) {
+        } catch (ConnectionException $e) {
+            $elapsedMs = (int) round((microtime(true) - $startedAt) * 1000);
+
             return [
                 'ok' => false,
                 'http_status' => null,
-                'message' => 'Connection error: '.$e->getMessage(),
-                'payload' => null,
+                'message' => $this->formatFailureParts([
+                    'Network/cURL error: '.$this->safeExceptionMessage($e),
+                    'URL: '.$url,
+                    'Elapsed: '.$elapsedMs.'ms',
+                ]),
+                'payload' => [
+                    'request_url' => $url,
+                    'elapsed_ms' => $elapsedMs,
+                    'network_error' => $this->safeExceptionMessage($e),
+                ],
+            ];
+        } catch (Throwable $e) {
+            $elapsedMs = (int) round((microtime(true) - $startedAt) * 1000);
+
+            return [
+                'ok' => false,
+                'http_status' => null,
+                'message' => $this->formatFailureParts([
+                    'Connection error: '.$this->safeExceptionMessage($e),
+                    'URL: '.$url,
+                    'Elapsed: '.$elapsedMs.'ms',
+                ]),
+                'payload' => [
+                    'request_url' => $url,
+                    'elapsed_ms' => $elapsedMs,
+                    'network_error' => $this->safeExceptionMessage($e),
+                ],
             ];
         }
+    }
+
+    /**
+     * @return array{ok: bool, http_status: int|null, message: string, payload: array<string, mixed>|null}
+     */
+    private function interpretHealthResponse(string $requestUrl, Response $response, float $startedAt): array
+    {
+        $elapsedMs = (int) round((microtime(true) - $startedAt) * 1000);
+        $status = $response->status();
+        $rawBody = (string) $response->body();
+        $contentType = (string) ($response->header('Content-Type') ?: '');
+        $location = (string) ($response->header('Location') ?: '');
+        $redirected = $this->isRedirectStatus($status);
+        $json = $response->json();
+        $jsonDecodable = is_array($json);
+        $okFlag = $jsonDecodable ? ($json['ok'] ?? null) : null;
+        $passed = $response->successful() && $okFlag === true;
+
+        $payload = [
+            'request_url' => $requestUrl,
+            'http_status' => $status,
+            'content_type' => $contentType !== '' ? $contentType : null,
+            'redirected' => $redirected,
+            'redirect_location' => $location !== '' ? $location : null,
+            'elapsed_ms' => $elapsedMs,
+            'json_decodable' => $jsonDecodable,
+            'ok' => $jsonDecodable ? $okFlag : null,
+            'capabilities' => $jsonDecodable ? ($json['capabilities'] ?? null) : null,
+            'error' => $jsonDecodable ? ($json['error'] ?? null) : null,
+            'message' => $jsonDecodable ? ($json['message'] ?? null) : null,
+            'body_excerpt' => $this->excerptBody($rawBody),
+        ];
+
+        if ($passed) {
+            return [
+                'ok' => true,
+                'http_status' => $status,
+                'message' => 'Connection successful. HTTP '.$status.'; '.$elapsedMs.'ms; URL: '.$requestUrl,
+                'payload' => $payload,
+            ];
+        }
+
+        $parts = ['HTTP '.$status];
+
+        if ($contentType !== '') {
+            $parts[] = 'Content-Type: '.$contentType;
+        }
+
+        $parts[] = 'URL: '.$requestUrl;
+        $parts[] = 'Elapsed: '.$elapsedMs.'ms';
+
+        if ($redirected) {
+            $parts[] = 'Redirected: yes'.($location !== '' ? ' → '.$location : '');
+        }
+
+        if (! $jsonDecodable) {
+            $parts[] = $rawBody === ''
+                ? 'invalid/empty JSON response'
+                : 'invalid JSON response';
+        } else {
+            $parts[] = 'JSON ok='.$this->stringifyMixed($okFlag);
+            if (array_key_exists('error', $json) && $json['error'] !== null && $json['error'] !== '') {
+                $parts[] = 'error='.$this->stringifyMixed($json['error']);
+            }
+            if (array_key_exists('message', $json) && $json['message'] !== null && $json['message'] !== '') {
+                $parts[] = 'message='.$this->stringifyMixed($json['message']);
+            }
+        }
+
+        $excerpt = $this->excerptBody($rawBody);
+        if ($excerpt !== '') {
+            $parts[] = 'response: '.$excerpt;
+        } elseif ($rawBody === '') {
+            $parts[] = 'response: (empty body)';
+        }
+
+        return [
+            'ok' => false,
+            'http_status' => $status,
+            'message' => 'Health check failed: '.implode('; ', $parts),
+            'payload' => $payload,
+        ];
+    }
+
+    private function isRedirectStatus(int $status): bool
+    {
+        return in_array($status, [301, 302, 303, 307, 308], true);
+    }
+
+    private function excerptBody(string $body): string
+    {
+        $normalized = preg_replace('/\s+/u', ' ', trim($body)) ?? trim($body);
+        if ($normalized === '') {
+            return '';
+        }
+
+        // Never leak secrets if a merchant echoes them back.
+        $normalized = preg_replace(
+            '/(?i)(client_secret|webhook_secret|authorization|api[_-]?key)\s*[:=]\s*\S+/',
+            '$1=[redacted]',
+            $normalized
+        ) ?? $normalized;
+
+        if (strlen($normalized) > self::BODY_EXCERPT_LIMIT) {
+            return substr($normalized, 0, self::BODY_EXCERPT_LIMIT).'…';
+        }
+
+        return $normalized;
+    }
+
+    private function stringifyMixed(mixed $value): string
+    {
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+
+        if ($value === null) {
+            return 'null';
+        }
+
+        if (is_scalar($value)) {
+            return (string) $value;
+        }
+
+        $encoded = json_encode($value, JSON_UNESCAPED_SLASHES);
+
+        return is_string($encoded) ? $encoded : 'complex';
+    }
+
+    /**
+     * @param  list<string>  $parts
+     */
+    private function formatFailureParts(array $parts): string
+    {
+        return 'Health check failed: '.implode('; ', array_values(array_filter($parts, fn (string $p): bool => $p !== '')));
+    }
+
+    private function safeExceptionMessage(Throwable $e): string
+    {
+        $message = trim($e->getMessage());
+        if ($message === '') {
+            return $e::class;
+        }
+
+        return $this->excerptBody($message) ?: $e::class;
     }
 }

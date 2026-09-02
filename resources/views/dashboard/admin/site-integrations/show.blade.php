@@ -153,7 +153,10 @@
                             <span class="{{ $log->ok ? 'text-emerald-600' : 'text-red-600' }}">{{ $log->ok ? 'OK' : 'Fail' }}</span>
                             <span class="text-text-muted">{{ $log->created_at->format('j M Y H:i') }}</span>
                         </div>
-                        <p class="mt-1 text-text-secondary">{{ $log->message }}</p>
+                        <p class="mt-1 break-words text-text-secondary">{{ $log->message }}</p>
+                        @if ($log->http_status)
+                            <p class="mt-1 text-[11px] text-text-muted">HTTP {{ $log->http_status }}</p>
+                        @endif
                     </div>
                 @empty
                     <p class="text-sm text-text-muted">No checks yet.</p>
