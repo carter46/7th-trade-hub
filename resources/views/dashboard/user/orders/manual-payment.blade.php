@@ -92,13 +92,6 @@
                                         <p class="mt-1 text-xl font-bold text-primary">{{ $bankDetails['account_name'] }}</p>
                                     </div>
 
-                                    @if(filled($bankDetails['instructions'] ?? null))
-                                        <div class="rounded-xl border border-primary/30 bg-white/60 px-4 py-4">
-                                            <p class="text-xs font-bold uppercase tracking-wide text-primary mb-2">Instructions</p>
-                                            <p class="text-base font-semibold text-primary whitespace-pre-line leading-relaxed">{{ $bankDetails['instructions'] }}</p>
-                                        </div>
-                                    @endif
-
                                     <p class="text-base font-bold text-primary">
                                         Transfer exactly <span class="text-2xl">₦{{ number_format((float) $order->total_amount, 2) }}</span>
                                     </p>
@@ -113,9 +106,18 @@
                             </x-dashboard.alert>
                         @endif
 
-                        <x-dashboard.button type="button" variant="primary" class="w-full" x-on:click="showProofForm = true; $nextTick(() => document.getElementById('proof-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))">
-                            I Have Made This Payment
-                        </x-dashboard.button>
+                        <div x-show="!showProofForm" class="space-y-4">
+                            <x-dashboard.button type="button" variant="primary" class="w-full" x-on:click="showProofForm = true; $nextTick(() => document.getElementById('proof-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))">
+                                I Have Made This Payment
+                            </x-dashboard.button>
+
+                            @if(filled($bankDetails['instructions'] ?? null))
+                                <div class="rounded-xl border border-border-default bg-muted/30 px-4 py-3">
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-text-muted mb-1.5">Instructions</p>
+                                    <p class="text-sm text-black whitespace-pre-line leading-relaxed">{{ $bankDetails['instructions'] }}</p>
+                                </div>
+                            @endif
+                        </div>
 
                         <form
                             id="proof-form"
@@ -123,6 +125,9 @@
                             action="{{ route('dashboard.orders.manual-payment.submit', $order) }}"
                             enctype="multipart/form-data"
                             class="space-y-4"
+                            style="display: none"
+                            x-show="showProofForm"
+                            x-cloak
                             x-on:submit.prevent="submitProof()"
                         >
                             @csrf
