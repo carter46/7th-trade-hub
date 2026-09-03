@@ -14,16 +14,16 @@ return new class extends Migration
 
         Schema::table('user_tools', function (Blueprint $table) {
             if (! Schema::hasColumn('user_tools', 'livechat_name')) {
-                $table->string('livechat_name')->nullable()->after('admin_password');
+                $table->string('livechat_name')->nullable();
             }
             if (! Schema::hasColumn('user_tools', 'livechat_url')) {
-                $table->string('livechat_url')->nullable()->after('livechat_name');
+                $table->string('livechat_url')->nullable();
             }
             if (! Schema::hasColumn('user_tools', 'livechat_email')) {
-                $table->string('livechat_email')->nullable()->after('livechat_url');
+                $table->string('livechat_email')->nullable();
             }
             if (! Schema::hasColumn('user_tools', 'livechat_password')) {
-                $table->text('livechat_password')->nullable()->after('livechat_email');
+                $table->text('livechat_password')->nullable();
             }
         });
     }

@@ -278,18 +278,46 @@ class UserManagementController extends Controller
         $this->ensureMember($user);
         abort_unless($tool->user_id === $user->id, 404);
 
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('user_tools', 'livechat_url')) {
+            return redirect()
+                ->route('admin.users.tools.show', [$user, $tool])
+                ->with('error', 'Livechat columns are missing. Run php artisan migrate on the server, then try again.');
+        }
+
         $data = $request->validate([
             'livechat_name' => ['nullable', 'string', 'max:255'],
-            'livechat_url' => ['nullable', 'url', 'max:500'],
+            'livechat_url' => ['nullable', 'string', 'max:500'],
             'livechat_email' => ['nullable', 'email', 'max:255'],
             'livechat_password' => ['nullable', 'string', 'min:4', 'max:255'],
         ]);
+
+        $rawUrl = trim((string) ($data['livechat_url'] ?? ''));
+        if ($rawUrl !== '') {
+            $normalizedUrl = preg_match('#^https?://#i', $rawUrl) ? $rawUrl : 'https://'.$rawUrl;
+            if (! filter_var($normalizedUrl, FILTER_VALIDATE_URL)) {
+                return redirect()
+                    ->route('admin.users.tools.show', [$user, $tool])
+                    ->withInput()
+                    ->with('error', 'Enter a valid livechat URL.');
+            }
+            $data['livechat_url'] = $normalizedUrl;
+        } else {
+            $data['livechat_url'] = null;
+        }
 
         try {
             app(\App\Services\SiteIntegrations\UserToolProvisioningService::class)
                 ->updateLivechat($tool, $data, $request->user(), $request->ip());
         } catch (\InvalidArgumentException $e) {
-            return back()->with('error', $e->getMessage());
+            return redirect()
+                ->route('admin.users.tools.show', [$user, $tool])
+                ->with('error', $e->getMessage());
+        } catch (\Throwable $e) {
+            report($e);
+
+            return redirect()
+                ->route('admin.users.tools.show', [$user, $tool])
+                ->with('error', 'Could not save livechat logins. Check that migrations have been run.');
         }
 
         return redirect()

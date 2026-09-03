@@ -11,10 +11,10 @@ return new class extends Migration
         if (Schema::hasTable('platform_products')) {
             Schema::table('platform_products', function (Blueprint $table) {
                 if (! Schema::hasColumn('platform_products', 'tutorial_url')) {
-                    $table->string('tutorial_url')->nullable()->after('demo_password');
+                    $table->string('tutorial_url')->nullable();
                 }
                 if (! Schema::hasColumn('platform_products', 'tutorial_description')) {
-                    $table->text('tutorial_description')->nullable()->after('tutorial_url');
+                    $table->text('tutorial_description')->nullable();
                 }
             });
         }

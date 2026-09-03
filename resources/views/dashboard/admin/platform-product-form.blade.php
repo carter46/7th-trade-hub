@@ -89,7 +89,7 @@
                 <div class="space-y-3 rounded-xl border border-border-subtle px-4 py-4">
                     <div>
                         <p class="text-sm font-medium text-text-primary">Tutorials</p>
-                        <p class="mt-1 text-xs text-text-muted">Shown on the product page and on My Tools after a customer purchases this product. Set once here — not per user.</p>
+                        <p class="mt-1 text-xs text-text-muted">Shown as a <strong>Watch tutorial</strong> button next to View Demo on the product page, and on My Tools after purchase. Set once here — not per user.</p>
                     </div>
                     <x-dashboard.input
                         label="Tutorial video URL"

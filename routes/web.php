@@ -387,6 +387,9 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::post('/users/{user}/tools/{tool}/setup', [UserManagementController::class, 'setupTool'])->name('.users.tools.setup');
         Route::post('/users/{user}/tools/{tool}/reconfigure', [UserManagementController::class, 'reconfigureTool'])->name('.users.tools.reconfigure');
         Route::post('/users/{user}/tools/{tool}/livechat', [UserManagementController::class, 'updateToolLivechat'])->name('.users.tools.livechat');
+        Route::get('/users/{user}/tools/{tool}/livechat', function (\App\Models\User $user, \App\Models\UserTool $tool) {
+            return redirect()->route('admin.users.tools.show', [$user, $tool]);
+        });
         Route::post('/users/{user}/tools/{tool}/rotate', [UserManagementController::class, 'rotateToolCredentials'])->name('.users.tools.rotate');
         Route::post('/users/{user}/tools/{tool}/check', [UserManagementController::class, 'checkTool'])->name('.users.tools.check');
         Route::post('/users/{user}/tools/{tool}/expiry', [UserManagementController::class, 'adjustToolExpiry'])->name('.users.tools.expiry');

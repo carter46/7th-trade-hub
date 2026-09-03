@@ -67,24 +67,13 @@
                     @elseif(filled($product->short_description))
                         <p class="text-text-secondary">{{ $product->short_description }}</p>
                     @endif
-                    <div class="pt-1 flex flex-wrap items-center gap-2">
+                    <div class="pt-1">
                         @include('partials.catalog.product-demo-actions', [
                             'product' => $product,
                             'modalName' => 'view-demo-dash-'.$product->id,
                         ])
-                        @if ($product->hasTutorialDetails() && filled($product->tutorial_url))
-                            <x-dashboard.button
-                                :href="$product->tutorial_url"
-                                variant="secondary"
-                                size="sm"
-                                target="_blank"
-                                rel="noopener"
-                            >
-                                Watch tutorial
-                            </x-dashboard.button>
-                        @endif
                     </div>
-                    @if ($product->hasTutorialDetails() && filled($product->tutorial_description))
+                    @if (filled($product->tutorial_description))
                         <p class="text-sm text-text-secondary whitespace-pre-line">{{ $product->tutorial_description }}</p>
                     @endif
                 </div>

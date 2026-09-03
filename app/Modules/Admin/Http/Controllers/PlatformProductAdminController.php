@@ -154,9 +154,24 @@ class PlatformProductAdminController extends Controller
             'domain_usd_ngn_rate' => ['nullable', 'numeric', 'min:0'],
             'allowed_tlds' => ['nullable', 'array', 'min:1'],
             'allowed_tlds.*' => ['string', 'max:63'],
-            'tutorial_url' => ['nullable', 'url', 'max:500'],
+            'tutorial_url' => ['nullable', 'string', 'max:500'],
             'tutorial_description' => ['nullable', 'string', 'max:2000'],
         ]);
+
+        if ($platformProduct->product_type !== PlatformProductType::Domain) {
+            $rawTutorial = trim((string) ($data['tutorial_url'] ?? ''));
+            if ($rawTutorial !== '') {
+                $normalizedTutorial = preg_match('#^https?://#i', $rawTutorial)
+                    ? $rawTutorial
+                    : 'https://'.$rawTutorial;
+                if (! filter_var($normalizedTutorial, FILTER_VALIDATE_URL)) {
+                    throw ValidationException::withMessages([
+                        'tutorial_url' => 'Enter a valid tutorial video URL.',
+                    ]);
+                }
+                $data['tutorial_url'] = $normalizedTutorial;
+            }
+        }
 
         $heroMediaId = filled($data['hero_media_id'] ?? null) ? (int) $data['hero_media_id'] : null;
         $heroPath = $this->mediaPaths->legacyPathFromMediaId($heroMediaId);
@@ -172,9 +187,11 @@ class PlatformProductAdminController extends Controller
         ];
 
         if ($platformProduct->product_type !== PlatformProductType::Domain) {
-            $updatePayload['tutorial_url'] = filled($data['tutorial_url'] ?? null)
-                ? trim((string) $data['tutorial_url'])
-                : null;
+            $tutorialUrl = trim((string) ($data['tutorial_url'] ?? ''));
+            if ($tutorialUrl !== '' && ! preg_match('#^https?://#i', $tutorialUrl)) {
+                $tutorialUrl = 'https://'.$tutorialUrl;
+            }
+            $updatePayload['tutorial_url'] = $tutorialUrl !== '' ? $tutorialUrl : null;
             $updatePayload['tutorial_description'] = filled($data['tutorial_description'] ?? null)
                 ? trim((string) $data['tutorial_description'])
                 : null;
