@@ -128,7 +128,7 @@ class UserToolProvisioningService
                 'livechat_email' => isset($data['livechat_email']) ? (strtolower(trim((string) $data['livechat_email'])) ?: null) : $locked->livechat_email,
                 'status' => UserToolStatus::Active,
                 'configured_at' => now(),
-                'expires_at' => now()->addMonths($duration),
+                'expires_at' => ($locked->purchased_at ?? now())->copy()->addMonths($duration),
                 'duration_months' => $duration,
             ]);
             if (array_key_exists('livechat_password', $data) && filled($data['livechat_password'])) {

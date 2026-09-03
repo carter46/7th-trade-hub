@@ -126,6 +126,8 @@ class ConnectionCheckDiagnosticsTest extends TestCase
         return new ConnectionCheckService(
             app(ProtocolV1Signer::class),
             app(IntegrationHttpClient::class),
+            Mockery::mock(\App\Services\SiteIntegrations\SubscriptionSyncService::class),
+            Mockery::mock(\App\Services\Notifications\NotificationDispatcher::class),
         );
     }
 

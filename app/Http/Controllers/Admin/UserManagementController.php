@@ -20,11 +20,15 @@ use App\Modules\Catalog\Services\PlatformCheckoutService;
 use App\Modules\Wallet\Services\WalletProvisioningService;
 use App\Models\DomainConnection;
 use App\Services\Domains\DomainConnectionService;
+use App\Services\Notifications\NotificationDispatcher;
+use App\Services\Notifications\NotificationEmailRenderer;
+use App\Services\Notifications\NotificationMessage;
 use App\Services\SiteIntegrations\SubscriptionSyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -36,6 +40,8 @@ class UserManagementController extends Controller
         private WalletProvisioningService $walletProvisioning,
         private PlatformCheckoutService $checkout,
         private SubscriptionSyncService $subscriptionSync,
+        private NotificationDispatcher $notificationDispatcher,
+        private NotificationEmailRenderer $notificationEmailRenderer,
     ) {}
 
     public function create(): View
@@ -377,14 +383,18 @@ class UserManagementController extends Controller
             return back()->with('status', 'Domain is already verified.');
         }
 
+        $previousStatus = $connection->verification_status;
+
         app(DomainConnectionService::class)->approveManually($connection);
 
-        $this->audit->log('admin.domain_connection.manual_approve', [
-            'connection_id' => $connection->id,
-            'fqdn' => $connection->fqdn,
-            'user_id' => $user->id,
-            'approved_by' => auth()->id(),
-        ]);
+        $this->audit->log(
+            (int) auth()->id(),
+            'admin.domain_connection.manual_approve',
+            $connection,
+            ['verification_status' => $previousStatus],
+            ['verification_status' => DomainConnection::STATUS_VERIFIED],
+            $request->ip(),
+        );
 
         return back()->with('status', __('Domain :fqdn manually approved.', ['fqdn' => $connection->fqdn]));
     }
@@ -483,11 +493,11 @@ class UserManagementController extends Controller
 
         if ($product->product_type === PlatformProductType::WebsitePackage) {
             $domainFqdn = trim((string) ($validated['domain_fqdn'] ?? ''));
-        if ($domainFqdn === '') {
-            return redirect()
-                ->route('admin.users.show', $user)
-                ->with('error', 'Enter the customer\'s existing domain for this website package.');
-        }
+            if ($domainFqdn === '') {
+                return redirect()
+                    ->route('admin.users.show', $user)
+                    ->with('error', 'Enter the customer\'s existing domain for this website package.');
+            }
 
             $data['domain_mode'] = 'connect';
             $data['domain_fqdn'] = $domainFqdn;
@@ -508,6 +518,10 @@ class UserManagementController extends Controller
             return redirect()
                 ->route('admin.users.show', $user)
                 ->with('error', $e->getMessage());
+        }
+
+        if (! $request->boolean('mark_paid')) {
+            $this->notifyManualPurchaseCreated($user, $order);
         }
 
         $message = $request->boolean('mark_paid')
@@ -886,5 +900,31 @@ class UserManagementController extends Controller
         }
 
         return view('dashboard.admin.users.show', $payload);
+    }
+
+    private function notifyManualPurchaseCreated(User $user, Order $order): void
+    {
+        $order->loadMissing(['items', 'user']);
+        $context = $this->notificationEmailRenderer->orderContext($order);
+
+        $this->notificationDispatcher->notifyUser(
+            $user,
+            new NotificationMessage(
+                type: 'order.created',
+                title: __('Purchase recorded'),
+                body: __('A purchase was created for you. Order :ref for ₦:amount is awaiting payment confirmation.', [
+                    'ref' => $order->reference,
+                    'amount' => number_format((float) ($order->total_amount ?? $order->amount), 2),
+                ]),
+                actionUrl: Route::has('dashboard.orders') ? route('dashboard.orders') : null,
+                meta: [
+                    'order_id' => $order->id,
+                    'email_context' => $context,
+                ],
+                emailSubject: __('Order :ref recorded', ['ref' => $order->reference]),
+                dedupeKey: 'order.created.'.$order->id,
+            ),
+            ['database', 'mail']
+        );
     }
 }

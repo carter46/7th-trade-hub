@@ -93,8 +93,8 @@ class ConnectionCheckService
         if ($result['ok']) {
             $this->subscriptionSync->push($tool->fresh(['integration']));
 
-            if ($previousStatus !== 'ok') {
-                $this->notifyUserToolReady($tool);
+            if ($previousStatus !== 'ok' && $tool->configured_at !== null) {
+                $this->notifyUserToolReady($tool->fresh(['product']));
             }
         }
 
@@ -134,6 +134,7 @@ class ConnectionCheckService
                 actionUrl: $toolUrl,
                 meta: ['user_tool_id' => $tool->id],
                 emailSubject: __(':product — your website is ready', ['product' => $productName]),
+                dedupeKey: 'tool.setup_complete.'.$tool->id,
             ),
             ['database', 'mail']
         );

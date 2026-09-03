@@ -37,7 +37,7 @@
         @endif
     </x-slot:actions>
 
-    <div class="space-y-6">
+    <div class="min-w-0 space-y-6 overflow-x-hidden">
         <x-dashboard.card>
             <div class="grid gap-4 lg:grid-cols-[minmax(0,240px)_1fr] lg:gap-6">
                 <div class="min-w-0 overflow-hidden rounded-xl border border-border-subtle bg-muted/40 p-3 sm:p-4">

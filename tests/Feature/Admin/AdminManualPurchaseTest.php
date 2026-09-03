@@ -172,6 +172,88 @@ class AdminManualPurchaseTest extends TestCase
         );
     }
 
+    public function test_admin_manual_purchase_respects_custom_purchase_date(): void
+    {
+        $admin = $this->adminUser();
+        $member = $this->memberUser();
+        $product = $this->seedVpnProduct();
+        $variant = $product->activeVariants->first();
+        $purchaseDate = now()->subDays(10)->format('Y-m-d');
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.manual-purchase', $member), [
+                'product_slug' => $product->slug,
+                'variant_id' => $variant->id,
+                'mark_paid' => '1',
+                'purchased_at' => $purchaseDate,
+            ])
+            ->assertRedirect(route('admin.users.tools', $member))
+            ->assertSessionHas('status');
+
+        $tool = UserTool::query()->where('user_id', $member->id)->first();
+        $this->assertNotNull($tool);
+        $this->assertSame($purchaseDate, $tool->purchased_at?->format('Y-m-d'));
+    }
+
+    public function test_admin_can_manually_approve_domain_connection(): void
+    {
+        $admin = $this->adminUser();
+        $member = $this->memberUser();
+        $product = $this->seedVpnProduct();
+
+        $order = Order::query()->create([
+            'source' => 'platform',
+            'user_id' => $member->id,
+            'reference' => 'PLT-TEST01',
+            'amount' => 2500,
+            'total_amount' => 2500,
+            'status' => 'paid',
+            'payment_method' => Order::PAYMENT_MANUAL_BANK_TRANSFER,
+        ]);
+
+        $orderItem = \App\Models\OrderItem::query()->create([
+            'order_id' => $order->id,
+            'item_type' => 'platform_product',
+            'item_id' => $product->id,
+            'quantity' => 1,
+            'unit_price' => 2500,
+            'line_total' => 2500,
+            'options' => ['domain_mode' => 'connect', 'domain_fqdn' => 'shop.customer-example.com'],
+        ]);
+
+        $tool = UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'order_id' => $order->id,
+            'order_item_id' => $orderItem->id,
+            'status' => UserToolStatus::PendingSetup,
+            'purchased_at' => now()->subDay(),
+            'duration_months' => 3,
+            'instance_sequence' => 1,
+        ]);
+
+        $connection = \App\Models\DomainConnection::query()->create([
+            'user_id' => $member->id,
+            'order_id' => $order->id,
+            'order_item_id' => $orderItem->id,
+            'user_tool_id' => $tool->id,
+            'fqdn' => 'shop.customer-example.com',
+            'claim_key' => 'shop.customer-example.com',
+            'required_nameservers' => ['ns1.example.com', 'ns2.example.com'],
+            'verification_status' => \App\Models\DomainConnection::STATUS_PENDING,
+        ]);
+
+        $this->actingAs($admin)
+            ->from(route('admin.users.tools.show', [$member, $tool]))
+            ->post(route('admin.users.domain-connections.approve', [$member, $connection]))
+            ->assertRedirect(route('admin.users.tools.show', [$member, $tool]))
+            ->assertSessionHas('status');
+
+        $connection->refresh();
+        $this->assertSame(\App\Models\DomainConnection::STATUS_VERIFIED, $connection->verification_status);
+        $this->assertNotNull($connection->verified_at);
+    }
+
     public function test_admin_can_adjust_tool_expiry(): void
     {
         $admin = $this->adminUser();

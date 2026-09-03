@@ -14,6 +14,7 @@ class EmailIdentityResolver
         return match (true) {
             str_starts_with($type, 'ticket.') => EmailProfile::Support,
             str_starts_with($type, 'order.') => EmailProfile::Sales,
+            str_starts_with($type, 'tool.') => EmailProfile::Sales,
             str_starts_with($type, 'user.') => EmailProfile::General,
             str_starts_with($type, 'security.'),
             str_starts_with($type, 'email.delivery_failed') => EmailProfile::Security,
