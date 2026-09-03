@@ -89,7 +89,7 @@ class DomainConnectionService
 
     public function isClaimedByAnotherUser(string $fqdn, int $userId): bool
     {
-        $fqdn = DomainFqdn::normalizeFqdn($fqdn);
+        $fqdn = DomainFqdn::normalizeFqdn($fqdn, apexOnly: false);
 
         $connected = DomainConnection::query()
             ->activeClaim()
@@ -110,7 +110,7 @@ class DomainConnectionService
 
     public function isClaimedByUser(string $fqdn, int $userId, ?int $exceptOrderItemId = null): bool
     {
-        $fqdn = DomainFqdn::normalizeFqdn($fqdn);
+        $fqdn = DomainFqdn::normalizeFqdn($fqdn, apexOnly: false);
 
         $query = DomainConnection::query()
             ->activeClaim()
@@ -126,7 +126,7 @@ class DomainConnectionService
 
     public function isActivelyClaimed(string $fqdn, ?int $exceptOrderItemId = null): bool
     {
-        $fqdn = DomainFqdn::normalizeFqdn($fqdn);
+        $fqdn = DomainFqdn::normalizeFqdn($fqdn, apexOnly: false);
 
         $query = DomainConnection::query()
             ->activeClaim()
@@ -162,7 +162,7 @@ class DomainConnectionService
             throw new InvalidArgumentException('Domain connections can only be created for paid orders.');
         }
 
-        $fqdn = DomainFqdn::normalizeFqdn($fqdn);
+        $fqdn = DomainFqdn::normalizeFqdn($fqdn, apexOnly: false);
         $required = $this->dns->platformNameservers();
 
         if (count($required) < 2) {

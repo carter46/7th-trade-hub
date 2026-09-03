@@ -207,10 +207,10 @@
                         type="text"
                         name="domain_fqdn"
                         x-model="domainFqdn"
-                        placeholder="example.com"
+                        placeholder="shop.example.com"
                         class="w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm"
                     />
-                    <p class="text-xs text-text-muted">Connect an existing domain for this website package. No availability check — enter the domain the customer already owns.</p>
+                    <p class="text-xs text-text-muted">Connect an existing domain or subdomain (e.g. example.com, shop.example.com). No availability check — enter what the customer already owns.</p>
                 </div>
 
                 <input type="hidden" name="mark_paid" value="0">

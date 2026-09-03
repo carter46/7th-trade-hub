@@ -98,7 +98,14 @@ final class DomainFqdn
         ];
     }
 
-    public static function normalizeFqdn(string $input): string
+    /**
+     * Normalize a hostname.
+     *
+     * @param  bool  $apexOnly  When true (buy/register), only example.com is allowed.
+     *                          When false (connect existing), subdomains and multi-part
+     *                          hosts like app.example.com or example.co.uk are allowed.
+     */
+    public static function normalizeFqdn(string $input, bool $apexOnly = true): string
     {
         $value = strtolower(trim($input));
         $value = preg_replace('#^https?://#', '', $value) ?? $value;
@@ -116,7 +123,9 @@ final class DomainFqdn
             throw new InvalidArgumentException('Domain format is invalid.');
         }
 
-        self::assertApexOnly($value);
+        if ($apexOnly) {
+            self::assertApexOnly($value);
+        }
 
         return $value;
     }
@@ -124,9 +133,9 @@ final class DomainFqdn
     /**
      * @return array{sld: string, tld: string, fqdn: string}
      */
-    public static function fromFqdn(string $fqdn): array
+    public static function fromFqdn(string $fqdn, bool $apexOnly = true): array
     {
-        $fqdn = self::normalizeFqdn($fqdn);
+        $fqdn = self::normalizeFqdn($fqdn, $apexOnly);
         $parts = explode('.', $fqdn);
         $tld = array_pop($parts);
         $sld = implode('.', $parts);

@@ -123,7 +123,7 @@ class DomainCheckoutValidator
             throw new InvalidArgumentException('This domain is already connected on your account.');
         }
 
-        $parsed = DomainFqdn::fromFqdn($lookup['fqdn']);
+        $parsed = DomainFqdn::fromFqdn($lookup['fqdn'], apexOnly: false);
 
         return [
             'mode' => 'connect',
@@ -145,13 +145,13 @@ class DomainCheckoutValidator
     {
         $fqdnInput = trim((string) ($data['domain_fqdn'] ?? $data['domain_name'] ?? ''));
         if ($fqdnInput === '') {
-            throw new InvalidArgumentException('Enter the existing domain (e.g. example.com).');
+            throw new InvalidArgumentException('Enter the existing domain (e.g. example.com or shop.example.com).');
         }
 
         $fqdnInput = preg_replace('#^https?://#i', '', $fqdnInput) ?? $fqdnInput;
         $fqdnInput = rtrim(explode('/', $fqdnInput, 2)[0], '/.');
 
-        $parsed = DomainFqdn::fromFqdn($fqdnInput);
+        $parsed = DomainFqdn::fromFqdn($fqdnInput, apexOnly: false);
 
         if ($this->connections->isClaimedByAnotherUser($parsed['fqdn'], $user->id)) {
             throw new InvalidArgumentException('This domain is already connected to another account on 7th Trade Hub.');

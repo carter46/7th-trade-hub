@@ -153,7 +153,7 @@ class AdminManualPurchaseTest extends TestCase
                 'product_slug' => $product->slug,
                 'variant_id' => $variant->id,
                 'mark_paid' => '1',
-                'domain_fqdn' => 'customer-example.com',
+                'domain_fqdn' => 'shop.customer-example.com',
             ])
             ->assertRedirect(route('admin.users.tools', $member))
             ->assertSessionHas('status');
@@ -161,6 +161,13 @@ class AdminManualPurchaseTest extends TestCase
         $tool = UserTool::query()->where('user_id', $member->id)->first();
         $this->assertNotNull($tool);
         $this->assertSame(UserToolStatus::PendingSetup, $tool->status);
+
+        $order = Order::query()->where('user_id', $member->id)->with('items')->first();
+        $this->assertNotNull($order);
+        $this->assertSame(
+            'shop.customer-example.com',
+            $order->items->first()?->options['domain_fqdn'] ?? null
+        );
     }
 
     public function test_admin_can_adjust_tool_expiry(): void

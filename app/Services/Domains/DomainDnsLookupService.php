@@ -19,7 +19,8 @@ class DomainDnsLookupService
      */
     public function lookup(string $input): array
     {
-        $parsed = DomainFqdn::fromFqdn($input);
+        // Connect-existing may use subdomains / multi-label hosts; registration keeps apex-only elsewhere.
+        $parsed = DomainFqdn::fromFqdn($input, apexOnly: false);
         $fqdn = $parsed['fqdn'];
         $nameservers = $this->fetchNameservers($fqdn);
 
