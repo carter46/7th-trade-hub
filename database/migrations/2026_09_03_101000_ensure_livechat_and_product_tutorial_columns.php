@@ -31,7 +31,7 @@ return new class extends Migration
             if ($userToolColumns !== []) {
                 Schema::table('user_tools', function (Blueprint $table) use ($userToolColumns) {
                     foreach ($userToolColumns as $column) {
-                        if ($column === 'livechat_password') {
+                        if ($column === 'livechat_password' || $column === 'livechat_url') {
                             $table->text($column)->nullable();
                         } else {
                             $table->string($column)->nullable();

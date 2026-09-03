@@ -231,7 +231,7 @@ class UserManagementController extends Controller
             'admin_email' => ['required', 'email', 'max:255'],
             'admin_password' => ['required', 'string', 'min:6', 'max:255'],
             'livechat_name' => ['nullable', 'string', 'max:255'],
-            'livechat_url' => ['nullable', 'url', 'max:500'],
+            'livechat_url' => ['nullable', 'string', 'max:2000'],
             'livechat_email' => ['nullable', 'email', 'max:255'],
             'livechat_password' => ['nullable', 'string', 'min:4', 'max:255'],
         ]);
@@ -285,8 +285,8 @@ class UserManagementController extends Controller
         }
 
         $data = $request->validate([
-            'livechat_name' => ['nullable', 'string', 'max:255'],
-            'livechat_url' => ['nullable', 'string', 'max:500'],
+            'livechat_name' => ['nullable', 'string', 'max:500'],
+            'livechat_url' => ['nullable', 'string', 'max:2000'],
             'livechat_email' => ['nullable', 'email', 'max:255'],
             'livechat_password' => ['nullable', 'string', 'min:4', 'max:255'],
         ]);
@@ -317,7 +317,7 @@ class UserManagementController extends Controller
 
             return redirect()
                 ->route('admin.users.tools.show', [$user, $tool])
-                ->with('error', 'Could not save livechat logins. Check that migrations have been run.');
+                ->with('error', 'Could not save livechat logins: '.$e->getMessage());
         }
 
         return redirect()

@@ -17,7 +17,7 @@ return new class extends Migration
                 $table->string('livechat_name')->nullable();
             }
             if (! Schema::hasColumn('user_tools', 'livechat_url')) {
-                $table->string('livechat_url')->nullable();
+                $table->text('livechat_url')->nullable();
             }
             if (! Schema::hasColumn('user_tools', 'livechat_email')) {
                 $table->string('livechat_email')->nullable();

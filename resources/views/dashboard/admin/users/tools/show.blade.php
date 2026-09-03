@@ -104,7 +104,7 @@
                         <p class="mt-1 text-xs text-text-muted">Optional. Customer can view these on My Tools and copy the livechat password.</p>
                     </div>
                     <x-dashboard.input name="livechat_name" label="Livechat name" type="text" :value="old('livechat_name', $tool->livechat_name)" />
-                    <x-dashboard.input name="livechat_url" label="Livechat link" type="url" :value="old('livechat_url', $tool->livechat_url)" />
+                    <x-dashboard.input name="livechat_url" label="Livechat link" type="text" :value="old('livechat_url', $tool->livechat_url)" placeholder="https://…" />
                     <x-dashboard.input name="livechat_email" label="Livechat email" type="email" :value="old('livechat_email', $tool->livechat_email)" />
                     <x-dashboard.input name="livechat_password" label="Livechat password" type="text" autocomplete="off" />
                 </div>
@@ -168,7 +168,7 @@
                 <form method="POST" action="{{ route('admin.users.tools.livechat', [$user, $tool]) }}" class="grid gap-4 sm:grid-cols-2">
                     @csrf
                     <x-dashboard.input name="livechat_name" label="Livechat name" type="text" :value="old('livechat_name', $tool->livechat_name)" />
-                    <x-dashboard.input name="livechat_url" label="Livechat link" type="url" :value="old('livechat_url', $tool->livechat_url)" />
+                    <x-dashboard.input name="livechat_url" label="Livechat link" type="text" :value="old('livechat_url', $tool->livechat_url)" placeholder="https://…" />
                     <x-dashboard.input name="livechat_email" label="Livechat email" type="email" :value="old('livechat_email', $tool->livechat_email)" />
                     <x-dashboard.input name="livechat_password" label="Livechat password" type="text" autocomplete="off" hint="Leave blank to keep the current password." />
                     <div class="sm:col-span-2">
