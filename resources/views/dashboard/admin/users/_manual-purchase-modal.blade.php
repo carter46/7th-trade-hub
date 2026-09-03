@@ -14,6 +14,7 @@
         productSlug: '',
         variantId: '',
         domainFqdn: '',
+        purchasedAt: new Date().toISOString().slice(0, 10),
         markPaid: true,
         catalogUrl: {{ \Illuminate\Support\Js::from(route('admin.users.manual-purchase.catalog')) }},
         get selectedProduct() {
@@ -39,6 +40,7 @@
             this.productSlug = '';
             this.variantId = '';
             this.domainFqdn = '';
+            this.purchasedAt = new Date().toISOString().slice(0, 10);
             this.markPaid = true;
             this.products = [];
             this.services = [];
@@ -211,6 +213,18 @@
                         class="w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm"
                     />
                     <p class="text-xs text-text-muted">Connect an existing domain or subdomain (e.g. example.com, shop.example.com). No availability check — enter what the customer already owns.</p>
+                </div>
+
+                <div>
+                    <label class="mb-1 block text-sm font-medium text-text-secondary">Purchase date</label>
+                    <input
+                        type="date"
+                        name="purchased_at"
+                        x-model="purchasedAt"
+                        required
+                        class="w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm"
+                    />
+                    <p class="mt-1 text-xs text-text-muted">Defaults to today. Back-date if the customer paid earlier.</p>
                 </div>
 
                 <input type="hidden" name="mark_paid" value="0">

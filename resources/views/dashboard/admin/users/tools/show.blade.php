@@ -162,6 +162,38 @@
                 </form>
             </x-dashboard.card>
 
+            @if ($tool->domainConnection)
+                @php $dc = $tool->domainConnection; @endphp
+                <x-dashboard.card class="lg:col-span-2 space-y-3">
+                    <h3 class="text-sm font-semibold text-text-primary">Domain connection</h3>
+                    <dl class="grid gap-3 sm:grid-cols-3 text-sm">
+                        <div>
+                            <dt class="text-text-muted">Domain</dt>
+                            <dd class="font-mono font-medium text-text-primary">{{ $dc->fqdn }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-text-muted">Status</dt>
+                            <dd><x-dashboard.badge :status="$dc->verification_status" /></dd>
+                        </div>
+                        <div>
+                            <dt class="text-text-muted">Verified at</dt>
+                            <dd class="font-medium text-text-primary">{{ $dc->verified_at?->format('j M Y H:i') ?? '—' }}</dd>
+                        </div>
+                    </dl>
+                    @if ($dc->verification_status !== 'verified')
+                        <div class="flex items-center gap-3 rounded-lg border border-amber-300/40 bg-amber-50/50 px-4 py-3">
+                            <p class="flex-1 text-xs text-text-secondary">
+                                DNS hasn't been verified yet. If this customer uses external hosting and doesn't need to change nameservers, you can approve manually.
+                            </p>
+                            <form method="POST" action="{{ route('admin.users.domain-connections.approve', [$user, $dc]) }}">
+                                @csrf
+                                <x-dashboard.button type="submit" size="sm" variant="secondary">Approve domain</x-dashboard.button>
+                            </form>
+                        </div>
+                    @endif
+                </x-dashboard.card>
+            @endif
+
             <x-dashboard.card class="lg:col-span-2">
                 <h3 class="mb-4 text-sm font-semibold text-text-primary">Livechat logins</h3>
                 <p class="mb-4 text-xs text-text-muted">Visible on the customer’s My Tools page. Password is never shown in plain text — they can copy it like the site password.</p>

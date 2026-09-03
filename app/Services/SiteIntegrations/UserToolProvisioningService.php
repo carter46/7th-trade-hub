@@ -77,7 +77,9 @@ class UserToolProvisioningService
                 : $product->title,
             'status' => UserToolStatus::PendingSetup,
             'site_url' => $siteUrl,
-            'purchased_at' => now(),
+            'purchased_at' => ! empty($options['purchased_at'])
+                ? \Carbon\Carbon::parse($options['purchased_at'])
+                : now(),
             'duration_months' => $duration > 0 ? $duration : null,
         ]);
 

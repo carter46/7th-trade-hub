@@ -18,6 +18,8 @@ use App\Models\User;
 use App\Modules\Admin\Services\AuditLogService;
 use App\Modules\Catalog\Services\PlatformCheckoutService;
 use App\Modules\Wallet\Services\WalletProvisioningService;
+use App\Models\DomainConnection;
+use App\Services\Domains\DomainConnectionService;
 use App\Services\SiteIntegrations\SubscriptionSyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -366,6 +368,27 @@ class UserManagementController extends Controller
         return $redirect->with('error', $result['message']);
     }
 
+    public function approveDomainConnection(Request $request, User $user, DomainConnection $connection): RedirectResponse
+    {
+        $this->ensureMember($user);
+        abort_unless($connection->user_id === $user->id, 404);
+
+        if ($connection->verification_status === DomainConnection::STATUS_VERIFIED) {
+            return back()->with('status', 'Domain is already verified.');
+        }
+
+        app(DomainConnectionService::class)->approveManually($connection);
+
+        $this->audit->log('admin.domain_connection.manual_approve', [
+            'connection_id' => $connection->id,
+            'fqdn' => $connection->fqdn,
+            'user_id' => $user->id,
+            'approved_by' => auth()->id(),
+        ]);
+
+        return back()->with('status', __('Domain :fqdn manually approved.', ['fqdn' => $connection->fqdn]));
+    }
+
     public function manualPurchaseCatalog(Request $request): JsonResponse
     {
         $categoryId = $request->integer('service_category_id') ?: null;
@@ -428,6 +451,7 @@ class UserManagementController extends Controller
             'product_slug' => ['required', 'string', 'max:255'],
             'variant_id' => ['required', 'integer', 'exists:platform_product_variants,id'],
             'mark_paid' => ['nullable', 'boolean'],
+            'purchased_at' => ['nullable', 'date', 'before_or_equal:today'],
             'domain_fqdn' => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -454,6 +478,7 @@ class UserManagementController extends Controller
             'idempotency_key' => (string) Str::uuid(),
             'payment_method' => Order::PAYMENT_MANUAL_BANK_TRANSFER,
             'admin_skip_domain_validation' => true,
+            'purchased_at' => $validated['purchased_at'] ?? null,
         ];
 
         if ($product->product_type === PlatformProductType::WebsitePackage) {

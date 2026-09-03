@@ -817,6 +817,10 @@ class PlatformCheckoutService
             'renew_user_tool_id' => $renewTool?->id,
         ];
 
+        if (! empty($data['purchased_at'])) {
+            $domainOptions['purchased_at'] = $data['purchased_at'];
+        }
+
         if ($domainContext !== null) {
             $domainOptions['domain_fqdn'] = $domainContext['fqdn'];
             $domainOptions['domain_tld'] = $domainContext['tld'];

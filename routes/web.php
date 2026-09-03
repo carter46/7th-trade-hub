@@ -393,6 +393,7 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::post('/users/{user}/tools/{tool}/rotate', [UserManagementController::class, 'rotateToolCredentials'])->name('.users.tools.rotate');
         Route::post('/users/{user}/tools/{tool}/check', [UserManagementController::class, 'checkTool'])->name('.users.tools.check');
         Route::post('/users/{user}/tools/{tool}/expiry', [UserManagementController::class, 'adjustToolExpiry'])->name('.users.tools.expiry');
+        Route::post('/users/{user}/domain-connections/{connection}/approve', [UserManagementController::class, 'approveDomainConnection'])->name('.users.domain-connections.approve');
         Route::get('/users/{user}/listings', [UserManagementController::class, 'listings'])->name('.users.listings');
         Route::get('/users/{user}/escrows', [UserManagementController::class, 'escrows'])->name('.users.escrows');
         Route::get('/users/{user}/tickets', [UserManagementController::class, 'tickets'])->name('.users.tickets');

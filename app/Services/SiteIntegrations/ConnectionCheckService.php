@@ -4,10 +4,14 @@ namespace App\Services\SiteIntegrations;
 
 use App\Models\SiteIntegration;
 use App\Models\SiteIntegrationCheckLog;
+use App\Models\User;
 use App\Models\UserTool;
 use App\Models\UserToolIntegration;
+use App\Services\Notifications\NotificationDispatcher;
+use App\Services\Notifications\NotificationMessage;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Throwable;
@@ -20,6 +24,7 @@ class ConnectionCheckService
         private ProtocolV1Signer $signer,
         private IntegrationHttpClient $http,
         private SubscriptionSyncService $subscriptionSync,
+        private NotificationDispatcher $notificationDispatcher,
     ) {}
 
     /**
@@ -60,15 +65,15 @@ class ConnectionCheckService
     {
         $integration = $tool->integration;
         if (! $integration instanceof UserToolIntegration || ! $tool->site_url) {
-            $result = [
+            return [
                 'ok' => false,
                 'http_status' => null,
                 'message' => 'Missing site URL or provisioning integration.',
                 'payload' => null,
             ];
-
-            return $result;
         }
+
+        $previousStatus = $integration->connection_status;
 
         $result = $this->ping(
             $tool->healthUrl(),
@@ -87,6 +92,10 @@ class ConnectionCheckService
 
         if ($result['ok']) {
             $this->subscriptionSync->push($tool->fresh(['integration']));
+
+            if ($previousStatus !== 'ok') {
+                $this->notifyUserToolReady($tool);
+            }
         }
 
         SiteIntegrationCheckLog::create([
@@ -100,6 +109,34 @@ class ConnectionCheckService
         ]);
 
         return $result;
+    }
+
+    private function notifyUserToolReady(UserTool $tool): void
+    {
+        $user = User::query()->find($tool->user_id);
+        if (! $user) {
+            return;
+        }
+
+        $productName = $tool->product?->title ?? $tool->resolvedDisplayName();
+        $toolUrl = Route::has('dashboard.my-tools.show')
+            ? route('dashboard.my-tools.show', $tool)
+            : null;
+
+        $this->notificationDispatcher->notifyUser(
+            $user,
+            new NotificationMessage(
+                type: 'tool.setup_complete',
+                title: __('Your website is ready'),
+                body: __(':product has been set up and connected successfully. You can now access your website, admin login, and other details from My Tools.', [
+                    'product' => $productName,
+                ]),
+                actionUrl: $toolUrl,
+                meta: ['user_tool_id' => $tool->id],
+                emailSubject: __(':product — your website is ready', ['product' => $productName]),
+            ),
+            ['database', 'mail']
+        );
     }
 
     /**

@@ -250,6 +250,23 @@ class DomainConnectionService
         ];
     }
 
+    /**
+     * Admin override: mark a domain connection as verified without DNS check.
+     */
+    public function approveManually(DomainConnection $connection): DomainConnection
+    {
+        DB::transaction(function () use ($connection) {
+            $connection->refresh();
+            $connection->update([
+                'verification_status' => DomainConnection::STATUS_VERIFIED,
+                'verified_at' => now(),
+                'last_checked_at' => now(),
+            ]);
+        });
+
+        return $connection->fresh();
+    }
+
     public function attachUserTool(OrderItem $item, int $userToolId): void
     {
         DomainConnection::query()

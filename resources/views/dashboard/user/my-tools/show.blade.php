@@ -95,15 +95,16 @@
             </p>
         @endif
 
-        <div class="grid gap-6 lg:grid-cols-2">
-            <x-dashboard.card class="space-y-4">
-                <h2 class="text-lg font-semibold text-text-primary">Admin access</h2>
+        <div class="grid min-w-0 gap-6 lg:grid-cols-2">
+            {{-- Website access --}}
+            <x-dashboard.card class="min-w-0 space-y-4">
+                <h2 class="text-lg font-semibold text-text-primary">Website access</h2>
                 <dl class="space-y-3 text-sm">
                     <div>
                         <dt class="text-text-muted">Site URL</dt>
                         <dd class="mt-1 space-y-2">
                             @if ($tool->site_url)
-                                <p class="font-mono text-sm text-text-primary" title="{{ $tool->site_url }}">{{ \Illuminate\Support\Str::limit($tool->site_url, 48) }}</p>
+                                <p class="truncate font-mono text-sm text-text-primary" title="{{ $tool->site_url }}">{{ \Illuminate\Support\Str::limit($tool->site_url, 48) }}</p>
                                 <x-dashboard.button :href="$tool->site_url" size="sm" variant="secondary" target="_blank" rel="noopener">
                                     Open Site
                                 </x-dashboard.button>
@@ -116,7 +117,7 @@
                         <div>
                             <dt class="text-text-muted">Admin login URL</dt>
                             <dd class="mt-1 space-y-2">
-                                <p class="font-mono text-sm text-text-primary" title="{{ $tool->admin_login_url }}">{{ \Illuminate\Support\Str::limit($tool->admin_login_url, 48) }}</p>
+                                <p class="truncate font-mono text-sm text-text-primary" title="{{ $tool->admin_login_url }}">{{ \Illuminate\Support\Str::limit($tool->admin_login_url, 48) }}</p>
                                 <x-dashboard.button :href="$tool->admin_login_url" size="sm" variant="secondary" target="_blank" rel="noopener">
                                     Open admin login link
                                 </x-dashboard.button>
@@ -163,9 +164,73 @@
                 @endif
             </x-dashboard.card>
 
-            <x-dashboard.card class="space-y-3">
+            {{-- Livechat logins --}}
+            @if ($tool->hasLivechatDetails())
+                <x-dashboard.card class="min-w-0 space-y-4">
+                    <h2 class="text-lg font-semibold text-text-primary">Livechat logins</h2>
+                    <dl class="grid gap-4 sm:grid-cols-2 text-sm">
+                        <div>
+                            <dt class="text-text-muted">Livechat name</dt>
+                            <dd class="font-medium text-text-primary">{{ $tool->livechat_name ?: $pendingLabel }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-text-muted">Livechat email</dt>
+                            <dd class="font-medium text-text-primary">{{ $tool->livechat_email ?: $pendingLabel }}</dd>
+                        </div>
+                        <div class="sm:col-span-2">
+                            <dt class="text-text-muted">Livechat link</dt>
+                            <dd class="mt-1 space-y-2">
+                                @if ($tool->livechat_url)
+                                    <p class="truncate font-mono text-sm text-text-primary" title="{{ $tool->livechat_url }}">{{ \Illuminate\Support\Str::limit($tool->livechat_url, 48) }}</p>
+                                    <x-dashboard.button :href="$tool->livechat_url" size="sm" variant="secondary" target="_blank" rel="noopener">
+                                        Open livechat
+                                    </x-dashboard.button>
+                                @else
+                                    <span class="text-text-muted">{{ $pendingLabel }}</span>
+                                @endif
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-text-muted">Password</dt>
+                            <dd class="font-medium text-text-primary">
+                                @if ($tool->livechat_password)
+                                    <span class="text-text-secondary">Saved securely — use Copy password below</span>
+                                @else
+                                    <span class="text-text-muted">{{ $pendingLabel }}</span>
+                                @endif
+                            </dd>
+                        </div>
+                    </dl>
+                    @if ($tool->canRevealLivechatPassword())
+                        <div class="pt-1">
+                            <x-dashboard.button type="button" variant="secondary" size="sm" id="copy-livechat-password" data-url="{{ route('dashboard.my-tools.livechat-password', $tool) }}">
+                                Copy livechat password
+                            </x-dashboard.button>
+                        </div>
+                    @endif
+                </x-dashboard.card>
+            @endif
+
+            {{-- Tutorials --}}
+            @if ($tool->hasTutorialDetails())
+                @php $productTutorial = $tool->product; @endphp
+                <x-dashboard.card class="min-w-0 space-y-4 lg:col-span-2">
+                    <h2 class="text-lg font-semibold text-text-primary">Tutorials</h2>
+                    @if (filled($productTutorial?->tutorial_description))
+                        <p class="text-sm text-text-secondary whitespace-pre-line">{{ $productTutorial->tutorial_description }}</p>
+                    @endif
+                    @if (filled($productTutorial?->tutorial_url))
+                        <x-dashboard.button :href="$productTutorial->tutorial_url" size="sm" variant="secondary" target="_blank" rel="noopener">
+                            Watch tutorial
+                        </x-dashboard.button>
+                    @endif
+                </x-dashboard.card>
+            @endif
+
+            {{-- Subscription (last) --}}
+            <x-dashboard.card class="min-w-0 space-y-3 lg:col-span-2">
                 <h2 class="text-lg font-semibold text-text-primary">Subscription</h2>
-                <dl class="space-y-3 text-sm">
+                <dl class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 text-sm">
                     <div>
                         <dt class="text-text-muted">Plan</dt>
                         <dd class="font-medium text-text-primary">{{ $planLabel }}</dd>
@@ -197,70 +262,6 @@
                     @endif
                 </dl>
             </x-dashboard.card>
-
-            @if ($tool->hasLivechatDetails())
-                <x-dashboard.card class="space-y-4 lg:col-span-2">
-                    <h2 class="text-lg font-semibold text-text-primary">Livechat logins</h2>
-                    <dl class="grid gap-4 sm:grid-cols-2 text-sm">
-                        <div>
-                            <dt class="text-text-muted">Livechat name</dt>
-                            <dd class="font-medium text-text-primary">{{ $tool->livechat_name ?: $pendingLabel }}</dd>
-                        </div>
-                        <div>
-                            <dt class="text-text-muted">Livechat email</dt>
-                            <dd class="font-medium text-text-primary">{{ $tool->livechat_email ?: $pendingLabel }}</dd>
-                        </div>
-                        <div class="sm:col-span-2">
-                            <dt class="text-text-muted">Livechat link</dt>
-                            <dd class="mt-1 space-y-2">
-                                @if ($tool->livechat_url)
-                                    <p class="font-mono text-sm text-text-primary" title="{{ $tool->livechat_url }}">{{ \Illuminate\Support\Str::limit($tool->livechat_url, 48) }}</p>
-                                    <x-dashboard.button :href="$tool->livechat_url" size="sm" variant="secondary" target="_blank" rel="noopener">
-                                        Open livechat
-                                    </x-dashboard.button>
-                                @else
-                                    <span class="text-text-muted">{{ $pendingLabel }}</span>
-                                @endif
-                            </dd>
-                        </div>
-                        <div>
-                            <dt class="text-text-muted">Password</dt>
-                            <dd class="font-medium text-text-primary">
-                                @if ($tool->livechat_password)
-                                    <span class="text-text-secondary">Saved securely — use Copy password below</span>
-                                @else
-                                    <span class="text-text-muted">{{ $pendingLabel }}</span>
-                                @endif
-                            </dd>
-                        </div>
-                    </dl>
-                    @if ($tool->canRevealLivechatPassword())
-                        <div class="pt-1">
-                            <x-dashboard.button type="button" variant="secondary" size="sm" id="copy-livechat-password" data-url="{{ route('dashboard.my-tools.livechat-password', $tool) }}">
-                                Copy livechat password
-                            </x-dashboard.button>
-                        </div>
-                    @endif
-                </x-dashboard.card>
-            @endif
-
-            @if ($tool->hasTutorialDetails())
-                @php $productTutorial = $tool->product; @endphp
-                <x-dashboard.card class="space-y-4 lg:col-span-2">
-                    <h2 class="text-lg font-semibold text-text-primary">Tutorials</h2>
-                    @if (filled($productTutorial?->tutorial_description))
-                        <p class="text-sm text-text-secondary whitespace-pre-line">{{ $productTutorial->tutorial_description }}</p>
-                    @endif
-                    @if (filled($productTutorial?->tutorial_url))
-                        <div class="space-y-2">
-                            <p class="break-all font-mono text-sm text-text-primary">{{ $productTutorial->tutorial_url }}</p>
-                            <x-dashboard.button :href="$productTutorial->tutorial_url" size="sm" variant="secondary" target="_blank" rel="noopener">
-                                Watch tutorial
-                            </x-dashboard.button>
-                        </div>
-                    @endif
-                </x-dashboard.card>
-            @endif
         </div>
     </div>
 </x-layout.page>
