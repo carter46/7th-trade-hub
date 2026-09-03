@@ -82,15 +82,33 @@
     </div>
 
     @if ($isPendingSetup)
+        @php
+            $prefillSiteUrl = old('site_url', $suggestedSiteUrl ?? $tool->suggestedSiteUrl());
+        @endphp
         <x-dashboard.card class="mb-6">
             <h3 class="mb-4 text-sm font-semibold text-text-primary">Initial setup</h3>
             <p class="mb-4 text-sm text-text-secondary">Configure this purchased website tool and generate unique owned credentials (never demo credentials).</p>
             <form method="POST" action="{{ route('admin.users.tools.setup', [$user, $tool]) }}" class="space-y-4">
                 @csrf
-                <x-dashboard.input name="site_url" label="Website URL" type="url" :value="old('site_url', $tool->site_url)" required />
+                <x-dashboard.input name="site_url" label="Website URL" type="url" :value="$prefillSiteUrl" required />
+                @if ($tool->connectedDomainFqdn())
+                    <p class="text-xs text-text-muted">Prefills from the domain connected at purchase (<span class="font-mono">{{ $tool->connectedDomainFqdn() }}</span>). You can clear or change it.</p>
+                @endif
                 <x-dashboard.input name="admin_login_url" label="Admin login URL" type="url" :value="old('admin_login_url', $tool->admin_login_url)" required />
                 <x-dashboard.input name="admin_email" label="Admin email" type="email" :value="old('admin_email', $tool->admin_email)" required />
                 <x-dashboard.input name="admin_password" label="Admin password" type="text" required autocomplete="off" />
+
+                <div class="rounded-xl border border-border-default bg-muted/30 p-4 space-y-4">
+                    <div>
+                        <h4 class="text-sm font-semibold text-text-primary">Livechat logins</h4>
+                        <p class="mt-1 text-xs text-text-muted">Optional. Customer can view these on My Tools and copy the livechat password.</p>
+                    </div>
+                    <x-dashboard.input name="livechat_name" label="Livechat name" type="text" :value="old('livechat_name', $tool->livechat_name)" />
+                    <x-dashboard.input name="livechat_url" label="Livechat link" type="url" :value="old('livechat_url', $tool->livechat_url)" />
+                    <x-dashboard.input name="livechat_email" label="Livechat email" type="email" :value="old('livechat_email', $tool->livechat_email)" />
+                    <x-dashboard.input name="livechat_password" label="Livechat password" type="text" autocomplete="off" />
+                </div>
+
                 <p class="text-xs text-text-muted">Saving starts the subscription clock and generates provisioning API keys for the merchant site.</p>
                 <x-dashboard.button type="submit">Save & generate keys</x-dashboard.button>
             </form>
@@ -141,6 +159,21 @@
                     />
                     <p class="text-xs text-text-muted">Adjust the paid window for this tool. Updates merchant subscription sync when the site is connected.</p>
                     <x-dashboard.button type="submit" variant="secondary">Update expiry</x-dashboard.button>
+                </form>
+            </x-dashboard.card>
+
+            <x-dashboard.card class="lg:col-span-2">
+                <h3 class="mb-4 text-sm font-semibold text-text-primary">Livechat logins</h3>
+                <p class="mb-4 text-xs text-text-muted">Visible on the customer’s My Tools page. Password is never shown in plain text — they can copy it like the site password.</p>
+                <form method="POST" action="{{ route('admin.users.tools.livechat', [$user, $tool]) }}" class="grid gap-4 sm:grid-cols-2">
+                    @csrf
+                    <x-dashboard.input name="livechat_name" label="Livechat name" type="text" :value="old('livechat_name', $tool->livechat_name)" />
+                    <x-dashboard.input name="livechat_url" label="Livechat link" type="url" :value="old('livechat_url', $tool->livechat_url)" />
+                    <x-dashboard.input name="livechat_email" label="Livechat email" type="email" :value="old('livechat_email', $tool->livechat_email)" />
+                    <x-dashboard.input name="livechat_password" label="Livechat password" type="text" autocomplete="off" hint="Leave blank to keep the current password." />
+                    <div class="sm:col-span-2">
+                        <x-dashboard.button type="submit" variant="secondary">Save livechat logins</x-dashboard.button>
+                    </div>
                 </form>
             </x-dashboard.card>
 

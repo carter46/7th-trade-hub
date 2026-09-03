@@ -235,6 +235,18 @@
                         {{ auth()->check() ? 'Buy Now' : 'Log in to buy' }}
                     </x-ui.button>
                     @include('partials.catalog.view-demo-modal', ['product' => $product])
+                    @if ($product->hasTutorialDetails() && filled($product->tutorial_url))
+                        <x-ui.button
+                            :href="$product->tutorial_url"
+                            variant="secondary"
+                            size="lg"
+                            class="!bg-slate-100 !text-slate-800 !border-slate-200 hover:!bg-slate-200"
+                            target="_blank"
+                            rel="noopener"
+                        >
+                            Watch tutorial
+                        </x-ui.button>
+                    @endif
                     @auth
                         <form method="POST" action="{{ route('favorites.toggle') }}">
                             @csrf

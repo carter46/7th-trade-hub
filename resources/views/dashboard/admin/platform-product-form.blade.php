@@ -85,6 +85,32 @@
                 :preview-url="$heroPreview"
             />
 
+            @unless ($isDomainProduct)
+                <div class="space-y-3 rounded-xl border border-border-subtle px-4 py-4">
+                    <div>
+                        <p class="text-sm font-medium text-text-primary">Tutorials</p>
+                        <p class="mt-1 text-xs text-text-muted">Shown on the product page and on My Tools after a customer purchases this product. Set once here — not per user.</p>
+                    </div>
+                    <x-dashboard.input
+                        label="Tutorial video URL"
+                        name="tutorial_url"
+                        type="url"
+                        :value="old('tutorial_url', $product->tutorial_url)"
+                        placeholder="https://www.youtube.com/watch?v=…"
+                    />
+                    <div>
+                        <label for="tutorial_description" class="mb-1 block text-sm font-medium text-text-secondary">Tutorial description</label>
+                        <textarea
+                            id="tutorial_description"
+                            name="tutorial_description"
+                            rows="3"
+                            class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2.5 text-sm"
+                            placeholder="Short note about what this tutorial covers"
+                        >{{ old('tutorial_description', $product->tutorial_description) }}</textarea>
+                    </div>
+                </div>
+            @endunless
+
             @if ($isDomainProduct)
                 <div class="space-y-3 rounded-xl border border-border-subtle px-4 py-4">
                     <p class="text-sm font-medium text-text-primary">Domain pricing policy</p>

@@ -161,6 +161,8 @@ class AdminManualPurchaseTest extends TestCase
         $tool = UserTool::query()->where('user_id', $member->id)->first();
         $this->assertNotNull($tool);
         $this->assertSame(UserToolStatus::PendingSetup, $tool->status);
+        $this->assertSame('https://shop.customer-example.com', $tool->site_url);
+        $this->assertSame('https://shop.customer-example.com', $tool->suggestedSiteUrl());
 
         $order = Order::query()->where('user_id', $member->id)->with('items')->first();
         $this->assertNotNull($order);
@@ -199,5 +201,89 @@ class AdminManualPurchaseTest extends TestCase
             $newExpiry,
             $tool->fresh()->expires_at?->format('Y-m-d')
         );
+    }
+
+    public function test_admin_can_save_livechat_logins_and_user_can_copy_password(): void
+    {
+        $admin = $this->adminUser();
+        $member = $this->memberUser();
+        $product = $this->seedVpnProduct();
+
+        $tool = UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'platform_product_variant_id' => $product->activeVariants->first()->id,
+            'status' => UserToolStatus::Active,
+            'purchased_at' => now()->subDay(),
+            'configured_at' => now()->subDay(),
+            'expires_at' => now()->addMonths(3),
+            'duration_months' => 3,
+            'site_url' => 'https://customer.example.com',
+            'admin_email' => 'owner@example.com',
+            'admin_password' => 'SitePass123!',
+            'instance_sequence' => 1,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.tools.livechat', [$member, $tool]), [
+                'livechat_name' => 'Jivo Support',
+                'livechat_url' => 'https://app.jivochat.com/login',
+                'livechat_email' => 'chat@example.com',
+                'livechat_password' => 'ChatPass123!',
+            ])
+            ->assertRedirect(route('admin.users.tools.show', [$member, $tool]))
+            ->assertSessionHas('status');
+
+        $tool->refresh();
+        $this->assertSame('Jivo Support', $tool->livechat_name);
+        $this->assertSame('https://app.jivochat.com/login', $tool->livechat_url);
+        $this->assertSame('chat@example.com', $tool->livechat_email);
+        $this->assertSame('ChatPass123!', $tool->livechat_password);
+
+        $this->actingAs($member)
+            ->get(route('dashboard.my-tools.show', $tool))
+            ->assertOk()
+            ->assertSee('Livechat logins')
+            ->assertSee('Jivo Support')
+            ->assertSee('chat@example.com');
+
+        $this->actingAs($member)
+            ->postJson(route('dashboard.my-tools.livechat-password', $tool))
+            ->assertOk()
+            ->assertJson(['password' => 'ChatPass123!']);
+    }
+
+    public function test_product_tutorial_shows_on_product_page_and_my_tools(): void
+    {
+        $member = $this->memberUser();
+        $product = $this->seedVpnProduct();
+        $product->forceFill([
+            'tutorial_url' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+            'tutorial_description' => 'How to set up your banking site admin panel.',
+        ])->save();
+
+        $this->actingAs($member)
+            ->get(route('dashboard.services.product', $product->slug))
+            ->assertOk()
+            ->assertSee('Watch tutorial')
+            ->assertSee('How to set up your banking site admin panel.');
+
+        $tool = UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'status' => UserToolStatus::Active,
+            'purchased_at' => now()->subDay(),
+            'configured_at' => now()->subDay(),
+            'expires_at' => now()->addMonths(3),
+            'site_url' => 'https://customer.example.com',
+            'instance_sequence' => 1,
+        ]);
+
+        $this->actingAs($member)
+            ->get(route('dashboard.my-tools.show', $tool))
+            ->assertOk()
+            ->assertSee('Tutorials')
+            ->assertSee('How to set up your banking site admin panel.')
+            ->assertSee('Watch tutorial');
     }
 }

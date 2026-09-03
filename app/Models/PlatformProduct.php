@@ -25,6 +25,8 @@ class PlatformProduct extends Model
         'demo_url',
         'demo_username',
         'demo_password',
+        'tutorial_url',
+        'tutorial_description',
         'industry',
         'framework',
         'is_responsive',
@@ -236,5 +238,10 @@ class PlatformProduct extends Model
         }
 
         return media_url(null, $this->hero_image, 'medium');
+    }
+
+    public function hasTutorialDetails(): bool
+    {
+        return filled($this->tutorial_url) || filled($this->tutorial_description);
     }
 }

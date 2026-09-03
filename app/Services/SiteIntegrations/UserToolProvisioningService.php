@@ -59,6 +59,12 @@ class UserToolProvisioningService
         $variant = $item->variant;
         $duration = (int) ($variant?->duration_months ?? 0);
 
+        $siteUrl = null;
+        $fqdn = $options['domain_fqdn'] ?? $options['domain_name'] ?? null;
+        if (is_string($fqdn) && trim($fqdn) !== '') {
+            $siteUrl = 'https://'.strtolower(trim($fqdn));
+        }
+
         $tool = UserTool::create([
             'user_id' => $order->user_id,
             'order_id' => $order->id,
@@ -70,6 +76,7 @@ class UserToolProvisioningService
                 ? $product->title.' #'.$sequence
                 : $product->title,
             'status' => UserToolStatus::PendingSetup,
+            'site_url' => $siteUrl,
             'purchased_at' => now(),
             'duration_months' => $duration > 0 ? $duration : null,
         ]);
@@ -114,11 +121,17 @@ class UserToolProvisioningService
                 'admin_login_url' => $data['admin_login_url'],
                 'admin_email' => strtolower(trim($data['admin_email'])),
                 'admin_password' => $data['admin_password'],
+                'livechat_name' => isset($data['livechat_name']) ? (trim((string) $data['livechat_name']) ?: null) : $locked->livechat_name,
+                'livechat_url' => isset($data['livechat_url']) ? (trim((string) $data['livechat_url']) ?: null) : $locked->livechat_url,
+                'livechat_email' => isset($data['livechat_email']) ? (strtolower(trim((string) $data['livechat_email'])) ?: null) : $locked->livechat_email,
                 'status' => UserToolStatus::Active,
                 'configured_at' => now(),
                 'expires_at' => now()->addMonths($duration),
                 'duration_months' => $duration,
             ]);
+            if (array_key_exists('livechat_password', $data) && filled($data['livechat_password'])) {
+                $locked->livechat_password = $data['livechat_password'];
+            }
             $locked->save();
 
             $integration = $locked->integration;
@@ -213,6 +226,50 @@ class UserToolProvisioningService
         });
 
         $this->connectionCheck->checkOwned($tool->fresh(['integration']));
+
+        return ['tool' => $tool->fresh(['integration', 'product', 'variant'])];
+    }
+
+    /**
+     * Update livechat login details without touching subscription or site credentials.
+     *
+     * @param  array{livechat_name?: string|null, livechat_url?: string|null, livechat_email?: string|null, livechat_password?: string|null}  $data
+     * @return array{tool: UserTool}
+     */
+    public function updateLivechat(UserTool $tool, array $data, ?User $admin = null, ?string $ip = null): array
+    {
+        if ($tool->status === UserToolStatus::PendingSetup) {
+            throw new InvalidArgumentException('Complete initial setup before saving livechat logins.');
+        }
+
+        $tool = DB::transaction(function () use ($tool, $data, $admin, $ip) {
+            $locked = UserTool::query()->whereKey($tool->id)->lockForUpdate()->firstOrFail();
+
+            $locked->livechat_name = array_key_exists('livechat_name', $data)
+                ? (trim((string) ($data['livechat_name'] ?? '')) ?: null)
+                : $locked->livechat_name;
+            $locked->livechat_url = array_key_exists('livechat_url', $data)
+                ? (trim((string) ($data['livechat_url'] ?? '')) ?: null)
+                : $locked->livechat_url;
+            $locked->livechat_email = array_key_exists('livechat_email', $data)
+                ? (strtolower(trim((string) ($data['livechat_email'] ?? ''))) ?: null)
+                : $locked->livechat_email;
+
+            if (array_key_exists('livechat_password', $data) && filled($data['livechat_password'])) {
+                $locked->livechat_password = $data['livechat_password'];
+            }
+
+            $locked->save();
+
+            $this->audit->log($admin?->id, 'user_tool.livechat_updated', $locked, null, [
+                'livechat_name' => $locked->livechat_name,
+                'livechat_url' => $locked->livechat_url,
+                'livechat_email' => $locked->livechat_email,
+                'password_updated' => array_key_exists('livechat_password', $data) && filled($data['livechat_password']),
+            ], $ip, ['module' => 'site_integrations']);
+
+            return $locked;
+        });
 
         return ['tool' => $tool->fresh(['integration', 'product', 'variant'])];
     }

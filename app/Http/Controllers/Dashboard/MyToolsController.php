@@ -177,4 +177,26 @@ class MyToolsController extends Controller
             'password' => $tool->admin_password,
         ])->header('Cache-Control', 'no-store');
     }
+
+    public function copyLivechatPassword(Request $request, UserTool $tool): JsonResponse
+    {
+        abort_unless($tool->user_id === $request->user()->id, 404);
+
+        if (! $tool->canRevealLivechatPassword()) {
+            return response()->json(['message' => 'Livechat password is not available for this tool.'], 422)
+                ->header('Cache-Control', 'no-store');
+        }
+
+        $this->audit->log($request->user()->id, 'user_tool.livechat_password_copied', $tool, null, [
+            'tool_id' => $tool->id,
+        ], $request->ip(), [
+            'actor_type' => 'user',
+            'actor_id' => $request->user()->id,
+            'module' => 'site_integrations',
+        ]);
+
+        return response()->json([
+            'password' => $tool->livechat_password,
+        ])->header('Cache-Control', 'no-store');
+    }
 }

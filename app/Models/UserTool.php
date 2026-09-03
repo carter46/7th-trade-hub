@@ -13,6 +13,7 @@ class UserTool extends Model
 {
     protected $hidden = [
         'admin_password',
+        'livechat_password',
     ];
 
     protected $fillable = [
@@ -29,6 +30,10 @@ class UserTool extends Model
         'admin_login_url',
         'admin_email',
         'admin_password',
+        'livechat_name',
+        'livechat_url',
+        'livechat_email',
+        'livechat_password',
         'purchased_at',
         'configured_at',
         'expires_at',
@@ -41,6 +46,7 @@ class UserTool extends Model
         return [
             'status' => UserToolStatus::class,
             'admin_password' => 'encrypted',
+            'livechat_password' => 'encrypted',
             'purchased_at' => 'datetime',
             'configured_at' => 'datetime',
             'expires_at' => 'datetime',
@@ -90,6 +96,11 @@ class UserTool extends Model
     public function integration(): HasOne
     {
         return $this->hasOne(UserToolIntegration::class);
+    }
+
+    public function domainConnection(): HasOne
+    {
+        return $this->hasOne(DomainConnection::class);
     }
 
     /**
@@ -168,6 +179,65 @@ class UserTool extends Model
     public function canRevealAdminPassword(): bool
     {
         return $this->isSubscriptionLive() && is_string($this->admin_password) && $this->admin_password !== '';
+    }
+
+    public function canRevealLivechatPassword(): bool
+    {
+        return $this->isSubscriptionLive()
+            && is_string($this->livechat_password)
+            && $this->livechat_password !== '';
+    }
+
+    public function hasLivechatDetails(): bool
+    {
+        return filled($this->livechat_name)
+            || filled($this->livechat_url)
+            || filled($this->livechat_email)
+            || filled($this->livechat_password);
+    }
+
+    public function hasTutorialDetails(): bool
+    {
+        $product = $this->product;
+
+        return $product
+            && (filled($product->tutorial_url) || filled($product->tutorial_description));
+    }
+
+    /**
+     * Prefer stored site_url; otherwise derive https://{domain} from the purchase connection.
+     */
+    public function suggestedSiteUrl(): ?string
+    {
+        if (filled($this->site_url)) {
+            return $this->site_url;
+        }
+
+        $fqdn = $this->connectedDomainFqdn();
+        if ($fqdn === null) {
+            return null;
+        }
+
+        return 'https://'.$fqdn;
+    }
+
+    public function connectedDomainFqdn(): ?string
+    {
+        $options = $this->orderItem?->options ?? [];
+        $fromOrder = $options['domain_fqdn'] ?? $options['domain_name'] ?? null;
+        if (is_string($fromOrder) && trim($fromOrder) !== '') {
+            return strtolower(trim($fromOrder));
+        }
+
+        $connection = $this->relationLoaded('domainConnection')
+            ? $this->getRelation('domainConnection')
+            : DomainConnection::query()->where('user_tool_id', $this->id)->first();
+
+        if ($connection && filled($connection->fqdn)) {
+            return strtolower(trim((string) $connection->fqdn));
+        }
+
+        return null;
     }
 
     public function resolvedDisplayName(): string

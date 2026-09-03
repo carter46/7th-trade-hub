@@ -154,6 +154,8 @@ class PlatformProductAdminController extends Controller
             'domain_usd_ngn_rate' => ['nullable', 'numeric', 'min:0'],
             'allowed_tlds' => ['nullable', 'array', 'min:1'],
             'allowed_tlds.*' => ['string', 'max:63'],
+            'tutorial_url' => ['nullable', 'url', 'max:500'],
+            'tutorial_description' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $heroMediaId = filled($data['hero_media_id'] ?? null) ? (int) $data['hero_media_id'] : null;
@@ -168,6 +170,15 @@ class PlatformProductAdminController extends Controller
             'hero_media_id' => $heroMediaId,
             'hero_image' => $heroPath,
         ];
+
+        if ($platformProduct->product_type !== PlatformProductType::Domain) {
+            $updatePayload['tutorial_url'] = filled($data['tutorial_url'] ?? null)
+                ? trim((string) $data['tutorial_url'])
+                : null;
+            $updatePayload['tutorial_description'] = filled($data['tutorial_description'] ?? null)
+                ? trim((string) $data['tutorial_description'])
+                : null;
+        }
 
         if ($platformProduct->product_type === PlatformProductType::Domain) {
             $meta = $platformProduct->meta ?? [];

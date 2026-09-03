@@ -283,6 +283,9 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
     Route::post('/my-tools/{tool}/credentials/password', [\App\Http\Controllers\Dashboard\MyToolsController::class, 'copyPassword'])
         ->middleware('throttle:10,1')
         ->name('.my-tools.password');
+    Route::post('/my-tools/{tool}/credentials/livechat-password', [\App\Http\Controllers\Dashboard\MyToolsController::class, 'copyLivechatPassword'])
+        ->middleware('throttle:10,1')
+        ->name('.my-tools.livechat-password');
 
     Route::get('/my-domains', [\App\Http\Controllers\Dashboard\MyDomainsController::class, 'index'])->name('.my-domains');
     Route::get('/my-domains/connections/{connection}', [\App\Http\Controllers\Dashboard\MyDomainsController::class, 'showConnection'])->name('.my-domains.connections.show');
@@ -383,6 +386,7 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::get('/users/{user}/tools/{tool}', [UserManagementController::class, 'manageTool'])->name('.users.tools.show');
         Route::post('/users/{user}/tools/{tool}/setup', [UserManagementController::class, 'setupTool'])->name('.users.tools.setup');
         Route::post('/users/{user}/tools/{tool}/reconfigure', [UserManagementController::class, 'reconfigureTool'])->name('.users.tools.reconfigure');
+        Route::post('/users/{user}/tools/{tool}/livechat', [UserManagementController::class, 'updateToolLivechat'])->name('.users.tools.livechat');
         Route::post('/users/{user}/tools/{tool}/rotate', [UserManagementController::class, 'rotateToolCredentials'])->name('.users.tools.rotate');
         Route::post('/users/{user}/tools/{tool}/check', [UserManagementController::class, 'checkTool'])->name('.users.tools.check');
         Route::post('/users/{user}/tools/{tool}/expiry', [UserManagementController::class, 'adjustToolExpiry'])->name('.users.tools.expiry');

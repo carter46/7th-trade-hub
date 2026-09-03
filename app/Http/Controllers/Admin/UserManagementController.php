@@ -200,7 +200,7 @@ class UserManagementController extends Controller
         $this->ensureMember($user);
         abort_unless($tool->user_id === $user->id, 404);
 
-        $tool->load(['product', 'variant', 'integration']);
+        $tool->load(['product', 'variant', 'integration', 'orderItem', 'domainConnection']);
 
         $logs = $tool->integration
             ? SiteIntegrationCheckLog::query()
@@ -216,6 +216,7 @@ class UserManagementController extends Controller
             'tool' => $tool,
             'logs' => $logs,
             'freshCredentials' => session('fresh_tool_credentials'),
+            'suggestedSiteUrl' => $tool->suggestedSiteUrl(),
         ]);
     }
 
@@ -229,6 +230,10 @@ class UserManagementController extends Controller
             'admin_login_url' => ['required', 'url', 'max:500'],
             'admin_email' => ['required', 'email', 'max:255'],
             'admin_password' => ['required', 'string', 'min:6', 'max:255'],
+            'livechat_name' => ['nullable', 'string', 'max:255'],
+            'livechat_url' => ['nullable', 'url', 'max:500'],
+            'livechat_email' => ['nullable', 'email', 'max:255'],
+            'livechat_password' => ['nullable', 'string', 'min:4', 'max:255'],
         ]);
 
         try {
@@ -266,6 +271,30 @@ class UserManagementController extends Controller
         return redirect()
             ->route('admin.users.tools.show', [$user, $tool])
             ->with('status', 'Tool reconfigured. Subscription expiry was not changed.');
+    }
+
+    public function updateToolLivechat(Request $request, User $user, \App\Models\UserTool $tool): RedirectResponse
+    {
+        $this->ensureMember($user);
+        abort_unless($tool->user_id === $user->id, 404);
+
+        $data = $request->validate([
+            'livechat_name' => ['nullable', 'string', 'max:255'],
+            'livechat_url' => ['nullable', 'url', 'max:500'],
+            'livechat_email' => ['nullable', 'email', 'max:255'],
+            'livechat_password' => ['nullable', 'string', 'min:4', 'max:255'],
+        ]);
+
+        try {
+            app(\App\Services\SiteIntegrations\UserToolProvisioningService::class)
+                ->updateLivechat($tool, $data, $request->user(), $request->ip());
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return redirect()
+            ->route('admin.users.tools.show', [$user, $tool])
+            ->with('status', 'Livechat logins saved.');
     }
 
     public function rotateToolCredentials(Request $request, User $user, \App\Models\UserTool $tool): RedirectResponse

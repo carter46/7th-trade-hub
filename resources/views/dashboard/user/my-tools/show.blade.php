@@ -197,6 +197,70 @@
                     @endif
                 </dl>
             </x-dashboard.card>
+
+            @if ($tool->hasLivechatDetails())
+                <x-dashboard.card class="space-y-4 lg:col-span-2">
+                    <h2 class="text-lg font-semibold text-text-primary">Livechat logins</h2>
+                    <dl class="grid gap-4 sm:grid-cols-2 text-sm">
+                        <div>
+                            <dt class="text-text-muted">Livechat name</dt>
+                            <dd class="font-medium text-text-primary">{{ $tool->livechat_name ?: $pendingLabel }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-text-muted">Livechat email</dt>
+                            <dd class="font-medium text-text-primary">{{ $tool->livechat_email ?: $pendingLabel }}</dd>
+                        </div>
+                        <div class="sm:col-span-2">
+                            <dt class="text-text-muted">Livechat link</dt>
+                            <dd class="mt-1 space-y-2">
+                                @if ($tool->livechat_url)
+                                    <p class="break-all font-mono text-sm text-text-primary">{{ $tool->livechat_url }}</p>
+                                    <x-dashboard.button :href="$tool->livechat_url" size="sm" variant="secondary" target="_blank" rel="noopener">
+                                        Open livechat
+                                    </x-dashboard.button>
+                                @else
+                                    <span class="text-text-muted">{{ $pendingLabel }}</span>
+                                @endif
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-text-muted">Password</dt>
+                            <dd class="font-medium text-text-primary">
+                                @if ($tool->livechat_password)
+                                    <span class="text-text-secondary">Saved securely — use Copy password below</span>
+                                @else
+                                    <span class="text-text-muted">{{ $pendingLabel }}</span>
+                                @endif
+                            </dd>
+                        </div>
+                    </dl>
+                    @if ($tool->canRevealLivechatPassword())
+                        <div class="pt-1">
+                            <x-dashboard.button type="button" variant="secondary" size="sm" id="copy-livechat-password" data-url="{{ route('dashboard.my-tools.livechat-password', $tool) }}">
+                                Copy livechat password
+                            </x-dashboard.button>
+                        </div>
+                    @endif
+                </x-dashboard.card>
+            @endif
+
+            @if ($tool->hasTutorialDetails())
+                @php $productTutorial = $tool->product; @endphp
+                <x-dashboard.card class="space-y-4 lg:col-span-2">
+                    <h2 class="text-lg font-semibold text-text-primary">Tutorials</h2>
+                    @if (filled($productTutorial?->tutorial_description))
+                        <p class="text-sm text-text-secondary whitespace-pre-line">{{ $productTutorial->tutorial_description }}</p>
+                    @endif
+                    @if (filled($productTutorial?->tutorial_url))
+                        <div class="space-y-2">
+                            <p class="break-all font-mono text-sm text-text-primary">{{ $productTutorial->tutorial_url }}</p>
+                            <x-dashboard.button :href="$productTutorial->tutorial_url" size="sm" variant="secondary" target="_blank" rel="noopener">
+                                Watch tutorial
+                            </x-dashboard.button>
+                        </div>
+                    @endif
+                </x-dashboard.card>
+            @endif
         </div>
     </div>
 </x-layout.page>
@@ -204,9 +268,8 @@
 @push('scripts')
 <script>
 (() => {
-  const btn = document.getElementById('copy-tool-password');
-  if (!btn) return;
-  btn.addEventListener('click', async () => {
+  async function copySecret(btn, defaultLabel) {
+    if (!btn) return;
     const url = btn.getAttribute('data-url');
     const token = document.querySelector('meta[name="csrf-token"]')?.content;
     try {
@@ -222,11 +285,21 @@
       if (!res.ok) throw new Error(data.message || 'Unable to copy');
       await navigator.clipboard.writeText(data.password);
       btn.textContent = 'Copied';
-      setTimeout(() => { btn.textContent = 'Copy password'; }, 2000);
+      setTimeout(() => { btn.textContent = defaultLabel; }, 2000);
     } catch (e) {
       alert(e.message || 'Copy failed');
     }
-  });
+  }
+
+  const siteBtn = document.getElementById('copy-tool-password');
+  if (siteBtn) {
+    siteBtn.addEventListener('click', () => copySecret(siteBtn, 'Copy password'));
+  }
+
+  const livechatBtn = document.getElementById('copy-livechat-password');
+  if (livechatBtn) {
+    livechatBtn.addEventListener('click', () => copySecret(livechatBtn, 'Copy livechat password'));
+  }
 })();
 </script>
 @endpush
