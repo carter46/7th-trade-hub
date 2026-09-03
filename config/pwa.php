@@ -21,7 +21,7 @@ return [
     'manifest' => [
         'name' => '7th Trade Hub',
         'short_name' => '7thHub',
-        'background_color' => '#0F172A',
+        'background_color' => '#FFFFFF',
         'display' => 'standalone',
         'description' => '7th Trade Hub — digital services marketplace (crypto exchange, social growth, receipts, documents, listings).',
         'theme_color' => '#0B6A39',
@@ -39,6 +39,18 @@ return [
                 'sizes' => '192x192',
                 'type' => 'image/png',
                 'purpose' => 'any',
+            ],
+            [
+                'src' => '/icons/icon-512x512-maskable.png',
+                'sizes' => '512x512',
+                'type' => 'image/png',
+                'purpose' => 'maskable',
+            ],
+            [
+                'src' => '/icons/icon-192x192-maskable.png',
+                'sizes' => '192x192',
+                'type' => 'image/png',
+                'purpose' => 'maskable',
             ],
         ],
     ],

@@ -382,11 +382,16 @@ window.cryptoSellTracker = function (initial, statusUrl, qrUrl, supportUrl, refr
             }
         },
         async copyAddress() {
-            try {
-                await navigator.clipboard.writeText(this.payload.platform_address || '');
+            const copyFn = window.copyToClipboard;
+            const ok = typeof copyFn === 'function'
+                ? await copyFn(this.payload.platform_address || '')
+                : false;
+            if (ok) {
                 this.copied = true;
                 setTimeout(() => { this.copied = false; }, 1500);
-            } catch (e) {}
+                return;
+            }
+            alert(window.copyFailedMessage?.() || 'Unable to copy.');
         },
     };
 };

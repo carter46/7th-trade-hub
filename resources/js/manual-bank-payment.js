@@ -111,17 +111,20 @@ export function registerManualBankPayment(Alpine) {
             if (!this.accountNumber) {
                 return;
             }
-            try {
-                await navigator.clipboard.writeText(this.accountNumber);
+            const copy = window.copyToClipboard;
+            const ok = typeof copy === 'function'
+                ? await copy(this.accountNumber)
+                : false;
+            if (ok) {
                 this.copied = true;
                 setTimeout(() => {
                     this.copied = false;
                 }, 2000);
-            } catch (e) {
-                window.dispatchEvent(new CustomEvent('toast', {
-                    detail: { type: 'danger', message: 'Unable to copy account number.' },
-                }));
+                return;
             }
+            window.dispatchEvent(new CustomEvent('toast', {
+                detail: { type: 'danger', message: window.copyFailedMessage?.() || 'Unable to copy account number.' },
+            }));
         },
         async submitProof() {
             if (this.submitting) {

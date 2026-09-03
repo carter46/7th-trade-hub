@@ -43,6 +43,24 @@ class IntegrationDocsControllerTest extends TestCase
         $response->assertSee('seventh_tradehub_validate_token', false);
     }
 
+    public function test_integration_docs_show_credential_sync_sample(): void
+    {
+        $response = $this->get(route('developers.integrations.show', ['path' => 'samples/php/sync-admin-credentials.php']));
+
+        $response->assertOk();
+        $response->assertSee('owned.admin_credentials.updated', false);
+    }
+
+    public function test_integration_docs_show_credential_sync_endpoint_contract(): void
+    {
+        $response = $this->get(route('developers.integrations.show', ['path' => 'ENDPOINTS-REFERENCE']));
+
+        $response->assertOk();
+        $response->assertSee('Owned admin credential sync', false);
+        $response->assertSee('credential_sync', false);
+        $response->assertSee('identity.email', false);
+    }
+
     public function test_samples_directory_redirects_to_index(): void
     {
         $response = $this->get('/developers/integrations/samples');

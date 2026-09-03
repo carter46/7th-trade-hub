@@ -14,9 +14,11 @@
 
 | HTTP | Meaning |
 | ---- | ------- |
-| 200 | Accepted (`{ "ok": true }`) |
-| 401 | Invalid webhook secret |
+| 200 | Accepted (`{ "ok": true }`; credential sync may include `"deduped": true`) |
+| 401 | Invalid webhook secret, client id, or Protocol v1 signature (credential sync) |
+| 403 | Credential sync posted against a **demo** integration |
 | 404 | Unknown integration id |
+| 422 | Credential sync: expired assertion, invalid email/password, missing fields |
 
 ## Hub Check Connection / sync failures (operator-facing)
 
@@ -35,7 +37,7 @@
 | Missing/wrong `X-7TH-Client-Id` or `X-7TH-Integration-Id` | 401 |
 | Expired assertion (`expires_at` past) | 401 |
 | Unknown `integration_id` | 404 |
-| Subscription expired | Refuse SSO; show shutdown UI |
+| Subscription expired | Fail-closed UI for users and regular admins; login page/form stay up; only super admin may enter after password login; refuse Hub SSO |
 | Stale sync (older than stored) | Ignore; keep newer state |
 | Validate token missing/invalid | Do not create session; show error page |
 
@@ -94,4 +96,12 @@ Subscription sync may return `{ "ok": true }` or an empty 200 body — Hub treat
 
 ## Webhook events (site → Hub)
 
-Protocol v1 documents **`ping`** only. Send `{ "event": "ping" }` to verify connectivity. Additional event types may be added in future protocol versions; unsupported events should return 422 with a clear message if you implement a generic receiver.
+Hub accepts:
+
+| `event` | Auth | Effect |
+| ------- | ---- | ------ |
+| `ping` (or omitted) | `X-7TH-Webhook-Secret` only | Logged; `{ "ok": true }`. Does not change connection or keys. |
+| `owned.admin_credentials.updated` | Secret + `X-7TH-Client-Id` + Protocol v1 HMAC | Owned only. Updates stored admin email/password. Demo → 403. |
+| Any other event name | Secret only | Treated like ping (`200 { "ok": true }`) for forward compatibility. |
+
+Do **not** send `owned.admin_credentials.updated` without a signed body — Hub will not treat it as a ping.

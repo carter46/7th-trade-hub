@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Enums\UserToolStatus;
 use App\Models\UserTool;
 use App\Services\SiteIntegrations\SubscriptionSyncService;
+use App\Services\SiteIntegrations\UserToolLifecycleNotifier;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -14,7 +15,7 @@ class ExpireUserToolsCommand extends Command
 
     protected $description = 'Mark expired user tools and push subscription status to external sites';
 
-    public function handle(SubscriptionSyncService $sync): int
+    public function handle(SubscriptionSyncService $sync, UserToolLifecycleNotifier $lifecycleNotifier): int
     {
         $ids = UserTool::query()
             ->where('status', '!=', UserToolStatus::Expired)
@@ -24,9 +25,9 @@ class ExpireUserToolsCommand extends Command
 
         $count = 0;
         foreach ($ids as $id) {
-            $pushed = DB::transaction(function () use ($id, $sync) {
+            $tool = DB::transaction(function () use ($id, $sync) {
                 $tool = UserTool::query()
-                    ->with('integration')
+                    ->with(['integration', 'product', 'user'])
                     ->whereKey($id)
                     ->lockForUpdate()
                     ->first();
@@ -45,20 +46,21 @@ class ExpireUserToolsCommand extends Command
                 }
 
                 $tool->status = UserToolStatus::Expired;
+                $tool->markSubscriptionEnded(UserTool::END_REASON_NATURAL);
                 $tool->save();
 
-                return $sync->push($tool->fresh(['integration']));
+                $sync->push($tool->fresh(['integration']));
+
+                return $tool->fresh(['product', 'user']);
             });
 
-            if ($pushed === null) {
+            if ($tool === null) {
                 continue;
             }
 
-            $this->line(sprintf(
-                'Tool #%d expired; sync %s',
-                $id,
-                $pushed['ok'] ? 'ok' : 'failed: '.$pushed['message']
-            ));
+            $lifecycleNotifier->notifyNaturallyExpired($tool);
+
+            $this->line(sprintf('Tool #%d expired; user notified', $id));
             $count++;
         }
 

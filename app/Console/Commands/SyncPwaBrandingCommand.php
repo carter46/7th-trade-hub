@@ -9,7 +9,7 @@ class SyncPwaBrandingCommand extends Command
 {
     protected $signature = 'branding:sync-pwa';
 
-    protected $description = 'Regenerate favicon, Apple touch, and PWA icons from admin branding media';
+    protected $description = 'Regenerate favicon, Apple touch, PWA (any + maskable), and OG icons from admin branding media';
 
     public function handle(PwaBrandingSync $sync): int
     {

@@ -24,23 +24,11 @@
         <title>{{ $resolvedTitle }}</title>
         <meta name="description" content="{{ $resolvedDescription }}">
         <link rel="canonical" href="{{ url()->current() }}">
-        <meta property="og:title" content="{{ $resolvedOgTitle }}">
-        <meta property="og:description" content="{{ $resolvedOgDescription }}">
-        <meta property="og:url" content="{{ url()->current() }}">
-        <meta property="og:type" content="website">
-        @php
-            $resolvedOgImage = trim($__env->yieldContent('og_image') ?: '');
-            if ($resolvedOgImage === '') {
-                $resolvedOgImage = is_file(public_path('icons/icon-512x512.png'))
-                    ? asset('icons/icon-512x512.png')
-                    : ($faviconUrl ?? '');
-            }
-        @endphp
-        @if ($resolvedOgImage !== '')
-            <meta property="og:image" content="{{ $resolvedOgImage }}">
-            <meta name="twitter:image" content="{{ $resolvedOgImage }}">
-        @endif
-        <meta name="twitter:card" content="{{ $resolvedOgImage !== '' ? 'summary_large_image' : 'summary' }}">
+        @include('partials.branding.social-meta', [
+            'ogTitleOverride' => $resolvedOgTitle,
+            'ogDescriptionOverride' => $resolvedOgDescription,
+            'ogImageOverride' => trim($__env->yieldContent('og_image') ?: ''),
+        ])
         @include('partials.branding.head-icons')
 
         <link rel="preconnect" href="https://fonts.googleapis.com">

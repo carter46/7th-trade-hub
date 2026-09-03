@@ -356,6 +356,7 @@ class UserToolProvisioningService
             if ($locked->status === UserToolStatus::Expired) {
                 $locked->status = UserToolStatus::Active;
             }
+            $locked->clearSubscriptionEndReason();
             $locked->save();
 
             return $locked;

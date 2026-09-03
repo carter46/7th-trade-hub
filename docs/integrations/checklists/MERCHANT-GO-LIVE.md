@@ -16,10 +16,14 @@
 - [ ] Health (and owned sync) respond during customer maintenance/shutdown UI
 - [ ] Subscription sync verifies signature (owned tools)
 - [ ] Poll cron hits `GET /api/site-integrations/v1/subscription` every 5–15 min (owned)
-- [ ] Shutdown UI blocks login when expired
+- [ ] Shutdown UI blocks users and **regular** admins when expired (same session-expired message site-wide)
+- [ ] Login page and login form remain reachable during shutdown
+- [ ] Only **super admin** (upgraded existing admin) may enter after password login; Hub SSO still refused while expired
 - [ ] Stale `active` cannot overwrite newer `expired` on sync
 - [ ] Hub Check connection succeeds
 - [ ] Demo / owned SSO smoke-tested end-to-end
 - [ ] Optional webhook to Hub tested with `X-7TH-Webhook-Secret`
+- [ ] Optional (owned): admin email/password changes POST `owned.admin_credentials.updated` (not required to stay connected)
+- [ ] Optional (owned): Admin Hub **Shutdown Site** / **Enable** treated like expiry / renew (same sync payload)
 
 Reference: [ENDPOINTS-REFERENCE.md](../ENDPOINTS-REFERENCE.md)

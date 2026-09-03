@@ -1,7 +1,9 @@
 <?php
 /**
  * Poll Hub for owned-tool subscription (defense in depth).
- * Schedule every 5–15 minutes. Shut down site when expired.
+ * Schedule every 5–15 minutes. When expired (or Admin Shutdown Site):
+ * fail-closed for users/regular admins; keep login page/form up;
+ * only super admin may enter after password login; refuse Hub SSO.
  */
 
 declare(strict_types=1);
@@ -42,4 +44,6 @@ function seventh_tradehub_poll_subscription(): ?array
 
 // Example:
 // $snap = seventh_tradehub_poll_subscription();
-// if ($snap && ($snap['status'] ?? '') === 'expired') { /* enable maintenance mode */ }
+// if ($snap && (($snap['status'] ?? '') === 'expired' || strtotime((string) ($snap['expires_at'] ?? '')) < time())) {
+//     /* fail-closed UI; except login; only super admin after password auth */
+// }

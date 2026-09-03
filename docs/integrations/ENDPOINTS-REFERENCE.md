@@ -19,7 +19,9 @@ Your `base_url` / `site_url` must be **HTTPS** and publicly reachable (no localh
 
 **Fixed paths:** Hub uses the paths above literally. Wire your router, rewrite rules, or file layout so these URLs reach your handlers. See [MERCHANT-GUIDE.md § Exact paths](MERCHANT-GUIDE.md#2-exact-paths-and-routing).
 
-**During shutdown:** Keep `POST …/health` (and owned `POST …/subscription/sync`) responding so Hub can run Check connection and push expiry updates even when customers see a maintenance page.
+**During shutdown:** Keep `POST …/health` (and owned `POST …/subscription/sync`) responding so Hub can run Check connection and push expiry/shutdown updates even when customers see a maintenance page.
+
+**Login during shutdown (owned):** Keep the login page and form reachable. After password auth, only a **super admin** (upgraded local admin — not a regular admin) may enter. Users and regular admins see the same session-expired / shutdown UI used elsewhere. Refuse Hub SSO consume while expired. Admin **Shutdown Site** on Hub uses the same `expired` subscription payload as the expiry job — no separate event.
 
 ---
 
@@ -29,7 +31,7 @@ Your `base_url` / `site_url` must be **HTTPS** and publicly reachable (no localh
 | ------ | ---- | ------- |
 | `POST` | `/api/site-integrations/v1/demo/tokens/validate` | Consume one-time launch token |
 | `GET` | `/api/site-integrations/v1/subscription` | Poll owned-tool subscription |
-| `POST` | `/webhooks/site-integrations/{integration_id}` | Optional ping to Hub |
+| `POST` | `/webhooks/site-integrations/{integration_id}` | Optional ping, or owned admin credential sync |
 
 Rate limit: **60 requests/minute** per IP on `/api/site-integrations/v1/*`.
 
@@ -120,7 +122,7 @@ Hub redirects the user's browser:
    - Use validate response **`role`** (`user` or `admin`) for redirect; optionally verify local user role matches.
    - Create session server-side without password/MFA/onboarding flows.
 4. Redirect to your user dashboard or admin area based on `role`.
-5. For **owned** tools: refuse login if your local subscription state is expired.
+5. For **owned** tools: refuse **Hub SSO** while subscription is expired. Password login page/form stay up; only a **super admin** may enter after password auth (users and regular admins see the session-expired UI).
 
 **Launch token lifetime:** 120 seconds from issue; single use.
 
@@ -207,7 +209,7 @@ Optional query fallback: `?integration_id=…` if header omitted.
 }
 ```
 
-If `status` is `expired` or `expires_at` is in the past → shut down locally even if sync push failed.
+If `status` is `expired` or `expires_at` is in the past → shut down locally even if sync push failed (same rules as [MERCHANT-GUIDE § Shutdown](MERCHANT-GUIDE.md#shutdown-expiry-and-admin-shutdown-site): except login page/form; only super admin may pass after password login).
 
 | HTTP | Meaning |
 | ---- | ------- |
@@ -218,13 +220,72 @@ If `status` is `expired` or `expires_at` is in the past → shut down locally ev
 
 ## 5. Webhook to Hub — `POST /webhooks/site-integrations/{integration_id}`
 
-Optional connectivity ping.
+CSRF exempt. Rate limited with the rest of site-integration webhooks (60/min). **Does not** change connection status, API keys, or subscription expiry.
+
+### 5a. Ping (unchanged)
+
+Optional connectivity ping. Demo **and** owned.
 
 **Headers:** `X-7TH-Webhook-Secret: {SEVENTH_TRADEHUB_WEBHOOK_SECRET}`  
-**Body (example):** `{ "event": "ping" }`  
-No session cookie / CSRF required.
+**Body:** `{ "event": "ping" }`
 
-**Response:** `{ "ok": true }` on success.
+**Response:** `{ "ok": true }`
+
+Ping does **not** require `X-7TH-Client-Id` or a Protocol v1 signature.
+
+### 5b. Owned admin credential sync (additive)
+
+When the local **owned-site admin email or password** changes, POST a signed Protocol v1 body so Hub can update `admin_email` / encrypted `admin_password` used for Auto Login binding and My Tools Copy password.
+
+This is **owned only**. Demo integrations receive **403**. Sites that never send this event keep working exactly as today.
+
+**Headers (all required):**
+
+| Header | Value |
+| ------ | ----- |
+| `X-7TH-Webhook-Secret` | `{SEVENTH_TRADEHUB_WEBHOOK_SECRET}` |
+| `X-7TH-Client-Id` | `{SEVENTH_TRADEHUB_CLIENT_ID}` |
+| `Content-Type` | `application/json` |
+
+**Body:** Protocol v1 signed JSON (`role`: `credential_sync`, `event`: `owned.admin_credentials.updated`). Sign with `SEVENTH_TRADEHUB_CLIENT_SECRET` using the same canonical HMAC as health ([samples/php/protocol-v1-verify.php](samples/php/protocol-v1-verify.php) / [samples/php/sync-admin-credentials.php](samples/php/sync-admin-credentials.php)).
+
+Include **at least one** of `identity.email` or `credential.password`. Partial updates are allowed. Envelope must also include `request_id`, `nonce`, `issued_at` (non-empty strings) and `event_id` (max 64 characters).
+
+`event_id` must be unique per change. Repeating the same `event_id` returns `{ "ok": true, "deduped": true }` and does not apply again.
+
+`expires_at` must be in the future (short TTL, ~2–5 minutes).
+
+**Email-only body (then sign — `protocol`, `version`, and `signature` are added by `seventh_tradehub_sign`):**
+
+```json
+{
+  "integration_id": "{SEVENTH_TRADEHUB_INTEGRATION_ID}",
+  "context": "owned_tool",
+  "role": "credential_sync",
+  "event": "owned.admin_credentials.updated",
+  "event_id": "<unique per change, max 64 chars>",
+  "request_id": "<unique>",
+  "nonce": "<unique>",
+  "issued_at": "2026-09-03T19:30:00+00:00",
+  "expires_at": "2026-09-03T19:33:00+00:00",
+  "identity": { "email": "new-admin@example.com" }
+}
+```
+
+Password-only: replace `identity` with `"credential": { "password": "<new password>" }`. Do not put the password in logs.
+
+Unsigned `{ "event": "owned.admin_credentials.updated" }` is **not** enough — Hub returns 401/422.
+
+**Success:** `{ "ok": true }`  
+**Does not:** rotate keys, run Check connection, push subscription sync, or change `connection_status`.
+
+| HTTP | Meaning |
+| ---- | ------- |
+| 200 | Applied or idempotent replay |
+| 401 | Invalid webhook secret, client id, or signature |
+| 403 | Demo integration (credential sync is owned-only) |
+| 404 | Unknown integration id |
+| 422 | Invalid/expired assertion, missing email/password, validation error |
 
 ---
 

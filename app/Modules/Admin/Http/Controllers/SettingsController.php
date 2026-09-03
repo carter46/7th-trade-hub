@@ -116,6 +116,14 @@ class SettingsController extends Controller
             'pwa_icons_synced' => $synced,
         ], $request->ip());
 
+        $hasBrandingMedia = (int) ($validated['favicon_media_id'] ?? 0) > 0
+            || (int) ($validated['logo_light_media_id'] ?? 0) > 0
+            || (int) ($validated['logo_dark_media_id'] ?? 0) > 0;
+
+        if (! $synced && $hasBrandingMedia) {
+            return back()->with('error', __('Site information was saved, but favicon/PWA icons could not be regenerated from your branding media. Icons were not left as the letter fallback intentionally — fix PHP GD / storage paths / public write access, then run: php artisan branding:sync-pwa'));
+        }
+
         if (! $synced) {
             return back()->with('warning', __('Site information saved, but favicon/PWA icons could not be regenerated. Ensure PHP GD is enabled and public/ is writable, then run: php artisan branding:sync-pwa'));
         }

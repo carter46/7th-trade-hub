@@ -20,6 +20,7 @@ class IntegrationDocs
         return [
             ['path' => 'README', 'title' => 'Overview', 'group' => 'Start'],
             ['path' => 'MERCHANT-GUIDE', 'title' => 'Merchant guide', 'group' => 'Start'],
+            ['path' => 'CONSUMER-PHP', 'title' => 'PHP consumer notes', 'group' => 'Start'],
             ['path' => 'ENDPOINTS-REFERENCE', 'title' => 'Endpoint reference', 'group' => 'Start'],
             ['path' => 'PROTOCOL-v1', 'title' => 'Protocol v1', 'group' => 'Reference'],
             ['path' => 'OVERVIEW', 'title' => 'Architecture', 'group' => 'Reference'],
@@ -34,6 +35,7 @@ class IntegrationDocs
             ['path' => 'samples/php/protocol-v1-verify.php', 'title' => 'PHP: HMAC verify', 'group' => 'Samples'],
             ['path' => 'samples/php/consume-validate.php', 'title' => 'PHP: Token validate', 'group' => 'Samples'],
             ['path' => 'samples/php/poll-subscription.php', 'title' => 'PHP: Poll subscription', 'group' => 'Samples'],
+            ['path' => 'samples/php/sync-admin-credentials.php', 'title' => 'PHP: Sync admin credentials', 'group' => 'Samples'],
             ['path' => 'samples/laravel/README', 'title' => 'Laravel sketch', 'group' => 'Samples'],
             ['path' => 'CHANGELOG', 'title' => 'Changelog', 'group' => 'Reference'],
         ];

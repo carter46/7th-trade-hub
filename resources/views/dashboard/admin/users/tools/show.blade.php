@@ -192,6 +192,35 @@
                     <p class="text-xs text-text-muted">Adjust the paid window for this tool. Updates merchant subscription sync when the site is connected.</p>
                     <x-dashboard.button type="submit" variant="secondary">Update expiry</x-dashboard.button>
                 </form>
+
+                @php $siteLive = $tool->isSubscriptionLive(); @endphp
+                <div class="mt-6 border-t border-border-default pt-4">
+                    @if ($siteLive)
+                        <form
+                            method="POST"
+                            action="{{ route('admin.users.tools.shutdown', [$user, $tool]) }}"
+                            onsubmit="return confirm('This immediately deactivates the connected external website (same as subscription expiry for the merchant). Customers will see the site as expired/shutdown. Continue?');"
+                        >
+                            @csrf
+                            <x-dashboard.button type="submit" variant="danger">Shutdown Site</x-dashboard.button>
+                        </form>
+                        <p class="mt-2 text-xs text-text-muted">Immediately deactivates the external website via the same subscription sync used for expiry. Does not rotate API keys. Use <strong>Enable</strong> later to reopen with a new expiry date.</p>
+                    @else
+                        <form method="POST" action="{{ route('admin.users.tools.enable', [$user, $tool]) }}" class="space-y-3" onsubmit="return confirm('Reopen this external website as active with the new expiry date? The merchant will be notified via subscription sync.');">
+                            @csrf
+                            <x-dashboard.input
+                                name="enable_expires_at"
+                                label="New expiry date"
+                                type="date"
+                                :value="old('enable_expires_at')"
+                                :min="now()->addDay()->format('Y-m-d')"
+                                required
+                            />
+                            <x-dashboard.button type="submit" variant="success">Enable</x-dashboard.button>
+                        </form>
+                        <p class="mt-2 text-xs text-text-muted">Reopens the site as active and notifies the merchant. A future expiry date is required because shutdown ends the paid window immediately.</p>
+                    @endif
+                </div>
             </x-dashboard.card>
 
             <x-dashboard.card class="lg:col-span-2">

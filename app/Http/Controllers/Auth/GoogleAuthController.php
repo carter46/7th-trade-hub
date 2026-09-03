@@ -31,13 +31,15 @@ class GoogleAuthController extends Controller
         Auth::login($result['user'], true);
         $request->session()->regenerate();
 
-        $redirect = redirect()->intended($result['user']->homeRoute())->getTargetUrl();
+        $target = $result['user']->hasVerifiedEmail()
+            ? redirect()->intended($result['user']->homeRoute())->getTargetUrl()
+            : route('verification.notice');
 
         if ($request->expectsJson() || $request->ajax()) {
-            return response()->json(['redirect' => $redirect]);
+            return response()->json(['redirect' => $target]);
         }
 
-        return redirect()->to($redirect);
+        return redirect()->to($target);
     }
 
     public function link(Request $request): RedirectResponse|JsonResponse

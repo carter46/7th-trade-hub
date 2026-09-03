@@ -143,7 +143,7 @@ On HTTP 200 and `"valid": true`:
 
 - Token lifetime: **120 seconds**, single use.
 - Sample: [samples/php/consume-validate.php](samples/php/consume-validate.php).
-- For owned tools: refuse login if subscription is locally expired.
+- For owned tools: refuse **Hub SSO consume** while subscription is expired. Keep the password **login page/form** reachable so a **super admin** can still sign in (see [Shutdown](#shutdown-expiry-and-admin-shutdown-site)).
 
 ---
 
@@ -173,9 +173,23 @@ Sample: [samples/php/poll-subscription.php](samples/php/poll-subscription.php).
 
 If Hub reports `expired` or `expires_at` is past → shut down even if push was missed.
 
-### Shutdown
+Admin **Shutdown Site** on Hub uses the **same** push/poll payload (`status: expired` + past `expires_at`). There is no separate shutdown event.
 
-When expired: maintenance UI, block routes, refuse new logins including SSO consume.
+### Shutdown (expiry and Admin Shutdown Site)
+
+When the subscription is expired (natural expiry **or** Hub Admin clicked **Shutdown Site**):
+
+1. Show the **same** site-wide shutdown / “session expired” (or equivalent) message on app pages.
+2. Keep `POST …/health` and `POST …/subscription/sync` reachable.
+3. **Except the login page and login form** — those routes must stay up so credentials can be checked.
+4. After a successful **password** login:
+   - **Super admin** — allow full admin access (operators need this during shutdown).
+   - **Regular admin** — treat like a customer (same session-expired / shutdown UI). Regular admin is **not** enough.
+   - **Users** — cannot use the site; same message as other blocked pages.
+5. **Super admin** is a merchant-site concept: upgrade an existing admin (flag, permission, `is_super_admin`, or config email list). You do **not** need a new Hub/Spatie role — just distinguish super admin from regular admins locally.
+6. **Refuse Hub SSO consume** while expired (Auto Login must not bypass shutdown for customers). Super-admin recovery is password login on the excepted login form.
+
+When Hub later sends `status: active` with a future `expires_at` (Admin **Enable**, renew, or Update expiry), clear local shutdown and restore normal access.
 
 ---
 
@@ -190,6 +204,27 @@ Content-Type: application/json
 ```
 
 No CSRF cookie; secret authenticates the call. Response: `{ "ok": true }`.
+
+### Owned: sync admin email / password (optional, additive)
+
+If the customer changes **admin email or password on your site**, POST to Hub **after** you persist the change locally so Auto Login and My Tools Copy password stay current. **Do not rotate keys or expect a reconnect.** Ping (above) is unchanged.
+
+```http
+POST {HUB}/webhooks/site-integrations/{integration_id}
+Content-Type: application/json
+X-7TH-Webhook-Secret: {SEVENTH_TRADEHUB_WEBHOOK_SECRET}
+X-7TH-Client-Id: {SEVENTH_TRADEHUB_CLIENT_ID}
+```
+
+Body: Protocol v1 signed JSON. Event `owned.admin_credentials.updated`, `context` `owned_tool`, `role` `credential_sync`. Include `identity.email` and/or `credential.password`. Full field list and example: [ENDPOINTS-REFERENCE.md § 5b](ENDPOINTS-REFERENCE.md#5b-owned-admin-credential-sync-additive). Working PHP: [samples/php/sync-admin-credentials.php](samples/php/sync-admin-credentials.php) (uses [samples/php/protocol-v1-verify.php](samples/php/protocol-v1-verify.php) to sign).
+
+On **admin email change:** send `identity.email` (new address). Keep a local admin user with that email so SSO still works.
+
+On **admin password change:** send `credential.password`. Hub stores it encrypted and returns it only via Copy password — it is **not** used for Auto Login.
+
+Advertise capability `admin_credential_sync` on health **only after** this is implemented. Hub accepts the webhook even if you omit the capability.
+
+LiveChat logins are **not** synced by this event.
 
 ---
 
@@ -237,8 +272,10 @@ For owned tools, **Reconfigure** updates URLs/email/password without new keys; *
 | Health responds during customer maintenance mode | ☐ |
 | `POST …/subscription/sync` verifies HMAC (owned) | ☐ |
 | Poll cron configured (owned) | ☐ |
-| Expired → fail-closed shutdown | ☐ |
-| Hub Check connection passes | ☐ |
+| Expired → fail-closed shutdown (users + regular admins); login page/form excepted; only super admin may enter | ☐ |
+| Super admin is an upgraded existing admin (not a new Hub role) | ☐ |
+| Optional ping webhook to Hub | ☐ |
+| Owned: POST admin email/password changes to Hub (`owned.admin_credentials.updated`) | ☐ |
 
 Also see [checklists/MERCHANT-GO-LIVE.md](checklists/MERCHANT-GO-LIVE.md).
 

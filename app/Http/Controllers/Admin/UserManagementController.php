@@ -24,6 +24,7 @@ use App\Services\Notifications\NotificationDispatcher;
 use App\Services\Notifications\NotificationEmailRenderer;
 use App\Services\Notifications\NotificationMessage;
 use App\Services\SiteIntegrations\SubscriptionSyncService;
+use App\Services\SiteIntegrations\UserToolLifecycleNotifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -42,6 +43,7 @@ class UserManagementController extends Controller
         private SubscriptionSyncService $subscriptionSync,
         private NotificationDispatcher $notificationDispatcher,
         private NotificationEmailRenderer $notificationEmailRenderer,
+        private UserToolLifecycleNotifier $toolLifecycleNotifier,
     ) {}
 
     public function create(): View
@@ -548,12 +550,16 @@ class UserManagementController extends Controller
 
         $expiresAt = \Carbon\Carbon::parse($validated['expires_at'])->endOfDay();
         $previous = $tool->expires_at?->toIso8601String();
+        $wasExpired = $tool->status === UserToolStatus::Expired;
+        $notifyExtend = $wasExpired && $expiresAt->isFuture() && $tool->endedByNaturalExpiry();
 
         $tool->expires_at = $expiresAt;
         if ($expiresAt->isFuture() && $tool->status === UserToolStatus::Expired) {
             $tool->status = UserToolStatus::Active;
+            $tool->clearSubscriptionEndReason();
         } elseif ($expiresAt->isPast() && $tool->status === UserToolStatus::Active) {
             $tool->status = UserToolStatus::Expired;
+            $tool->markSubscriptionEnded(\App\Models\UserTool::END_REASON_ADMIN_ADJUSTED);
         }
         $tool->save();
 
@@ -561,14 +567,137 @@ class UserManagementController extends Controller
             $this->subscriptionSync->push($tool->fresh(['integration']));
         }
 
+        // Only email when extending a naturally expired subscription (not after admin shutdown/enable).
+        if ($notifyExtend) {
+            $this->toolLifecycleNotifier->notifyExtendedAfterNaturalExpiry($tool->fresh(['product', 'user']));
+        }
+
         $this->audit->log(auth()->id(), 'user_tool.expiry_adjusted', $tool, null, [
             'previous_expires_at' => $previous,
             'expires_at' => $tool->expires_at?->toIso8601String(),
+            'user_notified' => $notifyExtend,
         ], $request->ip(), ['module' => 'site_integrations']);
 
         return redirect()
             ->route('admin.users.tools.show', [$user, $tool])
             ->with('status', 'Subscription expiry updated.');
+    }
+
+    public function shutdownTool(Request $request, User $user, \App\Models\UserTool $tool): RedirectResponse
+    {
+        $this->ensureMember($user);
+        abort_unless($tool->user_id === $user->id, 404);
+
+        if ($tool->status === UserToolStatus::PendingSetup) {
+            return back()->with('error', 'Complete initial setup before shutting down the site.');
+        }
+
+        if (! $tool->isSubscriptionLive()) {
+            return back()->with('error', 'This site is already shut down. Use Enable to reopen it.');
+        }
+
+        $previous = [
+            'status' => $tool->status instanceof UserToolStatus ? $tool->status->value : (string) $tool->status,
+            'expires_at' => $tool->expires_at?->toIso8601String(),
+        ];
+
+        $tool->status = UserToolStatus::Expired;
+        $tool->expires_at = now();
+        $tool->markSubscriptionEnded(\App\Models\UserTool::END_REASON_ADMIN_SHUTDOWN);
+        $tool->save();
+
+        $pushed = false;
+        $syncWarning = null;
+        if ($tool->integration && $tool->site_url) {
+            $pushed = true;
+            $result = $this->subscriptionSync->push($tool->fresh(['integration']));
+            if (! ($result['ok'] ?? false)) {
+                $syncWarning = $result['message'] ?? 'Merchant site did not acknowledge shutdown. Hub is still marked expired.';
+            }
+        }
+
+        // Intentionally no user email — admin shutdown must stay silent.
+        $this->audit->log(auth()->id(), 'user_tool.site_shutdown', $tool, $previous, [
+            'status' => $tool->status->value,
+            'expires_at' => $tool->expires_at?->toIso8601String(),
+            'merchant_notified' => $pushed && $syncWarning === null,
+            'user_notified' => false,
+        ], $request->ip(), ['module' => 'site_integrations']);
+
+        $redirect = redirect()->route('admin.users.tools.show', [$user, $tool]);
+
+        if ($syncWarning) {
+            return $redirect
+                ->with('status', 'Site shut down on Hub.')
+                ->with('warning', $syncWarning);
+        }
+
+        if (! $pushed) {
+            return $redirect->with('status', 'Site shut down on Hub. No merchant sync was sent (missing site URL or integration credentials).');
+        }
+
+        return $redirect->with('status', 'Site shut down. The external website has been notified to deactivate.');
+    }
+
+    public function enableTool(Request $request, User $user, \App\Models\UserTool $tool): RedirectResponse
+    {
+        $this->ensureMember($user);
+        abort_unless($tool->user_id === $user->id, 404);
+
+        if ($tool->status === UserToolStatus::PendingSetup) {
+            return back()->with('error', 'Complete initial setup before enabling the site.');
+        }
+
+        if ($tool->isSubscriptionLive()) {
+            return back()->with('error', 'This site is already live.');
+        }
+
+        $validated = $request->validate([
+            'enable_expires_at' => ['required', 'date', 'after:today'],
+        ]);
+
+        $expiresAt = \Carbon\Carbon::parse($validated['enable_expires_at'])->endOfDay();
+        $previous = [
+            'status' => $tool->status instanceof UserToolStatus ? $tool->status->value : (string) $tool->status,
+            'expires_at' => $tool->expires_at?->toIso8601String(),
+        ];
+
+        $tool->status = UserToolStatus::Active;
+        $tool->expires_at = $expiresAt;
+        $tool->clearSubscriptionEndReason();
+        $tool->save();
+
+        $pushed = false;
+        $syncWarning = null;
+        if ($tool->integration && $tool->site_url) {
+            $pushed = true;
+            $result = $this->subscriptionSync->push($tool->fresh(['integration']));
+            if (! ($result['ok'] ?? false)) {
+                $syncWarning = $result['message'] ?? 'Merchant site did not acknowledge enable. Hub is still marked active.';
+            }
+        }
+
+        // Intentionally no user email — admin Enable must stay silent.
+        $this->audit->log(auth()->id(), 'user_tool.site_enabled', $tool, $previous, [
+            'status' => $tool->status->value,
+            'expires_at' => $tool->expires_at?->toIso8601String(),
+            'merchant_notified' => $pushed && $syncWarning === null,
+            'user_notified' => false,
+        ], $request->ip(), ['module' => 'site_integrations']);
+
+        $redirect = redirect()->route('admin.users.tools.show', [$user, $tool]);
+
+        if ($syncWarning) {
+            return $redirect
+                ->with('status', 'Site enabled on Hub.')
+                ->with('warning', $syncWarning);
+        }
+
+        if (! $pushed) {
+            return $redirect->with('status', 'Site enabled on Hub. No merchant sync was sent (missing site URL or integration credentials).');
+        }
+
+        return $redirect->with('status', 'Site enabled. The external website has been notified.');
     }
 
     public function listings(User $user, Request $request): View

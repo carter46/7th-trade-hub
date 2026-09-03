@@ -33,7 +33,16 @@ class PwaBrandingSync
     }
 
     /**
-     * @return array{version: string, favicon: string, apple: string, icon192: string, icon512: string}
+     * @return array{
+     *     version: string,
+     *     favicon: string,
+     *     favicon16: string,
+     *     apple: string,
+     *     icon192: string,
+     *     icon512: string,
+     *     og: string,
+     *     manifest: string
+     * }
      */
     public function publishedUrls(): array
     {
@@ -46,6 +55,7 @@ class PwaBrandingSync
             'apple' => asset('apple-touch-icon.png').'?v='.$version,
             'icon192' => asset('icons/icon-192x192.png').'?v='.$version,
             'icon512' => asset('icons/icon-512x512.png').'?v='.$version,
+            'og' => asset('icons/og-image.png').'?v='.$version,
             'manifest' => asset('manifest.json').'?v='.$version,
         ];
     }
@@ -53,8 +63,13 @@ class PwaBrandingSync
     public function iconsExist(): bool
     {
         return is_file(public_path('icons/icon-512x512.png'))
+            && is_file(public_path('icons/icon-192x192.png'))
+            && is_file(public_path('icons/icon-512x512-maskable.png'))
+            && is_file(public_path('icons/icon-192x192-maskable.png'))
+            && is_file(public_path('icons/og-image.png'))
             && is_file(public_path('apple-touch-icon.png'))
-            && is_file(public_path('favicon-32x32.png'));
+            && is_file(public_path('favicon-32x32.png'))
+            && is_file(public_path('favicon.ico'));
     }
 
     /**
@@ -97,34 +112,49 @@ class PwaBrandingSync
             File::makeDirectory($iconsDir, 0755, true);
         }
 
-        $bg = $this->backgroundRgb();
+        $themeBg = $this->backgroundRgb();
 
         if ($sourcePath) {
-            $this->writeSquarePng($sourcePath, 512, $iconsDir.DIRECTORY_SEPARATOR.'icon-512x512.png', $bg);
-            $this->writeSquarePng($sourcePath, 192, $iconsDir.DIRECTORY_SEPARATOR.'icon-192x192.png', $bg);
-            $this->writeSquarePng($sourcePath, 180, public_path('apple-touch-icon.png'), $bg);
-            $this->writeSquarePng($sourcePath, 32, public_path('favicon-32x32.png'), $bg);
-            $this->writeSquarePng($sourcePath, 16, public_path('favicon-16x16.png'), $bg);
+            // Tight favicon / purpose:any — logo fills the canvas (not a white postage stamp).
+            $this->writeTightPng($sourcePath, 512, $iconsDir.DIRECTORY_SEPARATOR.'icon-512x512.png');
+            $this->writeTightPng($sourcePath, 192, $iconsDir.DIRECTORY_SEPARATOR.'icon-192x192.png');
+            $this->writeTightPng($sourcePath, 180, public_path('apple-touch-icon.png'));
+            $this->writeTightPng($sourcePath, 32, public_path('favicon-32x32.png'));
+            $this->writeTightPng($sourcePath, 16, public_path('favicon-16x16.png'));
+
+            // Maskable: white background + W3C safe zone (~80% center circle).
+            $this->writeMaskablePng($sourcePath, 512, $iconsDir.DIRECTORY_SEPARATOR.'icon-512x512-maskable.png');
+            $this->writeMaskablePng($sourcePath, 192, $iconsDir.DIRECTORY_SEPARATOR.'icon-192x192-maskable.png');
+
+            $this->writeOgPng($sourcePath, $iconsDir.DIRECTORY_SEPARATOR.'og-image.png');
+            $this->writeIco([
+                public_path('favicon-16x16.png'),
+                public_path('favicon-32x32.png'),
+            ], public_path('favicon.ico'));
         } elseif ($this->brandingMediaIds($branding) !== []) {
             throw new \RuntimeException(
                 'Branding media could not be read for favicon/PWA icon sync.'
             );
         } else {
-            $this->writeFallbackSquare(512, $iconsDir.DIRECTORY_SEPARATOR.'icon-512x512.png', $bg);
-            $this->writeFallbackSquare(192, $iconsDir.DIRECTORY_SEPARATOR.'icon-192x192.png', $bg);
-            $this->writeFallbackSquare(180, public_path('apple-touch-icon.png'), $bg);
-            $this->writeFallbackSquare(32, public_path('favicon-32x32.png'), $bg);
-            $this->writeFallbackSquare(16, public_path('favicon-16x16.png'), $bg);
+            $this->writeFallbackSquare(512, $iconsDir.DIRECTORY_SEPARATOR.'icon-512x512.png', $themeBg);
+            $this->writeFallbackSquare(192, $iconsDir.DIRECTORY_SEPARATOR.'icon-192x192.png', $themeBg);
+            $this->writeFallbackSquare(180, public_path('apple-touch-icon.png'), $themeBg);
+            $this->writeFallbackSquare(32, public_path('favicon-32x32.png'), $themeBg);
+            $this->writeFallbackSquare(16, public_path('favicon-16x16.png'), $themeBg);
+            $this->writeFallbackMaskable(512, $iconsDir.DIRECTORY_SEPARATOR.'icon-512x512-maskable.png');
+            $this->writeFallbackMaskable(192, $iconsDir.DIRECTORY_SEPARATOR.'icon-192x192-maskable.png');
+            $this->writeFallbackOg($iconsDir.DIRECTORY_SEPARATOR.'og-image.png', $themeBg);
+            $this->writeIco([
+                public_path('favicon-16x16.png'),
+                public_path('favicon-32x32.png'),
+            ], public_path('favicon.ico'));
         }
 
-        // Package @PwaHead falls back to logo.png — keep it in sync.
+        // Package @PwaHead falls back to logo.png — keep it in sync with tight icon.
         File::copy(
             $iconsDir.DIRECTORY_SEPARATOR.'icon-192x192.png',
             public_path('logo.png')
         );
-
-        // Browsers still request /favicon.ico; serve the 32px PNG bytes there.
-        File::copy(public_path('favicon-32x32.png'), public_path('favicon.ico'));
     }
 
     /**
@@ -242,8 +272,6 @@ class PwaBrandingSync
     {
         $asset->loadMissing('variants');
 
-        // Use raw variant paths for disk I/O. variantStoragePath() prefixes "storage/"
-        // for public URLs, which breaks Storage::disk('public')->exists()/path().
         foreach (['original', 'large', 'medium', 'small', 'thumbnail'] as $key) {
             $relative = $asset->variants->firstWhere('key', $key)?->path;
             if (! is_string($relative) || $relative === '') {
@@ -260,7 +288,6 @@ class PwaBrandingSync
                 return $disk->path($relative);
             }
 
-            // Fallback when the public disk symlink is used as the readable path.
             $publicCopy = public_path('storage/'.$relative);
             if (is_readable($publicCopy)) {
                 return $publicCopy;
@@ -288,12 +315,9 @@ class PwaBrandingSync
     }
 
     /**
-     * Resize onto a transparent square — do not paint the brand theme color behind uploads.
-     * ($bg is unused; kept so call sites stay stable. Fallback icons still use theme color.)
-     *
-     * @param  array{0: int, 1: int, 2: int}  $bg
+     * @return \GdImage
      */
-    private function writeSquarePng(string $sourcePath, int $size, string $destination, array $bg): void
+    private function openSource(string $sourcePath): mixed
     {
         $info = @getimagesize($sourcePath);
         if ($info === false) {
@@ -316,9 +340,21 @@ class PwaBrandingSync
         imagealphablending($source, true);
         imagesavealpha($source, true);
 
+        return $source;
+    }
+
+    /**
+     * Tight square for favicon / purpose:any — logo fills most of the canvas.
+     */
+    private function writeTightPng(string $sourcePath, int $size, string $destination): void
+    {
+        $source = $this->openSource($sourcePath);
         $origW = imagesx($source);
         $origH = imagesy($source);
-        $scale = min($size / max(1, $origW), $size / max(1, $origH));
+
+        // Fill ~94% of the canvas so the tab icon is the mark, not empty padding.
+        $inner = (int) max(1, round($size * 0.94));
+        $scale = min($inner / max(1, $origW), $inner / max(1, $origH));
         $dstW = max(1, (int) round($origW * $scale));
         $dstH = max(1, (int) round($origH * $scale));
         $dstX = (int) max(0, ($size - $dstW) / 2);
@@ -330,7 +366,6 @@ class PwaBrandingSync
         $transparent = imagecolorallocatealpha($canvas, 0, 0, 0, 127);
         imagefilledrectangle($canvas, 0, 0, $size, $size, $transparent);
 
-        // Blend the source onto the transparent canvas (keeps PNG alpha from the upload).
         imagealphablending($canvas, true);
         imagecopyresampled($canvas, $source, $dstX, $dstY, 0, 0, $dstW, $dstH, $origW, $origH);
         imagealphablending($canvas, false);
@@ -344,6 +379,131 @@ class PwaBrandingSync
 
         imagedestroy($source);
         imagedestroy($canvas);
+    }
+
+    /**
+     * Maskable icon: white full-bleed background; logo inside ~80% safe zone.
+     */
+    private function writeMaskablePng(string $sourcePath, int $size, string $destination): void
+    {
+        $source = $this->openSource($sourcePath);
+        $origW = imagesx($source);
+        $origH = imagesy($source);
+
+        // Safe zone ≈ circle of diameter 80% of canvas (W3C maskable icons).
+        $safe = (int) max(1, round($size * 0.80));
+        $scale = min($safe / max(1, $origW), $safe / max(1, $origH));
+        $dstW = max(1, (int) round($origW * $scale));
+        $dstH = max(1, (int) round($origH * $scale));
+        $dstX = (int) max(0, ($size - $dstW) / 2);
+        $dstY = (int) max(0, ($size - $dstH) / 2);
+
+        $canvas = imagecreatetruecolor($size, $size);
+        $white = imagecolorallocate($canvas, 255, 255, 255);
+        imagefilledrectangle($canvas, 0, 0, $size, $size, $white);
+
+        imagealphablending($canvas, true);
+        imagecopyresampled($canvas, $source, $dstX, $dstY, 0, 0, $dstW, $dstH, $origW, $origH);
+
+        if (! imagepng($canvas, $destination, 6)) {
+            imagedestroy($source);
+            imagedestroy($canvas);
+            throw new \RuntimeException('Unable to write maskable branding icon: '.$destination);
+        }
+
+        imagedestroy($source);
+        imagedestroy($canvas);
+    }
+
+    /**
+     * Social OG image (1200×630) — branding mark on white, not the letter-7 tile.
+     */
+    private function writeOgPng(string $sourcePath, string $destination): void
+    {
+        $source = $this->openSource($sourcePath);
+        $origW = imagesx($source);
+        $origH = imagesy($source);
+
+        $width = 1200;
+        $height = 630;
+        $canvas = imagecreatetruecolor($width, $height);
+        $white = imagecolorallocate($canvas, 255, 255, 255);
+        imagefilledrectangle($canvas, 0, 0, $width, $height, $white);
+
+        $maxW = (int) round($width * 0.45);
+        $maxH = (int) round($height * 0.55);
+        $scale = min($maxW / max(1, $origW), $maxH / max(1, $origH));
+        $dstW = max(1, (int) round($origW * $scale));
+        $dstH = max(1, (int) round($origH * $scale));
+        $dstX = (int) (($width - $dstW) / 2);
+        $dstY = (int) (($height - $dstH) / 2);
+
+        imagealphablending($canvas, true);
+        imagecopyresampled($canvas, $source, $dstX, $dstY, 0, 0, $dstW, $dstH, $origW, $origH);
+
+        if (! imagepng($canvas, $destination, 6)) {
+            imagedestroy($source);
+            imagedestroy($canvas);
+            throw new \RuntimeException('Unable to write OG image: '.$destination);
+        }
+
+        imagedestroy($source);
+        imagedestroy($canvas);
+    }
+
+    /**
+     * Write a multi-size ICO containing PNG images (supported by modern browsers).
+     *
+     * @param  list<string>  $pngPaths
+     */
+    private function writeIco(array $pngPaths, string $destination): void
+    {
+        $entries = [];
+        foreach ($pngPaths as $path) {
+            if (! is_readable($path)) {
+                continue;
+            }
+            $bytes = file_get_contents($path);
+            $info = @getimagesize($path);
+            if ($bytes === false || $info === false) {
+                continue;
+            }
+            $entries[] = [
+                'width' => min(255, (int) ($info[0] ?? 32)),
+                'height' => min(255, (int) ($info[1] ?? 32)),
+                'bytes' => $bytes,
+            ];
+        }
+
+        if ($entries === []) {
+            throw new \RuntimeException('Unable to build favicon.ico — no PNG sources.');
+        }
+
+        $count = count($entries);
+        $offset = 6 + ($count * 16);
+        $dir = pack('vvv', 0, 1, $count);
+        $imageData = '';
+
+        foreach ($entries as $entry) {
+            $size = strlen($entry['bytes']);
+            $dir .= pack(
+                'CCCCvvVV',
+                $entry['width'] >= 256 ? 0 : $entry['width'],
+                $entry['height'] >= 256 ? 0 : $entry['height'],
+                0,
+                0,
+                1,
+                32,
+                $size,
+                $offset
+            );
+            $imageData .= $entry['bytes'];
+            $offset += $size;
+        }
+
+        if (@file_put_contents($destination, $dir.$imageData) === false) {
+            throw new \RuntimeException('Unable to write favicon.ico');
+        }
     }
 
     /**
@@ -370,6 +530,65 @@ class PwaBrandingSync
         imagedestroy($canvas);
     }
 
+    private function writeFallbackMaskable(int $size, string $destination): void
+    {
+        $canvas = imagecreatetruecolor($size, $size);
+        $white = imagecolorallocate($canvas, 255, 255, 255);
+        imagefilledrectangle($canvas, 0, 0, $size, $size, $white);
+
+        $bg = $this->backgroundRgb();
+        $green = imagecolorallocate($canvas, $bg[0], $bg[1], $bg[2]);
+        $safe = (int) round($size * 0.80);
+        $pad = (int) (($size - $safe) / 2);
+        imagefilledrectangle($canvas, $pad, $pad, $pad + $safe - 1, $pad + $safe - 1, $green);
+
+        $ink = imagecolorallocate($canvas, 255, 255, 255);
+        $font = 5;
+        $text = '7';
+        $tw = imagefontwidth($font) * strlen($text);
+        $th = imagefontheight($font);
+        imagestring($canvas, $font, (int) (($size - $tw) / 2), (int) (($size - $th) / 2), $text, $ink);
+
+        if (! imagepng($canvas, $destination, 6)) {
+            imagedestroy($canvas);
+            throw new \RuntimeException('Unable to write fallback maskable icon: '.$destination);
+        }
+
+        imagedestroy($canvas);
+    }
+
+    /**
+     * @param  array{0: int, 1: int, 2: int}  $bg
+     */
+    private function writeFallbackOg(string $destination, array $bg): void
+    {
+        $width = 1200;
+        $height = 630;
+        $canvas = imagecreatetruecolor($width, $height);
+        $white = imagecolorallocate($canvas, 255, 255, 255);
+        imagefilledrectangle($canvas, 0, 0, $width, $height, $white);
+
+        $mark = 220;
+        $dx = (int) (($width - $mark) / 2);
+        $dy = (int) (($height - $mark) / 2);
+        $fill = imagecolorallocate($canvas, $bg[0], $bg[1], $bg[2]);
+        imagefilledrectangle($canvas, $dx, $dy, $dx + $mark - 1, $dy + $mark - 1, $fill);
+
+        $ink = imagecolorallocate($canvas, 255, 255, 255);
+        $font = 5;
+        $text = '7';
+        $tw = imagefontwidth($font) * strlen($text);
+        $th = imagefontheight($font);
+        imagestring($canvas, $font, (int) (($width - $tw) / 2), (int) (($height - $th) / 2), $text, $ink);
+
+        if (! imagepng($canvas, $destination, 6)) {
+            imagedestroy($canvas);
+            throw new \RuntimeException('Unable to write fallback OG image: '.$destination);
+        }
+
+        imagedestroy($canvas);
+    }
+
     /**
      * @param  array<string, mixed>  $branding
      */
@@ -389,6 +608,7 @@ class PwaBrandingSync
             'name' => $name,
             'short_name' => $short,
             'description' => $description,
+            'background_color' => '#FFFFFF',
             'icons' => [
                 [
                     'src' => '/icons/icon-512x512.png?v='.$version,
@@ -401,6 +621,18 @@ class PwaBrandingSync
                     'sizes' => '192x192',
                     'type' => 'image/png',
                     'purpose' => 'any',
+                ],
+                [
+                    'src' => '/icons/icon-512x512-maskable.png?v='.$version,
+                    'sizes' => '512x512',
+                    'type' => 'image/png',
+                    'purpose' => 'maskable',
+                ],
+                [
+                    'src' => '/icons/icon-192x192-maskable.png?v='.$version,
+                    'sizes' => '192x192',
+                    'type' => 'image/png',
+                    'purpose' => 'maskable',
                 ],
                 [
                     'src' => '/apple-touch-icon.png?v='.$version,

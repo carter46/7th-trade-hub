@@ -368,4 +368,246 @@ class AdminManualPurchaseTest extends TestCase
             ->assertSee('How to set up your banking site admin panel.')
             ->assertSee('Watch tutorial');
     }
+
+    public function test_admin_can_shutdown_site_and_enable_with_future_expiry(): void
+    {
+        $admin = $this->adminUser();
+        $member = $this->memberUser();
+        $product = $this->seedVpnProduct();
+
+        $tool = UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'platform_product_variant_id' => $product->activeVariants->first()->id,
+            'status' => UserToolStatus::Active,
+            'purchased_at' => now()->subMonth(),
+            'configured_at' => now()->subMonth(),
+            'expires_at' => now()->addMonths(2),
+            'duration_months' => 3,
+            'site_url' => 'https://customer.example.com',
+            'admin_login_url' => 'https://customer.example.com/admin',
+            'admin_email' => 'owner@example.com',
+            'admin_password' => 'SitePass123!',
+            'instance_sequence' => 1,
+        ]);
+
+        $integration = \App\Models\UserToolIntegration::query()->create([
+            'user_tool_id' => $tool->id,
+            'integration_id' => (string) Str::uuid(),
+            'client_id' => 'th_test',
+            'client_secret' => 'client-secret-test',
+            'webhook_secret' => 'webhook-secret-test',
+            'capabilities' => \App\Models\UserToolIntegration::defaultCapabilities(),
+            'connection_status' => 'ok',
+        ]);
+
+        \Illuminate\Support\Facades\Http::fake([
+            'https://customer.example.com/*' => \Illuminate\Support\Facades\Http::response(['ok' => true], 200),
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.users.tools.show', [$member, $tool]))
+            ->assertOk()
+            ->assertSee('Shutdown Site');
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.tools.shutdown', [$member, $tool]))
+            ->assertRedirect(route('admin.users.tools.show', [$member, $tool]))
+            ->assertSessionHas('status');
+
+        $tool->refresh();
+        $this->assertSame(UserToolStatus::Expired, $tool->status);
+        $this->assertSame(UserTool::END_REASON_ADMIN_SHUTDOWN, $tool->subscription_end_reason);
+        $this->assertTrue($tool->expires_at->lessThanOrEqualTo(now()->addSecond()));
+        $this->assertSame('client-secret-test', $integration->fresh()->client_secret);
+        $this->assertSame('webhook-secret-test', $integration->fresh()->webhook_secret);
+        $this->assertDatabaseMissing('user_notifications', [
+            'user_id' => $member->id,
+            'type' => 'tool.subscription_expired',
+        ]);
+        $this->assertDatabaseMissing('user_notifications', [
+            'user_id' => $member->id,
+            'type' => 'tool.subscription_extended',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.users.tools.show', [$member, $tool->fresh()]))
+            ->assertOk()
+            ->assertSee('>Enable</', false)
+            ->assertDontSee('Shutdown Site');
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.tools.enable', [$member, $tool]), [
+                'enable_expires_at' => now()->format('Y-m-d'),
+            ])
+            ->assertSessionHasErrors('enable_expires_at');
+
+        $newExpiry = now()->addMonths(3)->format('Y-m-d');
+        $this->actingAs($admin)
+            ->post(route('admin.users.tools.enable', [$member, $tool]), [
+                'enable_expires_at' => $newExpiry,
+            ])
+            ->assertRedirect(route('admin.users.tools.show', [$member, $tool]))
+            ->assertSessionHas('status');
+
+        $tool->refresh();
+        $this->assertSame(UserToolStatus::Active, $tool->status);
+        $this->assertNull($tool->subscription_end_reason);
+        $this->assertSame($newExpiry, $tool->expires_at?->format('Y-m-d'));
+        $this->assertTrue($tool->isSubscriptionLive());
+        $this->assertDatabaseMissing('user_notifications', [
+            'user_id' => $member->id,
+            'type' => 'tool.subscription_extended',
+        ]);
+    }
+
+    public function test_natural_expiry_notifies_user_and_extend_notifies_again(): void
+    {
+        $admin = $this->adminUser();
+        $member = $this->memberUser();
+        $product = $this->seedVpnProduct();
+
+        $tool = UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'platform_product_variant_id' => $product->activeVariants->first()->id,
+            'status' => UserToolStatus::Active,
+            'purchased_at' => now()->subMonths(4),
+            'configured_at' => now()->subMonths(4),
+            'expires_at' => now()->subHour(),
+            'duration_months' => 3,
+            'instance_sequence' => 1,
+        ]);
+
+        $this->artisan('site-integrations:expire-user-tools')->assertSuccessful();
+
+        $tool->refresh();
+        $this->assertSame(UserToolStatus::Expired, $tool->status);
+        $this->assertSame(UserTool::END_REASON_NATURAL, $tool->subscription_end_reason);
+        $this->assertDatabaseHas('user_notifications', [
+            'user_id' => $member->id,
+            'type' => 'tool.subscription_expired',
+        ]);
+
+        $newExpiry = now()->addMonths(2)->format('Y-m-d');
+        $this->actingAs($admin)
+            ->post(route('admin.users.tools.expiry', [$member, $tool]), [
+                'expires_at' => $newExpiry,
+            ])
+            ->assertRedirect(route('admin.users.tools.show', [$member, $tool]));
+
+        $tool->refresh();
+        $this->assertSame(UserToolStatus::Active, $tool->status);
+        $this->assertNull($tool->subscription_end_reason);
+        $this->assertDatabaseHas('user_notifications', [
+            'user_id' => $member->id,
+            'type' => 'tool.subscription_extended',
+        ]);
+    }
+
+    public function test_admin_extend_after_shutdown_does_not_notify_user(): void
+    {
+        $admin = $this->adminUser();
+        $member = $this->memberUser();
+        $product = $this->seedVpnProduct();
+
+        $tool = UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'platform_product_variant_id' => $product->activeVariants->first()->id,
+            'status' => UserToolStatus::Expired,
+            'purchased_at' => now()->subMonth(),
+            'configured_at' => now()->subMonth(),
+            'expires_at' => now()->subDay(),
+            'subscription_end_reason' => UserTool::END_REASON_ADMIN_SHUTDOWN,
+            'duration_months' => 3,
+            'instance_sequence' => 1,
+        ]);
+
+        $newExpiry = now()->addMonths(2)->format('Y-m-d');
+        $this->actingAs($admin)
+            ->post(route('admin.users.tools.expiry', [$member, $tool]), [
+                'expires_at' => $newExpiry,
+            ])
+            ->assertRedirect(route('admin.users.tools.show', [$member, $tool]));
+
+        $this->assertDatabaseMissing('user_notifications', [
+            'user_id' => $member->id,
+            'type' => 'tool.subscription_extended',
+        ]);
+    }
+
+    public function test_admin_shutdown_keeps_hub_expired_when_merchant_unreachable(): void
+    {
+        $admin = $this->adminUser();
+        $member = $this->memberUser();
+        $product = $this->seedVpnProduct();
+
+        $tool = UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'platform_product_variant_id' => $product->activeVariants->first()->id,
+            'status' => UserToolStatus::Active,
+            'purchased_at' => now()->subMonth(),
+            'configured_at' => now()->subMonth(),
+            'expires_at' => now()->addMonths(2),
+            'duration_months' => 3,
+            'site_url' => 'https://customer.example.com',
+            'admin_login_url' => 'https://customer.example.com/admin',
+            'admin_email' => 'owner@example.com',
+            'admin_password' => 'SitePass123!',
+            'instance_sequence' => 1,
+        ]);
+
+        \App\Models\UserToolIntegration::query()->create([
+            'user_tool_id' => $tool->id,
+            'integration_id' => (string) Str::uuid(),
+            'client_id' => 'th_test',
+            'client_secret' => 'client-secret-test',
+            'webhook_secret' => 'webhook-secret-test',
+            'capabilities' => \App\Models\UserToolIntegration::defaultCapabilities(),
+            'connection_status' => 'ok',
+        ]);
+
+        \Illuminate\Support\Facades\Http::fake([
+            'https://customer.example.com/*' => \Illuminate\Support\Facades\Http::response('down', 503),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.tools.shutdown', [$member, $tool]))
+            ->assertRedirect(route('admin.users.tools.show', [$member, $tool]))
+            ->assertSessionHas('status')
+            ->assertSessionHas('warning');
+
+        $tool->refresh();
+        $this->assertSame(UserToolStatus::Expired, $tool->status);
+        $this->assertFalse($tool->isSubscriptionLive());
+    }
+
+    public function test_admin_shutdown_without_integration_does_not_claim_merchant_notified(): void
+    {
+        $admin = $this->adminUser();
+        $member = $this->memberUser();
+        $product = $this->seedVpnProduct();
+
+        $tool = UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'platform_product_variant_id' => $product->activeVariants->first()->id,
+            'status' => UserToolStatus::Active,
+            'purchased_at' => now()->subMonth(),
+            'configured_at' => now()->subMonth(),
+            'expires_at' => now()->addMonths(2),
+            'duration_months' => 3,
+            'site_url' => null,
+            'instance_sequence' => 1,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.tools.shutdown', [$member, $tool]))
+            ->assertRedirect(route('admin.users.tools.show', [$member, $tool]))
+            ->assertSessionHas('status', 'Site shut down on Hub. No merchant sync was sent (missing site URL or integration credentials).');
+
+        $this->assertSame(UserToolStatus::Expired, $tool->fresh()->status);
+    }
 }

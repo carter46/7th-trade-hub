@@ -178,10 +178,9 @@
                             <dd class="font-medium text-text-primary">{{ $tool->livechat_email ?: $pendingLabel }}</dd>
                         </div>
                         <div class="sm:col-span-2">
-                            <dt class="text-text-muted">Livechat link</dt>
-                            <dd class="mt-1 space-y-2">
+                            <dt class="text-text-muted">Livechat</dt>
+                            <dd class="mt-1">
                                 @if ($tool->livechat_url)
-                                    <p class="truncate font-mono text-sm text-text-primary" title="{{ $tool->livechat_url }}">{{ \Illuminate\Support\Str::limit($tool->livechat_url, 48) }}</p>
                                     <x-dashboard.button :href="$tool->livechat_url" size="sm" variant="secondary" target="_blank" rel="noopener">
                                         Open livechat
                                     </x-dashboard.button>
@@ -273,22 +272,33 @@
     if (!btn) return;
     const url = btn.getAttribute('data-url');
     const token = document.querySelector('meta[name="csrf-token"]')?.content;
+    const fail = window.copyFailedMessage?.() || 'Unable to copy. Try again, or long-press and copy if your browser blocked it.';
     try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'X-CSRF-TOKEN': token || '',
-          'Accept': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Unable to copy');
-      await navigator.clipboard.writeText(data.password);
+      const loadPassword = async () => {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'X-CSRF-TOKEN': token || '',
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Unable to copy');
+        return data.password || '';
+      };
+      // Call copyFromAsync in the click turn so Safari can copy after fetch.
+      const copyAsync = window.copyFromAsync;
+      const copyFn = window.copyToClipboard;
+      const ok = typeof copyAsync === 'function'
+        ? await copyAsync(loadPassword)
+        : (typeof copyFn === 'function' ? await copyFn(await loadPassword()) : false);
+      if (!ok) throw new Error(fail);
       btn.textContent = 'Copied';
       setTimeout(() => { btn.textContent = defaultLabel; }, 2000);
     } catch (e) {
-      alert(e.message || 'Copy failed');
+      const msg = e.message || fail;
+      alert(msg.includes('not allowed by the user agent') ? fail : msg);
     }
   }
 

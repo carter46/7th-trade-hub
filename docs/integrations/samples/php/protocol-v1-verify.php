@@ -1,7 +1,7 @@
 <?php
 /**
- * Protocol v1 HMAC verification (reference — must match Hub ProtocolV1Signer).
- * Use in health + subscription/sync handlers.
+ * Protocol v1 HMAC (reference — must match Hub ProtocolV1Signer).
+ * Use to verify Hub→site health/sync, and to sign site→Hub credential sync.
  */
 
 declare(strict_types=1);
@@ -62,4 +62,15 @@ function seventh_tradehub_verify(array $payload, string $clientSecret): bool
     $expected = hash_hmac('sha256', seventh_tradehub_canonicalize($copy), $clientSecret);
 
     return hash_equals($expected, $signature);
+}
+
+function seventh_tradehub_sign(array $payload, string $clientSecret): array
+{
+    $payload['protocol'] = '7th-tradehub';
+    $payload['version'] = 1;
+    unset($payload['signature']);
+    ksort($payload);
+    $payload['signature'] = hash_hmac('sha256', seventh_tradehub_canonicalize($payload), $clientSecret);
+
+    return $payload;
 }

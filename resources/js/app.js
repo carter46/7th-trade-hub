@@ -10,6 +10,7 @@ import { assignAlpineHelpers, createDomainSearchHelpers, extractQuoteError } fro
 import { createCheckoutValidationHelpers } from './checkout-validation';
 import { registerAdminConnectionTest } from './admin-connection-test';
 import { registerManualBankPayment } from './manual-bank-payment';
+import { copyToClipboard, copyFromAsync, copyFailedMessage } from './copy-to-clipboard';
 import Alpine from 'alpinejs';
 import Chart from 'chart.js/auto';
 
@@ -17,6 +18,9 @@ window.Alpine = Alpine;
 window.Chart = Chart;
 window.mountCommandCharts = mountCommandCharts;
 window.bindCommandRange = bindCommandRange;
+window.copyToClipboard = copyToClipboard;
+window.copyFromAsync = copyFromAsync;
+window.copyFailedMessage = copyFailedMessage;
 
 document.addEventListener('DOMContentLoaded', () => {
     mountCommandCharts(document);

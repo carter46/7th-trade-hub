@@ -7,6 +7,7 @@
 
     <title>@yield('title', $defaultTitle) | {{ config('app.name') }}</title>
     @include('partials.branding.head-icons')
+    @include('partials.branding.social-meta')
     @include('partials.dashboard.theme-boot')
     @include('partials.dashboard.theme-tokens')
 

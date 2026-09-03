@@ -32,13 +32,14 @@
 
     <div class="space-y-3" x-data="{
         async copy(text, key) {
-            try {
-                await navigator.clipboard.writeText(text || '');
+            const copyFn = window.copyToClipboard;
+            const ok = typeof copyFn === 'function' ? await copyFn(text || '') : false;
+            if (ok) {
                 this.copied = key;
                 setTimeout(() => { if (this.copied === key) this.copied = null; }, 1600);
-            } catch (e) {
-                alert('Copy failed');
+                return;
             }
+            alert(window.copyFailedMessage?.() || 'Unable to copy.');
         },
         copied: null,
         reveal: {},

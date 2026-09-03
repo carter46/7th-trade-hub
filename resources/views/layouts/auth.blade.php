@@ -7,6 +7,7 @@
 
     <title>@yield('title', config('app.name').' - Authentication')</title>
     @include('partials.branding.head-icons')
+    @include('partials.branding.social-meta')
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

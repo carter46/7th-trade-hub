@@ -35,7 +35,8 @@ Path: `/admin/users/{id}/tools`
 3. Copy credentials from the manage page and give them to the merchant developer. Hub does **not** run Check connection automatically.
 4. Merchant installs the owned row (`context=owned_tool`) on their site, then use **Check connection** on the manage page. Status may show **pending_merchant** until credentials are installed.
 5. After Check connection passes, **Admin Auto Login** on the user's My Tools page can succeed (merchant must also have the admin email as a local user).
-6. For already-configured tools use **Manage** on the Tools tab — reconfigure, rotate keys, and connection logs live on that page.
+6. If the merchant implements **admin credential sync**, Hub updates stored admin email/password when the site POSTs `owned.admin_credentials.updated`. That does **not** require Reconfigure, key rotation, or a new Check connection. Reconfigure remains the manual fallback.
+7. For already-configured tools use **Manage** on the Tools tab — reconfigure, rotate keys, and connection logs live on that page.
 
 Ensure the Setup **admin email** exists as an admin user on the merchant site before testing Admin Auto Login.
 
@@ -48,6 +49,16 @@ Scheduled: `site-integrations:expire-user-tools` every five minutes.
 Marks expired tools (with `lockForUpdate`) and pushes `status=expired`. Hub also refuses launch/poll when `expires_at` is past even before the job runs. Sites must still poll Hub.
 
 Hostinger / shared hosting must run `php artisan schedule:run` via cron.
+
+## Shutdown Site ↔ Enable (Admin user tools)
+
+On **Admin → Users → Tools → Manage** (Subscription expiry card), for a configured website tool:
+
+- **Shutdown Site** (red) — immediately sets Hub `status=expired` and `expires_at=now()`, then pushes the **same** `subscription/sync` as the expiry job. Confirmation must state that the external website is deactivated, not merely that a date changed. If the merchant is unreachable, Hub stays expired (fail-closed). Does not rotate keys.
+- **Enable** (green, when shut down) — requires a **future** expiry date, sets `status=active`, pushes sync. Use when reopening after Shutdown Site.
+- **Update expiry** — unchanged date-only edit (also pushes sync when connected).
+
+Merchants must treat Admin Shutdown Site like natural expiry (see [MERCHANT-GUIDE.md](./MERCHANT-GUIDE.md#shutdown-expiry-and-admin-shutdown-site)): login page excepted; only **super admin** may enter; users and regular admins see session-expired UI.
 
 ## Docs for merchants
 

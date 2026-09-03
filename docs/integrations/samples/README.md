@@ -5,9 +5,10 @@ Copy and adapt these into **your merchant site** (not into Hub).
 | Sample | Purpose |
 | ------ | ------- |
 | [env.example](env.example) | Credential env variable names |
-| [php/protocol-v1-verify.php](php/protocol-v1-verify.php) | HMAC verify (health + subscription sync) |
+| [php/protocol-v1-verify.php](php/protocol-v1-verify.php) | HMAC verify (health + subscription sync) and sign (admin credential POST) |
 | [php/consume-validate.php](php/consume-validate.php) | Hub token validate on SSO consume |
 | [php/poll-subscription.php](php/poll-subscription.php) | Cron poll for owned tools |
+| [php/sync-admin-credentials.php](php/sync-admin-credentials.php) | Owned: POST admin email/password changes to Hub |
 | [laravel/README.md](laravel/README.md) | Laravel route/handler sketch |
 | [SMOKE-TEST.md](SMOKE-TEST.md) | End-to-end smoke test checklist + curl |
 

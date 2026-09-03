@@ -39,7 +39,13 @@ Schedule every 5–15 minutes:
 
 Headers: `X-7TH-Client-Id`, `X-7TH-Client-Secret`, `X-7TH-Integration-Id`.
 
-See [../samples/php/poll-subscription.php](../samples/php/poll-subscription.php). Apply fail-closed shutdown when `status === expired` or `expires_at` is past.
+See [../samples/php/poll-subscription.php](../samples/php/poll-subscription.php). Apply fail-closed shutdown when `status === expired` or `expires_at` is past: keep login page/form reachable; only **super admin** (upgraded existing admin) may enter after password login; users and regular admins see the same session-expired UI; refuse Hub SSO while expired. Admin Hub **Shutdown Site** uses this same payload — no separate endpoint.
+
+## Admin email / password change (owned, optional)
+
+When your local admin email or password is saved, POST to Hub using [../samples/php/sync-admin-credentials.php](../samples/php/sync-admin-credentials.php) (`seventh_tradehub_sign` in [../samples/php/protocol-v1-verify.php](../samples/php/protocol-v1-verify.php)). Do not rotate Hub keys. LiveChat credentials are not part of this event.
+
+Call from your admin-profile / password-update controller after a successful local commit. Use a new `event_id` for each distinct change.
 
 ## Full reference
 

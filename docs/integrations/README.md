@@ -19,7 +19,7 @@
 
 1. Get credentials from Hub operator → [samples/env.example](samples/env.example)
 2. Read [MERCHANT-GUIDE.md](MERCHANT-GUIDE.md)
-3. Implement three endpoints on **your** site (see [ENDPOINTS-REFERENCE.md](ENDPOINTS-REFERENCE.md))
+3. Implement three endpoints on **your** site (see [ENDPOINTS-REFERENCE.md](ENDPOINTS-REFERENCE.md)). Owned sites should also POST admin email/password changes to Hub ([samples/php/sync-admin-credentials.php](samples/php/sync-admin-credentials.php)).
 4. Copy patterns from [samples/php/](samples/php/) · [samples/README.md](samples/README.md)
 5. Go live with [checklists/MERCHANT-GO-LIVE.md](checklists/MERCHANT-GO-LIVE.md)
 6. Smoke-test with [samples/SMOKE-TEST.md](samples/SMOKE-TEST.md)
@@ -32,7 +32,7 @@
 
 | Audience | Start here |
 | -------- | ---------- |
-| External site developer | [MERCHANT-GUIDE.md](MERCHANT-GUIDE.md) → [ENDPOINTS-REFERENCE.md](ENDPOINTS-REFERENCE.md) |
+| External site developer | [MERCHANT-GUIDE.md](MERCHANT-GUIDE.md) → [ENDPOINTS-REFERENCE.md](ENDPOINTS-REFERENCE.md) → [CONSUMER-PHP.md](CONSUMER-PHP.md) |
 | Hub operator / catalog admin | [OPERATOR.md](OPERATOR.md) |
 | Protocol details / signing | [PROTOCOL-v1.md](PROTOCOL-v1.md) |
 | Machine-readable Hub APIs | [openapi.yaml](openapi.yaml) |
@@ -78,3 +78,5 @@ Webhooks:
 ```text
 {SEVENTH_TRADEHUB_HUB_URL}/webhooks/site-integrations/{integration_id}
 ```
+
+Ping uses the webhook secret only. Owned admin email/password updates use the same URL with a signed `owned.admin_credentials.updated` body (see [ENDPOINTS-REFERENCE.md](ENDPOINTS-REFERENCE.md) and [samples/php/sync-admin-credentials.php](samples/php/sync-admin-credentials.php)). That call does not reconnect or rotate keys.

@@ -37,9 +37,16 @@ class UserTool extends Model
         'purchased_at',
         'configured_at',
         'expires_at',
+        'subscription_end_reason',
         'duration_months',
         'last_synced_at',
     ];
+
+    public const END_REASON_NATURAL = 'natural';
+
+    public const END_REASON_ADMIN_SHUTDOWN = 'admin_shutdown';
+
+    public const END_REASON_ADMIN_ADJUSTED = 'admin_adjusted';
 
     protected function casts(): array
     {
@@ -147,6 +154,26 @@ class UserTool extends Model
         return $this->status instanceof UserToolStatus
             ? $this->status
             : UserToolStatus::tryFrom((string) $this->status) ?? UserToolStatus::PendingSetup;
+    }
+
+    /**
+     * True when the site ended via paid-window expiry (not admin shutdown/adjust).
+     * Null reason covers legacy rows that expired before this field existed.
+     */
+    public function endedByNaturalExpiry(): bool
+    {
+        return $this->subscription_end_reason === null
+            || $this->subscription_end_reason === self::END_REASON_NATURAL;
+    }
+
+    public function markSubscriptionEnded(string $reason): void
+    {
+        $this->subscription_end_reason = $reason;
+    }
+
+    public function clearSubscriptionEndReason(): void
+    {
+        $this->subscription_end_reason = null;
     }
 
     public function isExpiringSoon(int $withinDays = 7): bool

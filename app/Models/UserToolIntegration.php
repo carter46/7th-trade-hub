@@ -15,6 +15,8 @@ class UserToolIntegration extends Model
 
     public const CAP_OWNED_ADMIN_LOGIN = 'owned_admin_login';
 
+    public const CAP_ADMIN_CREDENTIAL_SYNC = 'admin_credential_sync';
+
     protected $hidden = [
         'client_secret',
         'webhook_secret',

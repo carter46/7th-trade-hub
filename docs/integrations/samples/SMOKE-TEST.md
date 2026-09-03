@@ -65,6 +65,14 @@ curl -sS -X POST "https://7th-tradehub.online/webhooks/site-integrations/YOUR_IN
 
 **Pass:** HTTP 200 and `{ "ok": true }`.
 
+### 4b. Optional owned — admin credential sync
+
+When the local admin email or password changes (owned tools only). See [php/sync-admin-credentials.php](php/sync-admin-credentials.php).
+
+**Pass:** HTTP 200 and `{ "ok": true }`. Connection status and keys on Hub must stay unchanged.
+
+You cannot smoke-test this with a hand-written curl unless you compute the Protocol v1 HMAC. Use the PHP sample (or port `seventh_tradehub_sign`). Unsigned POSTs return **401** or **422**.
+
 ---
 
 ## 5. Owned only — subscription poll (cron)
@@ -85,15 +93,17 @@ Schedule every 5–15 minutes in production.
 
 ---
 
-## 6. Owned only — expiry shutdown
+## 6. Owned only — expiry / Admin shutdown
 
-After `expires_at` passes:
+After `expires_at` passes **or** Hub Admin clicks **Shutdown Site**:
 
 - Poll returns `expired` (or past `expires_at`)
-- Merchant site shows shutdown UI
-- New SSO consume refused locally
+- Merchant site shows shutdown / session-expired UI for users and regular admins
+- Login page/form still loads; only **super admin** may enter after password login
+- Hub SSO consume refused
+- Health and subscription sync still respond
 
-Hub operator: ensure `site-integrations:expire-user-tools` runs every 5 minutes (`php artisan schedule:run`).
+Hub operator: ensure `site-integrations:expire-user-tools` runs every 5 minutes (`php artisan schedule:run`). After **Enable** (future expiry) or renew, site returns to normal.
 
 ---
 
@@ -105,6 +115,7 @@ Hub operator: ensure `site-integrations:expire-user-tools` runs every 5 minutes 
 | HMAC unit test | Merchant dev | Verify/reject as expected |
 | SSO login | Both | Session on merchant site |
 | Webhook ping | Merchant dev | 200 `{ "ok": true }` |
+| Admin credential sync (owned, optional) | Merchant dev | 200 `{ "ok": true }`; keys unchanged |
 | Subscription poll | Merchant cron | 200 snapshot JSON |
 
 See [checklists/MERCHANT-GO-LIVE.md](../checklists/MERCHANT-GO-LIVE.md).

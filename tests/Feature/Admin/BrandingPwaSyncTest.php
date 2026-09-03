@@ -32,6 +32,9 @@ class BrandingPwaSyncTest extends TestCase
         $this->assertTrue($ok);
         $this->assertFileExists(public_path('icons/icon-192x192.png'));
         $this->assertFileExists(public_path('icons/icon-512x512.png'));
+        $this->assertFileExists(public_path('icons/icon-192x192-maskable.png'));
+        $this->assertFileExists(public_path('icons/icon-512x512-maskable.png'));
+        $this->assertFileExists(public_path('icons/og-image.png'));
         $this->assertFileExists(public_path('apple-touch-icon.png'));
         $this->assertFileExists(public_path('favicon-32x32.png'));
         $this->assertFileExists(public_path('favicon-16x16.png'));
@@ -39,10 +42,20 @@ class BrandingPwaSyncTest extends TestCase
         $this->assertFileExists(public_path('logo.png'));
         $this->assertFileExists(public_path('manifest.json'));
 
+        $manifest = json_decode((string) file_get_contents(public_path('manifest.json')), true);
+        $this->assertIsArray($manifest);
+        $purposes = collect($manifest['icons'] ?? [])->pluck('purpose')->all();
+        $this->assertContains('any', $purposes);
+        $this->assertContains('maskable', $purposes);
+
         $this->get('/')->assertOk()
             ->assertSee('apple-touch-icon.png', false)
             ->assertSee('favicon-32x32.png', false)
-            ->assertSee('manifest.json', false);
+            ->assertSee('manifest.json', false)
+            ->assertSee('og:image', false)
+            ->assertSee('og-image.png', false)
+            ->assertDontSee('sizes="any"', false)
+            ->assertDontSee('favicon.ico', false);
     }
 
     public function test_sync_uses_uploaded_favicon_media_not_green_fallback(): void
@@ -108,6 +121,19 @@ class BrandingPwaSyncTest extends TestCase
         $r = ($rgb >> 16) & 0xFF;
         // Source is red — must not be the green theme fallback (~11,106,57).
         $this->assertGreaterThan(150, $r);
+
+        $this->assertFileExists(public_path('icons/icon-512x512-maskable.png'));
+        $maskable = imagecreatefrompng(public_path('icons/icon-512x512-maskable.png'));
+        $this->assertNotFalse($maskable);
+        // Corner of maskable must be white (safe-zone padding), not theme green.
+        $corner = imagecolorat($maskable, 2, 2);
+        imagedestroy($maskable);
+        $cr = ($corner >> 16) & 0xFF;
+        $cg = ($corner >> 8) & 0xFF;
+        $cb = $corner & 0xFF;
+        $this->assertGreaterThan(240, $cr);
+        $this->assertGreaterThan(240, $cg);
+        $this->assertGreaterThan(240, $cb);
     }
 
     public function test_should_regenerate_icons_when_favicon_media_is_newer(): void
