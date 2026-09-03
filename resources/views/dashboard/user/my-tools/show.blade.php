@@ -103,7 +103,7 @@
                         <dt class="text-text-muted">Site URL</dt>
                         <dd class="mt-1 space-y-2">
                             @if ($tool->site_url)
-                                <p class="break-all font-mono text-sm text-text-primary">{{ $tool->site_url }}</p>
+                                <p class="font-mono text-sm text-text-primary" title="{{ $tool->site_url }}">{{ \Illuminate\Support\Str::limit($tool->site_url, 48) }}</p>
                                 <x-dashboard.button :href="$tool->site_url" size="sm" variant="secondary" target="_blank" rel="noopener">
                                     Open Site
                                 </x-dashboard.button>
@@ -116,7 +116,7 @@
                         <div>
                             <dt class="text-text-muted">Admin login URL</dt>
                             <dd class="mt-1 space-y-2">
-                                <p class="break-all font-mono text-sm text-text-primary">{{ $tool->admin_login_url }}</p>
+                                <p class="font-mono text-sm text-text-primary" title="{{ $tool->admin_login_url }}">{{ \Illuminate\Support\Str::limit($tool->admin_login_url, 48) }}</p>
                                 <x-dashboard.button :href="$tool->admin_login_url" size="sm" variant="secondary" target="_blank" rel="noopener">
                                     Open admin login link
                                 </x-dashboard.button>
@@ -214,7 +214,7 @@
                             <dt class="text-text-muted">Livechat link</dt>
                             <dd class="mt-1 space-y-2">
                                 @if ($tool->livechat_url)
-                                    <p class="break-all font-mono text-sm text-text-primary">{{ $tool->livechat_url }}</p>
+                                    <p class="font-mono text-sm text-text-primary" title="{{ $tool->livechat_url }}">{{ \Illuminate\Support\Str::limit($tool->livechat_url, 48) }}</p>
                                     <x-dashboard.button :href="$tool->livechat_url" size="sm" variant="secondary" target="_blank" rel="noopener">
                                         Open livechat
                                     </x-dashboard.button>
