@@ -193,18 +193,31 @@
                     <x-dashboard.button type="submit" variant="secondary">Update expiry</x-dashboard.button>
                 </form>
 
-                @php $siteLive = $tool->isSubscriptionLive(); @endphp
+                @php
+                    $siteLive = $tool->isSubscriptionLive();
+                    $canResumeShutdown = $tool->canResumeShutdownWithStoredExpiry();
+                @endphp
                 <div class="mt-6 border-t border-border-default pt-4">
                     @if ($siteLive)
                         <form
                             method="POST"
                             action="{{ route('admin.users.tools.shutdown', [$user, $tool]) }}"
-                            onsubmit="return confirm('This immediately deactivates the connected external website (same as subscription expiry for the merchant). Customers will see the site as expired/shutdown. Continue?');"
+                            onsubmit="return confirm('This immediately deactivates the connected external website (same as subscription expiry for the merchant). Customers will see the site as expired/shutdown. The original expiry date is kept so Enable can restore it. Continue?');"
                         >
                             @csrf
                             <x-dashboard.button type="submit" variant="danger">Shutdown Site</x-dashboard.button>
                         </form>
-                        <p class="mt-2 text-xs text-text-muted">Immediately deactivates the external website via the same subscription sync used for expiry. Does not rotate API keys. Use <strong>Enable</strong> later to reopen with a new expiry date.</p>
+                        <p class="mt-2 text-xs text-text-muted">Immediately deactivates the external website via subscription sync. Does not rotate API keys. The current expiry is saved — <strong>Enable</strong> restores that date if it is still in the future.</p>
+                    @elseif ($canResumeShutdown)
+                        <form
+                            method="POST"
+                            action="{{ route('admin.users.tools.enable', [$user, $tool]) }}"
+                            onsubmit="return confirm('Reopen this website and restore the previous expiry ({{ $tool->shutdown_resume_expires_at->format('j M Y') }})?');"
+                        >
+                            @csrf
+                            <x-dashboard.button type="submit" variant="success">Enable</x-dashboard.button>
+                        </form>
+                        <p class="mt-2 text-xs text-text-muted">Admin shutdown paused this site. Enabling restores the previous expiry <strong>{{ $tool->shutdown_resume_expires_at->format('j M Y') }}</strong> — no new date needed.</p>
                     @else
                         <form method="POST" action="{{ route('admin.users.tools.enable', [$user, $tool]) }}" class="space-y-3" onsubmit="return confirm('Reopen this external website as active with the new expiry date? The merchant will be notified via subscription sync.');">
                             @csrf
@@ -218,7 +231,7 @@
                             />
                             <x-dashboard.button type="submit" variant="success">Enable</x-dashboard.button>
                         </form>
-                        <p class="mt-2 text-xs text-text-muted">Reopens the site as active and notifies the merchant. A future expiry date is required because shutdown ends the paid window immediately.</p>
+                        <p class="mt-2 text-xs text-text-muted">This subscription ended on its own (or the saved expiry has already passed). Choose a new future expiry to reopen the site.</p>
                     @endif
                 </div>
             </x-dashboard.card>

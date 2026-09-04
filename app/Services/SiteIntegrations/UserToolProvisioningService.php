@@ -357,6 +357,7 @@ class UserToolProvisioningService
                 $locked->status = UserToolStatus::Active;
             }
             $locked->clearSubscriptionEndReason();
+            $locked->clearShutdownResumeExpiry();
             $locked->save();
 
             return $locked;

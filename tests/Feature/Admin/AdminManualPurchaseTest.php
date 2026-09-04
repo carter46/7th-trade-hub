@@ -369,11 +369,13 @@ class AdminManualPurchaseTest extends TestCase
             ->assertSee('Watch tutorial');
     }
 
-    public function test_admin_can_shutdown_site_and_enable_with_future_expiry(): void
+    public function test_admin_can_shutdown_site_and_enable_restores_previous_expiry(): void
     {
         $admin = $this->adminUser();
         $member = $this->memberUser();
         $product = $this->seedVpnProduct();
+
+        $originalExpiry = now()->addMonths(2)->endOfDay();
 
         $tool = UserTool::query()->create([
             'user_id' => $member->id,
@@ -382,7 +384,7 @@ class AdminManualPurchaseTest extends TestCase
             'status' => UserToolStatus::Active,
             'purchased_at' => now()->subMonth(),
             'configured_at' => now()->subMonth(),
-            'expires_at' => now()->addMonths(2),
+            'expires_at' => $originalExpiry,
             'duration_months' => 3,
             'site_url' => 'https://customer.example.com',
             'admin_login_url' => 'https://customer.example.com/admin',
@@ -419,46 +421,81 @@ class AdminManualPurchaseTest extends TestCase
         $this->assertSame(UserToolStatus::Expired, $tool->status);
         $this->assertSame(UserTool::END_REASON_ADMIN_SHUTDOWN, $tool->subscription_end_reason);
         $this->assertTrue($tool->expires_at->lessThanOrEqualTo(now()->addSecond()));
+        $this->assertSame(
+            $originalExpiry->format('Y-m-d'),
+            $tool->shutdown_resume_expires_at?->format('Y-m-d')
+        );
         $this->assertSame('client-secret-test', $integration->fresh()->client_secret);
         $this->assertSame('webhook-secret-test', $integration->fresh()->webhook_secret);
         $this->assertDatabaseMissing('user_notifications', [
             'user_id' => $member->id,
             'type' => 'tool.subscription_expired',
         ]);
-        $this->assertDatabaseMissing('user_notifications', [
-            'user_id' => $member->id,
-            'type' => 'tool.subscription_extended',
-        ]);
 
         $this->actingAs($admin)
             ->get(route('admin.users.tools.show', [$member, $tool->fresh()]))
             ->assertOk()
             ->assertSee('>Enable</', false)
-            ->assertDontSee('Shutdown Site');
+            ->assertDontSee('Shutdown Site')
+            ->assertDontSee('name="enable_expires_at"', false)
+            ->assertSee($originalExpiry->format('j M Y'), false);
 
+        // No date required — resumes stored expiry.
         $this->actingAs($admin)
-            ->post(route('admin.users.tools.enable', [$member, $tool]), [
-                'enable_expires_at' => now()->format('Y-m-d'),
-            ])
-            ->assertSessionHasErrors('enable_expires_at');
-
-        $newExpiry = now()->addMonths(3)->format('Y-m-d');
-        $this->actingAs($admin)
-            ->post(route('admin.users.tools.enable', [$member, $tool]), [
-                'enable_expires_at' => $newExpiry,
-            ])
+            ->post(route('admin.users.tools.enable', [$member, $tool]))
             ->assertRedirect(route('admin.users.tools.show', [$member, $tool]))
             ->assertSessionHas('status');
 
         $tool->refresh();
         $this->assertSame(UserToolStatus::Active, $tool->status);
         $this->assertNull($tool->subscription_end_reason);
-        $this->assertSame($newExpiry, $tool->expires_at?->format('Y-m-d'));
+        $this->assertNull($tool->shutdown_resume_expires_at);
+        $this->assertSame($originalExpiry->format('Y-m-d'), $tool->expires_at?->format('Y-m-d'));
         $this->assertTrue($tool->isSubscriptionLive());
         $this->assertDatabaseMissing('user_notifications', [
             'user_id' => $member->id,
             'type' => 'tool.subscription_extended',
         ]);
+    }
+
+    public function test_enable_after_natural_expiry_requires_new_date(): void
+    {
+        $admin = $this->adminUser();
+        $member = $this->memberUser();
+        $product = $this->seedVpnProduct();
+
+        $tool = UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'platform_product_variant_id' => $product->activeVariants->first()->id,
+            'status' => UserToolStatus::Expired,
+            'purchased_at' => now()->subMonths(4),
+            'configured_at' => now()->subMonths(4),
+            'expires_at' => now()->subDay(),
+            'subscription_end_reason' => UserTool::END_REASON_NATURAL,
+            'duration_months' => 3,
+            'instance_sequence' => 1,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.users.tools.show', [$member, $tool]))
+            ->assertOk()
+            ->assertSee('name="enable_expires_at"', false);
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.tools.enable', [$member, $tool]))
+            ->assertSessionHasErrors('enable_expires_at');
+
+        $newExpiry = now()->addMonths(2)->format('Y-m-d');
+        $this->actingAs($admin)
+            ->post(route('admin.users.tools.enable', [$member, $tool]), [
+                'enable_expires_at' => $newExpiry,
+            ])
+            ->assertRedirect(route('admin.users.tools.show', [$member, $tool]));
+
+        $tool->refresh();
+        $this->assertSame(UserToolStatus::Active, $tool->status);
+        $this->assertSame($newExpiry, $tool->expires_at?->format('Y-m-d'));
     }
 
     public function test_natural_expiry_notifies_user_and_extend_notifies_again(): void

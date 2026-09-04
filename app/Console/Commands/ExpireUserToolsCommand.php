@@ -47,6 +47,7 @@ class ExpireUserToolsCommand extends Command
 
                 $tool->status = UserToolStatus::Expired;
                 $tool->markSubscriptionEnded(UserTool::END_REASON_NATURAL);
+                $tool->clearShutdownResumeExpiry();
                 $tool->save();
 
                 $sync->push($tool->fresh(['integration']));

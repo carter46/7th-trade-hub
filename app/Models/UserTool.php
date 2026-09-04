@@ -38,6 +38,7 @@ class UserTool extends Model
         'configured_at',
         'expires_at',
         'subscription_end_reason',
+        'shutdown_resume_expires_at',
         'duration_months',
         'last_synced_at',
     ];
@@ -57,6 +58,7 @@ class UserTool extends Model
             'purchased_at' => 'datetime',
             'configured_at' => 'datetime',
             'expires_at' => 'datetime',
+            'shutdown_resume_expires_at' => 'datetime',
             'last_synced_at' => 'datetime',
         ];
     }
@@ -174,6 +176,21 @@ class UserTool extends Model
     public function clearSubscriptionEndReason(): void
     {
         $this->subscription_end_reason = null;
+    }
+
+    /**
+     * True when Admin Shutdown Site paused a still-valid paid window that can be restored.
+     */
+    public function canResumeShutdownWithStoredExpiry(): bool
+    {
+        return $this->subscription_end_reason === self::END_REASON_ADMIN_SHUTDOWN
+            && $this->shutdown_resume_expires_at !== null
+            && $this->shutdown_resume_expires_at->isFuture();
+    }
+
+    public function clearShutdownResumeExpiry(): void
+    {
+        $this->shutdown_resume_expires_at = null;
     }
 
     public function isExpiringSoon(int $withinDays = 7): bool

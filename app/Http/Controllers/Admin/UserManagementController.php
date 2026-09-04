@@ -557,9 +557,11 @@ class UserManagementController extends Controller
         if ($expiresAt->isFuture() && $tool->status === UserToolStatus::Expired) {
             $tool->status = UserToolStatus::Active;
             $tool->clearSubscriptionEndReason();
+            $tool->clearShutdownResumeExpiry();
         } elseif ($expiresAt->isPast() && $tool->status === UserToolStatus::Active) {
             $tool->status = UserToolStatus::Expired;
             $tool->markSubscriptionEnded(\App\Models\UserTool::END_REASON_ADMIN_ADJUSTED);
+            $tool->clearShutdownResumeExpiry();
         }
         $tool->save();
 
@@ -601,6 +603,8 @@ class UserManagementController extends Controller
             'expires_at' => $tool->expires_at?->toIso8601String(),
         ];
 
+        // Remember the paid window so Enable can restore it without asking for a new date.
+        $tool->shutdown_resume_expires_at = $tool->expires_at;
         $tool->status = UserToolStatus::Expired;
         $tool->expires_at = now();
         $tool->markSubscriptionEnded(\App\Models\UserTool::END_REASON_ADMIN_SHUTDOWN);
@@ -620,6 +624,7 @@ class UserManagementController extends Controller
         $this->audit->log(auth()->id(), 'user_tool.site_shutdown', $tool, $previous, [
             'status' => $tool->status->value,
             'expires_at' => $tool->expires_at?->toIso8601String(),
+            'shutdown_resume_expires_at' => $tool->shutdown_resume_expires_at?->toIso8601String(),
             'merchant_notified' => $pushed && $syncWarning === null,
             'user_notified' => false,
         ], $request->ip(), ['module' => 'site_integrations']);
@@ -652,19 +657,27 @@ class UserManagementController extends Controller
             return back()->with('error', 'This site is already live.');
         }
 
-        $validated = $request->validate([
-            'enable_expires_at' => ['required', 'date', 'after:today'],
-        ]);
+        $canResume = $tool->canResumeShutdownWithStoredExpiry();
 
-        $expiresAt = \Carbon\Carbon::parse($validated['enable_expires_at'])->endOfDay();
+        if ($canResume) {
+            $expiresAt = $tool->shutdown_resume_expires_at->copy()->endOfDay();
+        } else {
+            $validated = $request->validate([
+                'enable_expires_at' => ['required', 'date', 'after:today'],
+            ]);
+            $expiresAt = \Carbon\Carbon::parse($validated['enable_expires_at'])->endOfDay();
+        }
+
         $previous = [
             'status' => $tool->status instanceof UserToolStatus ? $tool->status->value : (string) $tool->status,
             'expires_at' => $tool->expires_at?->toIso8601String(),
+            'shutdown_resume_expires_at' => $tool->shutdown_resume_expires_at?->toIso8601String(),
         ];
 
         $tool->status = UserToolStatus::Active;
         $tool->expires_at = $expiresAt;
         $tool->clearSubscriptionEndReason();
+        $tool->clearShutdownResumeExpiry();
         $tool->save();
 
         $pushed = false;
@@ -681,23 +694,33 @@ class UserManagementController extends Controller
         $this->audit->log(auth()->id(), 'user_tool.site_enabled', $tool, $previous, [
             'status' => $tool->status->value,
             'expires_at' => $tool->expires_at?->toIso8601String(),
+            'resumed_stored_expiry' => $canResume,
             'merchant_notified' => $pushed && $syncWarning === null,
             'user_notified' => false,
         ], $request->ip(), ['module' => 'site_integrations']);
 
         $redirect = redirect()->route('admin.users.tools.show', [$user, $tool]);
 
+        $statusMessage = $canResume
+            ? __('Site enabled. Previous expiry :date was restored.', ['date' => $expiresAt->format('j M Y')])
+            : __('Site enabled. The external website has been notified.');
+
         if ($syncWarning) {
             return $redirect
-                ->with('status', 'Site enabled on Hub.')
+                ->with('status', $canResume ? __('Site enabled on Hub; previous expiry restored.') : __('Site enabled on Hub.'))
                 ->with('warning', $syncWarning);
         }
 
         if (! $pushed) {
-            return $redirect->with('status', 'Site enabled on Hub. No merchant sync was sent (missing site URL or integration credentials).');
+            return $redirect->with(
+                'status',
+                $canResume
+                    ? __('Site enabled on Hub; previous expiry restored. No merchant sync was sent (missing site URL or integration credentials).')
+                    : __('Site enabled on Hub. No merchant sync was sent (missing site URL or integration credentials).')
+            );
         }
 
-        return $redirect->with('status', 'Site enabled. The external website has been notified.');
+        return $redirect->with('status', $statusMessage);
     }
 
     public function listings(User $user, Request $request): View
