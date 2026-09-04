@@ -33,6 +33,10 @@ class PwaBrandingSync
     }
 
     /**
+     * URLs for &lt;link rel="icon"&gt; / apple-touch / manifest references.
+     * Prefer live branding media when set — public/*.png can be overwritten by
+     * git pull with the letter-7 fallback and cause tab-icon flicker.
+     *
      * @return array{
      *     version: string,
      *     favicon: string,
@@ -44,9 +48,65 @@ class PwaBrandingSync
      *     manifest: string
      * }
      */
-    public function publishedUrls(): array
+    public function headIconUrls(?array $branding = null): array
     {
-        $version = $this->assetVersion();
+        $branding ??= app(SiteBrandingRepository::class)->all();
+        $published = $this->publishedUrls($branding);
+        $mediaUrl = $this->primaryBrandingMediaUrl($branding);
+
+        if ($mediaUrl === null) {
+            return $published;
+        }
+
+        $versioned = $this->appendVersion($mediaUrl, $published['version']);
+
+        return [
+            'version' => $published['version'],
+            // Browser tab / apple icons: always the uploaded mark when available.
+            'favicon' => $versioned,
+            'favicon16' => $versioned,
+            'apple' => $versioned,
+            // PWA install icons still come from generated public files when present.
+            'icon192' => $published['icon192'],
+            'icon512' => $published['icon512'],
+            'og' => $this->socialImageUrl($branding) ?? $published['og'],
+            'manifest' => $published['manifest'],
+        ];
+    }
+
+    /**
+     * Absolute OG/Twitter image URL — prefer branding media over letter-7 og-image.png.
+     */
+    public function socialImageUrl(?array $branding = null): ?string
+    {
+        $branding ??= app(SiteBrandingRepository::class)->all();
+        $mediaUrl = $this->primaryBrandingMediaUrl($branding, preferLogo: true);
+        if ($mediaUrl !== null) {
+            return $this->appendVersion($mediaUrl, $this->assetVersion($branding));
+        }
+
+        if (is_file(public_path('icons/og-image.png'))) {
+            return $this->publishedUrls($branding)['og'];
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{
+     *     version: string,
+     *     favicon: string,
+     *     favicon16: string,
+     *     apple: string,
+     *     icon192: string,
+     *     icon512: string,
+     *     og: string,
+     *     manifest: string
+     * }
+     */
+    public function publishedUrls(?array $branding = null): array
+    {
+        $version = $this->assetVersion($branding);
 
         return [
             'version' => $version,
@@ -105,14 +165,14 @@ class PwaBrandingSync
      */
     private function syncIcons(array $branding): void
     {
-        $sourcePath = $this->resolveSourcePath($branding);
-
         $iconsDir = public_path('icons');
         if (! File::isDirectory($iconsDir)) {
             File::makeDirectory($iconsDir, 0755, true);
         }
 
         $themeBg = $this->backgroundRgb();
+        $mediaIds = $this->brandingMediaIds($branding);
+        $sourcePath = $this->resolveBrandingMediaPath($branding);
 
         if ($sourcePath) {
             // Tight favicon / purpose:any — logo fills the canvas (not a white postage stamp).
@@ -131,40 +191,73 @@ class PwaBrandingSync
                 public_path('favicon-16x16.png'),
                 public_path('favicon-32x32.png'),
             ], public_path('favicon.ico'));
-        } elseif ($this->brandingMediaIds($branding) !== []) {
-            throw new \RuntimeException(
-                'Branding media could not be read for favicon/PWA icon sync.'
+
+            File::copy(
+                $iconsDir.DIRECTORY_SEPARATOR.'icon-192x192.png',
+                public_path('logo.png')
             );
-        } else {
-            $this->writeFallbackSquare(512, $iconsDir.DIRECTORY_SEPARATOR.'icon-512x512.png', $themeBg);
-            $this->writeFallbackSquare(192, $iconsDir.DIRECTORY_SEPARATOR.'icon-192x192.png', $themeBg);
-            $this->writeFallbackSquare(180, public_path('apple-touch-icon.png'), $themeBg);
-            $this->writeFallbackSquare(32, public_path('favicon-32x32.png'), $themeBg);
-            $this->writeFallbackSquare(16, public_path('favicon-16x16.png'), $themeBg);
-            $this->writeFallbackMaskable(512, $iconsDir.DIRECTORY_SEPARATOR.'icon-512x512-maskable.png');
-            $this->writeFallbackMaskable(192, $iconsDir.DIRECTORY_SEPARATOR.'icon-192x192-maskable.png');
-            $this->writeFallbackOg($iconsDir.DIRECTORY_SEPARATOR.'og-image.png', $themeBg);
-            $this->writeIco([
-                public_path('favicon-16x16.png'),
-                public_path('favicon-32x32.png'),
-            ], public_path('favicon.ico'));
+
+            Log::info('pwa.branding_sync_icons_from_media', [
+                'media_ids' => $mediaIds,
+                'source' => basename($sourcePath),
+            ]);
+
+            return;
         }
 
-        // Package @PwaHead falls back to logo.png — keep it in sync with tight icon.
+        if ($mediaIds !== []) {
+            throw new \RuntimeException(
+                'Branding favicon/logo media is configured but the image file could not be read from storage. '.
+                'Check storage/app/public (or the public/storage symlink), media disk paths, and PHP allow_url_fopen. '.
+                'Icons were NOT overwritten with the letter-7 fallback.'
+            );
+        }
+
+        // No branding media: never clobber existing icons with letter-7 (git pull + sync
+        // used to wipe a good logo). Only seed fallbacks on a virgin public/ tree.
+        if ($this->iconsExist()) {
+            Log::info('pwa.branding_sync_icons_preserved', [
+                'reason' => 'no_branding_media_configured',
+            ]);
+
+            return;
+        }
+
+        $this->writeFallbackSquare(512, $iconsDir.DIRECTORY_SEPARATOR.'icon-512x512.png', $themeBg);
+        $this->writeFallbackSquare(192, $iconsDir.DIRECTORY_SEPARATOR.'icon-192x192.png', $themeBg);
+        $this->writeFallbackSquare(180, public_path('apple-touch-icon.png'), $themeBg);
+        $this->writeFallbackSquare(32, public_path('favicon-32x32.png'), $themeBg);
+        $this->writeFallbackSquare(16, public_path('favicon-16x16.png'), $themeBg);
+        $this->writeFallbackMaskable(512, $iconsDir.DIRECTORY_SEPARATOR.'icon-512x512-maskable.png');
+        $this->writeFallbackMaskable(192, $iconsDir.DIRECTORY_SEPARATOR.'icon-192x192-maskable.png');
+        $this->writeFallbackOg($iconsDir.DIRECTORY_SEPARATOR.'og-image.png', $themeBg);
+        $this->writeIco([
+            public_path('favicon-16x16.png'),
+            public_path('favicon-32x32.png'),
+        ], public_path('favicon.ico'));
+
         File::copy(
             $iconsDir.DIRECTORY_SEPARATOR.'icon-192x192.png',
             public_path('logo.png')
         );
+
+        Log::warning('pwa.branding_sync_icons_letter_fallback', [
+            'reason' => 'no_branding_media_and_missing_icons',
+        ]);
     }
 
     /**
+     * Resolve a readable path for uploaded branding media only (never static letter-7 assets).
+     *
      * @param  array<string, mixed>  $branding
      */
-    private function resolveSourcePath(array $branding): ?string
+    private function resolveBrandingMediaPath(array $branding): ?string
     {
         foreach ($this->brandingMediaIds($branding) as $mediaId) {
             $asset = MediaAsset::query()->with('variants')->find($mediaId);
             if (! $asset) {
+                Log::warning('pwa.branding_media_missing', ['media_id' => $mediaId]);
+
                 continue;
             }
 
@@ -177,16 +270,47 @@ class PwaBrandingSync
             if ($fetched) {
                 return $fetched;
             }
+
+            Log::warning('pwa.branding_media_unreadable', [
+                'media_id' => $mediaId,
+                'disk' => $asset->disk,
+            ]);
         }
 
-        foreach (config('pwa.default_icon_paths', []) as $relative) {
-            $path = public_path(ltrim((string) $relative, '/'));
-            if (is_readable($path)) {
-                return $path;
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $branding
+     */
+    private function primaryBrandingMediaUrl(array $branding, bool $preferLogo = false): ?string
+    {
+        $keys = $preferLogo
+            ? ['logo_light_media_id', 'favicon_media_id', 'logo_dark_media_id']
+            : ['favicon_media_id', 'logo_light_media_id', 'logo_dark_media_id'];
+
+        foreach ($keys as $key) {
+            $id = (int) ($branding[$key] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+
+            $url = media_url_from_id($id, null, 'original');
+            if (is_string($url) && $url !== '') {
+                $absolute = absolute_url($url) ?? $url;
+
+                return is_string($absolute) && $absolute !== '' ? $absolute : $url;
             }
         }
 
         return null;
+    }
+
+    private function appendVersion(string $url, string $version): string
+    {
+        $separator = str_contains($url, '?') ? '&' : '?';
+
+        return $url.$separator.'v='.$version;
     }
 
     /**
@@ -285,7 +409,35 @@ class PwaBrandingSync
 
             $disk = Storage::disk($asset->disk);
             if ($disk->exists($relative)) {
-                return $disk->path($relative);
+                try {
+                    $local = $disk->path($relative);
+                    if (is_readable($local)) {
+                        return $local;
+                    }
+                } catch (Throwable) {
+                    // Remote disks may not support path(); fall through to temp extract.
+                }
+
+                try {
+                    $bytes = $disk->get($relative);
+                    if (is_string($bytes) && $bytes !== '') {
+                        $tmp = tempnam(sys_get_temp_dir(), 'pwa_media_');
+                        if ($tmp !== false) {
+                            $ext = pathinfo($relative, PATHINFO_EXTENSION) ?: 'png';
+                            $path = $tmp.'.'.$ext;
+                            @unlink($tmp);
+                            if (@file_put_contents($path, $bytes) !== false && is_readable($path)) {
+                                return $path;
+                            }
+                        }
+                    }
+                } catch (Throwable $e) {
+                    Log::warning('pwa.branding_media_disk_read_failed', [
+                        'media_id' => $asset->id,
+                        'path' => $relative,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
 
             $publicCopy = public_path('storage/'.$relative);
@@ -602,7 +754,7 @@ class PwaBrandingSync
             ? $branding['meta_description']
             : config('pwa.manifest.description'));
 
-        $version = $this->assetVersion();
+        $version = $this->assetVersion($branding);
 
         $manifest = array_merge(config('pwa.manifest', []), [
             'name' => $name,
@@ -647,10 +799,23 @@ class PwaBrandingSync
         app(PWAService::class)->createOrUpdate($manifest);
     }
 
-    private function assetVersion(): string
+    private function assetVersion(?array $branding = null): string
     {
-        $path = public_path('icons/icon-512x512.png');
+        $times = [];
 
-        return (string) (is_file($path) ? filemtime($path) : time());
+        $path = public_path('icons/icon-512x512.png');
+        if (is_file($path)) {
+            $times[] = (int) filemtime($path);
+        }
+
+        $branding ??= app(SiteBrandingRepository::class)->all();
+        foreach ($this->brandingMediaIds($branding) as $mediaId) {
+            $updated = MediaAsset::query()->whereKey($mediaId)->value('updated_at');
+            if ($updated) {
+                $times[] = \Illuminate\Support\Carbon::parse($updated)->getTimestamp();
+            }
+        }
+
+        return (string) ($times !== [] ? max($times) : time());
     }
 }

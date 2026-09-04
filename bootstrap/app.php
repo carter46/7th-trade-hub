@@ -30,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'not_suspended' => EnsureNotSuspended::class,
             'has_wallet' => \App\Http\Middleware\EnsureHasWallet::class,
+            'verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'marketplace.public' => \App\Http\Middleware\MarketplaceComingSoon::class,

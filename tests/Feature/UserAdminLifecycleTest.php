@@ -71,6 +71,25 @@ class UserAdminLifecycleTest extends TestCase
         $this->assertNull($member->fresh()->email_verified_at);
     }
 
+    public function test_impersonation_bypasses_email_verification(): void
+    {
+        $admin = User::factory()->admin()->create(['email_verified_at' => now()]);
+        $member = User::factory()->unverified()->create(['name' => 'Unverified Member']);
+        $member->assignRole('user');
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.impersonate', $member))
+            ->assertRedirect(route('dashboard'));
+
+        $this->assertAuthenticatedAs($member);
+        $this->assertTrue(session('impersonating'));
+
+        $this->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('You are impersonating', false)
+            ->assertDontSee('verify-email', false);
+    }
+
     public function test_impersonation_start_and_leave(): void
     {
         $admin = User::factory()->admin()->create(['email_verified_at' => now()]);

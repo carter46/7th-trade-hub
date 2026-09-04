@@ -7,6 +7,7 @@ use App\Models\MediaVariant;
 use App\Models\User;
 use App\Services\Branding\PwaBrandingSync;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -49,13 +50,106 @@ class BrandingPwaSyncTest extends TestCase
         $this->assertContains('maskable', $purposes);
 
         $this->get('/')->assertOk()
-            ->assertSee('apple-touch-icon.png', false)
-            ->assertSee('favicon-32x32.png', false)
+            ->assertSee('apple-touch-icon', false)
             ->assertSee('manifest.json', false)
             ->assertSee('og:image', false)
-            ->assertSee('og-image.png', false)
             ->assertDontSee('sizes="any"', false)
-            ->assertDontSee('favicon.ico', false);
+            ->assertDontSee('rel="icon" href="'.asset('favicon.ico'), false);
+    }
+
+    public function test_sync_without_media_does_not_overwrite_existing_icons_with_letter_fallback(): void
+    {
+        if (! function_exists('imagecreatetruecolor') || ! function_exists('imagepng')) {
+            $this->markTestSkipped('GD extension required');
+        }
+
+        $marker = public_path('favicon-32x32.png');
+        $img = imagecreatetruecolor(32, 32);
+        $red = imagecolorallocate($img, 200, 10, 10);
+        imagefilledrectangle($img, 0, 0, 31, 31, $red);
+        imagepng($img, $marker, 6);
+        imagedestroy($img);
+
+        // Ensure iconsExist() is true so preserve path is taken.
+        foreach ([
+            public_path('icons/icon-512x512.png'),
+            public_path('icons/icon-192x192.png'),
+            public_path('icons/icon-512x512-maskable.png'),
+            public_path('icons/icon-192x192-maskable.png'),
+            public_path('icons/og-image.png'),
+            public_path('apple-touch-icon.png'),
+            public_path('favicon.ico'),
+        ] as $path) {
+            if (! is_file($path)) {
+                File::ensureDirectoryExists(dirname($path));
+                copy($marker, $path);
+            }
+        }
+
+        $before = md5_file($marker);
+
+        $ok = app(PwaBrandingSync::class)->sync([
+            'site_name' => '7th Trade Hub',
+            'site_short_name' => '7thHub',
+            'meta_description' => 'Test',
+            'favicon_media_id' => null,
+            'logo_light_media_id' => null,
+            'logo_dark_media_id' => null,
+        ]);
+
+        $this->assertTrue($ok);
+        $this->assertSame($before, md5_file($marker));
+    }
+
+    public function test_head_icon_urls_prefer_branding_media_over_public_files(): void
+    {
+        Storage::fake('public');
+
+        $img = imagecreatetruecolor(64, 64);
+        $blue = imagecolorallocate($img, 20, 40, 200);
+        imagefilledrectangle($img, 0, 0, 63, 63, $blue);
+        ob_start();
+        imagepng($img);
+        $bytes = ob_get_clean();
+        imagedestroy($img);
+
+        $path = 'media/branding/head-icon.png';
+        Storage::disk('public')->put($path, $bytes);
+
+        $asset = MediaAsset::query()->create([
+            'type' => 'image',
+            'disk' => 'public',
+            'folder' => 'branding',
+            'original_name' => 'head-icon.png',
+            'mime' => 'image/png',
+            'extension' => 'png',
+            'size_bytes' => strlen($bytes),
+            'width' => 64,
+            'height' => 64,
+            'keep_original' => true,
+        ]);
+
+        MediaVariant::query()->create([
+            'media_asset_id' => $asset->id,
+            'key' => 'original',
+            'path' => $path,
+            'width' => 64,
+            'height' => 64,
+            'size_bytes' => strlen($bytes),
+            'mime' => 'image/png',
+        ]);
+
+        $urls = app(PwaBrandingSync::class)->headIconUrls([
+            'site_name' => '7th Trade Hub',
+            'site_short_name' => '7thHub',
+            'meta_description' => 'Test',
+            'favicon_media_id' => $asset->id,
+            'logo_light_media_id' => null,
+            'logo_dark_media_id' => null,
+        ]);
+
+        $this->assertStringContainsString('/storage/'.$path, $urls['favicon']);
+        $this->assertStringNotContainsString('favicon-32x32.png', $urls['favicon']);
     }
 
     public function test_sync_uses_uploaded_favicon_media_not_green_fallback(): void

@@ -80,9 +80,9 @@ return [
     |--------------------------------------------------------------------------
     | Used by branding:sync-pwa before the green placeholder is written.
     */
-    'default_icon_paths' => [
-        'assets/images/favicon.png',
-        'assets/images/favicon.ico',
-        'assets/images/white_originla_logo.png',
-    ],
+    /*
+    | Legacy seed paths — no longer used by PwaBrandingSync (letter-7 / static
+    | assets must not silently replace Admin branding media).
+    */
+    'default_icon_paths' => [],
 ];

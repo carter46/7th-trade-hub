@@ -1,11 +1,9 @@
 @php
-    $ogIcons = app(\App\Services\Branding\PwaBrandingSync::class)->publishedUrls();
+    $pwa = app(\App\Services\Branding\PwaBrandingSync::class);
 
     $ogImage = isset($ogImageOverride) ? trim((string) $ogImageOverride) : trim($__env->yieldContent('og_image') ?: '');
     if ($ogImage === '') {
-        $ogImage = is_file(public_path('icons/og-image.png'))
-            ? $ogIcons['og']
-            : (isset($faviconUrl) && is_string($faviconUrl) ? $faviconUrl : '');
+        $ogImage = (string) ($pwa->socialImageUrl() ?? '');
     }
     // publishedUrls()/asset() may already be absolute; relative paths need an absolute URL for crawlers.
     if ($ogImage !== '') {

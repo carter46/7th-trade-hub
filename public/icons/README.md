@@ -1,22 +1,28 @@
 # PWA / branding icons
 
-Derived assets (do not edit by hand). Regenerated from **Admin → Settings → Site branding**
-(favicon preferred, otherwise light/dark logo):
+Derived assets under `public/` and `public/icons/` are regenerated from
+**Admin → Settings → Site branding** (favicon preferred, otherwise light/dark logo).
 
-- `icon-192x192.png` / `icon-512x512.png` — tight `purpose: any` (logo fills the canvas)
-- `icon-192x192-maskable.png` / `icon-512x512-maskable.png` — white background + ~80% safe zone
-- `og-image.png` — social preview (1200×630), not the letter-7 tile
+## Important
 
-Also written to `public/`:
+- Browser tabs and social previews **prefer the live media library URL** when a
+  favicon/logo is set. That avoids a flash of the letter-7 icon after `git pull`
+  restores committed fallback files under `public/`.
+- `php artisan branding:sync-pwa` rewrites `public/` icons from branding media.
+  If media is configured but unreadable, sync **fails** and does **not** overwrite
+  with letter-7.
+- If **no** branding media is set, sync **preserves** existing public icons
+  (does not paint letter-7 over a good logo).
 
-- `apple-touch-icon.png`
-- `favicon-16x16.png` / `favicon-32x32.png` / `favicon.ico` (multi-size PNG-in-ICO)
-- `logo.png` (alias for legacy PWA package)
-
-Deploy command (after `git pull` only):
+Deploy (after `git pull` only):
 
 ```bash
 php artisan branding:sync-pwa
 ```
 
-Ensure `public/` and `public/icons/` are writable and PHP GD is enabled.
+Then confirm Admin → Settings still has Favicon / Logo selected, and open:
+
+- the site tab icon
+- `https://your-domain/icons/og-image.png` (after a successful media sync)
+
+WhatsApp/Facebook cache OG images — re-scrape after fixing icons.
