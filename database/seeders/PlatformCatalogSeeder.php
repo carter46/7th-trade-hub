@@ -44,7 +44,9 @@ class PlatformCatalogSeeder extends Seeder
                 'Account Transfer Escrow', 'Milestone Escrow', 'Express Escrow',
             ],
             PlatformProductType::WebsitePackage->value => [
-                'Online Banking website',
+                'Online banking v1',
+                'Online banking v2',
+                'Online banking v3',
             ],
             PlatformProductType::Receipt->value => [
                 'Invoice & Receipt Set', 'Payment Receipt Template', 'Sales Receipt Pack',
@@ -55,7 +57,7 @@ class PlatformCatalogSeeder extends Seeder
         ];
 
         $categoryMap = [
-            PlatformProductType::WebsitePackage->value => ['wp-starter'],
+            PlatformProductType::WebsitePackage->value => ['wp-starter', 'wp-starter', 'wp-starter'],
             PlatformProductType::Receipt->value => ['rc-invoice', 'rc-payment', 'rc-sales'],
             PlatformProductType::Document->value => ['doc-hr', 'doc-legal', 'doc-contract'],
             PlatformProductType::Vpn->value => ['vpn-dedicated'],
@@ -103,7 +105,9 @@ class PlatformCatalogSeeder extends Seeder
                     'demo_username' => $type === PlatformProductType::WebsitePackage->value ? 'demo@7thtrade.local' : null,
                     'demo_password' => $type === PlatformProductType::WebsitePackage->value ? 'DemoPass123!' : null,
                     'industry' => $type === PlatformProductType::WebsitePackage->value ? 'Finance' : null,
-                    'framework' => $type === PlatformProductType::WebsitePackage->value ? ['Laravel', 'WordPress', 'Next.js', 'Laravel', 'WordPress', 'Shopify'][$i] : null,
+                    'framework' => $type === PlatformProductType::WebsitePackage->value
+                        ? ['Laravel', 'Laravel', 'Laravel'][$i] ?? 'Laravel'
+                        : null,
                     'is_responsive' => true,
                     'is_seo_ready' => $type === PlatformProductType::WebsitePackage->value,
                     'support_period' => $type === PlatformProductType::WebsitePackage->value ? '30 days' : null,

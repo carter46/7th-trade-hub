@@ -16,7 +16,9 @@ return [
         'domain-registration',
     ],
     'website_package' => [
-        'online-banking-website',
+        'online-banking-v1',
+        'online-banking-v2',
+        'online-banking-v3',
     ],
     'vpn' => [
         'dedicated-ip-vpn',

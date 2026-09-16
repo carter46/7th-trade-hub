@@ -43,14 +43,17 @@ class PlatformCatalogTrimTest extends TestCase
         $this->assertDatabaseHas('platform_products', ['slug' => 'com-domain-registration', 'status' => 'draft']);
         $this->assertDatabaseHas('platform_products', ['slug' => 'io-domain-registration', 'status' => 'draft']);
         $this->assertDatabaseHas('platform_products', ['slug' => 'co-domain-registration', 'status' => 'draft']);
-        $this->assertDatabaseHas('platform_products', ['slug' => 'online-banking-website']);
+        $this->assertDatabaseHas('platform_products', ['slug' => 'online-banking-v1']);
+        $this->assertDatabaseHas('platform_products', ['slug' => 'online-banking-v2']);
+        $this->assertDatabaseHas('platform_products', ['slug' => 'online-banking-v3']);
+        $this->assertDatabaseMissing('platform_products', ['slug' => 'online-banking-website']);
 
         $this->assertDatabaseHas('platform_products', ['slug' => 'ng-domain-registration', 'status' => 'draft']);
         $this->assertDatabaseMissing('platform_products', ['slug' => 'agency-showcase-site']);
 
         $this->assertDatabaseHas('platform_products', ['slug' => 'domain-registration', 'status' => 'published']);
         $this->assertSame(1, PlatformProduct::query()->ofType(PlatformProductType::Domain)->where('status', 'published')->count());
-        $this->assertSame(1, PlatformProduct::query()->ofType(PlatformProductType::WebsitePackage)->count());
+        $this->assertSame(3, PlatformProduct::query()->ofType(PlatformProductType::WebsitePackage)->count());
     }
 
     public function test_retires_website_templates_vps_and_trims_network_products(): void

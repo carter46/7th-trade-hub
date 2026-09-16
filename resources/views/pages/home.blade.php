@@ -17,7 +17,7 @@
             ],
             [
                 'q' => 'How do website packages work?',
-                'a' => 'Pick a package such as Online Banking website, review the demo and deliverables on the product page, then check out when you are ready. Support details are listed on each package.',
+                'a' => 'Pick a package such as Online banking v1, v2, or v3, review the demo and deliverables on the product page, then check out when you are ready. Support details are listed on each package.',
             ],
             [
                 'q' => 'Can I buy domains and business documents here?',
