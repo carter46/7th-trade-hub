@@ -286,15 +286,19 @@ class UserTool extends Model
 
     public function resolvedDisplayName(): string
     {
+        // Prefer live catalog title so renames (e.g. Online Banking website → v1) show everywhere.
+        $title = $this->product?->title;
+        if (filled($title)) {
+            return $this->instance_sequence > 1
+                ? $title.' #'.$this->instance_sequence
+                : $title;
+        }
+
         if ($this->display_name) {
             return $this->display_name;
         }
 
-        $title = $this->product?->title ?? 'Service';
-
-        return $this->instance_sequence > 1
-            ? $title.' #'.$this->instance_sequence
-            : $title;
+        return 'Service';
     }
 
     public function scopeOwnedBy(Builder $query, int $userId): Builder
