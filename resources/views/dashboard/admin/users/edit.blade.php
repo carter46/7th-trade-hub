@@ -32,6 +32,15 @@
                 @endforeach
             </x-dashboard.select>
 
+            <div class="border-t border-border-default pt-4 space-y-4">
+                <div>
+                    <p class="text-sm font-medium text-text-primary">Set new password</p>
+                    <p class="mt-1 text-xs text-text-muted">Optional. Leave blank to keep the current password. You can still use “Send password reset” from the user page.</p>
+                </div>
+                <x-dashboard.input name="password" type="password" label="New password" autocomplete="new-password" />
+                <x-dashboard.input name="password_confirmation" type="password" label="Confirm new password" autocomplete="new-password" />
+            </div>
+
             <div class="flex gap-3">
                 <x-dashboard.button type="submit" x-bind:disabled="submitting">Save</x-dashboard.button>
                 <x-dashboard.button :href="route('admin.users.show', $user)" variant="secondary">Cancel</x-dashboard.button>

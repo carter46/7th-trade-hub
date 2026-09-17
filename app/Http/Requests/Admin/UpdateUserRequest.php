@@ -3,9 +3,10 @@
 namespace App\Http\Requests\Admin;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
-class StoreUserRequest extends FormRequest
+class UpdateUserRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -23,18 +24,31 @@ class StoreUserRequest extends FormRequest
 
     public function rules(): array
     {
+        /** @var \App\Models\User $user */
+        $user = $this->route('user');
+
         return [
             'name' => ['required', 'string', 'max:255'],
-            'username' => ['required', 'string', 'max:50', 'alpha_dash', 'unique:users,username'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'confirmed', Password::defaults()],
+            'username' => [
+                'required',
+                'string',
+                'max:50',
+                'alpha_dash',
+                Rule::unique('users', 'username')->ignore($user->id),
+            ],
+            'email' => [
+                'required',
+                'string',
+                'lowercase',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email')->ignore($user->id),
+            ],
             'phone' => ['nullable', 'string', 'max:40'],
             'country' => ['nullable', 'string', 'size:2'],
             'bio' => ['nullable', 'string', 'max:2000'],
-            'email_verified' => ['sometimes', 'boolean'],
-            'is_suspended' => ['sometimes', 'boolean'],
             'kyc_level' => ['nullable', 'integer', 'min:0', 'max:4'],
-            'provision_wallet' => ['sometimes', 'boolean'],
+            'password' => ['nullable', 'confirmed', Password::defaults()],
         ];
     }
 }

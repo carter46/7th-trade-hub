@@ -52,6 +52,61 @@ class UserAdminLifecycleTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'user.password_reset_link_sent']);
     }
 
+    public function test_admin_can_update_email_with_mixed_case(): void
+    {
+        $admin = User::factory()->admin()->create(['email_verified_at' => now()]);
+        $member = User::factory()->create([
+            'email' => 'old@example.com',
+            'email_verified_at' => now(),
+            'username' => 'member_one',
+        ]);
+        $member->assignRole('user');
+
+        $this->actingAs($admin)
+            ->put(route('admin.users.update', $member), [
+                'name' => $member->name,
+                'username' => $member->username,
+                'email' => 'New.Email@Example.COM',
+                'phone' => $member->phone,
+                'country' => $member->country,
+                'bio' => $member->bio,
+                'kyc_level' => $member->kyc_level,
+            ])
+            ->assertRedirect(route('admin.users.show', $member));
+
+        $member->refresh();
+        $this->assertSame('new.email@example.com', $member->email);
+        $this->assertNull($member->email_verified_at);
+    }
+
+    public function test_admin_can_manually_set_user_password(): void
+    {
+        $admin = User::factory()->admin()->create(['email_verified_at' => now()]);
+        $member = User::factory()->create([
+            'email_verified_at' => now(),
+            'username' => 'member_pw',
+            'password' => 'OldPassword1!',
+        ]);
+        $member->assignRole('user');
+
+        $this->actingAs($admin)
+            ->put(route('admin.users.update', $member), [
+                'name' => $member->name,
+                'username' => $member->username,
+                'email' => $member->email,
+                'phone' => $member->phone,
+                'country' => $member->country,
+                'bio' => $member->bio,
+                'kyc_level' => $member->kyc_level,
+                'password' => 'NewPassword1!',
+                'password_confirmation' => 'NewPassword1!',
+            ])
+            ->assertRedirect(route('admin.users.show', $member));
+
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('NewPassword1!', $member->fresh()->password));
+        $this->assertDatabaseHas('audit_logs', ['action' => 'user.password_set_by_admin']);
+    }
+
     public function test_admin_can_verify_and_unverify_email(): void
     {
         $admin = User::factory()->admin()->create(['email_verified_at' => now()]);

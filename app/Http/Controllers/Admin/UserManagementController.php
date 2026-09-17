@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreUserRequest;
+use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Enums\PlatformProductType;
 use App\Enums\UserToolStatus;
 use App\Models\AuditLog;
@@ -796,7 +797,7 @@ class UserManagementController extends Controller
         ]);
     }
 
-    public function update(Request $request, User $user): RedirectResponse
+    public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
         $this->ensureMember($user);
 
@@ -804,28 +805,7 @@ class UserManagementController extends Controller
             return back()->with('error', __('This account has been permanently deleted and cannot be edited.'));
         }
 
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'username' => [
-                'required',
-                'string',
-                'max:50',
-                'alpha_dash',
-                Rule::unique('users', 'username')->ignore($user->id),
-            ],
-            'email' => [
-                'required',
-                'string',
-                'lowercase',
-                'email',
-                'max:255',
-                Rule::unique('users', 'email')->ignore($user->id),
-            ],
-            'phone' => ['nullable', 'string', 'max:40'],
-            'country' => ['nullable', 'string', 'size:2'],
-            'bio' => ['nullable', 'string', 'max:2000'],
-            'kyc_level' => ['nullable', 'integer', 'min:0', 'max:4'],
-        ]);
+        $data = $request->validated();
 
         if (isset($data['country'])) {
             $data['country'] = strtoupper($data['country']);
@@ -833,10 +813,15 @@ class UserManagementController extends Controller
 
         $old = $user->only(['name', 'username', 'email', 'phone', 'country', 'bio', 'kyc_level']);
 
-        $user->fill(collect($data)->except('kyc_level')->all());
+        $user->fill(collect($data)->except(['kyc_level', 'password'])->all());
 
         if ($user->isDirty('email')) {
             $user->email_verified_at = null;
+        }
+
+        $passwordChanged = filled($data['password'] ?? null);
+        if ($passwordChanged) {
+            $user->password = $data['password'];
         }
 
         $user->save();
@@ -849,9 +834,17 @@ class UserManagementController extends Controller
             'name', 'username', 'email', 'phone', 'country', 'bio', 'kyc_level',
         ]), $request->ip());
 
+        if ($passwordChanged) {
+            $this->audit->log(auth()->id(), 'user.password_set_by_admin', $user, null, [
+                'user_id' => $user->id,
+            ], $request->ip());
+        }
+
         return redirect()
             ->route('admin.users.show', $user)
-            ->with('status', __('User profile updated.'));
+            ->with('status', $passwordChanged
+                ? __('User profile updated and password set.')
+                : __('User profile updated.'));
     }
 
     public function sendPasswordReset(Request $request, User $user): RedirectResponse
