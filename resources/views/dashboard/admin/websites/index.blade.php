@@ -50,7 +50,8 @@
         @foreach ($tools as $tool)
             @php
                 $effectiveStatus = $tool->effectiveStatus();
-                $expiryPast = $tool->expires_at && $tool->expires_at->isPast();
+                $displayExpiry = $tool->displayExpiresAt();
+                $adminHold = $tool->wasEndedByAdminShutdown();
             @endphp
             <tr>
                 <x-dashboard.td>
@@ -70,12 +71,16 @@
                 <x-dashboard.td>
                     <div class="text-sm text-text-secondary">Purchased {{ $tool->purchased_at?->format('j M Y') ?? '—' }}</div>
                     <div class="mt-0.5 font-mono text-xs text-text-muted">
-                        @if (! $tool->expires_at)
+                        @if (! $displayExpiry)
                             Expiry —
-                        @elseif ($expiryPast || $effectiveStatus === \App\Enums\UserToolStatus::Expired)
-                            Expired {{ $tool->expires_at->format('j M Y') }}
+                        @elseif ($adminHold && $displayExpiry->isFuture())
+                            Paid until {{ $displayExpiry->format('j M Y') }}
+                        @elseif ($adminHold)
+                            Was until {{ $displayExpiry->format('j M Y') }}
+                        @elseif ($displayExpiry->isPast() || $effectiveStatus === \App\Enums\UserToolStatus::Expired)
+                            Expired {{ $displayExpiry->format('j M Y') }}
                         @else
-                            Expires {{ $tool->expires_at->format('j M Y') }}
+                            Expires {{ $displayExpiry->format('j M Y') }}
                         @endif
                     </div>
                 </x-dashboard.td>

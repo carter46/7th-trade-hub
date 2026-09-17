@@ -410,15 +410,22 @@ class AdminManualPurchaseTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.users.tools.show', [$member, $tool]))
             ->assertOk()
-            ->assertSee('Shutdown Site');
+            ->assertSee('Shutdown Site')
+            ->assertSee('Shutdown reason', false)
+            ->assertSee('Suspended', false)
+            ->assertSee('Cancelled', false)
+            ->assertSee('Inactive', false)
+            ->assertSee('Expired', false);
 
         $this->actingAs($admin)
-            ->post(route('admin.users.tools.shutdown', [$member, $tool]))
+            ->post(route('admin.users.tools.shutdown', [$member, $tool]), [
+                'shutdown_reason' => UserToolStatus::Suspended->value,
+            ])
             ->assertRedirect(route('admin.users.tools.show', [$member, $tool]))
             ->assertSessionHas('status');
 
         $tool->refresh();
-        $this->assertSame(UserToolStatus::Expired, $tool->status);
+        $this->assertSame(UserToolStatus::Suspended, $tool->status);
         $this->assertSame(UserTool::END_REASON_ADMIN_SHUTDOWN, $tool->subscription_end_reason);
         $this->assertTrue($tool->expires_at->lessThanOrEqualTo(now()->addSecond()));
         $this->assertSame(
@@ -611,13 +618,16 @@ class AdminManualPurchaseTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->post(route('admin.users.tools.shutdown', [$member, $tool]))
+            ->post(route('admin.users.tools.shutdown', [$member, $tool]), [
+                'shutdown_reason' => UserToolStatus::Cancelled->value,
+            ])
             ->assertRedirect(route('admin.users.tools.show', [$member, $tool]))
             ->assertSessionHas('status')
             ->assertSessionHas('warning');
 
         $tool->refresh();
-        $this->assertSame(UserToolStatus::Expired, $tool->status);
+        $this->assertSame(UserToolStatus::Cancelled, $tool->status);
+        $this->assertSame('expired', $tool->status->protocolValue());
         $this->assertFalse($tool->isSubscriptionLive());
     }
 
@@ -641,10 +651,114 @@ class AdminManualPurchaseTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->post(route('admin.users.tools.shutdown', [$member, $tool]))
+            ->post(route('admin.users.tools.shutdown', [$member, $tool]), [
+                'shutdown_reason' => UserToolStatus::Inactive->value,
+            ])
             ->assertRedirect(route('admin.users.tools.show', [$member, $tool]))
-            ->assertSessionHas('status', 'Site shut down on Hub. No merchant sync was sent (missing site URL or integration credentials).');
+            ->assertSessionHas('status');
 
-        $this->assertSame(UserToolStatus::Expired, $tool->fresh()->status);
+        $tool->refresh();
+        $this->assertSame(UserToolStatus::Inactive, $tool->status);
+        $this->assertStringContainsString('Inactive', session('status'));
+        $this->assertStringContainsString('No merchant sync was sent', session('status'));
+    }
+
+    public function test_admin_shutdown_as_expired_can_resume_without_new_date(): void
+    {
+        $admin = $this->adminUser();
+        $member = $this->memberUser();
+        $product = $this->seedVpnProduct();
+        $originalExpiry = now()->addMonths(2)->endOfDay();
+
+        $tool = UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'platform_product_variant_id' => $product->activeVariants->first()->id,
+            'status' => UserToolStatus::Active,
+            'purchased_at' => now()->subMonth(),
+            'configured_at' => now()->subMonth(),
+            'expires_at' => $originalExpiry,
+            'duration_months' => 3,
+            'instance_sequence' => 1,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.tools.shutdown', [$member, $tool]), [
+                'shutdown_reason' => UserToolStatus::Expired->value,
+            ])
+            ->assertRedirect(route('admin.users.tools.show', [$member, $tool]))
+            ->assertSessionHas('status');
+
+        $tool->refresh();
+        $this->assertSame(UserToolStatus::Expired, $tool->status);
+        $this->assertSame(UserTool::END_REASON_ADMIN_SHUTDOWN, $tool->subscription_end_reason);
+        $this->assertTrue($tool->wasEndedByAdminShutdown());
+        $this->assertTrue($tool->canResumeShutdownWithStoredExpiry());
+        $this->assertSame(
+            $originalExpiry->format('Y-m-d'),
+            $tool->displayExpiresAt()?->format('Y-m-d')
+        );
+        $this->assertFalse($tool->status->isAdminHoldStatus());
+
+        $this->actingAs($admin)
+            ->get(route('admin.users.tools.show', [$member, $tool]))
+            ->assertOk()
+            ->assertSee('(Expired)', false)
+            ->assertDontSee('name="enable_expires_at"', false);
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.tools.enable', [$member, $tool]))
+            ->assertRedirect(route('admin.users.tools.show', [$member, $tool]));
+
+        $tool->refresh();
+        $this->assertSame(UserToolStatus::Active, $tool->status);
+        $this->assertNull($tool->subscription_end_reason);
+        $this->assertSame($originalExpiry->format('Y-m-d'), $tool->expires_at?->format('Y-m-d'));
+        $this->assertTrue($tool->isSubscriptionLive());
+    }
+
+    public function test_expire_job_skips_cancelled_and_inactive_holds(): void
+    {
+        $member = $this->memberUser();
+        $product = $this->seedVpnProduct();
+
+        $cancelled = UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'platform_product_variant_id' => $product->activeVariants->first()->id,
+            'status' => UserToolStatus::Cancelled,
+            'purchased_at' => now()->subMonths(2),
+            'configured_at' => now()->subMonths(2),
+            'expires_at' => now()->subDay(),
+            'shutdown_resume_expires_at' => now()->addMonth(),
+            'subscription_end_reason' => UserTool::END_REASON_ADMIN_SHUTDOWN,
+            'duration_months' => 3,
+            'instance_sequence' => 1,
+        ]);
+
+        $inactive = UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'platform_product_variant_id' => $product->activeVariants->first()->id,
+            'status' => UserToolStatus::Inactive,
+            'purchased_at' => now()->subMonths(2),
+            'configured_at' => now()->subMonths(2),
+            'expires_at' => now()->subDay(),
+            'shutdown_resume_expires_at' => now()->addMonth(),
+            'subscription_end_reason' => UserTool::END_REASON_ADMIN_SHUTDOWN,
+            'duration_months' => 3,
+            'instance_sequence' => 2,
+        ]);
+
+        $this->artisan('site-integrations:expire-user-tools')->assertSuccessful();
+
+        $this->assertSame(UserToolStatus::Cancelled, $cancelled->fresh()->status);
+        $this->assertSame(UserTool::END_REASON_ADMIN_SHUTDOWN, $cancelled->fresh()->subscription_end_reason);
+        $this->assertSame(UserToolStatus::Inactive, $inactive->fresh()->status);
+        $this->assertSame(UserTool::END_REASON_ADMIN_SHUTDOWN, $inactive->fresh()->subscription_end_reason);
+        $this->assertDatabaseMissing('user_notifications', [
+            'user_id' => $member->id,
+            'type' => 'tool.subscription_expired',
+        ]);
     }
 }

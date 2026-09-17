@@ -38,7 +38,7 @@ class SubscriptionSyncService
         }
 
         $effective = $tool->effectiveStatus();
-        $status = $effective->value;
+        $status = $effective->protocolValue();
 
         $body = $this->signer->sign([
             'integration_id' => $integration->integration_id,
@@ -138,7 +138,7 @@ class SubscriptionSyncService
             'version' => ProtocolV1Signer::VERSION,
             'tool_id' => $tool->id,
             'public_id' => $tool->public_id,
-            'status' => $effective->value,
+            'status' => $effective->protocolValue(),
             'expires_at' => $tool->expires_at?->toIso8601String(),
             'updated_at' => $tool->updated_at?->toIso8601String(),
         ];

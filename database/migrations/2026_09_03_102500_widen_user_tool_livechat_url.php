@@ -12,6 +12,11 @@ return new class extends Migration
             return;
         }
 
+        // MySQL/MariaDB only — SQLite ignores VARCHAR length and has no MODIFY.
+        if (! in_array(Schema::getConnection()->getDriverName(), ['mysql', 'mariadb'], true)) {
+            return;
+        }
+
         // livechat_url was VARCHAR(255) but validation allowed longer links —
         // second saves with longer URLs failed with "Data too long for column".
         if (Schema::hasColumn('user_tools', 'livechat_url')) {
@@ -26,6 +31,10 @@ return new class extends Migration
     public function down(): void
     {
         if (! Schema::hasTable('user_tools')) {
+            return;
+        }
+
+        if (! in_array(Schema::getConnection()->getDriverName(), ['mysql', 'mariadb'], true)) {
             return;
         }
 

@@ -3,7 +3,9 @@
     $closeOnSubmit = $modalName ? "\$dispatch('close-modal', '{$modalName}')" : '';
 @endphp
 <div class="space-y-4 p-1">
-    <h3 class="text-lg font-semibold {{ ($dashboard ?? true) ? 'text-text-primary' : 'text-slate-900' }}">View demo</h3>
+    @unless ($omitHeading ?? false)
+        <h3 class="text-lg font-semibold {{ ($dashboard ?? true) ? 'text-text-primary' : 'text-slate-900' }}">View demo</h3>
+    @endunless
     <p class="text-sm {{ ($dashboard ?? true) ? 'text-text-secondary' : 'text-slate-600' }}">
         Open the independent demo site without a password. Launches in a new tab.
     </p>

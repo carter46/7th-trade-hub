@@ -28,6 +28,8 @@
         'overpaid_review' => 'bg-warning/20 text-warning',
         'expired' => 'bg-muted text-text-secondary',
         'cancelled' => 'bg-muted text-text-secondary',
+        'inactive' => 'bg-warning/20 text-warning',
+        'pending_setup' => 'bg-warning/20 text-warning',
     ];
     $key = strtolower((string) $status);
     $label = str_replace('_', ' ', $key);

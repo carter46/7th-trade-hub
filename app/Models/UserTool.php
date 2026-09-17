@@ -125,7 +125,11 @@ class UserTool extends Model
      */
     public function isSubscriptionLive(): bool
     {
-        if ($this->status === UserToolStatus::Suspended || $this->status === UserToolStatus::PendingSetup) {
+        if ($this->status === UserToolStatus::PendingSetup) {
+            return false;
+        }
+
+        if ($this->status?->isAdminShutdown()) {
             return false;
         }
 
@@ -145,7 +149,12 @@ class UserTool extends Model
      */
     public function effectiveStatus(): UserToolStatus
     {
-        if ($this->status === UserToolStatus::Suspended || $this->status === UserToolStatus::PendingSetup) {
+        if ($this->status === UserToolStatus::PendingSetup) {
+            return $this->status;
+        }
+
+        // Admin shutdown reasons stay visible — do not collapse to Expired by clock.
+        if ($this->status instanceof UserToolStatus && $this->status->isAdminShutdown()) {
             return $this->status;
         }
 
@@ -179,13 +188,43 @@ class UserTool extends Model
     }
 
     /**
+     * True when the current offline state came from Admin Shutdown Site
+     * (including reason "Expired", which is not an isAdminHoldStatus()).
+     */
+    public function wasEndedByAdminShutdown(): bool
+    {
+        if ($this->subscription_end_reason === self::END_REASON_ADMIN_SHUTDOWN) {
+            return true;
+        }
+
+        $status = $this->status instanceof UserToolStatus
+            ? $this->status
+            : UserToolStatus::tryFrom((string) $this->status);
+
+        return $status?->isAdminShutdown() ?? false;
+    }
+
+    /**
      * True when Admin Shutdown Site paused a still-valid paid window that can be restored.
      */
     public function canResumeShutdownWithStoredExpiry(): bool
     {
-        return $this->subscription_end_reason === self::END_REASON_ADMIN_SHUTDOWN
+        return $this->wasEndedByAdminShutdown()
             && $this->shutdown_resume_expires_at !== null
             && $this->shutdown_resume_expires_at->isFuture();
+    }
+
+    /**
+     * Expiry date for UI. During admin shutdown the Hub clock is forced to "now",
+     * so prefer the saved paid window when present.
+     */
+    public function displayExpiresAt(): ?\Carbon\Carbon
+    {
+        if ($this->wasEndedByAdminShutdown() && $this->shutdown_resume_expires_at) {
+            return $this->shutdown_resume_expires_at;
+        }
+
+        return $this->expires_at;
     }
 
     public function clearShutdownResumeExpiry(): void

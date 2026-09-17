@@ -241,8 +241,9 @@
                     <div>
                         <dt class="text-text-muted">Expires</dt>
                         <dd class="font-medium text-text-primary">
-                            @if ($tool->expires_at)
-                                {{ $tool->expires_at->format('j M Y') }}
+                            @php $displayExpiry = $tool->displayExpiresAt(); @endphp
+                            @if ($displayExpiry)
+                                {{ $displayExpiry->format('j M Y') }}
                                 @if ($tool->isExpiringSoon())
                                     <span class="ml-1 text-amber-600">Expiring soon</span>
                                 @endif

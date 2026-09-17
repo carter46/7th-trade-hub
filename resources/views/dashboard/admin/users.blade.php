@@ -73,7 +73,8 @@
             }
         "
         x-on:close-modal.window="
-            if ($event.detail === 'admin-delete-user') reset();
+            const d = $event.detail;
+            if (d === 'admin-delete-user' || d?.id === 'admin-delete-user' || d?.[0] === 'admin-delete-user') reset();
         "
     >
         <x-dashboard.modal

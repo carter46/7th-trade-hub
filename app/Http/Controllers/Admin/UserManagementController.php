@@ -599,6 +599,17 @@ class UserManagementController extends Controller
             return back()->with('error', 'This site is already shut down. Use Enable to reopen it.');
         }
 
+        $allowedReasons = array_map(
+            fn (UserToolStatus $status) => $status->value,
+            UserToolStatus::adminShutdownReasons()
+        );
+
+        $validated = $request->validate([
+            'shutdown_reason' => ['required', 'string', Rule::in($allowedReasons)],
+        ]);
+
+        $shutdownStatus = UserToolStatus::from($validated['shutdown_reason']);
+
         $previous = [
             'status' => $tool->status instanceof UserToolStatus ? $tool->status->value : (string) $tool->status,
             'expires_at' => $tool->expires_at?->toIso8601String(),
@@ -606,7 +617,7 @@ class UserManagementController extends Controller
 
         // Remember the paid window so Enable can restore it without asking for a new date.
         $tool->shutdown_resume_expires_at = $tool->expires_at;
-        $tool->status = UserToolStatus::Expired;
+        $tool->status = $shutdownStatus;
         $tool->expires_at = now();
         $tool->markSubscriptionEnded(\App\Models\UserTool::END_REASON_ADMIN_SHUTDOWN);
         $tool->save();
@@ -617,13 +628,14 @@ class UserManagementController extends Controller
             $pushed = true;
             $result = $this->subscriptionSync->push($tool->fresh(['integration']));
             if (! ($result['ok'] ?? false)) {
-                $syncWarning = $result['message'] ?? 'Merchant site did not acknowledge shutdown. Hub is still marked expired.';
+                $syncWarning = $result['message'] ?? 'Merchant site did not acknowledge shutdown. Hub is still marked shut down.';
             }
         }
 
         // Intentionally no user email — admin shutdown must stay silent.
         $this->audit->log(auth()->id(), 'user_tool.site_shutdown', $tool, $previous, [
             'status' => $tool->status->value,
+            'shutdown_reason' => $shutdownStatus->value,
             'expires_at' => $tool->expires_at?->toIso8601String(),
             'shutdown_resume_expires_at' => $tool->shutdown_resume_expires_at?->toIso8601String(),
             'merchant_notified' => $pushed && $syncWarning === null,
@@ -632,17 +644,29 @@ class UserManagementController extends Controller
 
         $redirect = redirect()->route('admin.users.tools.show', [$user, $tool]);
 
+        $reasonLabel = $shutdownStatus->label();
+
         if ($syncWarning) {
             return $redirect
-                ->with('status', 'Site shut down on Hub.')
+                ->with('status', __('Site marked :reason on Hub.', ['reason' => $reasonLabel]))
                 ->with('warning', $syncWarning);
         }
 
         if (! $pushed) {
-            return $redirect->with('status', 'Site shut down on Hub. No merchant sync was sent (missing site URL or integration credentials).');
+            return $redirect->with(
+                'status',
+                __('Site marked :reason on Hub. No merchant sync was sent (missing site URL or integration credentials).', [
+                    'reason' => $reasonLabel,
+                ])
+            );
         }
 
-        return $redirect->with('status', 'Site shut down. The external website has been notified to deactivate.');
+        return $redirect->with(
+            'status',
+            __('Site shut down as :reason. The external website has been notified to deactivate.', [
+                'reason' => $reasonLabel,
+            ])
+        );
     }
 
     public function enableTool(Request $request, User $user, \App\Models\UserTool $tool): RedirectResponse

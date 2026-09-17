@@ -7,6 +7,8 @@
     'variant' => 'default',
     'formAction' => null,
     'method' => 'POST',
+    'maxWidth' => 'md',
+    'showActions' => true,
 ])
 
 @php
@@ -16,6 +18,15 @@
         default => 'primary',
     };
     $hasBody = isset($slot) && trim((string) $slot) !== '';
+    $hasFooterSlot = isset($footer);
+    $showDefaultActions = $showActions && ! $hasFooterSlot;
+    $maxWidthClass = match ($maxWidth) {
+        'sm' => 'max-w-sm',
+        'lg' => 'max-w-lg',
+        'xl' => 'max-w-xl',
+        '2xl' => 'max-w-2xl',
+        default => 'max-w-md',
+    };
 @endphp
 
 {{-- Theme-aware confirm modal. Open via $dispatch('open-modal', 'name') --}}
@@ -66,7 +77,7 @@
         <div
             x-show="open"
             x-cloak
-            class="fixed inset-0 z-[90] flex items-center justify-center p-4"
+            class="fixed inset-0 z-[90] flex items-end justify-center p-3 sm:items-center sm:p-4"
             role="dialog"
             aria-modal="true"
             :aria-labelledby="'modal-title-{{ $name }}'"
@@ -88,10 +99,14 @@
                 x-transition:leave="transition ease-in duration-150 motion-reduce:transition-none"
                 x-transition:leave-start="opacity-100 translate-y-0 scale-100"
                 x-transition:leave-end="opacity-0 translate-y-2 scale-95"
-                class="relative w-full max-w-md rounded-2xl border border-border-default bg-elevated p-6 shadow-panel outline-none"
+                @class([
+                    'relative flex w-full flex-col overflow-hidden rounded-2xl border border-border-default bg-elevated shadow-panel outline-none',
+                    'max-h-[min(92dvh,42rem)]',
+                    $maxWidthClass,
+                ])
                 @click.stop
             >
-                <div class="flex items-start justify-between gap-3">
+                <div class="flex shrink-0 items-start justify-between gap-3 border-b border-border-default px-5 py-4 sm:px-6">
                     <div class="min-w-0">
                         <h2 id="modal-title-{{ $name }}" class="text-lg font-semibold text-text-primary">{{ $title }}</h2>
                         @if ($description)
@@ -109,51 +124,59 @@
                 </div>
 
                 @if ($formAction)
-                    <form method="POST" action="{{ $formAction }}" class="mt-4" x-data="{ submitting: false }" @submit="if (submitting) { $event.preventDefault(); return; } submitting = true;">
+                    <form method="POST" action="{{ $formAction }}" class="flex min-h-0 flex-1 flex-col" x-data="{ submitting: false }" @submit="if (submitting) { $event.preventDefault(); return; } submitting = true;">
                         @csrf
                         @if (strtoupper($method) !== 'POST')
                             @method($method)
                         @endif
 
+                        <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">
+                            @if ($hasBody)
+                                <div class="text-sm text-text-secondary">{{ $slot }}</div>
+                            @endif
+
+                            @isset($form)
+                                <div @class(['space-y-4', 'mt-4' => $hasBody])>
+                                    {{ $form }}
+                                </div>
+                            @endisset
+                        </div>
+
+                        @if ($hasFooterSlot || $showDefaultActions)
+                            <div class="flex shrink-0 flex-col-reverse gap-2.5 border-t border-border-default px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+                                @if ($hasFooterSlot)
+                                    {{ $footer }}
+                                @else
+                                    <x-ui.button type="button" variant="secondary" @click="$dispatch('close-modal', '{{ $name }}')">{{ $cancelLabel }}</x-ui.button>
+                                    <x-ui.button type="submit" :variant="$confirmVariant" aria-busy="false" x-bind:aria-busy="submitting ? 'true' : 'false'">
+                                        <span class="inline-flex items-center gap-2">
+                                            <span x-show="submitting" x-cloak><x-ui.icon name="spinner" class="w-4 h-4 animate-spin" /></span>
+                                            {{ $confirmLabel }}
+                                        </span>
+                                    </x-ui.button>
+                                @endif
+                            </div>
+                        @endif
+                    </form>
+                @else
+                    <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">
                         @if ($hasBody)
                             <div class="text-sm text-text-secondary">{{ $slot }}</div>
                         @endif
+                    </div>
 
-                        @isset($form)
-                            <div @class(['space-y-4', 'mt-4' => $hasBody])>
-                                {{ $form }}
-                            </div>
-                        @endisset
-
-                        <div class="mt-6 flex flex-col-reverse gap-2.5 sm:flex-row sm:justify-end">
-                            @isset($footer)
+                    @if ($hasFooterSlot || $showDefaultActions)
+                        <div class="flex shrink-0 flex-col-reverse gap-2.5 border-t border-border-default px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+                            @if ($hasFooterSlot)
                                 {{ $footer }}
                             @else
-                                <x-ui.button type="button" variant="secondary" @click="$dispatch('close-modal', '{{ $name }}')">{{ $cancelLabel }}</x-ui.button>
-                                <x-ui.button type="submit" :variant="$confirmVariant" aria-busy="false" x-bind:aria-busy="submitting ? 'true' : 'false'">
-                                    <span class="inline-flex items-center gap-2">
-                                        <span x-show="submitting" x-cloak><x-ui.icon name="spinner" class="w-4 h-4 animate-spin" /></span>
-                                        {{ $confirmLabel }}
-                                    </span>
+                                <x-ui.button type="button" variant="secondary" @click="closeModal()">{{ $cancelLabel }}</x-ui.button>
+                                <x-ui.button type="button" :variant="$confirmVariant" @click="closeModal(); $dispatch('modal-confirmed', '{{ $name }}')">
+                                    {{ $confirmLabel }}
                                 </x-ui.button>
-                            @endisset
+                            @endif
                         </div>
-                    </form>
-                @else
-                    @if ($hasBody)
-                        <div class="mt-4 text-sm text-text-secondary">{{ $slot }}</div>
                     @endif
-
-                    <div class="mt-6 flex flex-col-reverse gap-2.5 sm:flex-row sm:justify-end">
-                        @isset($footer)
-                            {{ $footer }}
-                        @else
-                            <x-ui.button type="button" variant="secondary" @click="closeModal()">{{ $cancelLabel }}</x-ui.button>
-                            <x-ui.button type="button" :variant="$confirmVariant" @click="closeModal(); $dispatch('modal-confirmed', '{{ $name }}')">
-                                {{ $confirmLabel }}
-                            </x-ui.button>
-                        @endisset
-                    </div>
                 @endif
             </div>
         </div>

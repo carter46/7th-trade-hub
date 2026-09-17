@@ -196,15 +196,49 @@
                 @php
                     $siteLive = $tool->isSubscriptionLive();
                     $canResumeShutdown = $tool->canResumeShutdownWithStoredExpiry();
+                    $shutdownReasons = \App\Enums\UserToolStatus::adminShutdownReasons();
                 @endphp
                 <div class="mt-6 border-t border-border-default pt-4">
                     @if ($siteLive)
                         <form
                             method="POST"
                             action="{{ route('admin.users.tools.shutdown', [$user, $tool]) }}"
-                            onsubmit="return confirm('This immediately deactivates the connected external website (same as subscription expiry for the merchant). Customers will see the site as expired/shutdown. The original expiry date is kept so Enable can restore it. Continue?');"
+                            class="space-y-3"
+                            onsubmit="return confirm('This immediately deactivates the connected external website. The original expiry date is kept so Enable can restore it. Continue?');"
                         >
                             @csrf
+                            <p class="text-sm font-medium text-text-primary">Shutdown reason</p>
+                            <div class="space-y-2">
+                                @foreach ($shutdownReasons as $reason)
+                                    <label class="flex items-start gap-3 text-sm text-text-secondary">
+                                        <input
+                                            type="radio"
+                                            name="shutdown_reason"
+                                            value="{{ $reason->value }}"
+                                            class="mt-1 border-border-default text-primary focus:ring-primary"
+                                            @checked(old('shutdown_reason', 'suspended') === $reason->value)
+                                            required
+                                        >
+                                        <span>
+                                            <span class="font-medium text-text-primary">{{ $reason->label() }}</span>
+                                            <span class="mt-0.5 block text-xs text-text-muted">
+                                                @if ($reason === \App\Enums\UserToolStatus::Suspended)
+                                                    Temporary hold — can be re-enabled later.
+                                                @elseif ($reason === \App\Enums\UserToolStatus::Cancelled)
+                                                    Subscription cancelled — site stays offline until re-enabled.
+                                                @elseif ($reason === \App\Enums\UserToolStatus::Inactive)
+                                                    Shut down for inactivity — site stays offline until re-enabled.
+                                                @else
+                                                    Mark as expired now — same expired status as natural expiry; Enable can still restore a saved date.
+                                                @endif
+                                            </span>
+                                        </span>
+                                    </label>
+                                @endforeach
+                            </div>
+                            @error('shutdown_reason')
+                                <p class="text-xs text-danger">{{ $message }}</p>
+                            @enderror
                             <x-dashboard.button type="submit" variant="danger">Shutdown Site</x-dashboard.button>
                         </form>
                         <p class="mt-2 text-xs text-text-muted">Immediately deactivates the external website via subscription sync. Does not rotate API keys. The current expiry is saved — <strong>Enable</strong> restores that date if it is still in the future.</p>
@@ -217,7 +251,13 @@
                             @csrf
                             <x-dashboard.button type="submit" variant="success">Enable</x-dashboard.button>
                         </form>
-                        <p class="mt-2 text-xs text-text-muted">Admin shutdown paused this site. Enabling restores the previous expiry <strong>{{ $tool->shutdown_resume_expires_at->format('j M Y') }}</strong> — no new date needed.</p>
+                        <p class="mt-2 text-xs text-text-muted">
+                            Admin shutdown
+                            @if ($tool->status instanceof \App\Enums\UserToolStatus)
+                                ({{ $tool->status->label() }})
+                            @endif
+                            paused this site. Enabling restores the previous expiry <strong>{{ $tool->shutdown_resume_expires_at->format('j M Y') }}</strong> — no new date needed.
+                        </p>
                     @else
                         <form method="POST" action="{{ route('admin.users.tools.enable', [$user, $tool]) }}" class="space-y-3" onsubmit="return confirm('Reopen this external website as active with the new expiry date? The merchant will be notified via subscription sync.');">
                             @csrf

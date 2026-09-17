@@ -29,13 +29,14 @@
                 <x-dashboard.button type="button" :variant="$buttonVariant" :size="$buttonSize" x-on:click="$dispatch('open-modal', '{{ $modalName }}')">
                     View Demo
                 </x-dashboard.button>
-                <x-dashboard.modal :name="$modalName" maxWidth="md">
+                <x-dashboard.modal :name="$modalName" title="View demo" maxWidth="md" :show-actions="false">
                     @include('partials.catalog._demo-launch-modal-body', [
                         'product' => $product,
                         'canDemoUser' => $canDemoUser,
                         'canDemoAdmin' => $canDemoAdmin,
                         'dashboard' => true,
                         'modalName' => $modalName,
+                        'omitHeading' => true,
                     ])
                 </x-dashboard.modal>
             @else

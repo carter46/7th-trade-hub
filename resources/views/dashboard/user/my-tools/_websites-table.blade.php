@@ -14,7 +14,7 @@
                 <div class="min-w-[8rem]">
                     <x-dashboard.select name="status">
                         <option value="">All statuses</option>
-                        @foreach (['pending_setup', 'active', 'suspended', 'expired'] as $status)
+                        @foreach (['pending_setup', 'active', 'suspended', 'cancelled', 'inactive', 'expired'] as $status)
                             <option value="{{ $status }}" @selected(($filters['status'] ?? '') === $status)>{{ str_replace('_', ' ', ucfirst($status)) }}</option>
                         @endforeach
                     </x-dashboard.select>
@@ -44,7 +44,7 @@
                     <span class="ml-1 text-xs text-amber-600">Expiring soon</span>
                 @endif
             </x-dashboard.td>
-            <x-dashboard.td class="text-xs text-text-muted">{{ $tool->expires_at?->format('j M Y') ?? '—' }}</x-dashboard.td>
+            <x-dashboard.td class="text-xs text-text-muted">{{ $tool->displayExpiresAt()?->format('j M Y') ?? '—' }}</x-dashboard.td>
             <x-dashboard.td>
                 <x-dashboard.button :href="route('dashboard.my-tools.show', $tool)" size="sm">View</x-dashboard.button>
             </x-dashboard.td>

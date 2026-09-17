@@ -57,7 +57,7 @@ class PurchasedWebsiteController extends Controller
                 });
             })
             ->when($statusFilter === UserToolStatus::Expired->value, function ($q) {
-                // Match UserTool::effectiveStatus(): past clock counts as expired unless suspended/pending.
+                // Match UserTool::effectiveStatus(): past clock counts as expired unless pending/admin shutdown.
                 $q->where(function ($inner) {
                     $inner->where('status', UserToolStatus::Expired)
                         ->orWhere(function ($past) {
@@ -65,6 +65,8 @@ class PurchasedWebsiteController extends Controller
                                 ->where('expires_at', '<', now())
                                 ->whereNotIn('status', [
                                     UserToolStatus::Suspended->value,
+                                    UserToolStatus::Cancelled->value,
+                                    UserToolStatus::Inactive->value,
                                     UserToolStatus::PendingSetup->value,
                                 ]);
                         });

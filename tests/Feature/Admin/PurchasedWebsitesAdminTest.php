@@ -190,4 +190,53 @@ class PurchasedWebsitesAdminTest extends TestCase
             ->get(route('admin.websites'))
             ->assertForbidden();
     }
+
+    public function test_expired_filter_excludes_cancelled_holds_and_shows_paid_until(): void
+    {
+        $admin = User::factory()->admin()->create(['email_verified_at' => now()]);
+        $member = User::factory()->create([
+            'email_verified_at' => now(),
+            'name' => 'Hold Owner',
+            'email' => 'hold@example.com',
+        ]);
+        $member->assignRole('user');
+
+        $product = $this->forceCreatePlatformProduct([
+            'title' => 'Hold Banking',
+            'slug' => 'hold-banking-'.Str::lower(Str::random(4)),
+            'product_type' => PlatformProductType::WebsitePackage,
+            'status' => PlatformProductStatus::Published,
+            'base_price' => 10000,
+            'sort_order' => 1,
+            'provider' => 'manual',
+            'fulfillment_mode' => 'manual',
+        ]);
+
+        $resumeAt = now()->addMonths(2);
+
+        UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'status' => UserToolStatus::Cancelled,
+            'display_name' => 'Hold Banking',
+            'purchased_at' => now()->subMonth(),
+            'expires_at' => now()->subMinute(),
+            'shutdown_resume_expires_at' => $resumeAt,
+            'subscription_end_reason' => UserTool::END_REASON_ADMIN_SHUTDOWN,
+            'duration_months' => 3,
+            'instance_sequence' => 1,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.websites', ['status' => 'expired']))
+            ->assertOk()
+            ->assertDontSee('Hold Banking', false);
+
+        $this->actingAs($admin)
+            ->get(route('admin.websites', ['status' => 'cancelled']))
+            ->assertOk()
+            ->assertSee('Hold Banking', false)
+            ->assertSee('Paid until '.$resumeAt->format('j M Y'), false)
+            ->assertDontSee('Expired '.$resumeAt->format('j M Y'), false);
+    }
 }

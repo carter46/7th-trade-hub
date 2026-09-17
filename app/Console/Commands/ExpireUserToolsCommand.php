@@ -18,7 +18,13 @@ class ExpireUserToolsCommand extends Command
     public function handle(SubscriptionSyncService $sync, UserToolLifecycleNotifier $lifecycleNotifier): int
     {
         $ids = UserTool::query()
-            ->where('status', '!=', UserToolStatus::Expired)
+            ->whereNotIn('status', [
+                UserToolStatus::Expired->value,
+                UserToolStatus::Suspended->value,
+                UserToolStatus::Cancelled->value,
+                UserToolStatus::Inactive->value,
+                UserToolStatus::PendingSetup->value,
+            ])
             ->whereNotNull('expires_at')
             ->where('expires_at', '<', now())
             ->pluck('id');
@@ -37,7 +43,9 @@ class ExpireUserToolsCommand extends Command
                 }
 
                 // Renew race: do not expire a tool that was extended after the query.
-                if ($tool->status === UserToolStatus::Expired) {
+                if ($tool->status === UserToolStatus::Expired
+                    || ($tool->status instanceof UserToolStatus && $tool->status->isAdminShutdown())
+                    || $tool->status === UserToolStatus::PendingSetup) {
                     return null;
                 }
 
