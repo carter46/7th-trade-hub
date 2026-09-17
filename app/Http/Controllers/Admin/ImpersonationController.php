@@ -64,6 +64,11 @@ class ImpersonationController extends Controller
     public function leave(Request $request): RedirectResponse
     {
         if (! session('impersonating') || ! session('impersonator_id')) {
+            // Session flags gone (often after expiry) — do not leave admin stuck mid-flow.
+            if (! $request->user()) {
+                return redirect()->route('login');
+            }
+
             return redirect()->route('dashboard');
         }
 

@@ -173,6 +173,71 @@ class UserAdminLifecycleTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'user.impersonation.stopped']);
     }
 
+    public function test_impersonation_leave_via_get(): void
+    {
+        $admin = User::factory()->admin()->create(['email_verified_at' => now()]);
+        $member = User::factory()->create(['email_verified_at' => now(), 'name' => 'Leave Via Get']);
+        $member->assignRole('user');
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.impersonate', $member))
+            ->assertRedirect(route('dashboard'));
+
+        $this->get(route('impersonation.leave'))
+            ->assertRedirect(route('admin.users.show', $member));
+
+        $this->assertAuthenticatedAs($admin);
+        $this->assertFalse((bool) session('impersonating'));
+    }
+
+    public function test_guest_leave_impersonation_redirects_to_login(): void
+    {
+        $this->get(route('impersonation.leave'))
+            ->assertRedirect(route('login'));
+    }
+
+    public function test_csrf_mismatch_on_leave_redirects_to_get_leave_when_authenticated(): void
+    {
+        $member = User::factory()->create(['email_verified_at' => now()]);
+        $member->assignRole('user');
+
+        $request = \Illuminate\Http\Request::create('/impersonation/leave', 'POST');
+        $request->headers->set('Accept', 'text/html');
+        $request->setUserResolver(fn () => $member);
+        $request->setRouteResolver(function () use ($request) {
+            $route = new \Illuminate\Routing\Route(['POST'], '/impersonation/leave', []);
+            $route->name('impersonation.leave');
+            $route->bind($request);
+
+            return $route;
+        });
+
+        $response = app(\Illuminate\Contracts\Debug\ExceptionHandler::class)
+            ->render($request, new \Illuminate\Session\TokenMismatchException('CSRF'));
+
+        $this->assertTrue($response->isRedirection());
+        $this->assertTrue(str_contains($response->headers->get('Location'), '/impersonation/leave'));
+    }
+
+    public function test_csrf_mismatch_as_guest_redirects_to_login(): void
+    {
+        $request = \Illuminate\Http\Request::create('/impersonation/leave', 'POST');
+        $request->headers->set('Accept', 'text/html');
+        $request->setRouteResolver(function () use ($request) {
+            $route = new \Illuminate\Routing\Route(['POST'], '/impersonation/leave', []);
+            $route->name('impersonation.leave');
+            $route->bind($request);
+
+            return $route;
+        });
+
+        $response = app(\Illuminate\Contracts\Debug\ExceptionHandler::class)
+            ->render($request, new \Illuminate\Session\TokenMismatchException('CSRF'));
+
+        $this->assertTrue($response->isRedirection());
+        $this->assertTrue(str_contains($response->headers->get('Location'), '/login'));
+    }
+
     public function test_cannot_impersonate_admin_or_self_or_suspended(): void
     {
         $admin = User::factory()->admin()->create(['email_verified_at' => now()]);

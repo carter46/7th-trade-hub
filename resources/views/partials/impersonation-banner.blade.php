@@ -6,10 +6,10 @@
     @if ($impersonatorName ?? null)
         <span class="font-normal opacity-80"> (Admin: {{ $impersonatorName }})</span>
     @endif
-    <form method="POST" action="{{ route('impersonation.leave') }}" class="mt-1 inline-block sm:ml-3 sm:mt-0">
-        @csrf
-        <button type="submit" class="underline underline-offset-2 hover:no-underline focus-ring rounded">
-            Return to Admin
-        </button>
-    </form>
+    <a
+        href="{{ route('impersonation.leave') }}"
+        class="mt-1 inline-block underline underline-offset-2 hover:no-underline focus-ring rounded sm:ml-3 sm:mt-0"
+    >
+        Return to Admin
+    </a>
 </div>

@@ -47,9 +47,32 @@ return Application::configure(basePath: dirname(__DIR__))
                 ], 419);
             }
 
-            $redirectTo = $request->headers->get('referer');
-            if (! is_string($redirectTo) || $redirectTo === '') {
-                $redirectTo = route('login');
+            $message = __('Your session expired. Please sign in again.');
+
+            // Dead session / guest: never bounce back to the failed POST (refresh loops on 419).
+            if (! $request->user()) {
+                return redirect()
+                    ->guest(route('login'))
+                    ->with('error', $message);
+            }
+
+            // Impersonation leave: recover via GET (no CSRF) when still authenticated.
+            if ($request->routeIs('impersonation.leave') || $request->is('impersonation/*')) {
+                return redirect()
+                    ->route('impersonation.leave')
+                    ->with('error', __('Your session expired. Continuing return to admin…'));
+            }
+
+            $referer = $request->headers->get('referer');
+            $fallback = route('dashboard');
+            $redirectTo = (is_string($referer) && $referer !== '') ? $referer : $fallback;
+
+            // Avoid redirecting back onto the same mutating URL (browser refresh re-POSTs → 419 loop).
+            if ($request->isMethod('POST') || $request->isMethod('PUT') || $request->isMethod('PATCH') || $request->isMethod('DELETE')) {
+                $current = $request->fullUrl();
+                if (is_string($referer) && $referer !== '' && str_starts_with($referer, $current)) {
+                    $redirectTo = $fallback;
+                }
             }
 
             return redirect()

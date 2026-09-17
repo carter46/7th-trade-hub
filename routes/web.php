@@ -625,7 +625,9 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
 });
 
 Route::middleware('auth')->group(function () {
-    Route::post('/impersonation/leave', [ImpersonationController::class, 'leave'])->name('impersonation.leave');
+    // GET allowed so an expired CSRF POST / browser refresh cannot trap admins on a 419.
+    Route::match(['get', 'post'], '/impersonation/leave', [ImpersonationController::class, 'leave'])
+        ->name('impersonation.leave');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
