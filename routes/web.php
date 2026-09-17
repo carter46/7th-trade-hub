@@ -363,6 +363,12 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
     Route::get('/', [AdminDashboardController::class, 'index'])->name('');
     Route::get('/overview/panel', [AdminDashboardController::class, 'overviewPanel'])->name('.overview.panel');
     Route::get('/search', AdminSearchController::class)->name('.search');
+
+    // Purchased websites index (Operations → Websites). Keep FQCN so route:cache cannot lose the import.
+    Route::get('/websites', [\App\Http\Controllers\Admin\PurchasedWebsiteController::class, 'index'])
+        ->middleware('permission:users.manage')
+        ->name('.websites');
+
     Route::prefix('account')->name('.account')->controller(AccountController::class)->group(function () {
         Route::get('/profile', 'profile')->name('.profile');
         Route::patch('/profile', 'updateProfile')->name('.profile.update');
@@ -373,7 +379,6 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::delete('/sessions/{session}', 'revokeSession')->name('.sessions.destroy');
     });
     Route::middleware('permission:users.manage')->group(function () {
-        Route::get('/websites', [PurchasedWebsiteController::class, 'index'])->name('.websites');
         Route::get('/users', [UserManagementController::class, 'index'])->name('.users');
         Route::get('/users/create', [UserManagementController::class, 'create'])->name('.users.create');
         Route::post('/users', [UserManagementController::class, 'store'])->name('.users.store');
