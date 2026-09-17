@@ -100,8 +100,9 @@
                 x-transition:leave-start="opacity-100 translate-y-0 scale-100"
                 x-transition:leave-end="opacity-0 translate-y-2 scale-95"
                 @class([
-                    'relative flex w-full flex-col overflow-hidden rounded-2xl border border-border-default bg-elevated shadow-panel outline-none',
-                    'max-h-[min(92dvh,42rem)]',
+                    // min-h-0: flex items default to min-height:auto, which ignores max-h and clips the dialog.
+                    'relative flex w-full min-h-0 flex-col overflow-hidden rounded-2xl border border-border-default bg-elevated shadow-panel outline-none',
+                    'max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2rem)]',
                     $maxWidthClass,
                 ])
                 @click.stop
