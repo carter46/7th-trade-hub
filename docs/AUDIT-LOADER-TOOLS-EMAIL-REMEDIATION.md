@@ -1,4 +1,4 @@
-﻿# Audit + Remediation Plan â€” Page Loader, Online Banking Purchase Page & Email Notification Routing
+# Audit + Remediation Plan â€” Page Loader, Online Banking Purchase Page & Email Notification Routing
 
 **Deliverable file:** [`docs/AUDIT-LOADER-TOOLS-EMAIL-REMEDIATION.md`](docs/AUDIT-LOADER-TOOLS-EMAIL-REMEDIATION.md) (this plan, committed to repo)
 

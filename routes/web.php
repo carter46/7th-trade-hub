@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\ImpersonationController;
 use App\Http\Controllers\Admin\MediaLibraryController;
 use App\Http\Controllers\Admin\MonitoringController;
+use App\Http\Controllers\Admin\PurchasedWebsiteController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Account\AccountController;
 use App\Http\Controllers\Dashboard\ManualOrderPaymentController;
@@ -371,6 +372,7 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::delete('/sessions/{session}', 'revokeSession')->name('.sessions.destroy');
     });
     Route::middleware('permission:users.manage')->group(function () {
+        Route::get('/websites', [PurchasedWebsiteController::class, 'index'])->name('.websites');
         Route::get('/users', [UserManagementController::class, 'index'])->name('.users');
         Route::get('/users/create', [UserManagementController::class, 'create'])->name('.users.create');
         Route::post('/users', [UserManagementController::class, 'store'])->name('.users.store');
