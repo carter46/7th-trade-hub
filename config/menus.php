@@ -117,7 +117,7 @@ return [
             'sort' => 10,
             'children' => [
                 ['route' => 'admin.users', 'match' => ['admin.users', 'admin.users.*'], 'label' => 'Users', 'icon' => 'users', 'keywords' => ['members', 'accounts'], 'permission' => 'users.manage', 'sort' => 10],
-                ['route' => 'admin.websites', 'match' => ['admin.websites', 'admin.websites.*'], 'label' => 'Websites', 'icon' => 'listings', 'keywords' => ['purchased', 'online banking', 'user tools', 'expiry'], 'permission' => 'users.manage', 'sort' => 15],
+                ['route' => 'admin.websites', 'url' => '/admin/websites', 'match' => ['admin.websites', 'admin.websites.*'], 'label' => 'Websites', 'icon' => 'listings', 'keywords' => ['purchased', 'online banking', 'user tools', 'expiry'], 'permission' => 'users.manage', 'sort' => 15],
                 ['route' => 'admin.administrators', 'match' => ['admin.administrators', 'admin.administrators.*'], 'label' => 'Administrators', 'icon' => 'verified', 'keywords' => ['admins', 'staff'], 'permission' => 'admins.manage', 'sort' => 20],
                 ['route' => 'admin.kyc', 'match' => ['admin.kyc', 'admin.kyc.*'], 'label' => 'KYC', 'icon' => 'kyc', 'keywords' => ['identity', 'verification'], 'permission' => 'compliance.manage', 'sort' => 30],
                 ['route' => 'admin.tickets', 'match' => ['admin.tickets', 'admin.tickets.*'], 'label' => 'Support', 'icon' => 'support', 'keywords' => ['help', 'tickets'], 'permission' => 'support.manage', 'sort' => 40],

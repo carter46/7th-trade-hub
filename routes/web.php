@@ -22,6 +22,7 @@ use App\Modules\Admin\Http\Controllers\CryptoSellController as AdminCryptoSellCo
 use App\Modules\Admin\Http\Controllers\CryptoDepositWalletController;
 use App\Modules\Admin\Http\Controllers\IncomingDepositController;
 use App\Modules\Admin\Http\Controllers\OrderAdminController;
+use App\Modules\Admin\Http\Controllers\OtcPricingController;
 use App\Modules\Admin\Http\Controllers\EscrowController as AdminEscrowController;
 use App\Modules\Admin\Http\Controllers\KycController as AdminKycController;
 use App\Modules\Admin\Http\Controllers\ListingAdminController;

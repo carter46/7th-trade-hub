@@ -5,7 +5,6 @@ namespace App\Modules\Wallet\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Withdrawal;
 use App\Modules\Wallet\Services\WithdrawalConfirmationService;
-use App\Modules\Wallet\Services\WithdrawalConfirmationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
