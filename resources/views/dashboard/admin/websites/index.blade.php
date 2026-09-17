@@ -67,9 +67,9 @@
                         <span class="text-text-muted">—</span>
                     @endif
                 </x-dashboard.td>
-                <x-dashboard.td class="text-xs text-text-muted">
-                    <div>Purchased {{ $tool->purchased_at?->format('j M Y') ?? '—' }}</div>
-                    <div class="mt-0.5">
+                <x-dashboard.td>
+                    <div class="text-sm text-text-secondary">Purchased {{ $tool->purchased_at?->format('j M Y') ?? '—' }}</div>
+                    <div class="mt-0.5 font-mono text-xs text-text-muted">
                         @if (! $tool->expires_at)
                             Expiry —
                         @elseif ($expiryPast || $effectiveStatus === \App\Enums\UserToolStatus::Expired)
