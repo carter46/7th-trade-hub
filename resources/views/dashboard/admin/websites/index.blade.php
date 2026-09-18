@@ -104,7 +104,7 @@
                     @endif
                 </x-dashboard.td>
                 <x-dashboard.td>
-                    <div class="text-sm text-text-secondary">Purchased {{ $tool->purchased_at?->format('j M Y') ?? '—' }}</div>
+                    <div class="font-mono text-xs text-text-muted">Purchased {{ $tool->purchased_at?->format('j M Y') ?? '—' }}</div>
                     <div class="mt-0.5 font-mono text-xs text-text-muted">
                         @if (! $displayExpiry)
                             Expiry —
@@ -120,7 +120,7 @@
                     </div>
                 </x-dashboard.td>
                 <x-dashboard.td>
-                    <div class="flex flex-col items-start gap-1">
+                    <div class="flex flex-col items-start gap-1.5">
                         @if ($tool->user)
                             <x-dashboard.button
                                 :href="route('admin.users.tools.show', [$tool->user, $tool])"
@@ -130,7 +130,7 @@
                                 View
                             </x-dashboard.button>
                         @endif
-                        <span class="text-[11px] leading-tight text-text-muted">{{ $effectiveStatus->label() }}</span>
+                        <x-dashboard.badge :status="$effectiveStatus->value" />
                         @if ($tool->isExpiringSoon())
                             <span class="text-[11px] leading-tight text-amber-600">Expiring soon</span>
                         @endif
