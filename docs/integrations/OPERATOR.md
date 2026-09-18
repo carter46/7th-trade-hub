@@ -22,7 +22,7 @@ Path: **Dashboard → Services → My Tools**
 
 - After buying an internal catalog service (website packages require quantity **1**), a tool appears as **Pending setup**.
 - Orders remain under **Service orders**; My Tools is ownership/access.
-- When configured: site URL, admin URL, admin email, **Copy password** (POST only, active+live subscriptions), **Admin Auto Login** (SSO via one-time token; succeeds only after merchant installs owned credentials).
+- When configured: site URL, admin URL, admin email, **Copy password** (POST only), **Admin Auto Login** (SSO via one-time token; succeeds only after merchant installs owned credentials). Available even when the subscription is suspended/expired/inactive so the owner can open admin and renew.
 - **Expiring soon** is shown when active and ≤ 7 days remain — not a stored status.
 - **Renew** extends the same tool instance (quantity 1).
 

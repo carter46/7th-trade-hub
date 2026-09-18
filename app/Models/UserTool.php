@@ -259,7 +259,8 @@ class UserTool extends Model
             return false;
         }
 
-        if (! $this->isSubscriptionLive()) {
+        // Allow even when suspended/expired/inactive so the owner can open admin and renew.
+        if ($this->status === UserToolStatus::PendingSetup) {
             return false;
         }
 
@@ -280,7 +281,11 @@ class UserTool extends Model
             return false;
         }
 
-        return $this->isSubscriptionLive() && is_string($this->admin_password) && $this->admin_password !== '';
+        if ($this->status === UserToolStatus::PendingSetup) {
+            return false;
+        }
+
+        return is_string($this->admin_password) && $this->admin_password !== '';
     }
 
     public function canRevealLivechatPassword(): bool

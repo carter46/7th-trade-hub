@@ -167,4 +167,56 @@ class MyToolsShowTest extends TestCase
             ->assertOk()
             ->assertJson(['password' => 'MySecretPass99']);
     }
+
+    public function test_suspended_and_expired_tools_still_show_admin_access_controls(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $user->assignRole('user');
+        $product = $this->websiteProduct();
+
+        foreach ([UserToolStatus::Suspended, UserToolStatus::Expired, UserToolStatus::Inactive] as $status) {
+            $tool = UserTool::query()->create([
+                'user_id' => $user->id,
+                'platform_product_id' => $product->id,
+                'platform_product_variant_id' => $product->activeVariants->first()->id,
+                'display_name' => $product->title,
+                'status' => $status,
+                'site_url' => 'https://bank.example.test',
+                'admin_login_url' => 'https://bank.example.test/admin',
+                'admin_email' => 'admin@bank.example.test',
+                'admin_password' => 'secret-pass',
+                'has_admin_auth' => true,
+                'purchased_at' => now()->subMonths(2),
+                'configured_at' => now()->subMonths(2),
+                'expires_at' => now()->subDay(),
+                'duration_months' => 3,
+                'instance_sequence' => 1,
+            ]);
+
+            \App\Models\UserToolIntegration::query()->create([
+                'user_tool_id' => $tool->id,
+                'integration_id' => (string) Str::uuid(),
+                'client_id' => 'th_test_'.Str::lower(Str::random(8)),
+                'client_secret' => 'client-secret-test',
+                'webhook_secret' => 'webhook-secret-test',
+                'capabilities' => \App\Models\UserToolIntegration::defaultCapabilities(),
+                'connection_status' => 'ok',
+            ]);
+
+            $this->assertFalse($tool->fresh()->isSubscriptionLive());
+            $this->assertTrue($tool->fresh(['integration'])->canRevealAdminPassword());
+            $this->assertTrue($tool->fresh(['integration'])->canLaunchAdmin());
+
+            $this->actingAs($user)
+                ->get(route('dashboard.my-tools.show', $tool))
+                ->assertOk()
+                ->assertSee('Copy password')
+                ->assertSee('Admin Auto Login');
+
+            $this->actingAs($user)
+                ->postJson(route('dashboard.my-tools.password', $tool))
+                ->assertOk()
+                ->assertJson(['password' => 'secret-pass']);
+        }
+    }
 }

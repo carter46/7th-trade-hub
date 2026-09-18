@@ -4,6 +4,7 @@ namespace App\Services\SiteIntegrations;
 
 use App\Enums\SiteLaunchContext;
 use App\Enums\SiteIntegrationStatus;
+use App\Enums\UserToolStatus;
 use App\Models\SiteIntegration;
 use App\Models\SiteLaunchToken;
 use App\Models\User;
@@ -80,8 +81,8 @@ class DemoLaunchService
             throw new InvalidArgumentException('This site is non-authenticated and does not support Admin Auto Login.');
         }
 
-        if (! $tool->isSubscriptionLive()) {
-            throw new InvalidArgumentException('This tool is not active or its subscription has expired.');
+        if ($tool->status === UserToolStatus::PendingSetup) {
+            throw new InvalidArgumentException('This tool is still pending setup.');
         }
 
         if (! $tool->admin_email) {
@@ -133,7 +134,8 @@ class DemoLaunchService
 
             if ($token->user_tool_id) {
                 $tool = UserTool::query()->whereKey($token->user_tool_id)->lockForUpdate()->first();
-                if (! $tool || ! $tool->isSubscriptionLive()) {
+                // Allow SSO when suspended/expired so owners can open admin and renew.
+                if (! $tool || $tool->status === UserToolStatus::PendingSetup || ! $tool->hasAdminAuth()) {
                     throw new InvalidArgumentException('Invalid, expired, or already used token.');
                 }
             }
