@@ -109,21 +109,18 @@
                     <div>
                         <span class="inline-block rounded bg-muted/50 px-1.5 py-0.5 font-mono text-xs font-semibold text-text-muted">Purchased {{ $tool->purchased_at?->format('j M Y') ?? '—' }}</span>
                     </div>
-                    <div class="mt-0.5">
-                        @php
-                            if (! $displayExpiry) {
-                                $expiryLabel = 'Expiry —';
-                            } elseif ($adminHold && $displayExpiry->isFuture()) {
-                                $expiryLabel = 'Paid until '.$displayExpiry->format('j M Y');
-                            } elseif ($adminHold) {
-                                $expiryLabel = 'Was until '.$displayExpiry->format('j M Y');
-                            } elseif ($displayExpiry->isPast() || $effectiveStatus === \App\Enums\UserToolStatus::Expired) {
-                                $expiryLabel = 'Expired '.$displayExpiry->format('j M Y');
-                            } else {
-                                $expiryLabel = 'Expires '.$displayExpiry->format('j M Y');
-                            }
-                        @endphp
-                        <span class="inline-block rounded bg-muted/50 px-1.5 py-0.5 font-mono text-xs font-semibold text-text-muted">{{ $expiryLabel }}</span>
+                    <div class="mt-0.5 font-mono text-xs text-text-muted">
+                        @if (! $displayExpiry)
+                            Expiry —
+                        @elseif ($adminHold && $displayExpiry->isFuture())
+                            Paid until {{ $displayExpiry->format('j M Y') }}
+                        @elseif ($adminHold)
+                            Was until {{ $displayExpiry->format('j M Y') }}
+                        @elseif ($displayExpiry->isPast() || $effectiveStatus === \App\Enums\UserToolStatus::Expired)
+                            Expired {{ $displayExpiry->format('j M Y') }}
+                        @else
+                            Expires {{ $displayExpiry->format('j M Y') }}
+                        @endif
                     </div>
                 </x-dashboard.td>
                 <x-dashboard.td>
