@@ -151,13 +151,11 @@
                     </span>
                 </label>
 
-                <template x-if="hasAdminAuth">
-                    <div class="space-y-4">
-                        <x-dashboard.input name="admin_login_url" label="Admin login URL" type="url" :value="old('admin_login_url', $tool->admin_login_url)" />
-                        <x-dashboard.input name="admin_email" label="Admin email" type="email" :value="old('admin_email', $tool->admin_email)" />
-                        <x-dashboard.input name="admin_password" label="Admin password" type="text" autocomplete="off" />
-                    </div>
-                </template>
+                <div x-show="hasAdminAuth" x-cloak class="space-y-4">
+                    <x-dashboard.input name="admin_login_url" label="Admin login URL" type="url" :value="old('admin_login_url', $tool->admin_login_url)" />
+                    <x-dashboard.input name="admin_email" label="Admin email" type="email" :value="old('admin_email', $tool->admin_email)" />
+                    <x-dashboard.input name="admin_password" label="Admin password" type="text" autocomplete="off" />
+                </div>
 
                 <div class="rounded-xl border border-border-default bg-muted/30 p-4 space-y-4">
                     <div>
@@ -221,14 +219,12 @@
                         </span>
                     </label>
 
-                    <template x-if="hasAdminAuth">
-                        <div class="space-y-4">
-                            <x-dashboard.input name="admin_login_url" label="Admin login URL" type="url" :value="old('admin_login_url', $tool->admin_login_url)" />
-                            <x-dashboard.input name="admin_email" label="Admin email" type="email" :value="old('admin_email', $tool->admin_email)" />
-                            <x-dashboard.input name="admin_password" label="Admin password" type="text" autocomplete="off" />
-                            <p class="text-xs text-text-muted">Leave password blank to keep the current one.</p>
-                        </div>
-                    </template>
+                    <div x-show="hasAdminAuth" x-cloak class="space-y-4">
+                        <x-dashboard.input name="admin_login_url" label="Admin login URL" type="url" :value="old('admin_login_url', $tool->admin_login_url)" />
+                        <x-dashboard.input name="admin_email" label="Admin email" type="email" :value="old('admin_email', $tool->admin_email)" />
+                        <x-dashboard.input name="admin_password" label="Admin password" type="text" autocomplete="off" />
+                        <p class="text-xs text-text-muted">Leave password blank to keep the current one.</p>
+                    </div>
 
                     <p class="text-xs text-text-muted">Reconfigure updates URLs and profile. It does <strong>not</strong> extend the paid subscription.</p>
                     <x-dashboard.button type="submit">Save reconfiguration</x-dashboard.button>

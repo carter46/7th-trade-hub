@@ -253,7 +253,14 @@ class UserManagementController extends Controller
             $result = app(\App\Services\SiteIntegrations\UserToolProvisioningService::class)
                 ->setup($tool, $data, $request->user(), $request->ip());
         } catch (\InvalidArgumentException $e) {
-            return back()->with('error', $e->getMessage());
+            return back()->withInput()->with('error', $e->getMessage());
+        } catch (\Illuminate\Database\QueryException $e) {
+            report($e);
+
+            return back()->withInput()->with(
+                'error',
+                'Setup failed while saving the tool. If you recently deployed non-authenticated site support, run php artisan migrate on the server, then try again.'
+            );
         }
 
         return redirect()
@@ -286,7 +293,14 @@ class UserManagementController extends Controller
             app(\App\Services\SiteIntegrations\UserToolProvisioningService::class)
                 ->reconfigure($tool, $data, $request->user(), $request->ip());
         } catch (\InvalidArgumentException $e) {
-            return back()->with('error', $e->getMessage());
+            return back()->withInput()->with('error', $e->getMessage());
+        } catch (\Illuminate\Database\QueryException $e) {
+            report($e);
+
+            return back()->withInput()->with(
+                'error',
+                'Reconfigure failed while saving. If you recently deployed non-authenticated site support, run php artisan migrate on the server, then try again.'
+            );
         }
 
         return redirect()

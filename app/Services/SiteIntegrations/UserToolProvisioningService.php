@@ -13,6 +13,7 @@ use App\Models\UserToolIntegration;
 use App\Modules\Admin\Services\AuditLogService;
 use App\Services\Domains\DomainConnectionService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 
 class UserToolProvisioningService
@@ -104,6 +105,7 @@ class UserToolProvisioningService
             ? $this->coerceHasAdminAuth($data['has_admin_auth'])
             : true;
 
+        $this->assertHasAdminAuthColumnReady();
         $this->assertCompleteAdminAuthConfig($hasAdminAuth, $data, $tool, requirePassword: true);
         $this->assertHttpsUrls($data, $hasAdminAuth);
 
@@ -216,6 +218,7 @@ class UserToolProvisioningService
             ? $this->coerceHasAdminAuth($data['has_admin_auth'])
             : $tool->hasAdminAuth();
 
+        $this->assertHasAdminAuthColumnReady();
         $this->assertCompleteAdminAuthConfig($hasAdminAuth, $data, $tool, requirePassword: false);
         $this->assertHttpsUrls($data, $hasAdminAuth);
 
@@ -459,6 +462,15 @@ class UserToolProvisioningService
 
         if ($passwordProvided && strlen((string) $data['admin_password']) < 6) {
             throw new InvalidArgumentException('Admin password must be at least 6 characters.');
+        }
+    }
+
+    private function assertHasAdminAuthColumnReady(): void
+    {
+        if (! Schema::hasColumn('user_tools', 'has_admin_auth')) {
+            throw new InvalidArgumentException(
+                'Database is missing column user_tools.has_admin_auth. Run: php artisan migrate'
+            );
         }
     }
 
