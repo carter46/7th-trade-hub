@@ -97,26 +97,33 @@
                 </x-dashboard.td>
                 <x-dashboard.td>
                     @if ($tool->user)
-                        <a href="{{ route('admin.users.show', $tool->user) }}" class="font-medium text-text-primary underline-offset-2 hover:underline">{{ $tool->user->name }}</a>
-                        <div class="mt-0.5 text-xs text-text-muted">{{ $tool->user->email }}</div>
+                        <div>
+                            <a href="{{ route('admin.users.show', $tool->user) }}" class="inline-block max-w-full truncate rounded bg-muted/50 px-1.5 py-0.5 font-mono text-xs font-semibold text-text-muted underline-offset-2 hover:underline hover:text-text-primary" title="{{ $tool->user->name }}">{{ $tool->user->name }}</a>
+                        </div>
+                        <div class="mt-0.5 font-mono text-xs text-text-muted">{{ $tool->user->email }}</div>
                     @else
-                        <span class="text-text-muted">—</span>
+                        <span class="font-mono text-xs text-text-muted">—</span>
                     @endif
                 </x-dashboard.td>
                 <x-dashboard.td>
-                    <div class="font-mono text-xs text-text-muted">Purchased {{ $tool->purchased_at?->format('j M Y') ?? '—' }}</div>
-                    <div class="mt-0.5 font-mono text-xs text-text-muted">
-                        @if (! $displayExpiry)
-                            Expiry —
-                        @elseif ($adminHold && $displayExpiry->isFuture())
-                            Paid until {{ $displayExpiry->format('j M Y') }}
-                        @elseif ($adminHold)
-                            Was until {{ $displayExpiry->format('j M Y') }}
-                        @elseif ($displayExpiry->isPast() || $effectiveStatus === \App\Enums\UserToolStatus::Expired)
-                            Expired {{ $displayExpiry->format('j M Y') }}
-                        @else
-                            Expires {{ $displayExpiry->format('j M Y') }}
-                        @endif
+                    <div>
+                        <span class="inline-block rounded bg-muted/50 px-1.5 py-0.5 font-mono text-xs font-semibold text-text-muted">Purchased {{ $tool->purchased_at?->format('j M Y') ?? '—' }}</span>
+                    </div>
+                    <div class="mt-0.5">
+                        @php
+                            if (! $displayExpiry) {
+                                $expiryLabel = 'Expiry —';
+                            } elseif ($adminHold && $displayExpiry->isFuture()) {
+                                $expiryLabel = 'Paid until '.$displayExpiry->format('j M Y');
+                            } elseif ($adminHold) {
+                                $expiryLabel = 'Was until '.$displayExpiry->format('j M Y');
+                            } elseif ($displayExpiry->isPast() || $effectiveStatus === \App\Enums\UserToolStatus::Expired) {
+                                $expiryLabel = 'Expired '.$displayExpiry->format('j M Y');
+                            } else {
+                                $expiryLabel = 'Expires '.$displayExpiry->format('j M Y');
+                            }
+                        @endphp
+                        <span class="inline-block rounded bg-muted/50 px-1.5 py-0.5 font-mono text-xs font-semibold text-text-muted">{{ $expiryLabel }}</span>
                     </div>
                 </x-dashboard.td>
                 <x-dashboard.td>
@@ -130,7 +137,7 @@
                                 View
                             </x-dashboard.button>
                         @endif
-                        <x-dashboard.badge :status="$effectiveStatus->value" />
+                        <x-dashboard.badge :status="$effectiveStatus->value" class="!px-1.5 !py-0 !text-[10px] !leading-4 !font-medium" />
                         @if ($tool->isExpiringSoon())
                             <span class="text-[11px] leading-tight text-amber-600">Expiring soon</span>
                         @endif
