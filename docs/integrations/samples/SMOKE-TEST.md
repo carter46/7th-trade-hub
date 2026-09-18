@@ -75,9 +75,9 @@ You cannot smoke-test this with a hand-written curl unless you compute the Proto
 
 ---
 
-## 5. Owned only — subscription poll (cron)
+## 5. Owned only — subscription reconciliation (fallback)
 
-Run your poll script or:
+Hub **pushes** status on Shutdown / Enable / expiry. To verify credentials you can still:
 
 ```bash
 curl -sS "https://7th-tradehub.online/api/site-integrations/v1/subscription" \
@@ -89,7 +89,7 @@ curl -sS "https://7th-tradehub.online/api/site-integrations/v1/subscription" \
 
 **Pass:** HTTP 200 with `status`, `expires_at`, `updated_at`.
 
-Schedule every 5–15 minutes in production.
+In production, call this only as a **throttled fallback** when local state is missing/stale — not on every page view and not as a required cron.
 
 ---
 
@@ -97,9 +97,10 @@ Schedule every 5–15 minutes in production.
 
 After `expires_at` passes **or** Hub Admin clicks **Shutdown Site**:
 
-- Poll returns `expired` (or past `expires_at`)
-- Merchant site shows shutdown / session-expired UI for users and regular admins
-- Login page/form still loads; only **super admin** may enter after password login
+- Hub push updates merchant local state (primary)
+- Authenticated sites: public pages show generic session-expired UI; regular-admin post-login gets Hub CTAs
+- Non-authenticated sites: public shutdown overlay with Hub login/help CTAs
+- Login page/form still loads on authenticated sites; only **super admin** may enter after password login
 - Hub SSO consume refused
 - Health and subscription sync still respond
 
@@ -116,6 +117,6 @@ Hub operator: ensure `site-integrations:expire-user-tools` runs every 5 minutes 
 | SSO login | Both | Session on merchant site |
 | Webhook ping | Merchant dev | 200 `{ "ok": true }` |
 | Admin credential sync (owned, optional) | Merchant dev | 200 `{ "ok": true }`; keys unchanged |
-| Subscription poll | Merchant cron | 200 snapshot JSON |
+| Subscription poll (fallback) | Merchant (throttled page-load or optional cron) | 200 snapshot JSON |
 
 See [checklists/MERCHANT-GO-LIVE.md](../checklists/MERCHANT-GO-LIVE.md).

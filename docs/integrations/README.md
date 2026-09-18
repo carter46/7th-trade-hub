@@ -18,8 +18,8 @@
 ## Quick start (merchant developer)
 
 1. Get credentials from Hub operator → [samples/env.example](samples/env.example)
-2. Read [MERCHANT-GUIDE.md](MERCHANT-GUIDE.md)
-3. Implement three endpoints on **your** site (see [ENDPOINTS-REFERENCE.md](ENDPOINTS-REFERENCE.md)). Owned sites should also POST admin email/password changes to Hub ([samples/php/sync-admin-credentials.php](samples/php/sync-admin-credentials.php)).
+2. Read [MERCHANT-GUIDE.md](MERCHANT-GUIDE.md) (authenticated apps) or [NON-AUTHENTICATED-SITE.md](NON-AUTHENTICATED-SITE.md)
+3. Implement Hub endpoints on **your** site (see [ENDPOINTS-REFERENCE.md](ENDPOINTS-REFERENCE.md)). Hub **pushes** subscription status; page-load poll is a throttled fallback only.
 4. Copy patterns from [samples/php/](samples/php/) · [samples/README.md](samples/README.md)
 5. Go live with [checklists/MERCHANT-GO-LIVE.md](checklists/MERCHANT-GO-LIVE.md)
 6. Smoke-test with [samples/SMOKE-TEST.md](samples/SMOKE-TEST.md)

@@ -238,14 +238,16 @@ class UserManagementController extends Controller
 
         $data = $request->validate([
             'site_url' => ['required', 'url', 'max:500'],
-            'admin_login_url' => ['required', 'url', 'max:500'],
-            'admin_email' => ['required', 'email', 'max:255'],
-            'admin_password' => ['required', 'string', 'min:6', 'max:255'],
+            'has_admin_auth' => ['sometimes', 'boolean'],
+            'admin_login_url' => ['required_if:has_admin_auth,1', 'nullable', 'url', 'max:500'],
+            'admin_email' => ['required_if:has_admin_auth,1', 'nullable', 'email', 'max:255'],
+            'admin_password' => ['required_if:has_admin_auth,1', 'nullable', 'string', 'min:6', 'max:255'],
             'livechat_name' => ['nullable', 'string', 'max:255'],
             'livechat_url' => ['nullable', 'string', 'max:2000'],
             'livechat_email' => ['nullable', 'email', 'max:255'],
             'livechat_password' => ['nullable', 'string', 'min:4', 'max:255'],
         ]);
+        $data['has_admin_auth'] = $request->boolean('has_admin_auth');
 
         try {
             $result = app(\App\Services\SiteIntegrations\UserToolProvisioningService::class)
@@ -267,10 +269,18 @@ class UserManagementController extends Controller
 
         $data = $request->validate([
             'site_url' => ['required', 'url', 'max:500'],
-            'admin_login_url' => ['required', 'url', 'max:500'],
-            'admin_email' => ['required', 'email', 'max:255'],
-            'admin_password' => ['nullable', 'string', 'min:6', 'max:255'],
+            'has_admin_auth' => ['sometimes', 'boolean'],
+            'admin_login_url' => ['required_if:has_admin_auth,1', 'nullable', 'url', 'max:500'],
+            'admin_email' => ['required_if:has_admin_auth,1', 'nullable', 'email', 'max:255'],
+            'admin_password' => [
+                Rule::requiredIf(fn () => $request->boolean('has_admin_auth') && ! filled($tool->admin_password)),
+                'nullable',
+                'string',
+                'min:6',
+                'max:255',
+            ],
         ]);
+        $data['has_admin_auth'] = $request->boolean('has_admin_auth');
 
         try {
             app(\App\Services\SiteIntegrations\UserToolProvisioningService::class)

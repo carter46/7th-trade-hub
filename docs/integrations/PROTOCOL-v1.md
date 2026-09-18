@@ -112,6 +112,10 @@ Body is a full signed Protocol v1 assertion (including `signature`).
 - `context`: `owned_tool`
 - `role`: `subscription`
 - `subscription`: `{ tool_id, public_id, status, expires_at, updated_at }`
+- `subscription.status` values: `pending_setup`, `active`, `suspended`, `cancelled`, `inactive`, `expired`
+- `identity`: **optional** — included only when the owned tool has a stored admin email. Non-authenticated tools omit `identity` entirely. Merchants must not require `identity.email` on subscription sync.
+
+When applying sync messages, compare `subscription.updated_at` / `expires_at` — never let an older `active` overwrite a newer offline status. For enforcement, only `active` is online; all other statuses are offline.
 
 ## Hub endpoints for sites
 
@@ -160,7 +164,8 @@ Return the flags your site actually supports. Hub **Check connection** only requ
 | `admin_credential_sync` | — | ✓ | Site pushes admin email/password changes to Hub (optional; omit until implemented) |
 
 **Demo example:** `["health", "demo_user_login", "demo_admin_login"]`  
-**Owned example:** `["health", "subscription_sync", "shutdown_on_expiry", "owned_admin_login"]`  
+**Owned (authenticated):** `["health", "subscription_sync", "shutdown_on_expiry", "owned_admin_login"]`  
+**Owned (non-authenticated):** `["health", "subscription_sync", "shutdown_on_expiry"]` — see [NON-AUTHENTICATED-SITE.md](NON-AUTHENTICATED-SITE.md)  
 **Owned with credential sync:** add `"admin_credential_sync"` only after you POST `owned.admin_credentials.updated` from your admin-email/password change handlers.
 
 Omitting a capability does not fail Check connection today, but misreporting (e.g. claiming `subscription_sync` without an endpoint) will break Setup/sync later.
@@ -248,14 +253,15 @@ Treat `expires_at` as expired when `expires_at < now()` on the merchant server.
 - **No grace window** in Protocol v1 — do not add ±30s tolerance unless you document it for your own app only; Hub assertions use short TTLs (~2 minutes for health).
 - Keep merchant and Hub servers on NTP; clock drift causes false rejections on health/sync and token validate failures.
 
-## Subscription expiry (defense in depth)
+## Subscription expiry and admin shutdown (defense in depth)
 
 1. Hub treats `expires_at < now()` as expired for launch and poll **immediately** (does not wait for cron).
-2. Scheduled job marks stored status `expired` and pushes sync (with row locks against renew races).
-3. Hub Admin **Shutdown Site** also sets `expired` + `expires_at=now()` and pushes the same sync (no separate event).
-4. Site stores local subscription state; **periodically polls** Hub.
-5. Site shuts down when expired even if a Hub push failed — except the **login page/form**. After password login, only a **super admin** (upgraded existing admin on the merchant site) may enter; users and regular admins see the same session-expired UI. Refuse Hub SSO while expired.
-6. When applying sync messages, compare `subscription.expires_at` / `updated_at` — never let an older `active` overwrite a newer `expired`.
+2. Scheduled job marks stored status `expired` and **pushes** sync (with row locks against renew races).
+3. Hub Admin **Shutdown Site** sets the chosen reason as `status` (`suspended` / `cancelled` / `inactive` / `expired`), forces `expires_at=now()`, and **pushes** the same sync channel (no separate event).
+4. Site stores local subscription state from Hub push; page-load Hub GET is a **throttled fallback** only (not required cron).
+5. Site shuts down when offline even if a Hub push failed — apply fail-closed rules (past `expires_at`, or `last_synced_at` older than max trust age when Hub is unreachable). Login/SSO rules for authenticated sites: [MERCHANT-GUIDE](MERCHANT-GUIDE.md#shutdown-expiry-and-admin-shutdown-site). Non-authenticated: [NON-AUTHENTICATED-SITE.md](NON-AUTHENTICATED-SITE.md).
+6. When applying sync messages, compare `subscription.expires_at` / `updated_at` — never let an older `active` overwrite a newer offline status.
+7. Admin post-login copy (authenticated sites only): [MERCHANT-GUIDE § Status-specific messages](MERCHANT-GUIDE.md#status-specific-messages-regular-admin-after-password-login-only).
 
 ## Environment variables (site side)
 

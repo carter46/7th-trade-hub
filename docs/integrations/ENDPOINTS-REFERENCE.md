@@ -21,7 +21,7 @@ Your `base_url` / `site_url` must be **HTTPS** and publicly reachable (no localh
 
 **During shutdown:** Keep `POST …/health` (and owned `POST …/subscription/sync`) responding so Hub can run Check connection and push expiry/shutdown updates even when customers see a maintenance page.
 
-**Login during shutdown (owned):** Keep the login page and form reachable. After password auth, only a **super admin** (upgraded local admin — not a regular admin) may enter. Users and regular admins see the same session-expired / shutdown UI used elsewhere. Refuse Hub SSO consume while expired. Admin **Shutdown Site** on Hub uses the same `expired` subscription payload as the expiry job — no separate event.
+**Login during shutdown (owned):** Keep the login page and form reachable. Public pages keep the generic session-expired UI. After password auth, only a **super admin** may enter. A **regular admin** sees the status-specific Hub message (renew link for `expired`, Help Center for `cancelled` / `suspended` / `inactive`) — not the generic session-expired string. Refuse Hub SSO consume while offline. Admin **Shutdown Site** pushes the chosen reason as `subscription.status` on the same sync channel — no separate event.
 
 ---
 
@@ -122,7 +122,7 @@ Hub redirects the user's browser:
    - Use validate response **`role`** (`user` or `admin`) for redirect; optionally verify local user role matches.
    - Create session server-side without password/MFA/onboarding flows.
 4. Redirect to your user dashboard or admin area based on `role`.
-5. For **owned** tools: refuse **Hub SSO** while subscription is expired. Password login page/form stay up; only a **super admin** may enter after password auth (users and regular admins see the session-expired UI).
+5. For **owned** tools: refuse **Hub SSO** while subscription is offline (`expired` / `suspended` / `cancelled` / `inactive`, or past `expires_at`). Password login page/form stay up; only a **super admin** may enter after password auth; regular admins see the status-specific Hub CTA screen (public pages stay on session-expired).
 
 **Launch token lifetime:** 120 seconds from issue; single use.
 
@@ -170,19 +170,24 @@ Owned tools only. Hub pushes after Setup, renew, expiry job, etc.
 }
 ```
 
-**Status values:** `pending_setup`, `active`, `suspended`, `expired` (Hub may report `expired` when `expires_at` is past even if stored status lagged).
+`identity` is **optional** on subscription sync. Hub includes `identity.email` only when the owned tool stores an admin email. Non-authenticated tools omit `identity` (do not expect or require an empty string).
+
+**Status values:** `pending_setup`, `active`, `suspended`, `cancelled`, `inactive`, `expired`.
+
+Hub Admin **Shutdown Site** picks a reason; that reason is what you receive on sync/poll (`suspended` / `cancelled` / `inactive` / `expired`), with `expires_at` set to now. Natural paid-window end uses `expired`. Hub may also report `expired` when `expires_at` is past even if a stored status lagged.
 
 **Your handler must**
 
 1. Verify signature.
-2. Apply monotonic update: if incoming `subscription.updated_at` / `expires_at` is **older** than what you stored, ignore (never let stale `active` overwrite newer `expired`).
-3. Return HTTP 200 (body format is up to you; Hub checks HTTP success only).
+2. Apply monotonic update: if incoming `subscription.updated_at` / `expires_at` is **older** than what you stored, ignore (never let stale `active` overwrite a newer offline status).
+3. Store the exact `status` string. Drive public fail-closed UI with the generic session-expired page; after regular-admin password login, show the status-specific Hub CTA (see [MERCHANT-GUIDE § Status-specific messages](MERCHANT-GUIDE.md#status-specific-messages-regular-admin-after-password-login-only)). For non-authenticated sites, only `active` is online — see [NON-AUTHENTICATED-SITE.md](NON-AUTHENTICATED-SITE.md).
+4. Return HTTP 200 (body format is up to you; Hub checks HTTP success only). Do not require `identity` on this role.
 
 ---
 
 ## 4. Poll subscription — `GET /api/site-integrations/v1/subscription`
 
-Owned tools only. Run every **5–15 minutes** via cron.
+Owned tools only. **Fallback reconciliation** when local state is missing/stale — not a required every-N-minutes cron. Prefer Hub **push** (`POST …/subscription/sync`). Throttle page-load attempts (see [NON-AUTHENTICATED-SITE.md](NON-AUTHENTICATED-SITE.md)).
 
 **Request headers**
 
@@ -209,7 +214,7 @@ Optional query fallback: `?integration_id=…` if header omitted.
 }
 ```
 
-If `status` is `expired` or `expires_at` is in the past → shut down locally even if sync push failed (same rules as [MERCHANT-GUIDE § Shutdown](MERCHANT-GUIDE.md#shutdown-expiry-and-admin-shutdown-site): except login page/form; only super admin may pass after password login).
+If `status` is `expired`, `suspended`, `cancelled`, `inactive`, or `expires_at` is in the past → shut down locally even if sync push failed (same rules as [MERCHANT-GUIDE § Shutdown](MERCHANT-GUIDE.md#shutdown-expiry-and-admin-shutdown-site): public pages = session expired; login page/form excepted; only super admin may enter; regular admin post-login gets status-specific Hub CTAs).
 
 | HTTP | Meaning |
 | ---- | ------- |

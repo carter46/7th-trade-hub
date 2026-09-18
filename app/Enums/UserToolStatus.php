@@ -53,14 +53,11 @@ enum UserToolStatus: string
     }
 
     /**
-     * Status string merchants understand today (Protocol v1).
-     * Cancelled/Inactive map to expired; Suspended is already in the protocol.
+     * Status string sent on Protocol v1 subscription push/poll.
+     * Merchants must branch UI on these values (see MERCHANT-GUIDE shutdown messaging).
      */
     public function protocolValue(): string
     {
-        return match ($this) {
-            self::Cancelled, self::Inactive => self::Expired->value,
-            default => $this->value,
-        };
+        return $this->value;
     }
 }

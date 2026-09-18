@@ -57,6 +57,8 @@ class UserToolIntegration extends Model
     }
 
     /**
+     * Capabilities for owned sites with admin authentication (SSO / Auto Login).
+     *
      * @return list<string>
      */
     public static function defaultCapabilities(): array
@@ -67,5 +69,29 @@ class UserToolIntegration extends Model
             self::CAP_SHUTDOWN_ON_EXPIRY,
             self::CAP_OWNED_ADMIN_LOGIN,
         ];
+    }
+
+    /**
+     * Capabilities for non-authenticated sites (no admin login / SSO).
+     *
+     * @return list<string>
+     */
+    public static function nonAuthenticatedCapabilities(): array
+    {
+        return [
+            self::CAP_HEALTH,
+            self::CAP_SUBSCRIPTION_SYNC,
+            self::CAP_SHUTDOWN_ON_EXPIRY,
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function capabilitiesForHasAdminAuth(bool $hasAdminAuth): array
+    {
+        return $hasAdminAuth
+            ? self::defaultCapabilities()
+            : self::nonAuthenticatedCapabilities();
     }
 }

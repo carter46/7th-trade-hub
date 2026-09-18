@@ -149,17 +149,17 @@ On HTTP 200 and `"valid": true`:
 
 ## 6. Subscription (owned tools only)
 
-### Push — Hub → you
+### Push — Hub → you (primary)
 
 `POST {your-site}/api/7th-tradehub/v1/subscription/sync`
 
-Signed body includes `subscription.status`, `subscription.expires_at`, `subscription.updated_at`.
+Hub sends this on **Shutdown Site**, **Enable**, natural expiry, renew, Update expiry, and successful **Check connection**. Signed body includes `subscription.status`, `subscription.expires_at`, `subscription.updated_at`.
 
-Store locally. When applying updates, prefer newer `updated_at` / `expires_at` — **never let an older `active` overwrite a newer `expired`.**
+Store locally. When applying updates, prefer newer `updated_at` / `expires_at` — **never let an older `active` overwrite a newer offline status.** Gate the site from **local state** after each successful push. Merchants do **not** need a cron job for Hub to deliver status.
 
-### Poll — you → Hub (required)
+### Reconciliation — you → Hub (throttled fallback only)
 
-Every **5–15 minutes** (cron):
+Use Hub GET only when local state is missing, clock-stale (`active` + past `expires_at`), or `last_synced_at` is older than your max trust age (default **24 hours**). Throttle attempts with `last_reconciliation_attempt_at` (default min gap **15 minutes**) so page traffic never becomes N Hub requests per N visitors.
 
 ```http
 GET {HUB}/api/site-integrations/v1/subscription
@@ -169,27 +169,66 @@ X-7TH-Client-Secret: ...
 X-7TH-Integration-Id: ...
 ```
 
-Sample: [samples/php/poll-subscription.php](samples/php/poll-subscription.php).
+Sample helper: [samples/php/poll-subscription.php](samples/php/poll-subscription.php). Full rules (fail-closed when Hub unreachable): [NON-AUTHENTICATED-SITE.md](NON-AUTHENTICATED-SITE.md) (same rules apply to application sites).
 
-If Hub reports `expired` or `expires_at` is past → shut down even if push was missed.
+Optional rare cron is fine; it is **not** required.
 
-Admin **Shutdown Site** on Hub uses the **same** push/poll payload (`status: expired` + past `expires_at`). There is no separate shutdown event.
+If Hub reports `expired`, `suspended`, `cancelled`, `inactive`, or `expires_at` is past → shut down even if a push was missed.
+
+Admin **Shutdown Site** on Hub uses the **same** push channel. There is no separate shutdown event. Hub may send `status` as `expired`, `suspended`, `cancelled`, or `inactive` (plus past `expires_at`).
+
+**Non-authenticated sites** (no admin login): see [NON-AUTHENTICATED-SITE.md](NON-AUTHENTICATED-SITE.md) and [samples/php/non-auth-site-gate.php](samples/php/non-auth-site-gate.php).
 
 ### Shutdown (expiry and Admin Shutdown Site)
 
-When the subscription is expired (natural expiry **or** Hub Admin clicked **Shutdown Site**):
+Treat the site as **offline** when Hub reports any of:
 
-1. Show the **same** site-wide shutdown / “session expired” (or equivalent) message on app pages.
+| `status` | Meaning |
+| -------- | ------- |
+| `expired` | Paid window ended (natural expiry) **or** Hub admin chose reason **Expired** |
+| `suspended` | Hub admin temporary hold |
+| `cancelled` | Hub admin cancelled the subscription |
+| `inactive` | Hub admin shut down for inactivity |
+
+Also treat as offline when `expires_at` is in the past (even if a stale push still said `active`).
+
+**Access rules:**
+
+1. **Public / customer pages** — keep showing the same generic site-wide shutdown / **“session expired”** (or equivalent) message. Do **not** put Hub renew/help CTAs on public pages.
 2. Keep `POST …/health` and `POST …/subscription/sync` reachable.
 3. **Except the login page and login form** — those routes must stay up so credentials can be checked.
 4. After a successful **password** login:
    - **Super admin** — allow full admin access (operators need this during shutdown).
-   - **Regular admin** — treat like a customer (same session-expired / shutdown UI). Regular admin is **not** enough.
-   - **Users** — cannot use the site; same message as other blocked pages.
+   - **Regular admin** — **do not** enter the admin panel. Show the **status-specific** message for the Hub `status` (table below) with the Hub CTA. This is the only place those messages appear.
+   - **Users** — cannot use the site; same generic session-expired UI as public pages (not the admin status table).
 5. **Super admin** is a merchant-site concept: upgrade an existing admin (flag, permission, `is_super_admin`, or config email list). You do **not** need a new Hub/Spatie role — just distinguish super admin from regular admins locally.
-6. **Refuse Hub SSO consume** while expired (Auto Login must not bypass shutdown for customers). Super-admin recovery is password login on the excepted login form.
+6. **Refuse Hub SSO consume** while offline (Auto Login must not bypass shutdown). Super-admin recovery is password login on the excepted login form.
 
 When Hub later sends `status: active` with a future `expires_at` (Admin **Enable**, renew, or Update expiry), clear local shutdown and restore normal access.
+
+### Status-specific messages (regular admin after password login only)
+
+Show these **only** after a regular admin successfully signs in on the merchant login form while the subscription is offline. Public pages and end users stay on the generic session-expired UI.
+
+Use your Hub base URL from `SEVENTH_TRADEHUB_HUB_URL` (production example: `https://7th-tradehub.online`).
+
+| Hub `status` | Message to show (post–admin login) | Primary CTA |
+| ------------ | ---------------------------------- | ----------- |
+| `expired` | Your website subscription has expired. Sign in to your 7th Trade Hub account to renew this website subscription. | Link to `{HUB}/login` — label e.g. **Sign in to 7th Trade Hub** |
+| `cancelled` | This website subscription has been cancelled. Contact 7th Trade Hub support for help. | Link to `{HUB}/help` — label e.g. **Open Help Center** |
+| `suspended` | This website has been suspended. Contact 7th Trade Hub support for help. | Link to `{HUB}/help` — label e.g. **Open Help Center** |
+| `inactive` | This website is inactive. Contact 7th Trade Hub support for help. | Link to `{HUB}/help` — label e.g. **Open Help Center** |
+
+Do **not** use a “your session has expired / please log in again” string on this post-login admin screen — that confuses them into retrying the merchant password. Point them at Hub renew (`expired`) or Help (`cancelled` / `suspended` / `inactive`).
+
+Example links:
+
+```text
+{HUB}/login   → https://7th-tradehub.online/login
+{HUB}/help    → https://7th-tradehub.online/help
+```
+
+Open CTAs in a new tab (`target="_blank" rel="noopener"`) so the merchant login URL stays available for super-admin recovery.
 
 ---
 
@@ -233,7 +272,7 @@ LiveChat logins are **not** synced by this event.
 1. Operator runs **Check connection** (Admin → Demo Site Integrate, or admin user Tools tab for owned).
 2. **Demo:** View Demo → Login as User / Admin on product page.
 3. **Owned:** My Tools → Setup → Login as admin.
-4. Confirm expiry: after `expires_at`, poll returns `expired` and site shuts down.
+4. Confirm offline behaviour: public pages stay on session-expired; after regular-admin login the site shows the matching Hub CTA (login renew vs Help Center).
 
 ---
 
@@ -271,8 +310,8 @@ For owned tools, **Reconfigure** updates URLs/email/password without new keys; *
 | SSO bypasses password/MFA/onboarding flows | ☐ |
 | Health responds during customer maintenance mode | ☐ |
 | `POST …/subscription/sync` verifies HMAC (owned) | ☐ |
-| Poll cron configured (owned) | ☐ |
-| Expired → fail-closed shutdown (users + regular admins); login page/form excepted; only super admin may enter | ☐ |
+| Hub push sync verified; throttled page-load fallback OK (owned; cron optional) | ☐ |
+| Offline → public session-expired UI; regular admin post-login gets status-specific Hub CTA; login excepted; only super admin may enter | ☐ |
 | Super admin is an upgraded existing admin (not a new Hub role) | ☐ |
 | Optional ping webhook to Hub | ☐ |
 | Owned: POST admin email/password changes to Hub (`owned.admin_credentials.updated`) | ☐ |

@@ -40,11 +40,10 @@ class SubscriptionSyncService
         $effective = $tool->effectiveStatus();
         $status = $effective->protocolValue();
 
-        $body = $this->signer->sign([
+        $assertion = [
             'integration_id' => $integration->integration_id,
             'context' => 'owned_tool',
             'role' => 'subscription',
-            'identity' => ['email' => $tool->admin_email ?? ''],
             'request_id' => (string) Str::uuid(),
             'nonce' => Str::random(24),
             'issued_at' => now()->toIso8601String(),
@@ -56,7 +55,14 @@ class SubscriptionSyncService
                 'expires_at' => $tool->expires_at?->toIso8601String(),
                 'updated_at' => now()->toIso8601String(),
             ],
-        ], $integration->client_secret);
+        ];
+
+        // Admin identity only when Hub stores one — never send empty-string email.
+        if (filled($tool->admin_email)) {
+            $assertion['identity'] = ['email' => $tool->admin_email];
+        }
+
+        $body = $this->signer->sign($assertion, $integration->client_secret);
 
         try {
             $response = $this->http->postJson(
@@ -70,8 +76,10 @@ class SubscriptionSyncService
             );
 
             $ok = $response->successful();
-            $tool->last_synced_at = now();
-            $tool->save();
+            if ($ok) {
+                $tool->last_synced_at = now();
+                $tool->save();
+            }
 
             if (! $ok) {
                 $integration->last_error = 'Subscription sync failed: HTTP '.$response->status();

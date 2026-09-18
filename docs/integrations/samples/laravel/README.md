@@ -31,15 +31,15 @@ Verify Protocol v1 HMAC using [../samples/php/protocol-v1-verify.php](../samples
 
 Reject requests where `expires_at` is past or `integration_id` does not match env.
 
-## Scheduled poll (owned tools)
+## Fallback reconciliation (owned tools)
 
-Schedule every 5–15 minutes:
+Hub **pushes** `POST …/subscription/sync` as the primary path. Use Hub GET only when local state is missing/stale (throttled):
 
 `GET {HUB}/api/site-integrations/v1/subscription`
 
 Headers: `X-7TH-Client-Id`, `X-7TH-Client-Secret`, `X-7TH-Integration-Id`.
 
-See [../samples/php/poll-subscription.php](../samples/php/poll-subscription.php). Apply fail-closed shutdown when `status === expired` or `expires_at` is past: keep login page/form reachable; only **super admin** (upgraded existing admin) may enter after password login; users and regular admins see the same session-expired UI; refuse Hub SSO while expired. Admin Hub **Shutdown Site** uses this same payload — no separate endpoint.
+See [../samples/php/poll-subscription.php](../samples/php/poll-subscription.php) and [../NON-AUTHENTICATED-SITE.md](../NON-AUTHENTICATED-SITE.md). Apply fail-closed when `status` is offline, `expires_at` is past, or local sync is older than max trust age and Hub is unreachable. Authenticated sites: public session-expired UI; regular admin post-login Hub CTAs. Non-authenticated: [../samples/php/non-auth-site-gate.php](../samples/php/non-auth-site-gate.php).
 
 ## Admin email / password change (owned, optional)
 

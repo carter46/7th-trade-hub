@@ -627,7 +627,7 @@ class AdminManualPurchaseTest extends TestCase
 
         $tool->refresh();
         $this->assertSame(UserToolStatus::Cancelled, $tool->status);
-        $this->assertSame('expired', $tool->status->protocolValue());
+        $this->assertSame('cancelled', $tool->status->protocolValue());
         $this->assertFalse($tool->isSubscriptionLive());
     }
 
@@ -760,5 +760,435 @@ class AdminManualPurchaseTest extends TestCase
             'user_id' => $member->id,
             'type' => 'tool.subscription_expired',
         ]);
+    }
+
+    public function test_setup_non_authenticated_site_omits_admin_fields_and_owned_login_capability(): void
+    {
+        $admin = $this->adminUser();
+        $member = $this->memberUser();
+        $product = $this->seedVpnProduct();
+
+        $tool = UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'platform_product_variant_id' => $product->activeVariants->first()->id,
+            'status' => UserToolStatus::PendingSetup,
+            'purchased_at' => now(),
+            'duration_months' => 3,
+            'instance_sequence' => 1,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.tools.setup', [$member, $tool]), [
+                'site_url' => 'https://brochure.example.com',
+                'has_admin_auth' => '0',
+            ])
+            ->assertRedirect(route('admin.users.tools.show', [$member, $tool]))
+            ->assertSessionHas('status');
+
+        $tool->refresh()->load('integration');
+        $this->assertFalse($tool->hasAdminAuth());
+        $this->assertNull($tool->admin_email);
+        $this->assertNull($tool->admin_login_url);
+        $this->assertNull($tool->admin_password);
+        $this->assertSame(UserToolStatus::Active, $tool->status);
+        $this->assertNotNull($tool->integration);
+        $this->assertFalse($tool->integration->hasCapability(\App\Models\UserToolIntegration::CAP_OWNED_ADMIN_LOGIN));
+        $this->assertTrue($tool->integration->hasCapability(\App\Models\UserToolIntegration::CAP_SUBSCRIPTION_SYNC));
+        $this->assertFalse($tool->canLaunchAdmin());
+    }
+
+    public function test_setup_authenticated_site_still_requires_admin_fields(): void
+    {
+        $admin = $this->adminUser();
+        $member = $this->memberUser();
+        $product = $this->seedVpnProduct();
+
+        $tool = UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'platform_product_variant_id' => $product->activeVariants->first()->id,
+            'status' => UserToolStatus::PendingSetup,
+            'purchased_at' => now(),
+            'duration_months' => 3,
+            'instance_sequence' => 1,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.tools.setup', [$member, $tool]), [
+                'site_url' => 'https://app.example.com',
+                'has_admin_auth' => '1',
+            ])
+            ->assertSessionHasErrors(['admin_login_url', 'admin_email', 'admin_password']);
+    }
+
+    public function test_reconfigure_to_non_authenticated_clears_admin_and_capabilities(): void
+    {
+        $admin = $this->adminUser();
+        $member = $this->memberUser();
+        $product = $this->seedVpnProduct();
+
+        $tool = UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'platform_product_variant_id' => $product->activeVariants->first()->id,
+            'status' => UserToolStatus::Active,
+            'site_url' => 'https://app.example.com',
+            'admin_login_url' => 'https://app.example.com/admin',
+            'admin_email' => 'owner@example.com',
+            'admin_password' => 'SecretPass1!',
+            'has_admin_auth' => true,
+            'purchased_at' => now()->subMonth(),
+            'configured_at' => now()->subMonth(),
+            'expires_at' => now()->addMonths(2),
+            'duration_months' => 3,
+            'instance_sequence' => 1,
+        ]);
+
+        \App\Models\UserToolIntegration::query()->create([
+            'user_tool_id' => $tool->id,
+            'integration_id' => (string) Str::uuid(),
+            'client_id' => 'th_test',
+            'client_secret' => 'client-secret-test',
+            'webhook_secret' => 'webhook-secret-test',
+            'capabilities' => \App\Models\UserToolIntegration::defaultCapabilities(),
+            'connection_status' => 'ok',
+        ]);
+
+        \Illuminate\Support\Facades\Http::fake([
+            'https://app.example.com/*' => \Illuminate\Support\Facades\Http::response(['ok' => true], 200),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.tools.reconfigure', [$member, $tool]), [
+                'site_url' => 'https://app.example.com',
+                'has_admin_auth' => '0',
+            ])
+            ->assertRedirect(route('admin.users.tools.show', [$member, $tool]));
+
+        $tool->refresh()->load('integration');
+        $this->assertFalse($tool->hasAdminAuth());
+        $this->assertNull($tool->admin_email);
+        $this->assertNull($tool->admin_login_url);
+        $this->assertNull($tool->admin_password);
+        $this->assertFalse($tool->integration->hasCapability(\App\Models\UserToolIntegration::CAP_OWNED_ADMIN_LOGIN));
+        $this->assertFalse($tool->canLaunchAdmin());
+    }
+
+    public function test_reconfigure_non_auth_to_auth_requires_password_and_restores_capability(): void
+    {
+        $admin = $this->adminUser();
+        $member = $this->memberUser();
+        $product = $this->seedVpnProduct();
+
+        $tool = UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'platform_product_variant_id' => $product->activeVariants->first()->id,
+            'status' => UserToolStatus::Active,
+            'site_url' => 'https://brochure.example.com',
+            'has_admin_auth' => false,
+            'admin_login_url' => null,
+            'admin_email' => null,
+            'admin_password' => null,
+            'purchased_at' => now()->subMonth(),
+            'configured_at' => now()->subMonth(),
+            'expires_at' => now()->addMonths(2),
+            'duration_months' => 3,
+            'instance_sequence' => 1,
+        ]);
+
+        \App\Models\UserToolIntegration::query()->create([
+            'user_tool_id' => $tool->id,
+            'integration_id' => (string) Str::uuid(),
+            'client_id' => 'th_test',
+            'client_secret' => 'client-secret-test',
+            'webhook_secret' => 'webhook-secret-test',
+            'capabilities' => \App\Models\UserToolIntegration::nonAuthenticatedCapabilities(),
+            'connection_status' => 'ok',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.tools.reconfigure', [$member, $tool]), [
+                'site_url' => 'https://app.example.com',
+                'has_admin_auth' => '1',
+                'admin_login_url' => 'https://app.example.com/admin',
+                'admin_email' => 'owner@example.com',
+            ])
+            ->assertSessionHasErrors(['admin_password']);
+
+        \Illuminate\Support\Facades\Http::fake([
+            'https://app.example.com/*' => \Illuminate\Support\Facades\Http::response(['ok' => true], 200),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.tools.reconfigure', [$member, $tool]), [
+                'site_url' => 'https://app.example.com',
+                'has_admin_auth' => '1',
+                'admin_login_url' => 'https://app.example.com/admin',
+                'admin_email' => 'owner@example.com',
+                'admin_password' => 'SecretPass1!',
+            ])
+            ->assertRedirect(route('admin.users.tools.show', [$member, $tool]));
+
+        $tool->refresh()->load('integration');
+        $this->assertTrue($tool->hasAdminAuth());
+        $this->assertSame('owner@example.com', $tool->admin_email);
+        $this->assertSame('SecretPass1!', $tool->admin_password);
+        $this->assertTrue($tool->integration->hasCapability(\App\Models\UserToolIntegration::CAP_OWNED_ADMIN_LOGIN));
+    }
+
+    public function test_reconfigure_auth_keeps_existing_password_when_blank(): void
+    {
+        $admin = $this->adminUser();
+        $member = $this->memberUser();
+        $product = $this->seedVpnProduct();
+
+        $tool = UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'platform_product_variant_id' => $product->activeVariants->first()->id,
+            'status' => UserToolStatus::Active,
+            'site_url' => 'https://app.example.com',
+            'admin_login_url' => 'https://app.example.com/admin',
+            'admin_email' => 'owner@example.com',
+            'admin_password' => 'KeepMePass1!',
+            'has_admin_auth' => true,
+            'purchased_at' => now()->subMonth(),
+            'configured_at' => now()->subMonth(),
+            'expires_at' => now()->addMonths(2),
+            'duration_months' => 3,
+            'instance_sequence' => 1,
+        ]);
+
+        \App\Models\UserToolIntegration::query()->create([
+            'user_tool_id' => $tool->id,
+            'integration_id' => (string) Str::uuid(),
+            'client_id' => 'th_test',
+            'client_secret' => 'client-secret-test',
+            'webhook_secret' => 'webhook-secret-test',
+            'capabilities' => \App\Models\UserToolIntegration::defaultCapabilities(),
+            'connection_status' => 'ok',
+        ]);
+
+        \Illuminate\Support\Facades\Http::fake([
+            'https://app.example.com/*' => \Illuminate\Support\Facades\Http::response(['ok' => true], 200),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.tools.reconfigure', [$member, $tool]), [
+                'site_url' => 'https://app.example.com',
+                'has_admin_auth' => '1',
+                'admin_login_url' => 'https://app.example.com/admin',
+                'admin_email' => 'owner@example.com',
+                'admin_password' => '',
+            ])
+            ->assertRedirect(route('admin.users.tools.show', [$member, $tool]));
+
+        $this->assertSame('KeepMePass1!', $tool->fresh()->admin_password);
+    }
+
+    public function test_launch_owned_admin_rejects_non_authenticated_tool(): void
+    {
+        $member = $this->memberUser();
+        $product = $this->seedVpnProduct();
+
+        $tool = UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'platform_product_variant_id' => $product->activeVariants->first()->id,
+            'status' => UserToolStatus::Active,
+            'site_url' => 'https://brochure.example.com',
+            'has_admin_auth' => false,
+            'purchased_at' => now()->subMonth(),
+            'configured_at' => now()->subMonth(),
+            'expires_at' => now()->addMonths(2),
+            'duration_months' => 3,
+            'instance_sequence' => 1,
+        ]);
+
+        \App\Models\UserToolIntegration::query()->create([
+            'user_tool_id' => $tool->id,
+            'integration_id' => (string) Str::uuid(),
+            'client_id' => 'th_test',
+            'client_secret' => 'client-secret-test',
+            'webhook_secret' => 'webhook-secret-test',
+            'capabilities' => \App\Models\UserToolIntegration::nonAuthenticatedCapabilities(),
+            'connection_status' => 'ok',
+        ]);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('non-authenticated');
+
+        app(\App\Services\SiteIntegrations\DemoLaunchService::class)
+            ->launchOwnedAdmin($member, $tool->fresh(['integration']));
+    }
+
+    public function test_my_tools_hides_auto_login_for_non_authenticated_tool(): void
+    {
+        $member = $this->memberUser();
+        $product = $this->seedVpnProduct();
+
+        $tool = UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'platform_product_variant_id' => $product->activeVariants->first()->id,
+            'status' => UserToolStatus::Active,
+            'site_url' => 'https://brochure.example.com',
+            'has_admin_auth' => false,
+            'purchased_at' => now()->subMonth(),
+            'configured_at' => now()->subMonth(),
+            'expires_at' => now()->addMonths(2),
+            'duration_months' => 3,
+            'instance_sequence' => 1,
+        ]);
+
+        \App\Models\UserToolIntegration::query()->create([
+            'user_tool_id' => $tool->id,
+            'integration_id' => (string) Str::uuid(),
+            'client_id' => 'th_test',
+            'client_secret' => 'client-secret-test',
+            'webhook_secret' => 'webhook-secret-test',
+            'capabilities' => \App\Models\UserToolIntegration::nonAuthenticatedCapabilities(),
+            'connection_status' => 'ok',
+        ]);
+
+        $this->actingAs($member)
+            ->get(route('dashboard.my-tools.show', $tool))
+            ->assertOk()
+            ->assertSee('Non-authenticated (no admin login)', false)
+            ->assertDontSee('Admin Auto Login', false)
+            ->assertDontSee('id="copy-tool-password"', false);
+    }
+
+    public function test_subscription_sync_omits_identity_for_non_auth_and_sets_last_synced_only_on_success(): void
+    {
+        $member = $this->memberUser();
+        $product = $this->seedVpnProduct();
+
+        $tool = UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'platform_product_variant_id' => $product->activeVariants->first()->id,
+            'status' => UserToolStatus::Active,
+            'site_url' => 'https://brochure.example.com',
+            'has_admin_auth' => false,
+            'admin_email' => null,
+            'purchased_at' => now()->subMonth(),
+            'configured_at' => now()->subMonth(),
+            'expires_at' => now()->addMonths(2),
+            'duration_months' => 3,
+            'instance_sequence' => 1,
+            'last_synced_at' => null,
+        ]);
+
+        \App\Models\UserToolIntegration::query()->create([
+            'user_tool_id' => $tool->id,
+            'integration_id' => (string) Str::uuid(),
+            'client_id' => 'th_test',
+            'client_secret' => 'client-secret-test',
+            'webhook_secret' => 'webhook-secret-test',
+            'capabilities' => \App\Models\UserToolIntegration::nonAuthenticatedCapabilities(),
+            'connection_status' => 'ok',
+        ]);
+
+        \Illuminate\Support\Facades\Http::fake([
+            'https://brochure.example.com/*' => \Illuminate\Support\Facades\Http::response(['ok' => true], 200),
+        ]);
+
+        $result = app(\App\Services\SiteIntegrations\SubscriptionSyncService::class)
+            ->push($tool->fresh(['integration']));
+
+        $this->assertTrue($result['ok']);
+        $this->assertNotNull($tool->fresh()->last_synced_at);
+
+        \Illuminate\Support\Facades\Http::assertSent(function ($request) {
+            $body = $request->data();
+
+            return ! array_key_exists('identity', $body)
+                && ($body['role'] ?? null) === 'subscription';
+        });
+    }
+
+    public function test_subscription_sync_includes_identity_email_when_auth_and_skips_last_synced_on_http_failure(): void
+    {
+        $member = $this->memberUser();
+        $product = $this->seedVpnProduct();
+
+        $tool = UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'platform_product_variant_id' => $product->activeVariants->first()->id,
+            'status' => UserToolStatus::Active,
+            'site_url' => 'https://app.example.com',
+            'has_admin_auth' => true,
+            'admin_email' => 'owner@example.com',
+            'admin_login_url' => 'https://app.example.com/admin',
+            'admin_password' => 'SecretPass1!',
+            'purchased_at' => now()->subMonth(),
+            'configured_at' => now()->subMonth(),
+            'expires_at' => now()->addMonths(2),
+            'duration_months' => 3,
+            'instance_sequence' => 1,
+            'last_synced_at' => null,
+        ]);
+
+        \App\Models\UserToolIntegration::query()->create([
+            'user_tool_id' => $tool->id,
+            'integration_id' => (string) Str::uuid(),
+            'client_id' => 'th_test',
+            'client_secret' => 'client-secret-test',
+            'webhook_secret' => 'webhook-secret-test',
+            'capabilities' => \App\Models\UserToolIntegration::defaultCapabilities(),
+            'connection_status' => 'ok',
+        ]);
+
+        \Illuminate\Support\Facades\Http::fake([
+            'https://app.example.com/*' => \Illuminate\Support\Facades\Http::response(['error' => true], 500),
+        ]);
+
+        $result = app(\App\Services\SiteIntegrations\SubscriptionSyncService::class)
+            ->push($tool->fresh(['integration']));
+
+        $this->assertFalse($result['ok']);
+        $this->assertNull($tool->fresh()->last_synced_at);
+
+        \Illuminate\Support\Facades\Http::assertSent(function ($request) {
+            $body = $request->data();
+
+            return ($body['identity']['email'] ?? null) === 'owner@example.com'
+                && ($body['role'] ?? null) === 'subscription';
+        });
+    }
+
+    public function test_setup_authenticated_still_gets_owned_admin_login_capability(): void
+    {
+        $admin = $this->adminUser();
+        $member = $this->memberUser();
+        $product = $this->seedVpnProduct();
+
+        $tool = UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'platform_product_variant_id' => $product->activeVariants->first()->id,
+            'status' => UserToolStatus::PendingSetup,
+            'purchased_at' => now(),
+            'duration_months' => 3,
+            'instance_sequence' => 1,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.tools.setup', [$member, $tool]), [
+                'site_url' => 'https://app.example.com',
+                'has_admin_auth' => '1',
+                'admin_login_url' => 'https://app.example.com/admin',
+                'admin_email' => 'owner@example.com',
+                'admin_password' => 'SecretPass1!',
+            ])
+            ->assertRedirect(route('admin.users.tools.show', [$member, $tool]));
+
+        $tool->refresh()->load('integration');
+        $this->assertTrue($tool->hasAdminAuth());
+        $this->assertTrue($tool->integration->hasCapability(\App\Models\UserToolIntegration::CAP_OWNED_ADMIN_LOGIN));
     }
 }

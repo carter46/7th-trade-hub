@@ -1,9 +1,15 @@
 <?php
 /**
- * Poll Hub for owned-tool subscription (defense in depth).
- * Schedule every 5–15 minutes. When expired (or Admin Shutdown Site):
- * fail-closed for users/regular admins; keep login page/form up;
- * only super admin may enter after password login; refuse Hub SSO.
+ * Fallback Hub GET for owned-tool subscription (defense in depth).
+ *
+ * Hub push (POST …/subscription/sync) is primary — do not run this on a tight cron
+ * for every site. Call only when local state is missing/stale, and throttle with
+ * last_reconciliation_attempt_at (see NON-AUTHENTICATED-SITE.md).
+ *
+ * Offline when status is expired|suspended|cancelled|inactive, or expires_at is past:
+ * - authenticated sites: public session-expired; admin post-login Hub CTAs
+ * - non-authenticated: public shutdown overlay with Hub CTAs
+ * - fail closed if last_synced_at older than max trust age and Hub unreachable
  */
 
 declare(strict_types=1);
@@ -42,8 +48,71 @@ function seventh_tradehub_poll_subscription(): ?array
     return is_array($body) ? $body : null;
 }
 
+/**
+ * @param  array<string, mixed>  $snap
+ */
+function seventh_tradehub_subscription_is_offline(array $snap): bool
+{
+    $status = (string) ($snap['status'] ?? '');
+    if (in_array($status, ['expired', 'suspended', 'cancelled', 'inactive'], true)) {
+        return true;
+    }
+
+    $expiresAt = $snap['expires_at'] ?? null;
+    if (is_string($expiresAt) && $expiresAt !== '' && strtotime($expiresAt) < time()) {
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Suggested copy + Hub CTA for a regular admin AFTER successful password login
+ * while the subscription is offline. Do not use this on public pages —
+ * public pages keep the generic session-expired UI.
+ *
+ * @return array{message: string, cta_label: string, cta_url: string}|null
+ */
+function seventh_tradehub_admin_shutdown_message(array $snap, string $hubBaseUrl): ?array
+{
+    if (! seventh_tradehub_subscription_is_offline($snap)) {
+        return null;
+    }
+
+    $hub = rtrim($hubBaseUrl, '/');
+    $status = (string) ($snap['status'] ?? 'expired');
+
+    return match ($status) {
+        'cancelled' => [
+            'message' => 'This website subscription has been cancelled. Contact 7th Trade Hub support for help.',
+            'cta_label' => 'Open Help Center',
+            'cta_url' => $hub.'/help',
+        ],
+        'suspended' => [
+            'message' => 'This website has been suspended. Contact 7th Trade Hub support for help.',
+            'cta_label' => 'Open Help Center',
+            'cta_url' => $hub.'/help',
+        ],
+        'inactive' => [
+            'message' => 'This website is inactive. Contact 7th Trade Hub support for help.',
+            'cta_label' => 'Open Help Center',
+            'cta_url' => $hub.'/help',
+        ],
+        default => [ // expired, or past expires_at with stale status
+            'message' => 'Your website subscription has expired. Sign in to your 7th Trade Hub account to renew this website subscription.',
+            'cta_label' => 'Sign in to 7th Trade Hub',
+            'cta_url' => $hub.'/login',
+        ],
+    };
+}
+
 // Example:
 // $snap = seventh_tradehub_poll_subscription();
-// if ($snap && (($snap['status'] ?? '') === 'expired' || strtotime((string) ($snap['expires_at'] ?? '')) < time())) {
-//     /* fail-closed UI; except login; only super admin after password auth */
+// if ($snap && seventh_tradehub_subscription_is_offline($snap)) {
+//     /* public pages: generic session-expired UI */
+//     /* after regular-admin password login:
+//        $ui = seventh_tradehub_admin_shutdown_message($snap, seventh_tradehub_env('SEVENTH_TRADEHUB_HUB_URL'));
+//        show $ui['message'] + link $ui['cta_url']
+//     */
+//     /* only super admin may enter the admin panel */
 // }

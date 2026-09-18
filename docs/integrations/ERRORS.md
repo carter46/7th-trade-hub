@@ -37,7 +37,7 @@
 | Missing/wrong `X-7TH-Client-Id` or `X-7TH-Integration-Id` | 401 |
 | Expired assertion (`expires_at` past) | 401 |
 | Unknown `integration_id` | 404 |
-| Subscription expired | Fail-closed UI for users and regular admins; login page/form stay up; only super admin may enter after password login; refuse Hub SSO |
+| Subscription offline | Hub push updates local state. Authenticated: public session-expired; admin post-login Hub CTAs. Non-auth: public shutdown overlay. Fail closed if past `expires_at` or stale sync + Hub unreachable. Login form stays up on authenticated sites; refuse Hub SSO |
 | Stale sync (older than stored) | Ignore; keep newer state |
 | Validate token missing/invalid | Do not create session; show error page |
 

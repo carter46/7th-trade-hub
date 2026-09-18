@@ -82,7 +82,7 @@ paths:
                   version: { type: integer }
                   tool_id: { type: integer }
                   public_id: { type: string, format: uuid }
-                  status: { type: string, enum: [pending_setup, active, suspended, expired] }
+                  status: { type: string, enum: [pending_setup, active, suspended, cancelled, inactive, expired] }
                   expires_at: { type: string, format: date-time, nullable: true }
                   updated_at: { type: string, format: date-time, nullable: true }
         "401": { description: Invalid credentials }

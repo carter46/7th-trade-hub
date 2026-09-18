@@ -30,6 +30,7 @@ class UserTool extends Model
         'admin_login_url',
         'admin_email',
         'admin_password',
+        'has_admin_auth',
         'livechat_name',
         'livechat_url',
         'livechat_email',
@@ -55,12 +56,22 @@ class UserTool extends Model
             'status' => UserToolStatus::class,
             'admin_password' => 'encrypted',
             'livechat_password' => 'encrypted',
+            'has_admin_auth' => 'boolean',
             'purchased_at' => 'datetime',
             'configured_at' => 'datetime',
             'expires_at' => 'datetime',
             'shutdown_resume_expires_at' => 'datetime',
             'last_synced_at' => 'datetime',
         ];
+    }
+
+    /**
+     * True when the merchant site has admin authentication (SSO / Auto Login).
+     * False for non-authenticated (brochure / marketing) sites.
+     */
+    public function hasAdminAuth(): bool
+    {
+        return (bool) ($this->has_admin_auth ?? true);
     }
 
     protected static function booted(): void
@@ -244,6 +255,10 @@ class UserTool extends Model
 
     public function canLaunchAdmin(): bool
     {
+        if (! $this->hasAdminAuth()) {
+            return false;
+        }
+
         if (! $this->isSubscriptionLive()) {
             return false;
         }
@@ -261,6 +276,10 @@ class UserTool extends Model
 
     public function canRevealAdminPassword(): bool
     {
+        if (! $this->hasAdminAuth()) {
+            return false;
+        }
+
         return $this->isSubscriptionLive() && is_string($this->admin_password) && $this->admin_password !== '';
     }
 

@@ -31,14 +31,16 @@ Path: **Dashboard → Services → My Tools**
 Path: `/admin/users/{id}/tools`
 
 1. For **pending** tools, click **Setup** on the Tools tab (opens the tool manage page).
-2. Enter HTTPS site URL, admin login URL, admin email, admin password, then **Save & generate keys**.
+2. Enter HTTPS **Website URL**. Choose whether the site has admin authentication:
+   - **Checked (default):** also enter admin login URL, admin email, and admin password, then **Save & generate keys**. Auto Login / Copy password apply.
+   - **Unchecked (non-authenticated):** omit admin fields; Hub enables subscription shutdown only — see [NON-AUTHENTICATED-SITE.md](./NON-AUTHENTICATED-SITE.md).
 3. Copy credentials from the manage page and give them to the merchant developer. Hub does **not** run Check connection automatically.
 4. Merchant installs the owned row (`context=owned_tool`) on their site, then use **Check connection** on the manage page. Status may show **pending_merchant** until credentials are installed.
-5. After Check connection passes, **Admin Auto Login** on the user's My Tools page can succeed (merchant must also have the admin email as a local user).
+5. After Check connection passes, **Admin Auto Login** on the user's My Tools page can succeed for authenticated sites (merchant must also have the admin email as a local user).
 6. If the merchant implements **admin credential sync**, Hub updates stored admin email/password when the site POSTs `owned.admin_credentials.updated`. That does **not** require Reconfigure, key rotation, or a new Check connection. Reconfigure remains the manual fallback.
 7. For already-configured tools use **Manage** on the Tools tab — reconfigure, rotate keys, and connection logs live on that page.
 
-Ensure the Setup **admin email** exists as an admin user on the merchant site before testing Admin Auto Login.
+For authenticated sites, ensure the Setup **admin email** exists as an admin user on the merchant site before testing Admin Auto Login.
 
 **Note:** `pending_merchant` means the merchant has not installed Hub credentials yet — it is not proof that SSO will work. Admin Auto Login still requires full merchant-side token validation.
 
@@ -46,7 +48,7 @@ Ensure the Setup **admin email** exists as an admin user on the merchant site be
 
 Scheduled: `site-integrations:expire-user-tools` every five minutes.
 
-Marks expired tools (with `lockForUpdate`) and pushes `status=expired`. Hub also refuses launch/poll when `expires_at` is past even before the job runs. Sites must still poll Hub.
+Marks expired tools (with `lockForUpdate`) and pushes `status=expired`. Hub also refuses launch/poll when `expires_at` is past even before the job runs. Merchants rely on Hub **push** (`subscription/sync`); page-load Hub GET is a throttled fallback only (optional rare cron).
 
 Hostinger / shared hosting must run `php artisan schedule:run` via cron.
 
@@ -54,11 +56,13 @@ Hostinger / shared hosting must run `php artisan schedule:run` via cron.
 
 On **Admin → Users → Tools → Manage** (Subscription expiry card), for a configured website tool:
 
-- **Shutdown Site** (red) — immediately sets Hub `status=expired` and `expires_at=now()`, then pushes the **same** `subscription/sync` as the expiry job. Confirmation must state that the external website is deactivated, not merely that a date changed. If the merchant is unreachable, Hub stays expired (fail-closed). Does not rotate keys.
-- **Enable** (green, when shut down) — requires a **future** expiry date, sets `status=active`, pushes sync. Use when reopening after Shutdown Site.
+- **Shutdown Site** (red) — admin picks a reason (`Suspended` / `Cancelled` / `Inactive` / `Expired`). Hub stores that status, sets `expires_at=now()`, keeps the prior paid window for **Enable**, then pushes `subscription/sync` with that `status`. Confirmation must state that the external website is deactivated. If the merchant is unreachable, Hub stays shut down (fail-closed). Does not rotate keys.
+- **Enable** (green, when shut down) — if a saved paid window is still in the future, restores it with one click; otherwise requires a **future** expiry date. Sets `status=active`, pushes sync.
 - **Update expiry** — unchanged date-only edit (also pushes sync when connected).
 
-Merchants must treat Admin Shutdown Site like natural expiry (see [MERCHANT-GUIDE.md](./MERCHANT-GUIDE.md#shutdown-expiry-and-admin-shutdown-site)): login page excepted; only **super admin** may enter; users and regular admins see session-expired UI.
+Merchants: Hub **pushes** status (primary). Page-load Hub GET is a throttled fallback only. Public pages keep the generic session-expired UI on authenticated sites; after regular-admin password login, branch on pushed `status` (see [MERCHANT-GUIDE.md](./MERCHANT-GUIDE.md#status-specific-messages-regular-admin-after-password-login-only)). Non-authenticated sites: [NON-AUTHENTICATED-SITE.md](./NON-AUTHENTICATED-SITE.md). Login page excepted; only **super admin** may enter the merchant admin on authenticated sites.
+
+On setup, operators can uncheck **This website has admin authentication** to omit admin email/password and Auto Login.
 
 ## Docs for merchants
 

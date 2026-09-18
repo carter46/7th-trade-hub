@@ -20,6 +20,7 @@ class IntegrationDocs
         return [
             ['path' => 'README', 'title' => 'Overview', 'group' => 'Start'],
             ['path' => 'MERCHANT-GUIDE', 'title' => 'Merchant guide', 'group' => 'Start'],
+            ['path' => 'NON-AUTHENTICATED-SITE', 'title' => 'Non-authenticated sites', 'group' => 'Start'],
             ['path' => 'CONSUMER-PHP', 'title' => 'PHP consumer notes', 'group' => 'Start'],
             ['path' => 'ENDPOINTS-REFERENCE', 'title' => 'Endpoint reference', 'group' => 'Start'],
             ['path' => 'PROTOCOL-v1', 'title' => 'Protocol v1', 'group' => 'Reference'],
@@ -34,7 +35,8 @@ class IntegrationDocs
             ['path' => 'samples/env.example', 'title' => 'Env sample', 'group' => 'Samples'],
             ['path' => 'samples/php/protocol-v1-verify.php', 'title' => 'PHP: HMAC verify', 'group' => 'Samples'],
             ['path' => 'samples/php/consume-validate.php', 'title' => 'PHP: Token validate', 'group' => 'Samples'],
-            ['path' => 'samples/php/poll-subscription.php', 'title' => 'PHP: Poll subscription', 'group' => 'Samples'],
+            ['path' => 'samples/php/poll-subscription.php', 'title' => 'PHP: Fallback reconcile', 'group' => 'Samples'],
+            ['path' => 'samples/php/non-auth-site-gate.php', 'title' => 'PHP: Non-auth site gate', 'group' => 'Samples'],
             ['path' => 'samples/php/sync-admin-credentials.php', 'title' => 'PHP: Sync admin credentials', 'group' => 'Samples'],
             ['path' => 'samples/laravel/README', 'title' => 'Laravel sketch', 'group' => 'Samples'],
             ['path' => 'CHANGELOG', 'title' => 'Changelog', 'group' => 'Reference'],

@@ -113,42 +113,49 @@
                             @endif
                         </dd>
                     </div>
-                    @if ($tool->admin_login_url)
+                    @if ($tool->hasAdminAuth())
+                        @if ($tool->admin_login_url)
+                            <div>
+                                <dt class="text-text-muted">Admin login URL</dt>
+                                <dd class="mt-1 space-y-2">
+                                    <p class="truncate font-mono text-sm text-text-primary" title="{{ $tool->admin_login_url }}">{{ \Illuminate\Support\Str::limit($tool->admin_login_url, 48) }}</p>
+                                    <x-dashboard.button :href="$tool->admin_login_url" size="sm" variant="secondary" target="_blank" rel="noopener">
+                                        Open admin login link
+                                    </x-dashboard.button>
+                                </dd>
+                            </div>
+                        @endif
                         <div>
-                            <dt class="text-text-muted">Admin login URL</dt>
-                            <dd class="mt-1 space-y-2">
-                                <p class="truncate font-mono text-sm text-text-primary" title="{{ $tool->admin_login_url }}">{{ \Illuminate\Support\Str::limit($tool->admin_login_url, 48) }}</p>
-                                <x-dashboard.button :href="$tool->admin_login_url" size="sm" variant="secondary" target="_blank" rel="noopener">
-                                    Open admin login link
-                                </x-dashboard.button>
+                            <dt class="text-text-muted">Admin login email</dt>
+                            <dd class="font-medium text-text-primary">
+                                @if ($tool->admin_email)
+                                    {{ $tool->admin_email }}
+                                @else
+                                    <span class="text-text-muted">{{ $pendingLabel }}</span>
+                                @endif
                             </dd>
                         </div>
+                        <div>
+                            <dt class="text-text-muted">Password</dt>
+                            <dd class="font-medium text-text-primary">
+                                @if ($tool->admin_password)
+                                    <span class="text-text-secondary">Saved securely — use Copy password below</span>
+                                @else
+                                    <span class="text-text-muted">{{ $pendingLabel }}</span>
+                                @endif
+                            </dd>
+                        </div>
+                    @else
+                        <div>
+                            <dt class="text-text-muted">Site type</dt>
+                            <dd class="font-medium text-text-primary">Non-authenticated (no admin login)</dd>
+                        </div>
                     @endif
-                    <div>
-                        <dt class="text-text-muted">Admin login email</dt>
-                        <dd class="font-medium text-text-primary">
-                            @if ($tool->admin_email)
-                                {{ $tool->admin_email }}
-                            @else
-                                <span class="text-text-muted">{{ $pendingLabel }}</span>
-                            @endif
-                        </dd>
-                    </div>
-                    <div>
-                        <dt class="text-text-muted">Password</dt>
-                        <dd class="font-medium text-text-primary">
-                            @if ($tool->admin_password)
-                                <span class="text-text-secondary">Saved securely — use Copy password below</span>
-                            @else
-                                <span class="text-text-muted">{{ $pendingLabel }}</span>
-                            @endif
-                        </dd>
-                    </div>
                 </dl>
 
-                @if (! $isPending)
+                @if (! $isPending && $tool->hasAdminAuth())
                     <div class="flex flex-wrap gap-2 pt-2">
-                        @if ($tool->admin_password)
+                        @if ($tool->canRevealAdminPassword())
                             <x-dashboard.button type="button" variant="secondary" size="sm" id="copy-tool-password" data-url="{{ route('dashboard.my-tools.password', $tool) }}">
                                 Copy password
                             </x-dashboard.button>

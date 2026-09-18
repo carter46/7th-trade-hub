@@ -91,7 +91,7 @@ class UserToolProvisioningService
     /**
      * Initial setup for pending_setup tools only. Starts the paid clock once.
      *
-     * @param  array{site_url: string, admin_login_url: string, admin_email: string, admin_password: string}  $data
+     * @param  array{site_url: string, has_admin_auth?: bool, admin_login_url?: string|null, admin_email?: string|null, admin_password?: string|null}  $data
      * @return array{tool: UserTool, credentials: array<string, mixed>}
      */
     public function setup(UserTool $tool, array $data, ?User $admin = null, ?string $ip = null): array
@@ -100,7 +100,12 @@ class UserToolProvisioningService
             throw new InvalidArgumentException('Tool is already configured. Use reconfigure or rotate credentials instead.');
         }
 
-        $this->assertHttpsUrls($data);
+        $hasAdminAuth = array_key_exists('has_admin_auth', $data)
+            ? $this->coerceHasAdminAuth($data['has_admin_auth'])
+            : true;
+
+        $this->assertCompleteAdminAuthConfig($hasAdminAuth, $data, $tool, requirePassword: true);
+        $this->assertHttpsUrls($data, $hasAdminAuth);
 
         $duration = (int) ($tool->duration_months
             ?: $tool->variant?->duration_months
@@ -111,18 +116,17 @@ class UserToolProvisioningService
         }
 
         $creds = $this->credentials->generate();
+        $capabilities = UserToolIntegration::capabilitiesForHasAdminAuth($hasAdminAuth);
 
-        $tool = DB::transaction(function () use ($tool, $data, $admin, $ip, $duration, $creds) {
+        $tool = DB::transaction(function () use ($tool, $data, $admin, $ip, $duration, $creds, $hasAdminAuth, $capabilities) {
             $locked = UserTool::query()->whereKey($tool->id)->lockForUpdate()->firstOrFail();
             if ($locked->status !== UserToolStatus::PendingSetup) {
                 throw new InvalidArgumentException('Tool is already configured. Use reconfigure or rotate credentials instead.');
             }
 
-            $locked->fill([
+            $fill = [
                 'site_url' => rtrim($data['site_url'], '/'),
-                'admin_login_url' => $data['admin_login_url'],
-                'admin_email' => strtolower(trim($data['admin_email'])),
-                'admin_password' => $data['admin_password'],
+                'has_admin_auth' => $hasAdminAuth,
                 'livechat_name' => isset($data['livechat_name']) ? (trim((string) $data['livechat_name']) ?: null) : $locked->livechat_name,
                 'livechat_url' => isset($data['livechat_url']) ? (trim((string) $data['livechat_url']) ?: null) : $locked->livechat_url,
                 'livechat_email' => isset($data['livechat_email']) ? (strtolower(trim((string) $data['livechat_email'])) ?: null) : $locked->livechat_email,
@@ -130,7 +134,19 @@ class UserToolProvisioningService
                 'configured_at' => now(),
                 'expires_at' => ($locked->purchased_at ?? now())->copy()->addMonths($duration),
                 'duration_months' => $duration,
-            ]);
+            ];
+
+            if ($hasAdminAuth) {
+                $fill['admin_login_url'] = $data['admin_login_url'] ?? null;
+                $fill['admin_email'] = strtolower(trim((string) ($data['admin_email'] ?? '')));
+                $fill['admin_password'] = $data['admin_password'] ?? null;
+            } else {
+                $fill['admin_login_url'] = null;
+                $fill['admin_email'] = null;
+                $fill['admin_password'] = null;
+            }
+
+            $locked->fill($fill);
             if (array_key_exists('livechat_password', $data) && filled($data['livechat_password'])) {
                 $locked->livechat_password = $data['livechat_password'];
             }
@@ -143,7 +159,7 @@ class UserToolProvisioningService
                     'client_id' => $creds['client_id'],
                     'client_secret' => $creds['client_secret'],
                     'webhook_secret' => $creds['webhook_secret'],
-                    'capabilities' => UserToolIntegration::defaultCapabilities(),
+                    'capabilities' => $capabilities,
                     'connection_status' => 'unchecked',
                     'last_error' => null,
                 ]);
@@ -155,13 +171,14 @@ class UserToolProvisioningService
                     'client_id' => $creds['client_id'],
                     'client_secret' => $creds['client_secret'],
                     'webhook_secret' => $creds['webhook_secret'],
-                    'capabilities' => UserToolIntegration::defaultCapabilities(),
+                    'capabilities' => $capabilities,
                     'connection_status' => 'unchecked',
                 ]);
             }
 
             $this->audit->log($admin?->id, 'user_tool.setup', $locked, null, [
                 'site_url' => $locked->site_url,
+                'has_admin_auth' => $hasAdminAuth,
                 'admin_email' => $locked->admin_email,
                 'expires_at' => $locked->expires_at?->toIso8601String(),
                 'integration_id' => $creds['integration_id'],
@@ -186,7 +203,7 @@ class UserToolProvisioningService
     /**
      * Update URLs / admin identity / password without changing expires_at or rotating keys.
      *
-     * @param  array{site_url: string, admin_login_url: string, admin_email: string, admin_password?: string|null}  $data
+     * @param  array{site_url: string, has_admin_auth?: bool, admin_login_url?: string|null, admin_email?: string|null, admin_password?: string|null}  $data
      * @return array{tool: UserTool}
      */
     public function reconfigure(UserTool $tool, array $data, ?User $admin = null, ?string $ip = null): array
@@ -195,20 +212,38 @@ class UserToolProvisioningService
             throw new InvalidArgumentException('Tool is still pending setup. Use setup first.');
         }
 
-        $this->assertHttpsUrls($data);
+        $hasAdminAuth = array_key_exists('has_admin_auth', $data)
+            ? $this->coerceHasAdminAuth($data['has_admin_auth'])
+            : $tool->hasAdminAuth();
+
+        $this->assertCompleteAdminAuthConfig($hasAdminAuth, $data, $tool, requirePassword: false);
+        $this->assertHttpsUrls($data, $hasAdminAuth);
 
         $previousExpires = $tool->expires_at?->copy();
+        $capabilities = UserToolIntegration::capabilitiesForHasAdminAuth($hasAdminAuth);
 
-        $tool = DB::transaction(function () use ($tool, $data, $admin, $ip, $previousExpires) {
-            $locked = UserTool::query()->whereKey($tool->id)->lockForUpdate()->firstOrFail();
+        $tool = DB::transaction(function () use ($tool, $data, $admin, $ip, $previousExpires, $hasAdminAuth, $capabilities) {
+            $locked = UserTool::query()->whereKey($tool->id)->lockForUpdate()->with('integration')->firstOrFail();
 
             $fill = [
                 'site_url' => rtrim($data['site_url'], '/'),
-                'admin_login_url' => $data['admin_login_url'],
-                'admin_email' => strtolower(trim($data['admin_email'])),
+                'has_admin_auth' => $hasAdminAuth,
             ];
-            if (! empty($data['admin_password'])) {
-                $fill['admin_password'] = $data['admin_password'];
+
+            if ($hasAdminAuth) {
+                $fill['admin_login_url'] = $data['admin_login_url'] ?? null;
+                $fill['admin_email'] = strtolower(trim((string) ($data['admin_email'] ?? '')));
+                if (! empty($data['admin_password'])) {
+                    $fill['admin_password'] = $data['admin_password'];
+                } elseif (! filled($locked->admin_password)) {
+                    throw new InvalidArgumentException(
+                        'Admin password is required when enabling admin authentication.'
+                    );
+                }
+            } else {
+                $fill['admin_login_url'] = null;
+                $fill['admin_email'] = null;
+                $fill['admin_password'] = null;
             }
 
             $locked->fill($fill);
@@ -218,8 +253,14 @@ class UserToolProvisioningService
             }
             $locked->save();
 
+            if ($locked->integration) {
+                $locked->integration->capabilities = $capabilities;
+                $locked->integration->save();
+            }
+
             $this->audit->log($admin?->id, 'user_tool.reconfigure', $locked, null, [
                 'site_url' => $locked->site_url,
+                'has_admin_auth' => $hasAdminAuth,
                 'admin_email' => $locked->admin_email,
                 'expires_at' => $locked->expires_at?->toIso8601String(),
             ], $ip, ['module' => 'site_integrations']);
@@ -369,11 +410,66 @@ class UserToolProvisioningService
     }
 
     /**
-     * @param  array{site_url: string, admin_login_url: string}  $data
+     * @param  array{site_url: string, admin_login_url?: string|null}  $data
      */
-    private function assertHttpsUrls(array $data): void
+    private function assertHttpsUrls(array $data, bool $hasAdminAuth = true): void
     {
         $this->urlGuard->assertSafe($data['site_url'], httpsOnly: true);
-        $this->urlGuard->assertSafe($data['admin_login_url'], httpsOnly: true);
+        if ($hasAdminAuth && filled($data['admin_login_url'] ?? null)) {
+            $this->urlGuard->assertSafe((string) $data['admin_login_url'], httpsOnly: true);
+        }
+    }
+
+    /**
+     * Invariant: has_admin_auth=true requires complete admin authentication config.
+     *
+     * @param  array{admin_login_url?: string|null, admin_email?: string|null, admin_password?: string|null}  $data
+     */
+    private function assertCompleteAdminAuthConfig(
+        bool $hasAdminAuth,
+        array $data,
+        UserTool $tool,
+        bool $requirePassword,
+    ): void {
+        if (! $hasAdminAuth) {
+            return;
+        }
+
+        if (! filled($data['admin_login_url'] ?? null)) {
+            throw new InvalidArgumentException('Admin login URL is required when admin authentication is enabled.');
+        }
+
+        $email = strtolower(trim((string) ($data['admin_email'] ?? '')));
+        if ($email === '' || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new InvalidArgumentException('Admin email is required when admin authentication is enabled.');
+        }
+
+        $passwordProvided = filled($data['admin_password'] ?? null);
+        $hasExistingPassword = filled($tool->admin_password);
+
+        if ($requirePassword && ! $passwordProvided) {
+            throw new InvalidArgumentException('Admin password is required when admin authentication is enabled.');
+        }
+
+        if (! $requirePassword && ! $passwordProvided && ! $hasExistingPassword) {
+            throw new InvalidArgumentException(
+                'Admin password is required when enabling admin authentication (no password is stored yet).'
+            );
+        }
+
+        if ($passwordProvided && strlen((string) $data['admin_password']) < 6) {
+            throw new InvalidArgumentException('Admin password must be at least 6 characters.');
+        }
+    }
+
+    private function coerceHasAdminAuth(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        $filtered = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
+        return $filtered ?? false;
     }
 }

@@ -27,8 +27,11 @@
         }
     }
 
-    $ownedDocsSubtitle = 'Give these values to the merchant developer for this customer-owned site. '
-        .'<a href="'.route('developers.integrations.show', ['path' => 'MERCHANT-GUIDE']).'" class="text-primary hover:underline" target="_blank" rel="noopener">Integration docs</a>';
+    $ownedDocsSubtitle = $tool->hasAdminAuth()
+        ? 'Give these values to the merchant developer for this customer-owned site. '
+            .'<a href="'.route('developers.integrations.show', ['path' => 'MERCHANT-GUIDE']).'" class="text-primary hover:underline" target="_blank" rel="noopener">Integration docs</a>'
+        : 'Non-authenticated site — install the gate sample with these credentials (no admin email). '
+            .'<a href="'.route('developers.integrations.show', ['path' => 'NON-AUTHENTICATED-SITE']).'" class="text-primary hover:underline" target="_blank" rel="noopener">Non-authenticated site guide</a>';
 @endphp
 <x-layout.page
     title="{{ $tool->resolvedDisplayName() }}"
@@ -120,15 +123,41 @@
         <x-dashboard.card class="mb-6">
             <h3 class="mb-4 text-sm font-semibold text-text-primary">Initial setup</h3>
             <p class="mb-4 text-sm text-text-secondary">Configure this purchased website tool and generate unique owned credentials (never demo credentials).</p>
-            <form method="POST" action="{{ route('admin.users.tools.setup', [$user, $tool]) }}" class="space-y-4">
+            <form
+                method="POST"
+                action="{{ route('admin.users.tools.setup', [$user, $tool]) }}"
+                class="space-y-4"
+                x-data="{ hasAdminAuth: {{ old('has_admin_auth', '1') === '0' ? 'false' : 'true' }} }"
+            >
                 @csrf
                 <x-dashboard.input name="site_url" label="Website URL" type="url" :value="$prefillSiteUrl" required />
                 @if ($tool->connectedDomainFqdn())
                     <p class="text-xs text-text-muted">Prefills from the domain connected at purchase (<span class="font-mono">{{ $tool->connectedDomainFqdn() }}</span>). You can clear or change it.</p>
                 @endif
-                <x-dashboard.input name="admin_login_url" label="Admin login URL" type="url" :value="old('admin_login_url', $tool->admin_login_url)" required />
-                <x-dashboard.input name="admin_email" label="Admin email" type="email" :value="old('admin_email', $tool->admin_email)" required />
-                <x-dashboard.input name="admin_password" label="Admin password" type="text" required autocomplete="off" />
+
+                <input type="hidden" name="has_admin_auth" value="0">
+                <label class="flex items-start gap-3 text-sm text-text-secondary">
+                    <input
+                        type="checkbox"
+                        name="has_admin_auth"
+                        value="1"
+                        class="mt-1 border-border-default text-primary focus:ring-primary"
+                        x-model="hasAdminAuth"
+                        @checked(old('has_admin_auth', '1') === '1')
+                    >
+                    <span>
+                        <span class="font-medium text-text-primary">This website has admin authentication</span>
+                        <span class="mt-0.5 block text-xs text-text-muted">Uncheck for non-authenticated sites (brochure, marketing, landing pages). Those sites only need the gate script — no admin email or Auto Login.</span>
+                    </span>
+                </label>
+
+                <template x-if="hasAdminAuth">
+                    <div class="space-y-4">
+                        <x-dashboard.input name="admin_login_url" label="Admin login URL" type="url" :value="old('admin_login_url', $tool->admin_login_url)" />
+                        <x-dashboard.input name="admin_email" label="Admin email" type="email" :value="old('admin_email', $tool->admin_email)" />
+                        <x-dashboard.input name="admin_password" label="Admin password" type="text" autocomplete="off" />
+                    </div>
+                </template>
 
                 <div class="rounded-xl border border-border-default bg-muted/30 p-4 space-y-4">
                     <div>
@@ -167,13 +196,41 @@
         <div class="grid gap-6 lg:grid-cols-2">
             <x-dashboard.card>
                 <h3 class="mb-4 text-sm font-semibold text-text-primary">Tool settings</h3>
-                <form method="POST" action="{{ route('admin.users.tools.reconfigure', [$user, $tool]) }}" class="space-y-4">
+                <form
+                    method="POST"
+                    action="{{ route('admin.users.tools.reconfigure', [$user, $tool]) }}"
+                    class="space-y-4"
+                    x-data="{ hasAdminAuth: {{ old('has_admin_auth', $tool->hasAdminAuth() ? '1' : '0') === '0' ? 'false' : 'true' }} }"
+                >
                     @csrf
                     <x-dashboard.input name="site_url" label="Website URL" type="url" :value="old('site_url', $tool->site_url)" required />
-                    <x-dashboard.input name="admin_login_url" label="Admin login URL" type="url" :value="old('admin_login_url', $tool->admin_login_url)" required />
-                    <x-dashboard.input name="admin_email" label="Admin email" type="email" :value="old('admin_email', $tool->admin_email)" required />
-                    <x-dashboard.input name="admin_password" label="Admin password" type="text" autocomplete="off" />
-                    <p class="text-xs text-text-muted">Reconfigure updates URLs and admin identity. It does <strong>not</strong> extend the paid subscription. Leave password blank to keep the current one.</p>
+
+                    <input type="hidden" name="has_admin_auth" value="0">
+                    <label class="flex items-start gap-3 text-sm text-text-secondary">
+                        <input
+                            type="checkbox"
+                            name="has_admin_auth"
+                            value="1"
+                            class="mt-1 border-border-default text-primary focus:ring-primary"
+                            x-model="hasAdminAuth"
+                            @checked(old('has_admin_auth', $tool->hasAdminAuth() ? '1' : '0') === '1')
+                        >
+                        <span>
+                            <span class="font-medium text-text-primary">This website has admin authentication</span>
+                            <span class="mt-0.5 block text-xs text-text-muted">Uncheck for non-authenticated sites. Clears admin email/password and disables Auto Login.</span>
+                        </span>
+                    </label>
+
+                    <template x-if="hasAdminAuth">
+                        <div class="space-y-4">
+                            <x-dashboard.input name="admin_login_url" label="Admin login URL" type="url" :value="old('admin_login_url', $tool->admin_login_url)" />
+                            <x-dashboard.input name="admin_email" label="Admin email" type="email" :value="old('admin_email', $tool->admin_email)" />
+                            <x-dashboard.input name="admin_password" label="Admin password" type="text" autocomplete="off" />
+                            <p class="text-xs text-text-muted">Leave password blank to keep the current one.</p>
+                        </div>
+                    </template>
+
+                    <p class="text-xs text-text-muted">Reconfigure updates URLs and profile. It does <strong>not</strong> extend the paid subscription.</p>
                     <x-dashboard.button type="submit">Save reconfiguration</x-dashboard.button>
                 </form>
             </x-dashboard.card>

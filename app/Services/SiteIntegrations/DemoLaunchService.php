@@ -76,6 +76,10 @@ class DemoLaunchService
             throw new InvalidArgumentException('Tool does not belong to this user.');
         }
 
+        if (! $tool->hasAdminAuth()) {
+            throw new InvalidArgumentException('This site is non-authenticated and does not support Admin Auto Login.');
+        }
+
         if (! $tool->isSubscriptionLive()) {
             throw new InvalidArgumentException('This tool is not active or its subscription has expired.');
         }
