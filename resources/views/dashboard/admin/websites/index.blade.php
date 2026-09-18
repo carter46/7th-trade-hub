@@ -76,7 +76,6 @@
             <x-dashboard.th>Website</x-dashboard.th>
             <x-dashboard.th>Owner</x-dashboard.th>
             <x-dashboard.th>Dates</x-dashboard.th>
-            <x-dashboard.th>Status</x-dashboard.th>
             <x-dashboard.th></x-dashboard.th>
         </x-slot:head>
 
@@ -121,21 +120,21 @@
                     </div>
                 </x-dashboard.td>
                 <x-dashboard.td>
-                    <x-dashboard.badge :status="$effectiveStatus->value" />
-                    @if ($tool->isExpiringSoon())
-                        <span class="mt-1 block text-xs text-amber-600">Expiring soon</span>
-                    @endif
-                </x-dashboard.td>
-                <x-dashboard.td>
-                    @if ($tool->user)
-                        <x-dashboard.button
-                            :href="route('admin.users.tools.show', [$tool->user, $tool])"
-                            variant="secondary"
-                            size="xs"
-                        >
-                            View
-                        </x-dashboard.button>
-                    @endif
+                    <div class="flex flex-col items-start gap-1">
+                        @if ($tool->user)
+                            <x-dashboard.button
+                                :href="route('admin.users.tools.show', [$tool->user, $tool])"
+                                variant="secondary"
+                                size="xs"
+                            >
+                                View
+                            </x-dashboard.button>
+                        @endif
+                        <span class="text-[11px] leading-tight text-text-muted">{{ $effectiveStatus->label() }}</span>
+                        @if ($tool->isExpiringSoon())
+                            <span class="text-[11px] leading-tight text-amber-600">Expiring soon</span>
+                        @endif
+                    </div>
                 </x-dashboard.td>
             </tr>
         @endforeach
