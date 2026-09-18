@@ -51,11 +51,21 @@ class PurchasedWebsitesAdminTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.websites'))
             ->assertOk()
+            ->assertSee('Total sites', false)
+            ->assertSee('https://bank.example.com', false)
             ->assertSee('Online banking v1', false)
             ->assertSee('Website Owner', false)
             ->assertSee('owner@example.com', false)
             ->assertSee('Expires', false)
             ->assertSee(route('admin.users.tools.show', [$member, $tool]), false);
+
+        // URL is primary (appears before product name in the Website cell HTML).
+        $html = $this->actingAs($admin)->get(route('admin.websites'))->getContent();
+        $urlPos = strpos($html, 'https://bank.example.com');
+        $namePos = strpos($html, 'Online banking v1');
+        $this->assertNotFalse($urlPos);
+        $this->assertNotFalse($namePos);
+        $this->assertLessThan($namePos, $urlPos);
 
         $this->actingAs($admin)
             ->get(route('admin.users.tools.show', [$member, $tool]))
@@ -238,5 +248,79 @@ class PurchasedWebsitesAdminTest extends TestCase
             ->assertSee('Hold Banking', false)
             ->assertSee('Paid until '.$resumeAt->format('j M Y'), false)
             ->assertDontSee('Expired '.$resumeAt->format('j M Y'), false);
+    }
+
+    public function test_websites_index_shows_status_summary_counts(): void
+    {
+        $admin = User::factory()->admin()->create(['email_verified_at' => now()]);
+        $member = User::factory()->create(['email_verified_at' => now()]);
+        $member->assignRole('user');
+
+        $product = $this->forceCreatePlatformProduct([
+            'title' => 'Count Banking',
+            'slug' => 'count-banking-'.Str::lower(Str::random(4)),
+            'product_type' => PlatformProductType::WebsitePackage,
+            'status' => PlatformProductStatus::Published,
+            'base_price' => 10000,
+            'sort_order' => 1,
+            'provider' => 'manual',
+            'fulfillment_mode' => 'manual',
+        ]);
+
+        UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'status' => UserToolStatus::Active,
+            'purchased_at' => now()->subDay(),
+            'expires_at' => now()->addMonth(),
+            'duration_months' => 1,
+            'instance_sequence' => 1,
+            'site_url' => 'https://active.example.com',
+        ]);
+        UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'status' => UserToolStatus::Expired,
+            'purchased_at' => now()->subMonths(2),
+            'expires_at' => now()->subDay(),
+            'duration_months' => 1,
+            'instance_sequence' => 2,
+            'site_url' => 'https://expired.example.com',
+        ]);
+        UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'status' => UserToolStatus::Suspended,
+            'purchased_at' => now()->subMonth(),
+            'expires_at' => now()->subMinute(),
+            'duration_months' => 1,
+            'instance_sequence' => 3,
+            'site_url' => 'https://suspended.example.com',
+        ]);
+        UserTool::query()->create([
+            'user_id' => $member->id,
+            'platform_product_id' => $product->id,
+            'status' => UserToolStatus::PendingSetup,
+            'purchased_at' => now(),
+            'duration_months' => 1,
+            'instance_sequence' => 4,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.websites'))
+            ->assertOk()
+            ->assertSee('Total sites', false)
+            ->assertSee('Active', false)
+            ->assertSee('Expired', false)
+            ->assertSee('Suspended', false)
+            ->assertSee('Other', false)
+            ->assertSee('Pending, cancelled, inactive', false)
+            ->assertViewHas('statusCounts', function (array $counts): bool {
+                return $counts['total'] === 4
+                    && $counts['active'] === 1
+                    && $counts['expired'] === 1
+                    && $counts['suspended'] === 1
+                    && $counts['other'] === 1;
+            });
     }
 }

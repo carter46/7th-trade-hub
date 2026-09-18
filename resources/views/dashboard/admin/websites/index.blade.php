@@ -13,6 +13,39 @@
         ['Websites', null],
     ]"
 >
+    <x-dashboard.stat-grid :count="5" class="mb-6">
+        <x-dashboard.stats-card
+            label="Total sites"
+            :value="number_format($statusCounts['total'])"
+            :href="route('admin.websites')"
+            icon="listings"
+        />
+        <x-dashboard.stats-card
+            label="Active"
+            :value="number_format($statusCounts['active'])"
+            :href="route('admin.websites', ['status' => 'active'])"
+            icon="listings"
+        />
+        <x-dashboard.stats-card
+            label="Expired"
+            :value="number_format($statusCounts['expired'])"
+            :href="route('admin.websites', ['status' => 'expired'])"
+            icon="listings"
+        />
+        <x-dashboard.stats-card
+            label="Suspended"
+            :value="number_format($statusCounts['suspended'])"
+            :href="route('admin.websites', ['status' => 'suspended'])"
+            icon="listings"
+        />
+        <x-dashboard.stats-card
+            label="Other"
+            :value="number_format($statusCounts['other'])"
+            hint="Pending, cancelled, inactive"
+            icon="listings"
+        />
+    </x-dashboard.stat-grid>
+
     <x-dashboard.table
         :empty="$tools->isEmpty()"
         empty-title="No purchased websites"
@@ -55,9 +88,12 @@
             @endphp
             <tr>
                 <x-dashboard.td>
-                    <div class="font-medium text-text-primary">{{ $tool->resolvedDisplayName() }}</div>
                     @if ($tool->site_url)
-                        <div class="mt-0.5 truncate font-mono text-xs text-text-muted" title="{{ $tool->site_url }}">{{ \Illuminate\Support\Str::limit($tool->site_url, 36) }}</div>
+                        <div class="truncate font-mono text-sm font-medium text-text-primary" title="{{ $tool->site_url }}">{{ \Illuminate\Support\Str::limit($tool->site_url, 48) }}</div>
+                        <div class="mt-0.5 text-xs text-text-muted">{{ $tool->resolvedDisplayName() }}</div>
+                    @else
+                        <div class="font-medium text-text-primary">{{ $tool->resolvedDisplayName() }}</div>
+                        <div class="mt-0.5 text-xs text-text-muted">No site URL yet</div>
                     @endif
                 </x-dashboard.td>
                 <x-dashboard.td>
