@@ -16,6 +16,8 @@ use App\Support\Domains\DomainProductTldPolicy;
 use App\Support\SortOrder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -147,8 +149,10 @@ class PlatformProductAdminController extends Controller
             'sort_order' => ['required', 'integer', 'min:1', 'max:'.$siblingMax],
             'hero_media_id' => ['nullable', 'integer', $this->mediaPaths->existsRule()],
             'variants' => ['nullable', 'array'],
-            'variants.*.id' => ['required', 'integer'],
-            'variants.*.price' => ['required', 'numeric', 'min:0'],
+            'variants.*.id' => ['nullable', 'integer'],
+            'variants.*.name' => ['required_with:variants', 'string', 'max:255'],
+            'variants.*.price' => ['required_with:variants', 'numeric', 'min:0'],
+            'variants.*.duration_months' => ['nullable', 'integer', 'min:1', 'max:120'],
             'variants.*.description' => ['nullable', 'string', 'max:2000'],
             'domain_markup_percent' => ['nullable', 'numeric', 'min:0', 'max:500'],
             'domain_usd_ngn_rate' => ['nullable', 'numeric', 'min:0'],
@@ -221,8 +225,8 @@ class PlatformProductAdminController extends Controller
 
         SortOrder::move($platformProduct, (int) $data['sort_order'], $siblings);
 
-        if ($platformProduct->product_type !== PlatformProductType::Domain) {
-            $this->updateExistingVariants($platformProduct, $data['variants'] ?? []);
+        if ($platformProduct->product_type !== PlatformProductType::Domain && $request->boolean('variants_sync')) {
+            $this->syncVariants($platformProduct, $data['variants'] ?? []);
         }
         $this->mediaUsages->syncUsages($platformProduct, [
             'hero' => $heroMediaId,
@@ -268,42 +272,101 @@ class PlatformProductAdminController extends Controller
     }
 
     /**
-     * @param  list<array{id: int, price: mixed, description?: string|null}>  $variants
+     * @param  list<array{id?: int|string|null, name?: string, price: mixed, duration_months?: mixed, description?: string|null}>  $variants
      */
-    private function updateExistingVariants(PlatformProduct $product, array $variants): void
+    private function syncVariants(PlatformProduct $product, array $variants): void
     {
-        if ($variants === []) {
-            return;
+        $rows = array_values(array_filter($variants, function ($row) {
+            if (! is_array($row)) {
+                return false;
+            }
+
+            $name = trim((string) ($row['name'] ?? ''));
+            $price = $row['price'] ?? null;
+
+            return $name !== '' || ($price !== null && $price !== '');
+        }));
+
+        if ($rows === []) {
+            throw ValidationException::withMessages([
+                'variants' => 'Add at least one plan with a name and price.',
+            ]);
         }
 
         $existingIds = $product->variants()->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $keepIds = [];
         $prices = [];
 
-        foreach ($variants as $row) {
-            $id = (int) ($row['id'] ?? 0);
-            if ($id <= 0 || ! in_array($id, $existingIds, true)) {
-                throw ValidationException::withMessages([
-                    'variants' => 'Variant structure is fixed. You can only change prices and descriptions of existing variants.',
+        DB::transaction(function () use ($product, $rows, $existingIds, &$keepIds, &$prices) {
+            foreach ($rows as $index => $row) {
+                $name = trim((string) ($row['name'] ?? ''));
+                if ($name === '') {
+                    throw ValidationException::withMessages([
+                        'variants' => 'Each plan needs a name.',
+                    ]);
+                }
+
+                $price = (float) ($row['price'] ?? 0);
+                $prices[] = $price;
+                $duration = filled($row['duration_months'] ?? null) ? (int) $row['duration_months'] : null;
+                $description = trim((string) ($row['description'] ?? '')) ?: null;
+                $id = (int) ($row['id'] ?? 0);
+
+                $payload = [
+                    'name' => $name,
+                    'label' => $name,
+                    'price' => $price,
+                    'duration_months' => $duration,
+                    'description' => $description,
+                    'sort_order' => $index,
+                    'is_default' => $index === 0,
+                    'is_active' => true,
+                ];
+
+                if ($id > 0) {
+                    if (! in_array($id, $existingIds, true)) {
+                        throw ValidationException::withMessages([
+                            'variants' => 'One of the plans does not belong to this product.',
+                        ]);
+                    }
+
+                    PlatformProductVariant::query()
+                        ->where('id', $id)
+                        ->where('platform_product_id', $product->id)
+                        ->update($payload);
+                    $keepIds[] = $id;
+
+                    continue;
+                }
+
+                $created = PlatformProductVariant::query()->create([
+                    ...$payload,
+                    'platform_product_id' => $product->id,
+                    'sku' => $this->uniqueVariantSku($product, $duration, $index),
                 ]);
+                $keepIds[] = (int) $created->id;
             }
 
-            $price = (float) $row['price'];
-            $prices[] = $price;
+            $product->variants()
+                ->when($keepIds !== [], fn ($q) => $q->whereNotIn('id', $keepIds))
+                ->when($keepIds === [], fn ($q) => $q)
+                ->delete();
+        });
 
-            $payload = ['price' => $price];
-            if (array_key_exists('description', $row)) {
-                $payload['description'] = trim((string) ($row['description'] ?? '')) ?: null;
-            }
+        $product->update(['base_price' => min($prices)]);
+    }
 
-            PlatformProductVariant::query()
-                ->where('id', $id)
-                ->where('platform_product_id', $product->id)
-                ->update($payload);
+    private function uniqueVariantSku(PlatformProduct $product, ?int $durationMonths, int $index): string
+    {
+        $base = $product->slug.'-'.($durationMonths ? $durationMonths.'m' : 'plan-'.($index + 1));
+        $sku = $base;
+        $n = 2;
+        while (PlatformProductVariant::query()->where('sku', $sku)->exists()) {
+            $sku = $base.'-'.$n;
+            $n++;
         }
 
-        if ($prices !== []) {
-            $product->update(['base_price' => min($prices)]);
-        }
+        return Str::limit($sku, 80, '');
     }
 
     private function assertPublishable(PlatformProduct $product): void

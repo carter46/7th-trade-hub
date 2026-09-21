@@ -199,8 +199,9 @@ class FixedPlatformCatalogLockTest extends TestCase
                 'description' => 'Updated long',
                 'status' => 'published',
                 'sort_order' => $product->sort_order,
+                'variants_sync' => '1',
                 'variants' => [
-                    ['id' => $variant->id, 'price' => 5500, 'description' => 'Best for home use'],
+                    ['id' => $variant->id, 'name' => $variant->name, 'price' => 5500, 'description' => 'Best for home use'],
                 ],
             ])
             ->assertRedirect(route('admin.platform-products.edit', $product));
@@ -229,8 +230,9 @@ class FixedPlatformCatalogLockTest extends TestCase
                 'status' => 'published',
                 'sort_order' => $product->sort_order,
                 // is_featured omitted = unchecked on edit form
+                'variants_sync' => '1',
                 'variants' => [
-                    ['id' => $variant->id, 'price' => $variant->price],
+                    ['id' => $variant->id, 'name' => $variant->name, 'price' => $variant->price],
                 ],
             ])
             ->assertRedirect(route('admin.platform-products.edit', $product));
@@ -245,8 +247,9 @@ class FixedPlatformCatalogLockTest extends TestCase
                 'status' => 'published',
                 'sort_order' => $product->fresh()->sort_order,
                 'is_featured' => '1',
+                'variants_sync' => '1',
                 'variants' => [
-                    ['id' => $variant->id, 'price' => $variant->price],
+                    ['id' => $variant->id, 'name' => $variant->name, 'price' => $variant->price],
                 ],
             ])
             ->assertRedirect(route('admin.platform-products.edit', $product));
@@ -273,7 +276,6 @@ class FixedPlatformCatalogLockTest extends TestCase
         $product = PlatformProduct::query()->where('slug', 'residential-vpn-lock-test')->firstOrFail();
         $email = ProductType::query()->where('slug', 'email')->firstOrFail();
         $variant = $product->variants()->firstOrFail();
-        $variantName = $variant->name;
 
         $this->actingAs($admin)
             ->put(route('admin.platform-products.update', $product), [
@@ -288,8 +290,9 @@ class FixedPlatformCatalogLockTest extends TestCase
                 'auto_renew' => '1',
                 'product_type_id' => $email->id,
                 'slug' => 'hacked-slug',
+                'variants_sync' => '1',
                 'variants' => [
-                    ['id' => $variant->id, 'price' => 5000, 'name' => 'Hacked Name'],
+                    ['id' => $variant->id, 'name' => 'Hacked Name', 'price' => 5000],
                 ],
             ])
             ->assertRedirect(route('admin.platform-products.edit', $product));
@@ -301,7 +304,7 @@ class FixedPlatformCatalogLockTest extends TestCase
         $this->assertFalse((bool) $product->auto_renew);
         $this->assertSame('residential-vpn-lock-test', $product->slug);
         $this->assertNotSame($email->id, $product->product_type_id);
-        $this->assertSame($variantName, $variant->fresh()->name);
+        $this->assertSame('Hacked Name', $variant->fresh()->name);
     }
 
     public function test_unknown_variant_id_is_rejected(): void
@@ -317,14 +320,77 @@ class FixedPlatformCatalogLockTest extends TestCase
                 'title' => $product->title,
                 'status' => 'published',
                 'sort_order' => $product->sort_order,
+                'variants_sync' => '1',
                 'variants' => [
-                    ['id' => $variant->id, 'price' => 5000],
-                    ['id' => 999999, 'price' => 100],
+                    ['id' => $variant->id, 'name' => $variant->name, 'price' => 5000],
+                    ['id' => 999999, 'name' => 'Fake', 'price' => 100],
                 ],
             ])
             ->assertSessionHasErrors('variants');
 
         $this->assertSame(1, $product->variants()->count());
+    }
+
+    public function test_admin_can_add_and_remove_product_variants(): void
+    {
+        $this->seedCatalog();
+        $admin = $this->admin();
+        $product = PlatformProduct::query()->where('slug', 'residential-vpn-lock-test')->firstOrFail();
+        $keep = $product->variants()->firstOrFail();
+
+        $this->actingAs($admin)
+            ->put(route('admin.platform-products.update', $product), [
+                'title' => $product->title,
+                'status' => 'published',
+                'sort_order' => $product->sort_order,
+                'variants_sync' => '1',
+                'variants' => [
+                    [
+                        'id' => $keep->id,
+                        'name' => '1 Month',
+                        'price' => 5000,
+                        'duration_months' => 1,
+                    ],
+                    [
+                        'id' => '',
+                        'name' => '3 Months',
+                        'price' => 12000,
+                        'duration_months' => 3,
+                        'description' => 'Quarterly plan',
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.platform-products.edit', $product));
+
+        $product->refresh();
+        $this->assertSame(2, $product->variants()->count());
+        $this->assertEquals(5000.0, (float) $product->base_price);
+        $added = $product->variants()->where('name', '3 Months')->first();
+        $this->assertNotNull($added);
+        $this->assertEquals(12000.0, (float) $added->price);
+        $this->assertEquals(3, $added->duration_months);
+
+        $this->actingAs($admin)
+            ->put(route('admin.platform-products.update', $product->fresh()), [
+                'title' => $product->title,
+                'status' => 'published',
+                'sort_order' => $product->fresh()->sort_order,
+                'variants_sync' => '1',
+                'variants' => [
+                    [
+                        'id' => $added->id,
+                        'name' => '3 Months',
+                        'price' => 11000,
+                        'duration_months' => 3,
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.platform-products.edit', $product));
+
+        $this->assertSame(1, $product->variants()->count());
+        $this->assertNull(PlatformProductVariant::query()->find($keep->id));
+        $this->assertEquals(11000.0, (float) $product->fresh()->base_price);
+        $this->assertEquals(11000.0, (float) $added->fresh()->price);
     }
 
     public function test_inactive_category_hides_products_from_public(): void

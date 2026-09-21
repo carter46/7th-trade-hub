@@ -8,14 +8,30 @@
     $domainMeta = $product->meta ?? [];
     $domainMarkup = old('domain_markup_percent', $domainMeta['domain_markup_percent'] ?? 15);
     $domainFxRate = old('domain_usd_ngn_rate', $domainMeta['domain_fx_policy']['usd_ngn_rate'] ?? 1600);
-    $variantRows = old('variants', ! $isDomainProduct && $product->relationLoaded('variants') && $product->variants->isNotEmpty()
+    $variantRows = old('variants', ! $isDomainProduct && $product->relationLoaded('variants')
         ? $product->variants->map(fn ($v) => [
             'id' => $v->id,
             'name' => $v->name,
             'price' => $v->price,
+            'duration_months' => $v->duration_months,
             'description' => $v->description,
         ])->values()->all()
         : []);
+    if (! is_array($variantRows)) {
+        $variantRows = [];
+    }
+    $variantRows = array_values(array_map(function ($row, $i) {
+        $row = is_array($row) ? $row : [];
+
+        return [
+            'id' => $row['id'] ?? '',
+            'name' => $row['name'] ?? '',
+            'price' => $row['price'] ?? '',
+            'duration_months' => $row['duration_months'] ?? '',
+            'description' => $row['description'] ?? '',
+            '_key' => 'v'.$i,
+        ];
+    }, $variantRows, array_keys($variantRows)));
     $heroId = old('hero_media_id', $product->hero_media_id);
     $heroPreview = $heroId
         ? \App\Models\MediaAsset::query()->with('variants')->find((int) $heroId)?->thumbnailUrl()
@@ -23,7 +39,7 @@
 @endphp
 <x-layout.page
     title="Edit Product"
-    subtitle="Fixed platform product — title, description, plan prices, image, featured, and status."
+    subtitle="Edit title, description, plans (add, remove, price), image, featured, and status."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
@@ -38,7 +54,23 @@
         @if (session('error'))
             <x-dashboard.alert type="danger" class="mb-4">{{ session('error') }}</x-dashboard.alert>
         @endif
-        <form method="POST" action="{{ route('admin.platform-products.update', $product) }}" class="w-full space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
+        <form method="POST" action="{{ route('admin.platform-products.update', $product) }}" class="w-full space-y-4" x-data="{
+            submitting: false,
+            variants: {{ \Illuminate\Support\Js::from($variantRows) }},
+            addVariant() {
+                this.variants.push({
+                    id: '',
+                    name: '',
+                    duration_months: '',
+                    price: '',
+                    description: '',
+                    _key: 'n' + Date.now() + Math.random(),
+                });
+            },
+            removeVariant(index) {
+                this.variants.splice(index, 1);
+            },
+        }" @submit="submitting = true">
             @csrf
             @method('PUT')
 
@@ -152,42 +184,45 @@
                         'registryTlds' => $registryTlds ?? [],
                     ])
                 </div>
-            @elseif ($variantRows !== [])
+            @elseif (! $isDomainProduct)
+                <input type="hidden" name="variants_sync" value="1">
                 <div class="space-y-3 rounded-xl border border-border-subtle px-4 py-4">
-                    <p class="text-sm font-medium text-text-primary">Plans / variants</p>
-                    <p class="text-xs text-text-muted">Variant names are fixed. Set price and an optional description for each plan. The storefront shows the lowest price as “from”.</p>
-                    @foreach ($variantRows as $i => $variant)
+                    <div>
+                        <p class="text-sm font-medium text-text-primary">Plans / variants</p>
+                        <p class="text-xs text-text-muted">Add, remove, or edit plans. Name and price are required. Duration is optional (used for website / subscription length). The storefront shows the lowest price as “from”.</p>
+                    </div>
+                    @error('variants')
+                        <p class="text-sm text-danger">{{ $message }}</p>
+                    @enderror
+                    <template x-for="(variant, index) in variants" :key="variant._key">
                         <div class="space-y-2 rounded-xl border border-border-default bg-muted/20 p-3">
-                            <input type="hidden" name="variants[{{ $i }}][id]" value="{{ $variant['id'] }}">
-                            <div class="grid grid-cols-1 gap-2 md:grid-cols-2 items-end">
+                            <input type="hidden" :name="'variants[' + index + '][id]'" :value="variant.id">
+                            <div class="grid grid-cols-1 gap-2 md:grid-cols-3 items-end">
                                 <div>
-                                    <label class="block text-xs text-text-muted mb-1">Variant</label>
-                                    <p class="rounded-xl border border-border-default bg-muted/40 px-3 py-2.5 text-sm">{{ $variant['name'] }}</p>
+                                    <label class="mb-1 block text-xs text-text-muted">Plan name</label>
+                                    <input type="text" :name="'variants[' + index + '][name]'" x-model="variant.name" required class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2.5 text-sm" placeholder="e.g. 3 Months">
                                 </div>
-                                <x-dashboard.input
-                                    label="Price (NGN)"
-                                    :name="'variants['.$i.'][price]'"
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    :value="old('variants.'.$i.'.price', $variant['price'])"
-                                    required
-                                />
+                                <div>
+                                    <label class="mb-1 block text-xs text-text-muted">Duration (months)</label>
+                                    <input type="number" min="1" max="120" :name="'variants[' + index + '][duration_months]'" x-model="variant.duration_months" class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2.5 text-sm" placeholder="Optional">
+                                </div>
+                                <div>
+                                    <label class="mb-1 block text-xs text-text-muted">Price (NGN)</label>
+                                    <input type="number" step="0.01" min="0" :name="'variants[' + index + '][price]'" x-model="variant.price" required class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2.5 text-sm">
+                                </div>
                             </div>
                             <div>
                                 <label class="mb-1 block text-xs text-text-muted">Plan description</label>
-                                <textarea
-                                    name="variants[{{ $i }}][description]"
-                                    rows="2"
-                                    class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2.5 text-sm"
-                                    placeholder="What this plan includes…"
-                                >{{ old('variants.'.$i.'.description', $variant['description'] ?? '') }}</textarea>
+                                <textarea :name="'variants[' + index + '][description]'" x-model="variant.description" rows="2" class="w-full rounded-xl border border-border-default bg-elevated px-3 py-2.5 text-sm" placeholder="What this plan includes…"></textarea>
+                            </div>
+                            <div class="flex justify-end">
+                                <x-dashboard.button type="button" variant="secondary" size="sm" @click="removeVariant(index)">Remove plan</x-dashboard.button>
                             </div>
                         </div>
-                    @endforeach
+                    </template>
+                    <p x-show="variants.length === 0" x-cloak class="text-sm text-amber-600">No plans yet. Add at least one before you publish.</p>
+                    <x-dashboard.button type="button" variant="secondary" size="sm" @click="addVariant()">Add plan</x-dashboard.button>
                 </div>
-            @else
-                <p class="text-sm text-amber-600">This product has no variants. Pricing cannot be set until plans exist in the catalog seed.</p>
             @endif
 
             <div class="flex flex-wrap gap-2 pt-2">
