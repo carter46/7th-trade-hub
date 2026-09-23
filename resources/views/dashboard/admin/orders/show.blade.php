@@ -7,6 +7,8 @@
     $meta = $order->payment_metadata ?? [];
     $hasProof = ! empty($meta['proof_path'] ?? null);
     $awaitingBank = $order->isAwaitingManualBankTransfer();
+    $proofInlineUrl = $hasProof ? route('admin.orders.proof', ['order' => $order, 'inline' => 1]) : null;
+    $proofDownloadUrl = $hasProof ? route('admin.orders.proof', $order) : null;
 @endphp
 <x-layout.page
     :title="'Order '.$order->reference"
@@ -75,13 +77,52 @@
             @endif
         </x-dashboard.card>
 
-        <x-dashboard.card class="space-y-3 text-sm">
+        <x-dashboard.card class="space-y-3 text-sm" x-data="{ proofOpen: false }">
             <h2 class="text-lg font-semibold text-text-primary">Items</h2>
-            <ul class="space-y-2">
+            <ul class="space-y-3">
                 @foreach ($order->items as $item)
-                    <li class="flex justify-between gap-4 border-b border-border-subtle pb-2">
-                        <span>{{ $item->variant?->displayLabel() ?? 'Product #'.$item->item_id }} × {{ $item->quantity }}</span>
-                        <span>₦{{ number_format((float) $item->line_total, 2) }}</span>
+                    @php
+                        $opts = $item->options ?? [];
+                        $title = $opts['product_title'] ?? ($item->variant?->product?->title ?? null);
+                        $variantLabel = $opts['variant_label'] ?? $item->variant?->displayLabel();
+                        $domainMode = $opts['domain_mode'] ?? null;
+                        $fqdn = $opts['domain_fqdn'] ?? $opts['domain_name'] ?? null;
+                        $tld = $opts['domain_tld'] ?? $opts['tld'] ?? null;
+                        $fulfillment = $opts['domain_fulfillment'] ?? null;
+                    @endphp
+                    <li class="rounded-xl border border-border-subtle px-3 py-3 space-y-1.5">
+                        <div class="flex justify-between gap-4">
+                            <div>
+                                <p class="font-medium text-text-primary">
+                                    {{ $title ?: ($variantLabel ?: 'Product #'.$item->item_id) }}
+                                </p>
+                                @if ($variantLabel && $title)
+                                    <p class="text-xs text-text-muted">Plan: {{ $variantLabel }} × {{ $item->quantity }}</p>
+                                @elseif (! $title)
+                                    <p class="text-xs text-text-muted">{{ $variantLabel ?? 'Item' }} × {{ $item->quantity }}</p>
+                                @endif
+                            </div>
+                            <span class="shrink-0 font-semibold">₦{{ number_format((float) $item->line_total, 2) }}</span>
+                        </div>
+
+                        @if ($domainMode === 'buy' && filled($fqdn))
+                            <p class="text-xs text-text-secondary">
+                                Domain purchase: <span class="font-medium text-text-primary">{{ $fqdn }}</span>
+                                @if (filled($tld))
+                                    <span class="text-text-muted">({{ str_starts_with((string) $tld, '.') ? $tld : '.'.$tld }})</span>
+                                @endif
+                                @if ($fulfillment === 'manual')
+                                    <span class="text-amber-700">· manual fulfillment</span>
+                                @endif
+                            </p>
+                        @elseif ($domainMode === 'connect' && filled($fqdn))
+                            <p class="text-xs text-text-secondary">
+                                Connect existing domain: <span class="font-medium text-text-primary">{{ $fqdn }}</span>
+                                <span class="text-text-muted">· no domain charge</span>
+                            </p>
+                        @elseif ($domainMode === 'buy')
+                            <p class="text-xs text-amber-700">Domain buy selected (details missing on line)</p>
+                        @endif
                     </li>
                 @endforeach
             </ul>
@@ -107,7 +148,34 @@
                 @endif
 
                 @if ($hasProof)
-                    <x-dashboard.button :href="route('admin.orders.proof', $order)" variant="secondary" size="sm" target="_blank">View proof</x-dashboard.button>
+                    <div class="flex flex-wrap gap-2 pt-2">
+                        <x-dashboard.button type="button" variant="secondary" size="sm" x-on:click="proofOpen = true">View proof</x-dashboard.button>
+                        <x-dashboard.button :href="$proofDownloadUrl" variant="ghost" size="sm">Download</x-dashboard.button>
+                    </div>
+
+                    <div
+                        x-show="proofOpen"
+                        x-cloak
+                        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+                        role="dialog"
+                        aria-modal="true"
+                        x-on:keydown.escape.window="proofOpen = false"
+                    >
+                        <div class="relative w-full max-w-3xl rounded-2xl border border-border-default bg-surface p-4 shadow-xl space-y-3" x-on:click.stop>
+                            <div class="flex items-center justify-between gap-3">
+                                <h3 class="text-base font-semibold text-text-primary">Payment proof</h3>
+                                <button type="button" class="text-sm text-text-muted hover:text-text-primary" x-on:click="proofOpen = false">Close</button>
+                            </div>
+                            @if ($proofIsImage ?? false)
+                                <img src="{{ $proofInlineUrl }}" alt="Payment proof" class="max-h-[70vh] w-full rounded-lg object-contain bg-muted/30">
+                            @elseif ($proofIsPdf ?? false)
+                                <iframe src="{{ $proofInlineUrl }}" title="Payment proof PDF" class="h-[70vh] w-full rounded-lg border border-border-subtle"></iframe>
+                            @else
+                                <p class="text-sm text-text-secondary">Preview is not available for this file type.</p>
+                                <x-dashboard.button :href="$proofDownloadUrl" size="sm">Download proof</x-dashboard.button>
+                            @endif
+                        </div>
+                    </div>
                 @endif
             @endif
         </x-dashboard.card>

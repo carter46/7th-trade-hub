@@ -354,16 +354,16 @@ class DashboardController extends Controller
         }
 
         if ($canFinance) {
-            $esc = (int) ($pulse['pending_escrows'] ?? 0);
+            $pendingOrders = (int) ($pulse['pending_platform_orders'] ?? 0);
             $items[] = [
-                'label' => 'Pending Escrows',
-                'value' => number_format($esc),
+                'label' => 'Pending orders',
+                'value' => number_format($pendingOrders),
                 'accent' => 'indigo',
-                'description' => '₦'.number_format((float) ($pulse['escrow_locked_ngn'] ?? 0), 0).' locked',
-                'badge' => $esc > 0
-                    ? ['label' => 'Active', 'class' => 'bg-indigo-50 text-indigo-700']
+                'description' => 'Bank transfer proofs awaiting confirmation',
+                'badge' => $pendingOrders > 0
+                    ? ['label' => 'Review', 'class' => 'bg-indigo-50 text-indigo-700']
                     : null,
-                'href' => route('admin.escrows'),
+                'href' => route('admin.orders', ['filter' => 'awaiting_bank']),
             ];
         }
 

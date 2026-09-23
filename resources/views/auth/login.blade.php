@@ -77,6 +77,15 @@
                         :value="old('name')"
                         required
                     />
+                    <x-ui.input
+                        label="Phone number"
+                        name="phone"
+                        type="tel"
+                        id="signup-phone"
+                        placeholder="+2348012345678"
+                        :value="old('phone')"
+                        required
+                    />
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <x-ui.input
                             label="Email"

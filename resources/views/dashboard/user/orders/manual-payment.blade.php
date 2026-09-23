@@ -31,6 +31,9 @@
                     <p class="font-semibold text-text-primary">Payment under review</p>
                     <p class="mt-1 text-sm">{{ session('status') ?: 'Your payment is being processed. We will review your transfer and confirm your order shortly.' }}</p>
                 </x-dashboard.alert>
+                <x-dashboard.button :href="route('dashboard')" variant="primary" class="w-full sm:w-auto">
+                    Done — back to dashboard
+                </x-dashboard.button>
             @else
                 <div
                     x-data="manualBankPayment({
@@ -167,11 +170,14 @@
                         </x-dashboard.button>
                     </div>
 
-                    <div x-show="submitted" style="display: none">
+                    <div x-show="submitted" style="display: none" class="space-y-4">
                         <x-dashboard.alert type="info">
                             <p class="font-semibold text-text-primary">Payment under review</p>
                             <p class="mt-1 text-sm" x-text="statusMessage || @js(session('status') ?: 'Your payment is being processed. We will review your transfer and confirm your order shortly.')"></p>
                         </x-dashboard.alert>
+                        <x-dashboard.button type="button" variant="primary" class="w-full sm:w-auto" x-on:click="goToDashboard()">
+                            Done — back to dashboard
+                        </x-dashboard.button>
                     </div>
 
                     <div

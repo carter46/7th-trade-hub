@@ -73,6 +73,16 @@ class OpsMetrics
         return (int) Escrow::query()->whereIn('status', ['locked', 'disputed'])->count();
     }
 
+    public function pendingPlatformOrders(): int
+    {
+        return (int) Order::query()
+            ->where('source', 'platform')
+            ->where('payment_method', Order::PAYMENT_MANUAL_BANK_TRANSFER)
+            ->where('status', 'pending')
+            ->whereNotNull('payment_submitted_at')
+            ->count();
+    }
+
     public function pendingWithdrawals(): int
     {
         return (int) Withdrawal::query()

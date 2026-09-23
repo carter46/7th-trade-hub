@@ -274,7 +274,7 @@ class DomainQuoteService
             'retail_price' => $retail,
             'premium' => false,
             'quote_token' => $plainToken,
-            'message' => 'Availability cannot be verified automatically. This purchase is a manual domain request for admin fulfillment.',
+            'message' => null,
         ];
     }
 

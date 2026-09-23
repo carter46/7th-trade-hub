@@ -21,8 +21,10 @@
             <form method="POST" action="{{ route('register') }}" class="space-y-4" x-data="{ submitting: false }" @submit="submitting = true">
                 @csrf
 
-                <x-ui.input label="Name" name="name" type="text" id="name" :value="old('name')" required autofocus autocomplete="name" />
-                <x-ui.input label="Email" name="email" type="email" id="email" :value="old('email')" required autocomplete="username" />
+                <x-ui.input label="Full Name" name="name" type="text" id="name" :value="old('name')" required autofocus autocomplete="name" />
+                <x-ui.input label="Phone number" name="phone" type="tel" id="phone" :value="old('phone')" required autocomplete="tel" />
+                <x-ui.input label="Username" name="username" type="text" id="username" :value="old('username')" required autocomplete="username" />
+                <x-ui.input label="Email" name="email" type="email" id="email" :value="old('email')" required autocomplete="email" />
                 <x-ui.input label="Password" name="password" type="password" id="password" required autocomplete="new-password" />
                 <x-ui.input label="Confirm Password" name="password_confirmation" type="password" id="password_confirmation" required autocomplete="new-password" />
 

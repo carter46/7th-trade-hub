@@ -20,7 +20,6 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use InvalidArgumentException;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class OrderAdminController extends Controller
 {
@@ -62,7 +61,15 @@ class OrderAdminController extends Controller
     public function show(Order $order): View
     {
         $this->assertPlatformOrder($order);
-        $order->load(['user', 'items.variant', 'paymentConfirmer', 'domainRegistrations']);
+        $order->load(['user', 'items.variant.product', 'paymentConfirmer', 'domainRegistrations']);
+
+        $meta = $order->payment_metadata ?? [];
+        $proofPath = $meta['proof_path'] ?? null;
+        $proofDisk = $meta['proof_disk'] ?? config('media.documents.disk', 'local');
+        $proofMime = null;
+        if ($proofPath && Storage::disk($proofDisk)->exists($proofPath)) {
+            $proofMime = Storage::disk($proofDisk)->mimeType($proofPath) ?: null;
+        }
 
         return view('dashboard.admin.orders.show', [
             'order' => $order,
@@ -70,6 +77,9 @@ class OrderAdminController extends Controller
             'pendingManualDomains' => $order->domainRegistrations
                 ->where('status', DomainRegistration::STATUS_PENDING_MANUAL)
                 ->values(),
+            'proofMime' => $proofMime,
+            'proofIsImage' => is_string($proofMime) && str_starts_with($proofMime, 'image/'),
+            'proofIsPdf' => $proofMime === 'application/pdf',
         ]);
     }
 
@@ -233,7 +243,7 @@ class OrderAdminController extends Controller
             ->with('status', __('Order cancelled.'));
     }
 
-    public function downloadPaymentProof(Order $order): StreamedResponse|RedirectResponse
+    public function downloadPaymentProof(Request $request, Order $order): \Symfony\Component\HttpFoundation\StreamedResponse|\Illuminate\Http\RedirectResponse|\Symfony\Component\HttpFoundation\BinaryFileResponse|\Illuminate\Http\Response
     {
         $this->assertPlatformOrder($order);
 
@@ -249,7 +259,17 @@ class OrderAdminController extends Controller
             return back()->with('error', __('Payment proof not found.'));
         }
 
-        return Storage::disk($disk)->download($path, 'order-proof-'.$order->reference);
+        $filename = 'order-proof-'.$order->reference;
+        $mime = Storage::disk($disk)->mimeType($path) ?: 'application/octet-stream';
+
+        if ($request->boolean('inline')) {
+            return Storage::disk($disk)->response($path, $filename, [
+                'Content-Type' => $mime,
+                'Content-Disposition' => 'inline; filename="'.$filename.'"',
+            ]);
+        }
+
+        return Storage::disk($disk)->download($path, $filename);
     }
 
     private function assertPlatformOrder(Order $order): void

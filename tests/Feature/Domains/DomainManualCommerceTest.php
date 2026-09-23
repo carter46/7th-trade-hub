@@ -170,7 +170,7 @@ class DomainManualCommerceTest extends TestCase
             ->assertJsonPath('fqdn', 'mybusiness.com');
 
         $this->assertNotEmpty($response->json('quote_token'));
-        $this->assertStringContainsString('Availability cannot be verified', (string) $response->json('message'));
+        $this->assertSame('25000.00', $response->json('retail_price'));
 
         Http::assertNothingSent();
 
@@ -364,7 +364,7 @@ class DomainManualCommerceTest extends TestCase
             ->assertOk()
             ->assertSee('Buy a new domain', false)
             ->assertSee('Connect existing domain', false)
-            ->assertSee('Availability cannot be verified automatically', false);
+            ->assertDontSee('Availability cannot be verified automatically', false);
     }
 
     public function test_admin_domain_form_shows_manual_prices_only_when_providers_off(): void

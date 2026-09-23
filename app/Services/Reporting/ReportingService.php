@@ -75,6 +75,7 @@ class ReportingService
                 'pending_kyc' => $this->ops->pendingKyc(),
                 'pending_withdrawals' => $this->ops->pendingWithdrawals(),
                 'pending_escrows' => $this->ops->pendingEscrows(),
+                'pending_platform_orders' => $this->ops->pendingPlatformOrders(),
                 'escrow_locked_ngn' => $this->ops->lockedEscrowVolume(),
                 'support_waiting' => $this->ops->supportWaiting(),
                 'pending_listings' => $this->ops->pendingListings(),

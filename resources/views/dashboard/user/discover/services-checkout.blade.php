@@ -38,18 +38,25 @@
         'csrfToken' => csrf_token(),
         'oldDomainLabel' => old('domain_label', ''),
         'oldDomainTld' => old('domain_tld', ''),
-        'registrantDefaults' => [
-            'first_name' => old('registrant.first_name', ''),
-            'last_name' => old('registrant.last_name', ''),
-            'company' => old('registrant.company', ''),
-            'email' => old('registrant.email', auth()->user()->email),
-            'phone' => old('registrant.phone', ''),
-            'address' => old('registrant.address', ''),
-            'city' => old('registrant.city', ''),
-            'state' => old('registrant.state', ''),
-            'zip' => old('registrant.zip', ''),
-            'country' => old('registrant.country', 'NG'),
-        ],
+        'registrantDefaults' => (function () {
+            $user = auth()->user();
+            $parts = preg_split('/\s+/', trim((string) ($user->name ?? '')), 2) ?: [];
+            $first = $parts[0] ?? '';
+            $last = $parts[1] ?? '';
+
+            return [
+                'first_name' => old('registrant.first_name', $first),
+                'last_name' => old('registrant.last_name', $last),
+                'company' => old('registrant.company', ''),
+                'email' => old('registrant.email', $user->email),
+                'phone' => old('registrant.phone', (string) ($user->phone ?? '')),
+                'address' => old('registrant.address', ''),
+                'city' => old('registrant.city', ''),
+                'state' => old('registrant.state', ''),
+                'zip' => old('registrant.zip', ''),
+                'country' => old('registrant.country', 'NG'),
+            ];
+        })(),
         'walletBalance' => $hasWallet ? (float) $wallet->balance : 0,
         'hasWallet' => $hasWallet,
         'gatewayEnabled' => $gatewayOn,
@@ -220,11 +227,6 @@
                             @endif
                                     <div class="space-y-2">
                                         <input type="hidden" name="domain_quote_token" x-bind:value="domainQuoteToken">
-                                        @if (($domainCommerceMode ?? 'provider') === 'manual')
-                                            <x-dashboard.alert type="warning" class="text-xs">
-                                                Availability cannot be verified automatically. Buying a domain creates a manual request for admin fulfillment after payment.
-                                            </x-dashboard.alert>
-                                        @endif
                                         <x-dashboard.button
                                             type="button"
                                             variant="primary"

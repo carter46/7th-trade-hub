@@ -154,10 +154,10 @@ export function registerManualBankPayment(Alpine) {
                 if (!res.ok || !data.ok) {
                     throw new Error(data.message || 'Unable to submit payment proof.');
                 }
-                await new Promise((resolve) => setTimeout(resolve, 5000));
                 this.submitted = true;
+                this.proofSubmitted = true;
                 this.phase = 'submitted';
-                this.statusMessage = data.message;
+                this.statusMessage = data.message || 'Your payment is being processed. We will review your transfer and confirm your order shortly.';
                 if (this.timerId) {
                     clearInterval(this.timerId);
                 }

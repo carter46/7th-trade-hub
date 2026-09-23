@@ -8,7 +8,7 @@
         <p class="text-sm font-medium text-text-primary">Find your domain</p>
         <p class="mt-1 text-xs text-text-muted">
             @if ($commerceMode === 'manual')
-                Choose an extension and get the admin-configured price. Availability is not verified automatically.
+                Choose an extension and get the listed price before checkout.
             @else
                 Search availability and get a live price before checkout.
             @endif
@@ -27,12 +27,6 @@
             'domainCommerceMode' => $commerceMode,
         ]))"
     >
-        @if ($commerceMode === 'manual')
-            <x-dashboard.alert type="warning" class="text-xs">
-                Availability cannot be verified automatically. Purchase creates a manual domain request for admin fulfillment.
-            </x-dashboard.alert>
-        @endif
-
         <div class="grid gap-3 sm:grid-cols-[1fr_minmax(9rem,12rem)]">
             <div>
                 <label class="mb-1 block text-xs text-text-muted">Domain name</label>
