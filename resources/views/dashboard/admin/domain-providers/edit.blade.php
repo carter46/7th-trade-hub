@@ -19,6 +19,15 @@
     @if(session('error'))
         <x-dashboard.alert type="danger">{{ session('error') }}</x-dashboard.alert>
     @endif
+    @if ($errors->any())
+        <x-dashboard.alert type="danger">
+            <ul class="list-disc pl-4 space-y-1">
+                @foreach ($errors->all() as $message)
+                    <li>{{ $message }}</li>
+                @endforeach
+            </ul>
+        </x-dashboard.alert>
+    @endif
 
     <x-dashboard.card>
         <form method="POST" action="{{ route('admin.domain-providers.update', $provider) }}" class="space-y-5" autocomplete="off">
@@ -27,13 +36,14 @@
 
             <label class="flex items-center gap-3">
                 <input type="hidden" name="enabled" value="0">
-                <input type="checkbox" name="enabled" value="1" @checked(old('enabled', $provider->enabled)) class="accent-primary">
+                <input type="checkbox" name="enabled" value="1" @checked((string) old('enabled', $provider->enabled ? '1' : '0') === '1') class="accent-primary">
                 <span class="text-sm text-text-primary">Enabled</span>
             </label>
+            <p class="text-xs text-text-muted -mt-3">When every provider is disabled, Domain product → Allowed extensions shows manual NGN price fields for offline fulfillment.</p>
 
             <label class="flex items-center gap-3">
                 <input type="hidden" name="is_default" value="0">
-                <input type="checkbox" name="is_default" value="1" @checked(old('is_default', $provider->is_default)) class="accent-primary">
+                <input type="checkbox" name="is_default" value="1" @checked((string) old('is_default', $provider->is_default ? '1' : '0') === '1') class="accent-primary">
                 <span class="text-sm text-text-primary">Default provider (tried first)</span>
             </label>
 
@@ -45,7 +55,7 @@
 
             <label class="flex items-center gap-3">
                 <input type="hidden" name="sandbox" value="0">
-                <input type="checkbox" name="sandbox" value="1" @checked(old('sandbox', $provider->sandbox)) class="accent-primary">
+                <input type="checkbox" name="sandbox" value="1" @checked((string) old('sandbox', $provider->sandbox ? '1' : '0') === '1') class="accent-primary">
                 <span class="text-sm text-text-primary">Sandbox / test environment</span>
             </label>
 

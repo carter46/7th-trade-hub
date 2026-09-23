@@ -76,7 +76,40 @@ class DomainProviderAdminController extends Controller
         try {
             $this->configValidator->validateSave($domainProvider, $enabled, $isDefault, $fallbackPriority);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return back()->withInput()->withErrors($e->errors());
+            $first = collect($e->errors())->flatten()->first();
+
+            return back()
+                ->withInput()
+                ->withErrors($e->errors())
+                ->with('error', $first ?: 'Could not save provider settings.');
+        }
+
+        if ($enabled && ! $isDefault) {
+            $hasOtherDefault = DomainProvider::query()
+                ->where('enabled', true)
+                ->where('is_default', true)
+                ->where('id', '!=', $domainProvider->id)
+                ->exists();
+
+            if (! $hasOtherDefault) {
+                return back()->withInput()->with('error', 'Enable a default provider or mark this one as default.');
+            }
+        }
+
+        if (! $enabled) {
+            $remainingDefaults = DomainProvider::query()
+                ->where('enabled', true)
+                ->where('is_default', true)
+                ->where('id', '!=', $domainProvider->id)
+                ->exists();
+            $remainingEnabled = DomainProvider::query()
+                ->where('enabled', true)
+                ->where('id', '!=', $domainProvider->id)
+                ->exists();
+
+            if ($remainingEnabled && ! $remainingDefaults) {
+                return back()->withInput()->with('error', 'Mark another enabled provider as default before disabling this one.');
+            }
         }
 
         if ($isDefault) {
@@ -90,10 +123,6 @@ class DomainProviderAdminController extends Controller
             'sandbox' => $request->boolean('sandbox'),
             'credentials' => $credentials,
         ]);
-
-        if ($enabled && ! DomainProvider::query()->where('enabled', true)->where('is_default', true)->exists()) {
-            return back()->with('error', 'Enable a default provider or mark this one as default.');
-        }
 
         $this->cacheInvalidator->invalidateAllDomainPricingCaches();
         $this->audit->providerConfigChanged(

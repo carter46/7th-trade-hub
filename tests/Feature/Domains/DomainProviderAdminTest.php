@@ -115,7 +115,7 @@ class DomainProviderAdminTest extends TestCase
             ->assertSessionHasErrors('fallback_priority');
     }
 
-    public function test_cannot_disable_last_provider_without_manual_prices(): void
+    public function test_can_disable_last_provider_then_configure_manual_prices(): void
     {
         $admin = User::factory()->create(['email_verified_at' => now()]);
         $admin->assignRole('admin');
@@ -138,9 +138,10 @@ class DomainProviderAdminTest extends TestCase
                     'api_token' => 't',
                 ],
             ])
-            ->assertRedirect()
-            ->assertSessionHasErrors('enabled');
+            ->assertRedirect(route('admin.domain-providers.edit', $provider))
+            ->assertSessionHas('status');
 
-        $this->assertTrue($provider->fresh()->enabled);
+        $this->assertFalse($provider->fresh()->enabled);
+        $this->assertTrue(app(\App\Services\Domains\DomainCommerceModeResolver::class)->isManual());
     }
 }
