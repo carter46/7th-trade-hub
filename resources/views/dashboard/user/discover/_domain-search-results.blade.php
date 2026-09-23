@@ -6,7 +6,14 @@
     ></p>
 
     <div x-show="domainAvailable" x-cloak class="space-y-2">
-        <p class="text-xs font-semibold uppercase tracking-wide text-text-secondary">Available extension</p>
+        <p class="text-xs font-semibold uppercase tracking-wide text-text-secondary"
+           x-text="domainCommerceMode === 'manual' ? 'Priced extension (manual request)' : 'Available extension'"></p>
+        <p
+            x-show="domainCommerceMode === 'manual' && domainMessage"
+            x-cloak
+            class="text-xs text-amber-800"
+            x-text="domainMessage"
+        ></p>
         <div class="rounded-xl border border-primary/25 bg-primary/5 px-3 py-2.5">
             <p class="text-lg font-semibold text-primary break-all">
                 <span x-text="domainFqdn"></span>
@@ -43,6 +50,6 @@
                 </button>
             </template>
         </div>
-        <p class="text-xs text-text-muted">Tap a suggestion to switch — your selected extension stays available above.</p>
+        <p class="text-xs text-text-muted">Tap a suggestion to switch — your selected extension stays listed above.</p>
     </div>
 </div>

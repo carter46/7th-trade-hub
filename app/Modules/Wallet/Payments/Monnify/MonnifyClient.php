@@ -86,7 +86,14 @@ class MonnifyClient
 
     public function clearTokenCache(): void
     {
-        Cache::forget('monnify_access_token_'.$this->provider()->id);
+        if ($this->provider !== null) {
+            Cache::forget('monnify_access_token_'.$this->provider->id);
+        } else {
+            $row = IntegrationProvider::forProvider(IntegrationProvider::MONNIFY);
+            Cache::forget('monnify_access_token_'.$row->id);
+        }
+
+        $this->provider = null;
     }
 
     public function http(): PendingRequest

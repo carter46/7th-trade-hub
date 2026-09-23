@@ -3,19 +3,23 @@
 namespace App\Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\DomainRegistration;
 use App\Models\Order;
 use App\Models\PlatformProduct;
 use App\Models\PlatformProductVariant;
 use App\Models\SystemSetting;
 use App\Models\User;
+use App\Modules\Admin\Services\AuditLogService;
 use App\Modules\Admin\Services\FinancialAuditLog;
 use App\Modules\Catalog\Services\PlatformCheckoutService;
 use App\Modules\Wallet\Services\WalletService;
+use App\Services\Domains\DomainRegistrationFulfillmentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class OrderAdminController extends Controller
@@ -24,6 +28,8 @@ class OrderAdminController extends Controller
         private PlatformCheckoutService $checkout,
         private FinancialAuditLog $financialAudit,
         private WalletService $walletService,
+        private DomainRegistrationFulfillmentService $domainFulfillment,
+        private AuditLogService $audit,
     ) {}
 
     public function index(Request $request): View
@@ -39,6 +45,10 @@ class OrderAdminController extends Controller
         } elseif ($request->string('filter')->toString() === 'failed_bank') {
             $query->where('payment_method', Order::PAYMENT_MANUAL_BANK_TRANSFER)
                 ->where('status', 'cancelled');
+        } elseif ($request->string('filter')->toString() === 'pending_manual_domains') {
+            $query->whereHas('domainRegistrations', function ($q) {
+                $q->where('status', DomainRegistration::STATUS_PENDING_MANUAL);
+            });
         }
 
         $orders = $query->paginate(20)->withQueryString();
@@ -52,12 +62,52 @@ class OrderAdminController extends Controller
     public function show(Order $order): View
     {
         $this->assertPlatformOrder($order);
-        $order->load(['user', 'items.variant', 'paymentConfirmer']);
+        $order->load(['user', 'items.variant', 'paymentConfirmer', 'domainRegistrations']);
 
         return view('dashboard.admin.orders.show', [
             'order' => $order,
             'bankDetails' => SystemSetting::manualBankTransferDetails(),
+            'pendingManualDomains' => $order->domainRegistrations
+                ->where('status', DomainRegistration::STATUS_PENDING_MANUAL)
+                ->values(),
         ]);
+    }
+
+    public function markDomainRegistered(Request $request, Order $order, DomainRegistration $registration): RedirectResponse
+    {
+        $this->assertPlatformOrder($order);
+        abort_unless((int) $registration->order_id === (int) $order->id, 404);
+
+        $data = $request->validate([
+            'provider_reference' => ['nullable', 'string', 'max:191'],
+            'nameservers' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $nameservers = null;
+        if (filled($data['nameservers'] ?? null)) {
+            $nameservers = preg_split('/[\s,;]+/', (string) $data['nameservers'], -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        }
+
+        try {
+            $updated = $this->domainFulfillment->markManualRegistered(
+                $registration,
+                $data['provider_reference'] ?? null,
+                $nameservers,
+            );
+        } catch (InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        $this->audit->log(
+            $request->user()?->id,
+            'domains.manual_registered',
+            $updated,
+            ['status' => DomainRegistration::STATUS_PENDING_MANUAL],
+            ['status' => $updated->status, 'fqdn' => $updated->fqdn, 'order_id' => $order->id],
+            $request->ip(),
+        );
+
+        return back()->with('status', 'Marked '.$updated->fqdn.' as registered.');
     }
 
     public function create(): View

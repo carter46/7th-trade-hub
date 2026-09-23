@@ -112,6 +112,35 @@ class DomainProviderAdminTest extends TestCase
                 ],
             ])
             ->assertRedirect()
-            ->assertSessionHas('error');
+            ->assertSessionHasErrors('fallback_priority');
+    }
+
+    public function test_cannot_disable_last_provider_without_manual_prices(): void
+    {
+        $admin = User::factory()->create(['email_verified_at' => now()]);
+        $admin->assignRole('admin');
+
+        DomainProvider::query()->update(['enabled' => false, 'is_default' => false]);
+        $provider = DomainProvider::query()->where('key', 'namecom')->firstOrFail();
+        $provider->update([
+            'enabled' => true,
+            'is_default' => true,
+            'credentials' => ['username' => 'u', 'api_token' => 't'],
+        ]);
+
+        $this->actingAs($admin)
+            ->put(route('admin.domain-providers.update', $provider), [
+                'enabled' => '0',
+                'is_default' => '0',
+                'sandbox' => '1',
+                'credentials' => [
+                    'username' => 'u',
+                    'api_token' => 't',
+                ],
+            ])
+            ->assertRedirect()
+            ->assertSessionHasErrors('enabled');
+
+        $this->assertTrue($provider->fresh()->enabled);
     }
 }

@@ -42,6 +42,7 @@
                 @csrf
                 <input type="hidden" name="monnify_enabled" value="0">
                 <x-dashboard.toggle name="monnify_enabled" label="Enable Monnify" :checked="old('monnify_enabled', $monnify->enabled)" value="1" />
+                <p class="text-xs text-text-muted -mt-2">When enabled with valid credentials, service checkout shows <strong>Pay directly</strong> (Monnify card/bank). Save this form separately from manual bank transfer.</p>
                 <div class="grid gap-4 sm:grid-cols-2">
                     <x-dashboard.secret-input
                         name="monnify_api_key"

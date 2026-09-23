@@ -15,6 +15,7 @@
     <x-slot:actions>
         <x-dashboard.button :href="route('admin.orders.create')" icon="orders" size="sm">Create order</x-dashboard.button>
         <x-dashboard.button :href="route('admin.orders', ['filter' => 'awaiting_bank'])" variant="secondary" size="sm">Awaiting bank</x-dashboard.button>
+        <x-dashboard.button :href="route('admin.orders', ['filter' => 'pending_manual_domains'])" variant="secondary" size="sm">Manual domains</x-dashboard.button>
         <x-dashboard.button :href="route('admin.orders', ['filter' => 'failed_bank'])" variant="secondary" size="sm">Failed bank</x-dashboard.button>
         <x-dashboard.button :href="route('admin.orders')" variant="secondary" size="sm">All orders</x-dashboard.button>
     </x-slot:actions>

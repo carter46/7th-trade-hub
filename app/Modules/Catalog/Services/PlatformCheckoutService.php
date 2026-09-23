@@ -763,6 +763,7 @@ class PlatformCheckoutService
                 'product_title' => $domainProduct->title,
                 'domain_quote_id' => $quote->id,
                 'registrant_contact' => $domainContext['registrant_contact'] ?? null,
+                'domain_fulfillment' => $quote->isManualFulfillment() ? 'manual' : 'provider',
             ],
         ];
     }

@@ -9,6 +9,8 @@ use App\Models\PlatformProduct;
 use App\Models\PlatformProductVariant;
 use App\Models\ProductType;
 use App\Models\ServiceCategory;
+use App\Services\Domains\DomainCommerceModeResolver;
+use App\Services\Domains\DomainManualTldPriceService;
 use App\Services\Domains\DomainQuoteService;
 use App\Services\Media\MediaPathService;
 use App\Services\Media\MediaUsageService;
@@ -28,6 +30,8 @@ class PlatformProductAdminController extends Controller
         private MediaUsageService $mediaUsages,
         private MediaPathService $mediaPaths,
         private DomainQuoteService $domainQuotes,
+        private DomainCommerceModeResolver $commerceMode,
+        private DomainManualTldPriceService $manualTldPrices,
     ) {}
 
     public function index(Request $request): View
@@ -112,16 +116,26 @@ class PlatformProductAdminController extends Controller
             ->whereHas('productType.serviceCategory', fn ($q) => $q->system());
         $siblingMax = max(1, (clone $siblings)->count());
 
+        $manualPricingMode = $platformProduct->product_type === PlatformProductType::Domain
+            && $this->commerceMode->isManual();
+
         return view('dashboard.admin.platform-product-form', [
             'product' => $platformProduct,
             'lockedCatalog' => true,
             'siblingMax' => $siblingMax,
             'domainFloorExample' => $platformProduct->product_type === PlatformProductType::Domain
+                && $this->commerceMode->isProvider()
                 ? $this->domainQuotes->pricingFloorExample($platformProduct)
                 : null,
             'registryTlds' => $platformProduct->product_type === PlatformProductType::Domain
-                ? $this->domainQuotes->registryTldOptionsForUi()
+                ? ($this->commerceMode->isProvider()
+                    ? $this->domainQuotes->registryTldOptionsForUi()
+                    : [])
                 : [],
+            'manualPricingMode' => $manualPricingMode,
+            'manualTldPrices' => $manualPricingMode
+                ? $this->manualTldPrices->pricesForProduct($platformProduct, activeOnly: false)
+                : collect(),
         ]);
     }
 
@@ -158,6 +172,8 @@ class PlatformProductAdminController extends Controller
             'domain_usd_ngn_rate' => ['nullable', 'numeric', 'min:0'],
             'allowed_tlds' => ['nullable', 'array', 'min:1'],
             'allowed_tlds.*' => ['string', 'max:63'],
+            'manual_tld_prices' => ['nullable', 'array'],
+            'manual_tld_prices.*' => ['nullable', 'numeric', 'gt:0'],
             'tutorial_url' => ['nullable', 'string', 'max:500'],
             'tutorial_description' => ['nullable', 'string', 'max:2000'],
         ]);
@@ -219,6 +235,14 @@ class PlatformProductAdminController extends Controller
             }
             $meta['allowed_tlds'] = $allowed;
             $updatePayload['meta'] = $meta;
+
+            if ($this->commerceMode->isManual()) {
+                $this->manualTldPrices->syncForProduct(
+                    $platformProduct,
+                    $allowed,
+                    is_array($data['manual_tld_prices'] ?? null) ? $data['manual_tld_prices'] : [],
+                );
+            }
         }
 
         $platformProduct->update($updatePayload);
@@ -372,6 +396,30 @@ class PlatformProductAdminController extends Controller
     private function assertPublishable(PlatformProduct $product): void
     {
         if ($product->product_type === PlatformProductType::Domain) {
+            if ($this->commerceMode->isManual()) {
+                $allowed = DomainProductTldPolicy::allowedTlds($product);
+                if ($allowed === []) {
+                    throw ValidationException::withMessages([
+                        'allowed_tlds' => 'Select at least one allowed extension before publishing.',
+                    ]);
+                }
+
+                $priced = $this->manualTldPrices->pricesForProduct($product, activeOnly: true);
+                $missing = [];
+                foreach ($allowed as $tld) {
+                    if (! $priced->has($tld)) {
+                        $missing[] = '.'.$tld;
+                    }
+                }
+                if ($missing !== []) {
+                    throw ValidationException::withMessages([
+                        'manual_tld_prices' => 'While all domain providers are disabled, set a positive NGN price for each allowed extension (missing: '.implode(', ', $missing).').',
+                    ]);
+                }
+
+                return;
+            }
+
             $meta = $product->meta ?? [];
             $rate = (float) ($meta['domain_fx_policy']['usd_ngn_rate'] ?? 0);
             if ($rate <= 0) {

@@ -1,11 +1,18 @@
 @php
     $quoteUrl = route('dashboard.services.domain-quote');
     $checkoutBase = route('dashboard.services.checkout', $product->slug);
+    $commerceMode = $domainCommerceMode ?? 'provider';
 @endphp
 <x-dashboard.card class="space-y-4 h-fit">
     <div>
         <p class="text-sm font-medium text-text-primary">Find your domain</p>
-        <p class="mt-1 text-xs text-text-muted">Search availability and get a live price before checkout.</p>
+        <p class="mt-1 text-xs text-text-muted">
+            @if ($commerceMode === 'manual')
+                Choose an extension and get the admin-configured price. Availability is not verified automatically.
+            @else
+                Search availability and get a live price before checkout.
+            @endif
+        </p>
     </div>
 
     <div
@@ -17,8 +24,15 @@
             'domainTlds' => $domainTlds ?? [],
             'domainTldsAdvanced' => $domainTldsAdvanced ?? [],
             'csrfToken' => csrf_token(),
+            'domainCommerceMode' => $commerceMode,
         ]))"
     >
+        @if ($commerceMode === 'manual')
+            <x-dashboard.alert type="warning" class="text-xs">
+                Availability cannot be verified automatically. Purchase creates a manual domain request for admin fulfillment.
+            </x-dashboard.alert>
+        @endif
+
         <div class="grid gap-3 sm:grid-cols-[1fr_minmax(9rem,12rem)]">
             <div>
                 <label class="mb-1 block text-xs text-text-muted">Domain name</label>
@@ -47,7 +61,7 @@
             x-on:click="checkDomain()"
             x-bind:disabled="domainChecking || !canCheckDomain"
         >
-            <span x-text="domainChecking ? 'Checking…' : 'Check availability'">Check availability</span>
+            <span x-text="domainChecking ? 'Getting price…' : (domainCommerceMode === 'manual' ? 'Get price' : 'Check availability')">Check availability</span>
         </x-dashboard.button>
 
         @include('dashboard.user.discover._domain-search-results')

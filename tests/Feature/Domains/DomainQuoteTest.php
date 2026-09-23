@@ -86,6 +86,11 @@ class DomainQuoteTest extends TestCase
         $user->assignRole('user');
 
         Http::fake([
+            'https://api.dev.name.com/core/v1/tldpricing*' => Http::response([
+                'tlds' => [
+                    ['tld' => 'com', 'registrationPrice' => 12.99],
+                ],
+            ]),
             'https://api.dev.name.com/core/v1/domains:checkAvailability' => Http::response([
                 'results' => [[
                     'domainName' => 'example.com',
@@ -96,6 +101,7 @@ class DomainQuoteTest extends TestCase
                 ]],
             ]),
         ]);
+        \App\Services\Domains\DomainProviderManager::forgetTldCaches();
 
         $response = $this->actingAs($user)
             ->postJson(route('dashboard.services.domain-quote'), [

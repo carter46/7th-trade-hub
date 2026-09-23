@@ -113,12 +113,15 @@ export function createDomainSearchHelpers() {
             this.domainFqdn = data.fqdn || '';
             this.domainPremium = Boolean(data.premium);
             const suggestions = Array.isArray(data.suggestions) ? [...data.suggestions] : [];
+            const manualMode = (this.domainCommerceMode || 'provider') === 'manual';
 
             if (data.available && data.quote_token) {
                 this.domainAvailable = true;
                 this.domainQuoteToken = data.quote_token;
                 this.domainRetailPrice = Number(data.retail_price || 0);
-                this.domainMessage = `${data.fqdn} is available.`;
+                this.domainMessage = manualMode
+                    ? (data.message || `${data.fqdn}: price locked for manual registration (availability not verified).`)
+                    : `${data.fqdn} is available.`;
                 this.selectedSuggestionTld = this.domainTld;
                 this.domainSuggestions = suggestions;
                 return;
@@ -133,13 +136,16 @@ export function createDomainSearchHelpers() {
                 return;
             }
 
+            const manualMode = (this.domainCommerceMode || 'provider') === 'manual';
             this.domainTld = row.tld;
             this.domainFqdn = row.fqdn;
             this.domainRetailPrice = Number(row.retail_price || 0);
             this.domainPremium = Boolean(row.premium);
             this.domainQuoteToken = row.quote_token;
             this.domainAvailable = true;
-            this.domainMessage = `${row.fqdn} is available.`;
+            this.domainMessage = manualMode
+                ? `${row.fqdn}: price locked for manual registration (availability not verified).`
+                : `${row.fqdn} is available.`;
             this.selectedSuggestionTld = row.tld;
         },
         invalidateQuote(clearSuggestions = true) {

@@ -20,7 +20,8 @@ class DemoLaunchController extends Controller
     public function __invoke(Request $request, PlatformProduct $product, string $role): RedirectResponse
     {
         $role = strtolower($role);
-        abort_unless(in_array($role, ['user', 'admin'], true), 404);
+        // Catalog View Demo is user-only; admin demo SSO is not offered.
+        abort_unless($role === 'user', 404);
 
         $integration = SiteIntegration::query()
             ->where('platform_product_id', $product->id)

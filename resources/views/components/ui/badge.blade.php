@@ -30,6 +30,10 @@
         'cancelled' => 'bg-muted text-text-secondary',
         'inactive' => 'bg-warning/20 text-warning',
         'pending_setup' => 'bg-warning/20 text-warning',
+        'pending_manual' => 'bg-warning/20 text-warning',
+        'processing' => 'bg-primary/15 text-primary',
+        'registered' => 'bg-success/20 text-success',
+        'reconciliation_required' => 'bg-warning/20 text-warning',
     ];
     $key = strtolower((string) $status);
     $label = str_replace('_', ' ', $key);

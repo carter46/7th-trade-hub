@@ -21,7 +21,13 @@ class DomainCheckoutTest extends TestCase
 
     private function enableNameComProvider(): void
     {
-        DomainProvider::query()->where('key', 'namecom')->update([
+        DomainProvider::query()->where('key', '!=', 'namecom')->update([
+            'enabled' => false,
+            'is_default' => false,
+        ]);
+
+        $provider = DomainProvider::query()->where('key', 'namecom')->firstOrFail();
+        $provider->update([
             'enabled' => true,
             'is_default' => true,
             'sandbox' => true,
@@ -85,6 +91,8 @@ class DomainCheckoutTest extends TestCase
 
     private function seedDomainRegistrationProduct(): PlatformProduct
     {
+        $this->seed(\Database\Seeders\PlatformCatalogSeeder::class);
+
         $product = PlatformProduct::query()->where('slug', 'domain-registration')->first();
 
         if (! $product) {
@@ -101,10 +109,10 @@ class DomainCheckoutTest extends TestCase
             ]);
         } else {
             $product->update([
-                'meta' => [
+                'meta' => array_merge($product->meta ?? [], [
                     'domain_markup_percent' => 15,
                     'domain_fx_policy' => ['usd_ngn_rate' => 1600],
-                ],
+                ]),
             ]);
         }
 
@@ -114,6 +122,13 @@ class DomainCheckoutTest extends TestCase
     private function fakeAvailability(string $fqdn = 'example.com', float $price = 12.99): void
     {
         Http::fake([
+            'https://api.dev.name.com/core/v1/tldpricing*' => Http::response([
+                'tlds' => [
+                    ['tld' => 'com', 'registrationPrice' => $price],
+                    ['tld' => 'net', 'registrationPrice' => 11.99],
+                    ['tld' => 'org', 'registrationPrice' => 10.99],
+                ],
+            ]),
             'https://api.dev.name.com/core/v1/domains:checkAvailability' => Http::response([
                 'results' => [[
                     'domainName' => $fqdn,
@@ -124,6 +139,7 @@ class DomainCheckoutTest extends TestCase
                 ]],
             ]),
         ]);
+        \App\Services\Domains\DomainProviderManager::forgetTldCaches();
     }
 
     public function test_website_checkout_rejects_domain_mode_none(): void
@@ -244,11 +260,11 @@ class DomainCheckoutTest extends TestCase
 
     public function test_website_checkout_buy_mode_creates_two_order_lines(): void
     {
+        $this->seedDomainRegistrationProduct();
+        $product = $this->seedWebsiteProduct();
         $this->enableNameComProvider();
         $this->fakeAvailability();
-        $this->seedDomainRegistrationProduct();
 
-        $product = $this->seedWebsiteProduct();
         $user = User::factory()->create(['email_verified_at' => now()]);
         $user->assignRole('user');
         Wallet::factory()->create([
@@ -264,9 +280,12 @@ class DomainCheckoutTest extends TestCase
                 'product_slug' => $product->slug,
                 'domain_label' => 'example',
                 'domain_tld' => 'com',
-            ]);
+            ])
+            ->assertOk()
+            ->assertJsonPath('available', true);
 
         $token = $quoteResponse->json('quote_token');
+        $this->assertNotEmpty($token);
 
         $this->actingAs($user)
             ->post(route('dashboard.services.purchase', $product->slug), [
@@ -279,7 +298,8 @@ class DomainCheckoutTest extends TestCase
                 'registrant' => $this->sampleDomainRegistrant(),
                 'idempotency_key' => (string) Str::uuid(),
             ])
-            ->assertRedirect();
+            ->assertRedirect()
+            ->assertSessionMissing('error');
 
         $this->assertDatabaseCount('order_items', 2);
         $this->assertDatabaseHas('domain_quotes', [

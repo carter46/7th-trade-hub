@@ -73,6 +73,12 @@ class DomainNameserverService
     {
         $this->assertRegistered($registration);
 
+        if ($registration->isManualFulfillment()) {
+            throw new DomainBusinessException(
+                'This domain was registered manually. Ask an admin to update nameservers on the order, or set them here for your records.'
+            );
+        }
+
         $provider = $this->providers->providerRecord($registration->provider_key);
         $adapter = $this->providers->adapterFor($provider);
 
@@ -147,6 +153,26 @@ class DomainNameserverService
      */
     private function pushToProvider(DomainRegistration $registration, array $nameservers, User $actor, string $auditAction): array
     {
+        if ($registration->isManualFulfillment()) {
+            $registration->update([
+                'nameservers' => $nameservers,
+                'nameservers_updated_at' => now(),
+                'nameservers_synced_at' => now(),
+                'provider_meta' => array_merge($registration->provider_meta ?? [], [
+                    'nameservers_local_only' => true,
+                    'nameservers_note' => 'Stored locally; registrar was not updated through a provider API.',
+                ]),
+            ]);
+
+            $this->audit->log($auditAction, $registration->fresh(), [
+                'fqdn' => $registration->fqdn,
+                'manual' => true,
+                'local_only' => true,
+            ], $actor->id);
+
+            return $nameservers;
+        }
+
         $provider = $this->providers->providerRecord($registration->provider_key);
         $adapter = $this->providers->adapterFor($provider);
 

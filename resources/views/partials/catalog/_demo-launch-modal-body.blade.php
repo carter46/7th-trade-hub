@@ -27,23 +27,6 @@
                 @endif
             </form>
         @endif
-        @if ($canDemoAdmin)
-            <form
-                method="POST"
-                action="{{ route('dashboard.services.demo-launch', [$product, 'admin']) }}"
-                target="_blank"
-                rel="noopener"
-                data-no-page-loader
-                @if ($closeOnSubmit) @submit="{{ $closeOnSubmit }}" @endif
-            >
-                @csrf
-                @if ($dashboard ?? true)
-                    <x-dashboard.button type="submit" class="w-full" variant="secondary">Login as Admin</x-dashboard.button>
-                @else
-                    <x-ui.button type="submit" variant="primary" class="w-full">Login as Admin</x-ui.button>
-                @endif
-            </form>
-        @endif
     </div>
     @if (! empty($closeAction))
         <button type="button" class="w-full text-sm text-slate-500 hover:text-slate-800" @click="{{ $closeAction }}">Cancel</button>

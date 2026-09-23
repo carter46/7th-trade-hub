@@ -54,6 +54,7 @@
         'hasWallet' => $hasWallet,
         'gatewayEnabled' => $gatewayOn,
         'manualBankTransferEnabled' => $manualBankOn,
+        'domainCommerceMode' => $domainCommerceMode ?? 'provider',
     ];
 @endphp
 <x-layout.page
@@ -212,8 +213,18 @@
                                         </div>
                                     </div>
 
+                            @if (($domainCommerceMode ?? 'provider') === 'manual' && ($domainTlds ?? []) === [] && ($domainTldsAdvanced ?? []) === [])
+                                <x-dashboard.alert type="warning" class="text-xs">
+                                    No priced domain extensions are configured. An admin must set extension prices on the Domain product while providers are disabled.
+                                </x-dashboard.alert>
+                            @endif
                                     <div class="space-y-2">
                                         <input type="hidden" name="domain_quote_token" x-bind:value="domainQuoteToken">
+                                        @if (($domainCommerceMode ?? 'provider') === 'manual')
+                                            <x-dashboard.alert type="warning" class="text-xs">
+                                                Availability cannot be verified automatically. Buying a domain creates a manual request for admin fulfillment after payment.
+                                            </x-dashboard.alert>
+                                        @endif
                                         <x-dashboard.button
                                             type="button"
                                             variant="primary"
@@ -221,7 +232,7 @@
                                             x-on:click="checkDomain()"
                                             x-bind:disabled="domainChecking || !canCheckDomain"
                                         >
-                                            <span x-text="domainChecking ? 'Checking…' : 'Check availability'">Check availability</span>
+                                            <span x-text="domainChecking ? 'Getting price…' : (domainCommerceMode === 'manual' ? 'Get price' : 'Check availability')">Check availability</span>
                                         </x-dashboard.button>
                                         @include('dashboard.user.discover._domain-search-results')
                                     </div>
@@ -317,7 +328,7 @@
                                 <input type="radio" name="payment_method" value="gateway" x-model="paymentMethod" class="mt-1 accent-primary" @checked($defaultMethod === 'gateway')>
                                 <span>
                                     <span class="block text-sm font-medium text-text-primary">Pay directly</span>
-                                    <span class="block text-xs text-text-muted">Card or bank transfer via payment gateway</span>
+                                    <span class="block text-xs text-text-muted">Card or instant transfer (Monnify)</span>
                                 </span>
                             </label>
                         @endif
@@ -327,7 +338,7 @@
                                 <input type="radio" name="payment_method" value="manual_bank_transfer" x-model="paymentMethod" class="mt-1 accent-primary" @checked($defaultMethod === 'manual_bank_transfer')>
                                 <span>
                                     <span class="block text-sm font-medium text-text-primary">Bank transfer</span>
-                                    <span class="block text-xs text-text-muted">Pay directly to our company account — we confirm manually</span>
+                                    <span class="block text-xs text-text-muted">Transfer to our company account — we confirm manually</span>
                                 </span>
                             </label>
                         @endif

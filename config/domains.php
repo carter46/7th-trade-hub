@@ -3,6 +3,9 @@
 return [
     'quote_ttl_minutes' => (int) env('DOMAIN_QUOTE_TTL_MINUTES', 15),
 
+    /** How long a reserved (awaiting payment) quote stays valid after reserve. */
+    'reserved_quote_hold_minutes' => (int) env('DOMAIN_RESERVED_QUOTE_HOLD_MINUTES', 180),
+
     'price_drift_tolerance_percent' => (float) env('DOMAIN_PRICE_DRIFT_TOLERANCE_PERCENT', 2),
 
     'tld_cache_ttl_minutes' => (int) env('DOMAIN_TLD_CACHE_TTL_MINUTES', 60),

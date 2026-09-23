@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DomainQuote extends Model
 {
+    public const PROVIDER_KEY_MANUAL = 'manual';
+
     protected $fillable = [
         'user_id',
         'platform_product_id',
@@ -59,6 +61,18 @@ class DomainQuote extends Model
     public function reservedOrder(): BelongsTo
     {
         return $this->belongsTo(Order::class, 'reserved_order_id');
+    }
+
+    public function isManualFulfillment(): bool
+    {
+        if ($this->provider_key === self::PROVIDER_KEY_MANUAL) {
+            return true;
+        }
+
+        $meta = $this->provider_meta ?? [];
+
+        return ($meta['fulfillment'] ?? null) === 'manual'
+            || ($meta['domain_fulfillment'] ?? null) === 'manual';
     }
 
     public function isExpired(): bool

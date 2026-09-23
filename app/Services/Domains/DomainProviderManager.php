@@ -173,6 +173,11 @@ class DomainProviderManager
         Cache::forget('domain.tlds.merged');
     }
 
+    public function hasEnabledProviders(): bool
+    {
+        return $this->orderedEnabledProviders()->isNotEmpty();
+    }
+
     /**
      * @return Collection<int, DomainProvider>
      */

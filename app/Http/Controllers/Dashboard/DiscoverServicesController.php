@@ -10,6 +10,7 @@ use App\Modules\Catalog\Services\CatalogBrowseService;
 use App\Modules\Catalog\Services\CatalogContentResolver;
 use App\Modules\Catalog\Services\PlatformCheckoutService;
 use App\Services\Analytics\UserActivityRecorder;
+use App\Services\Domains\DomainCommerceModeResolver;
 use App\Services\Domains\DomainConnectionService;
 use App\Services\Domains\DomainQuoteService;
 use App\Support\Domains\DomainRegistrantContact;
@@ -30,6 +31,7 @@ class DiscoverServicesController extends Controller
         private PlatformCheckoutService $checkoutService,
         private DomainQuoteService $domainQuotes,
         private DomainConnectionService $domainConnections,
+        private DomainCommerceModeResolver $domainCommerceMode,
     ) {}
 
     public function index(Request $request): View
@@ -166,6 +168,7 @@ class DiscoverServicesController extends Controller
             'isDomainProduct' => $isDomainProduct,
             'domainTlds' => $domainTldBundles['featured'],
             'domainTldsAdvanced' => $domainTldBundles['advanced'],
+            'domainCommerceMode' => $this->domainCommerceMode->current()->value,
         ]);
     }
 
@@ -304,6 +307,7 @@ class DiscoverServicesController extends Controller
             'renewTool' => $renewTool,
             'gatewayEnabled' => $this->checkoutService->gatewayEnabled(),
             'manualBankTransferEnabled' => $this->checkoutService->manualBankTransferEnabledForCheckout(),
+            'domainCommerceMode' => $this->domainCommerceMode->current()->value,
         ]);
     }
 

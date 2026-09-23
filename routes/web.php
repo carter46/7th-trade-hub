@@ -306,7 +306,7 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
         ->name('.my-domains.nameservers.sync');
 
     Route::post('/services/product/{product:slug}/demo/{role}', \App\Http\Controllers\Dashboard\DemoLaunchController::class)
-        ->whereIn('role', ['user', 'admin'])
+        ->whereIn('role', ['user'])
         ->middleware('throttle:10,1')
         ->name('.services.demo-launch');
 
@@ -454,6 +454,8 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::get('/orders/{order}', [OrderAdminController::class, 'show'])->name('.orders.show');
         Route::post('/orders/{order}/confirm', [OrderAdminController::class, 'confirmManualPayment'])->name('.orders.confirm');
         Route::post('/orders/{order}/reject', [OrderAdminController::class, 'rejectManualPayment'])->name('.orders.reject');
+        Route::post('/orders/{order}/domains/{registration}/mark-registered', [OrderAdminController::class, 'markDomainRegistered'])
+            ->name('.orders.domains.mark-registered');
         Route::post('/fundings/{funding}/approve', [AdminWalletFundingController::class, 'approve'])->name('.fundings.approve');
         Route::post('/fundings/{funding}/reject', [AdminWalletFundingController::class, 'reject'])->name('.fundings.reject');
         Route::post('/fundings/{funding}/reverse', [AdminWalletFundingController::class, 'reverse'])->name('.fundings.reverse');

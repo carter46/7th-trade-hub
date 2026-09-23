@@ -94,10 +94,9 @@
                             $canDemoUser = $demoIntegration?->isActive()
                                 && $demoIntegration->hasCapability(\App\Models\SiteIntegration::CAP_DEMO_USER_LOGIN)
                                 && filled($demoIntegration->demo_user_email);
-                            $canDemoAdmin = $demoIntegration?->isActive()
-                                && $demoIntegration->hasCapability(\App\Models\SiteIntegration::CAP_DEMO_ADMIN_LOGIN)
-                                && filled($demoIntegration->demo_admin_email);
-                            $showDemo = $canDemoUser || $canDemoAdmin;
+                            // Catalog View Demo exposes Login as User only.
+                            $canDemoAdmin = false;
+                            $showDemo = $canDemoUser;
                         @endphp
                         @if ($showDemo)
                             <a href="{{ route('login') }}" class="px-5 py-3 rounded-xl border border-white/15 font-bold hover:bg-white/5">Log in to view demo</a>

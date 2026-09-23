@@ -7,6 +7,7 @@ use App\Models\PlatformProduct;
 use App\Models\User;
 use App\Support\Domains\DomainFqdn;
 use App\Support\Domains\DomainProductTldPolicy;
+use App\Support\Domains\DomainRegistrantContact;
 use InvalidArgumentException;
 
 class DomainCheckoutValidator

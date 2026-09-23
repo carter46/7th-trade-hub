@@ -33,24 +33,20 @@ class DemoLaunchService
         }
 
         $role = strtolower($role);
-        if (! in_array($role, ['user', 'admin'], true)) {
-            throw new InvalidArgumentException('Invalid demo role.');
+        if ($role !== 'user') {
+            throw new InvalidArgumentException('Demo admin login is not available.');
         }
 
-        $capability = $role === 'admin'
-            ? SiteIntegration::CAP_DEMO_ADMIN_LOGIN
-            : SiteIntegration::CAP_DEMO_USER_LOGIN;
+        $capability = SiteIntegration::CAP_DEMO_USER_LOGIN;
 
         if (! $integration->hasCapability($capability)) {
-            throw new InvalidArgumentException('This demo does not allow login as '.$role.'.');
+            throw new InvalidArgumentException('This demo does not allow login as user.');
         }
 
-        $email = $role === 'admin'
-            ? $integration->demo_admin_email
-            : $integration->demo_user_email;
+        $email = $integration->demo_user_email;
 
         if (! is_string($email) || $email === '') {
-            throw new InvalidArgumentException('Demo '.$role.' email is not configured.');
+            throw new InvalidArgumentException('Demo user email is not configured.');
         }
 
         return $this->issueLaunch(

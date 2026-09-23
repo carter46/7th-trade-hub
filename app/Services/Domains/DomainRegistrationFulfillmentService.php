@@ -22,10 +22,6 @@ class DomainRegistrationFulfillmentService
 
     public function fulfillOrder(Order $order): void
     {
-        if (! config('domains.auto_register_on_purchase', true)) {
-            return;
-        }
-
         $order->loadMissing('items');
 
         foreach ($order->items as $item) {
@@ -48,11 +44,28 @@ class DomainRegistrationFulfillmentService
         $quoteId = (int) ($options['domain_quote_id'] ?? 0);
 
         if ($fqdn === '' || $quoteId <= 0) {
+            $this->recordFulfillmentDataMissing($order, $item, $fqdn !== '' ? $fqdn : 'unknown', 'Order line is missing domain FQDN or quote reference.');
+
             return;
         }
 
         $quote = DomainQuote::query()->find($quoteId);
         if (! $quote) {
+            $this->recordFulfillmentDataMissing($order, $item, $fqdn, 'Domain quote #'.$quoteId.' was not found for fulfillment.');
+
+            return;
+        }
+
+        $isManual = $quote->isManualFulfillment()
+            || ($options['domain_fulfillment'] ?? null) === 'manual';
+
+        if ($isManual) {
+            $this->fulfillManualOrderItem($order, $item, $quote, $fqdn, $options);
+
+            return;
+        }
+
+        if (! config('domains.auto_register_on_purchase', true)) {
             return;
         }
 
@@ -157,6 +170,62 @@ class DomainRegistrationFulfillmentService
         }
     }
 
+    /**
+     * @param  array<string, mixed>  $options
+     */
+    private function fulfillManualOrderItem(
+        Order $order,
+        OrderItem $item,
+        DomainQuote $quote,
+        string $fqdn,
+        array $options,
+    ): void {
+        $registrantContact = $options['registrant_contact'] ?? null;
+        if (! is_array($registrantContact)) {
+            $registration = DomainRegistration::query()->create([
+                'order_id' => $order->id,
+                'order_item_id' => $item->id,
+                'domain_quote_id' => $quote->id,
+                'fqdn' => $fqdn,
+                'provider_key' => DomainQuote::PROVIDER_KEY_MANUAL,
+                'provider_cost_at_checkout' => $quote->provider_cost,
+                'provider_currency_at_checkout' => $quote->provider_currency,
+                'status' => DomainRegistration::STATUS_FAILED,
+                'error_message' => 'Registrant contact details are missing.',
+                'provider_meta' => [
+                    'fulfillment' => 'manual',
+                    'domain_fulfillment' => 'manual',
+                ],
+            ]);
+            $this->audit->log('domains.fulfillment.failed', $registration, ['reason' => 'missing_registrant']);
+
+            return;
+        }
+
+        $registration = DomainRegistration::query()->create([
+            'order_id' => $order->id,
+            'order_item_id' => $item->id,
+            'domain_quote_id' => $quote->id,
+            'fqdn' => $fqdn,
+            'provider_key' => DomainQuote::PROVIDER_KEY_MANUAL,
+            'provider_cost_at_checkout' => $quote->provider_cost,
+            'provider_currency_at_checkout' => $quote->provider_currency,
+            'registrant_contact' => $registrantContact,
+            'status' => DomainRegistration::STATUS_PENDING_MANUAL,
+            'provider_meta' => [
+                'fulfillment' => 'manual',
+                'domain_fulfillment' => 'manual',
+                'locked_retail_price' => (string) $quote->retail_price,
+            ],
+            'error_message' => 'Awaiting manual domain registration by admin.',
+        ]);
+
+        $this->audit->log('domains.fulfillment.pending_manual', $registration, [
+            'fqdn' => $fqdn,
+            'order_id' => $order->id,
+        ]);
+    }
+
     private function markFailed(DomainRegistration $registration, string $message): void
     {
         $registration->update([
@@ -179,6 +248,68 @@ class DomainRegistrationFulfillmentService
         $this->audit->log('domains.fulfillment.reconciliation_required', $registration->fresh(), [
             'message' => Str::limit($message, 200),
         ]);
+    }
+
+    private function recordFulfillmentDataMissing(Order $order, OrderItem $item, string $fqdn, string $message): void
+    {
+        $registration = DomainRegistration::query()->create([
+            'order_id' => $order->id,
+            'order_item_id' => $item->id,
+            'domain_quote_id' => null,
+            'fqdn' => Str::limit($fqdn, 191, ''),
+            'provider_key' => DomainQuote::PROVIDER_KEY_MANUAL,
+            'provider_cost_at_checkout' => 0,
+            'provider_currency_at_checkout' => 'NGN',
+            'status' => DomainRegistration::STATUS_FAILED,
+            'error_message' => Str::limit($message, 500),
+        ]);
+        $this->audit->log('domains.fulfillment.failed', $registration, [
+            'reason' => 'missing_fulfillment_data',
+            'message' => Str::limit($message, 200),
+        ]);
+    }
+
+    /**
+     * Admin completes offline registration for a pending_manual row.
+     *
+     * @param  list<string>|null  $nameservers
+     */
+    public function markManualRegistered(DomainRegistration $registration, ?string $providerReference = null, ?array $nameservers = null): DomainRegistration
+    {
+        if ($registration->status === DomainRegistration::STATUS_REGISTERED) {
+            return $registration;
+        }
+
+        if ($registration->status !== DomainRegistration::STATUS_PENDING_MANUAL
+            || $registration->provider_key !== DomainQuote::PROVIDER_KEY_MANUAL) {
+            throw new \InvalidArgumentException('Only pending manual domain registrations can be marked registered this way.');
+        }
+
+        $ns = is_array($nameservers)
+            ? array_values(array_filter(array_map(fn ($v) => strtolower(trim((string) $v)), $nameservers)))
+            : [];
+
+        $registration->update([
+            'status' => DomainRegistration::STATUS_REGISTERED,
+            'provider_reference' => $providerReference !== null && $providerReference !== ''
+                ? Str::limit($providerReference, 191, '')
+                : $registration->provider_reference,
+            'nameservers' => $ns !== [] ? $ns : $registration->nameservers,
+            'nameservers_updated_at' => $ns !== [] ? now() : $registration->nameservers_updated_at,
+            'registered_at' => now(),
+            'error_message' => null,
+            'provider_meta' => array_merge($registration->provider_meta ?? [], [
+                'fulfillment' => 'manual',
+                'domain_fulfillment' => 'manual',
+                'marked_registered_at' => now()->toIso8601String(),
+            ]),
+        ]);
+
+        $this->audit->log('domains.fulfillment.registered', $registration->fresh(), [
+            'manual' => true,
+        ]);
+
+        return $registration->fresh();
     }
 
     private function isDomainPurchaseLine(OrderItem $item): bool

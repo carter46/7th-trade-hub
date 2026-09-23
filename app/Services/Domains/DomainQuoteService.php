@@ -3,8 +3,10 @@
 namespace App\Services\Domains;
 
 use App\Data\Domains\DomainTld;
+use App\Models\DomainManualTldPrice;
 use App\Models\DomainProvider;
 use App\Models\DomainQuote;
+use App\Models\DomainRegistration;
 use App\Models\PlatformProduct;
 use App\Models\User;
 use App\Services\Domains\Exceptions\DomainBusinessException;
@@ -22,6 +24,8 @@ class DomainQuoteService
         private DomainProviderManager $providers,
         private PlatformDomainPricingPolicy $pricing,
         private DomainAuditLogger $audit,
+        private DomainCommerceModeResolver $commerceMode,
+        private DomainManualTldPriceService $manualPrices,
     ) {}
 
     /**
@@ -101,6 +105,10 @@ class DomainQuoteService
             return $this->quoteFailure($fqdn, '0.00', 'Selected extension is not available for this product.');
         }
 
+        if ($this->commerceMode->isManual()) {
+            return $this->attemptManualQuoteForTld($user, $product, $parsed);
+        }
+
         try {
             $result = $this->providers->quoteThroughTld($parsed['tld'], $fqdn, function ($adapter, DomainProvider $provider) use ($fqdn) {
                 $availability = $adapter->checkAvailability($provider, $fqdn);
@@ -123,7 +131,9 @@ class DomainQuoteService
             });
         } catch (DomainBusinessException $e) {
             return $this->quoteFailure($fqdn, '0.00', $e->getMessage());
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            report($e);
+
             return $this->quoteFailure($fqdn, '0.00', 'Domain search is temporarily unavailable. Please try again shortly.');
         }
 
@@ -161,7 +171,10 @@ class DomainQuoteService
             'retail_currency' => $retail['retail_currency'],
             'premium' => $registration->premium,
             'purchase_type' => $registration->purchaseType,
-            'provider_meta' => $registration->providerMeta,
+            'provider_meta' => array_merge($registration->providerMeta ?? [], [
+                'fulfillment' => 'provider',
+                'domain_fulfillment' => 'provider',
+            ]),
             'expires_at' => now()->addMinutes($ttl),
         ]);
 
@@ -178,6 +191,90 @@ class DomainQuoteService
             'premium' => $registration->premium,
             'quote_token' => $plainToken,
             'message' => null,
+        ];
+    }
+
+    /**
+     * @param  array{sld: string, tld: string, fqdn: string}  $parsed
+     * @return array{
+     *     available: bool,
+     *     fqdn: string,
+     *     retail_price: string,
+     *     premium: bool,
+     *     quote_token: string|null,
+     *     message: string|null
+     * }
+     */
+    private function attemptManualQuoteForTld(User $user, PlatformProduct $product, array $parsed): array
+    {
+        $fqdn = $parsed['fqdn'];
+
+        try {
+            $priceRow = $this->manualPrices->requireActivePrice($product, $parsed['tld']);
+        } catch (InvalidArgumentException $e) {
+            return $this->quoteFailure($fqdn, '0.00', $e->getMessage());
+        }
+
+        $busy = DomainRegistration::query()
+            ->where('fqdn', $fqdn)
+            ->whereIn('status', [
+                DomainRegistration::STATUS_PENDING,
+                DomainRegistration::STATUS_PENDING_MANUAL,
+                DomainRegistration::STATUS_PROCESSING,
+                DomainRegistration::STATUS_REGISTERED,
+                DomainRegistration::STATUS_RECONCILIATION_REQUIRED,
+            ])
+            ->exists();
+
+        if ($busy) {
+            return $this->quoteFailure(
+                $fqdn,
+                '0.00',
+                'This domain is already registered or pending on 7th Trade Hub.',
+            );
+        }
+
+        $retail = number_format((float) $priceRow->retail_price, 2, '.', '');
+        $plainToken = Str::random(64);
+        $ttl = max(1, (int) config('domains.quote_ttl_minutes', 15));
+
+        $quote = DomainQuote::query()->create([
+            'user_id' => $user->id,
+            'platform_product_id' => $product->id,
+            'provider_key' => DomainQuote::PROVIDER_KEY_MANUAL,
+            'token_hash' => hash('sha256', $plainToken),
+            'fqdn' => $fqdn,
+            'tld' => $parsed['tld'],
+            'sld' => $parsed['sld'],
+            'provider_cost' => 0,
+            'provider_currency' => 'NGN',
+            'retail_price' => $retail,
+            'retail_currency' => 'NGN',
+            'premium' => false,
+            'purchase_type' => 'registration',
+            'provider_meta' => [
+                'fulfillment' => 'manual',
+                'domain_fulfillment' => 'manual',
+                'manual_tld_price_id' => $priceRow->id,
+                'locked_retail_price' => $retail,
+            ],
+            'expires_at' => now()->addMinutes($ttl),
+        ]);
+
+        $this->audit->log('domains.quote.created', $quote, [
+            'fqdn' => $fqdn,
+            'provider_key' => DomainQuote::PROVIDER_KEY_MANUAL,
+            'retail_price' => $retail,
+            'fulfillment' => 'manual',
+        ], $user->id);
+
+        return [
+            'available' => true,
+            'fqdn' => $fqdn,
+            'retail_price' => $retail,
+            'premium' => false,
+            'quote_token' => $plainToken,
+            'message' => 'Availability cannot be verified automatically. This purchase is a manual domain request for admin fulfillment.',
         ];
     }
 
@@ -340,16 +437,32 @@ class DomainQuoteService
             $validated = $this->validateQuoteForCheckout($user, $plainToken, $expectedFqdn, $expectedProductId, consume: false, expectedOrderId: $orderId);
 
             $quote = $validated['quote'];
+            // Keep the quote alive through gateway / manual-bank payment windows (and admin confirm lag).
+            $paymentHoldMinutes = max(
+                (int) config('domains.quote_ttl_minutes', 15),
+                \App\Modules\Catalog\Services\PlatformCheckoutService::MANUAL_PAYMENT_WINDOW_MINUTES + 60,
+                (int) config('domains.reserved_quote_hold_minutes', 180),
+            );
+            $holdUntil = now()->addMinutes($paymentHoldMinutes);
+
             $quote->update([
                 'reserved_at' => now(),
                 'reserved_order_id' => $orderId,
+                'expires_at' => $quote->expires_at && $quote->expires_at->greaterThan($holdUntil)
+                    ? $quote->expires_at
+                    : $holdUntil,
             ]);
 
             $this->audit->log('domains.quote.reserved', $quote->fresh(), [
                 'order_id' => $orderId,
+                'expires_at' => $quote->fresh()->expires_at?->toIso8601String(),
             ], $user->id);
 
-            return $validated;
+            return [
+                'quote' => $quote->fresh(),
+                'validated_retail' => $validated['validated_retail'],
+                'registration' => $validated['registration'],
+            ];
         });
     }
 
@@ -430,12 +543,11 @@ class DomainQuoteService
             throw new InvalidArgumentException('Domain quote does not match this product.');
         }
 
-        if (! $consume && $quote->reserved_order_id !== null && $expectedOrderId !== null && (int) $quote->reserved_order_id !== (int) $expectedOrderId) {
-            throw new InvalidArgumentException('Domain quote is reserved for another checkout.');
-        }
-
-        if (! $consume && $quote->reserved_order_id !== null && $expectedOrderId === null) {
-            throw new InvalidArgumentException('Domain quote is reserved for another checkout.');
+        // Reserved quotes are bound to one pending order (gateway / manual bank). Never allow
+        // wallet or another checkout to consume or re-reserve the same token mid-payment.
+        if ($quote->reserved_order_id !== null
+            && ($expectedOrderId === null || (int) $quote->reserved_order_id !== (int) $expectedOrderId)) {
+            throw new InvalidArgumentException('Domain quote is reserved for another checkout. Complete or cancel that payment, or check availability again for a new quote.');
         }
 
         return $this->validateLockedQuote($quote, $user);
@@ -446,8 +558,23 @@ class DomainQuoteService
      */
     private function validateLockedQuote(DomainQuote $quote, User $user): array
     {
-        if ($quote->isExpired()) {
+        // Reserved quotes are held through payment; do not fail consume solely on the original browse TTL.
+        if (! $quote->isReserved() && $quote->isExpired()) {
             throw new InvalidArgumentException('Domain quote has expired. Please check availability again.');
+        }
+
+        if ($quote->isManualFulfillment()) {
+            return $this->validateLockedManualQuote($quote);
+        }
+
+        // Reserved provider quotes: payment is being confirmed — honor the locked retail.
+        // Live availability / provider enablement are re-checked during fulfillment.
+        if ($quote->isReserved()) {
+            return [
+                'quote' => $quote,
+                'validated_retail' => number_format((float) $quote->retail_price, 2, '.', ''),
+                'registration' => null,
+            ];
         }
 
         $provider = $this->providers->providerRecord($quote->provider_key, requireEnabled: true);
@@ -479,6 +606,37 @@ class DomainQuoteService
             'quote' => $quote,
             'validated_retail' => $retail['retail_price'],
             'registration' => $registration,
+        ];
+    }
+
+    /**
+     * @return array{quote: DomainQuote, validated_retail: string, registration: null}
+     */
+    private function validateLockedManualQuote(DomainQuote $quote): array
+    {
+        // In-flight reserved manual quotes may finish after providers come back online.
+        // Fresh (non-reserved) manual quotes must not checkout once Provider mode is active.
+        if (! $quote->isReserved() && ! $this->commerceMode->isManual()) {
+            throw new InvalidArgumentException('Domain pricing mode changed. Please check availability again.');
+        }
+
+        $product = $quote->product ?? PlatformProduct::query()->findOrFail($quote->platform_product_id);
+        $locked = number_format((float) $quote->retail_price, 2, '.', '');
+
+        // New checkouts must still target an active/allowed extension. Reserved quotes keep the locked price
+        // even if the admin later deactivates the TLD or changes the list/price.
+        if (! $quote->isReserved()) {
+            if (! DomainProductTldPolicy::isAllowed($product, (string) $quote->tld)) {
+                throw new InvalidArgumentException('Selected extension is not available for this product.');
+            }
+
+            $this->manualPrices->requireActivePrice($product, (string) $quote->tld);
+        }
+
+        return [
+            'quote' => $quote,
+            'validated_retail' => $locked,
+            'registration' => null,
         ];
     }
 
@@ -530,7 +688,42 @@ class DomainQuoteService
             default => $allowed,
         };
 
+        if ($this->commerceMode->isManual()) {
+            return $this->mapManualTlds($product, $scopeTlds);
+        }
+
         return $this->mapRegistryTlds($scopeTlds);
+    }
+
+    /**
+     * @param  list<string>  $onlyTlds
+     * @return list<array{tld: string, label: string, retail_price?: string}>
+     */
+    private function mapManualTlds(PlatformProduct $product, array $onlyTlds): array
+    {
+        $prices = $this->manualPrices->pricesForProduct($product, activeOnly: true);
+        $preset = DomainProductTldPolicy::defaultFeaturedTlds();
+
+        return collect($onlyTlds)
+            ->filter(fn (string $tld) => $prices->has($tld))
+            ->sortBy(function (string $tld) use ($preset) {
+                $presetIndex = array_search($tld, $preset, true);
+
+                return $presetIndex === false ? 1000 + ord($tld[0] ?? 'z') : $presetIndex;
+            })
+            ->values()
+            ->map(function (string $tld) use ($prices) {
+                /** @var DomainManualTldPrice $row */
+                $row = $prices->get($tld);
+                $amount = number_format((float) $row->retail_price, 0, '.', ',');
+
+                return [
+                    'tld' => $tld,
+                    'label' => '.'.$tld.' — ₦'.$amount,
+                    'retail_price' => number_format((float) $row->retail_price, 2, '.', ''),
+                ];
+            })
+            ->all();
     }
 
     /**
@@ -585,10 +778,26 @@ class DomainQuoteService
 
     public function cheapestRetailPrice(PlatformProduct $product): ?float
     {
-        $cacheKey = 'domain.cheapest_retail.'.$product->id;
+        $mode = $this->commerceMode->current()->value;
+        $cacheKey = 'domain.cheapest_retail.'.$product->id.'.'.$mode;
         $ttl = max(1, (int) config('domains.tld_cache_ttl_minutes', 60));
 
         $retail = Cache::remember($cacheKey, now()->addMinutes($ttl), function () use ($product) {
+            if ($this->commerceMode->isManual()) {
+                $prices = $this->manualPrices->pricesForProduct($product, activeOnly: true);
+                $allowed = array_fill_keys(DomainProductTldPolicy::allowedTlds($product), true);
+                $min = null;
+                foreach ($prices as $tld => $row) {
+                    if (! isset($allowed[$tld])) {
+                        continue;
+                    }
+                    $value = (float) $row->retail_price;
+                    $min = $min === null ? $value : min($min, $value);
+                }
+
+                return $min;
+            }
+
             try {
                 $tlds = $this->providers->mergedTldList();
             } catch (\Throwable) {

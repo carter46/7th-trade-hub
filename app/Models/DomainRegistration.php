@@ -9,6 +9,8 @@ class DomainRegistration extends Model
 {
     public const STATUS_PENDING = 'pending';
 
+    public const STATUS_PENDING_MANUAL = 'pending_manual';
+
     public const STATUS_PROCESSING = 'processing';
 
     public const STATUS_REGISTERED = 'registered';
@@ -70,6 +72,23 @@ class DomainRegistration extends Model
     public function isRegistered(): bool
     {
         return $this->status === self::STATUS_REGISTERED;
+    }
+
+    public function isPendingManual(): bool
+    {
+        return $this->status === self::STATUS_PENDING_MANUAL;
+    }
+
+    public function isManualFulfillment(): bool
+    {
+        if ($this->provider_key === DomainQuote::PROVIDER_KEY_MANUAL) {
+            return true;
+        }
+
+        $meta = $this->provider_meta ?? [];
+
+        return ($meta['fulfillment'] ?? null) === 'manual'
+            || ($meta['domain_fulfillment'] ?? null) === 'manual';
     }
 
     /**

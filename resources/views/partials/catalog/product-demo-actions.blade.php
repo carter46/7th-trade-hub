@@ -10,10 +10,9 @@
     $canDemoUser = $demoIntegration
         && $demoIntegration->hasCapability(\App\Models\SiteIntegration::CAP_DEMO_USER_LOGIN)
         && filled($demoIntegration->demo_user_email);
-    $canDemoAdmin = $demoIntegration
-        && $demoIntegration->hasCapability(\App\Models\SiteIntegration::CAP_DEMO_ADMIN_LOGIN)
-        && filled($demoIntegration->demo_admin_email);
-    $showDemo = $canDemoUser || $canDemoAdmin;
+    // Catalog View Demo exposes Login as User only (admin demo launch is disabled).
+    $canDemoAdmin = false;
+    $showDemo = $canDemoUser;
     $tutorialUrl = filled($product->tutorial_url) ? (string) $product->tutorial_url : null;
     $showTutorial = filled($tutorialUrl);
     $modalName = $modalName ?? 'view-demo-product-'.$product->id;

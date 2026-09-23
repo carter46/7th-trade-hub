@@ -41,7 +41,11 @@
             </div>
         @endif
 
-        @if($registration->error_message && ! $registration->isRegistered())
+        @if($registration->isPendingManual())
+            <x-dashboard.alert type="info">
+                Your domain purchase is queued for manual registration. We will update this page once an admin completes registration.
+            </x-dashboard.alert>
+        @elseif($registration->error_message && ! $registration->isRegistered())
             <x-dashboard.alert type="warning">{{ $registration->error_message }}</x-dashboard.alert>
         @endif
     </x-dashboard.card>
@@ -52,6 +56,11 @@
             <p class="mt-1 text-sm text-text-secondary">
                 These are the current nameservers for this domain. Changes may take 24–48 hours to propagate globally.
             </p>
+            @if($registration->isManualFulfillment() && $registration->isRegistered())
+                <p class="mt-1 text-xs text-text-muted">
+                    This domain was registered offline. Nameserver changes here are saved on your account; update the registrar panel separately if needed.
+                </p>
+            @endif
         </div>
 
         @if($ns !== [])
@@ -64,7 +73,13 @@
                 @endforeach
             </dl>
         @else
-            <p class="text-sm text-text-muted">Nameserver details are not synced yet. Use Refresh from Registrar if this domain is registered.</p>
+            <p class="text-sm text-text-muted">
+                @if($registration->isPendingManual())
+                    Nameservers will appear after manual registration is completed.
+                @else
+                    Nameserver details are not synced yet. Use Refresh from Registrar if this domain is registered.
+                @endif
+            </p>
         @endif
 
         @if($canManageNameservers)
@@ -72,20 +87,26 @@
                 <x-dashboard.button :href="route('dashboard.my-domains.show', ['registration' => $registration, 'change' => 1])" variant="secondary" size="sm">
                     Change Nameservers
                 </x-dashboard.button>
-                @if($defaults !== [])
+                @if($defaults !== [] && ! $registration->isManualFulfillment())
                     <form method="POST" action="{{ route('dashboard.my-domains.nameservers.defaults', $registration) }}" class="inline">
                         @csrf
                         <x-dashboard.button type="submit" variant="secondary" size="sm">Use Platform Defaults</x-dashboard.button>
                     </form>
                 @endif
-                <form method="POST" action="{{ route('dashboard.my-domains.nameservers.sync', $registration) }}" class="inline">
-                    @csrf
-                    <x-dashboard.button type="submit" variant="secondary" size="sm">Refresh from Registrar</x-dashboard.button>
-                </form>
+                @if(! $registration->isManualFulfillment())
+                    <form method="POST" action="{{ route('dashboard.my-domains.nameservers.sync', $registration) }}" class="inline">
+                        @csrf
+                        <x-dashboard.button type="submit" variant="secondary" size="sm">Refresh from Registrar</x-dashboard.button>
+                    </form>
+                @endif
             </div>
         @else
             <p class="text-sm text-text-muted border-t border-border-default pt-4">
-                Nameservers can be changed once domain registration completes successfully.
+                @if($registration->isPendingManual())
+                    Nameserver management unlocks after an admin marks this domain as registered.
+                @else
+                    Nameservers can be changed once domain registration completes successfully.
+                @endif
             </p>
         @endif
     </x-dashboard.card>

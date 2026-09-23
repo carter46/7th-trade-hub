@@ -182,6 +182,8 @@
                     @include('dashboard.admin.partials.domain-allowed-tlds', [
                         'product' => $product,
                         'registryTlds' => $registryTlds ?? [],
+                        'manualPricingMode' => $manualPricingMode ?? false,
+                        'manualTldPrices' => $manualTldPrices ?? collect(),
                     ])
                 </div>
             @elseif (! $isDomainProduct)

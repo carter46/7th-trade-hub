@@ -147,14 +147,36 @@ class SiteIntegrationPlatformTest extends TestCase
         $user = User::factory()->create(['email_verified_at' => now()]);
         $user->assignRole('user');
 
-        $launch = app(DemoLaunchService::class)->launchDemo($user, $integration, 'admin');
+        $launch = app(DemoLaunchService::class)->launchDemo($user, $integration, 'user');
 
-        $this->assertSame('demo-admin@example.com', $launch['assertion']['identity']['email']);
+        $this->assertSame('demo-user@example.com', $launch['assertion']['identity']['email']);
         $this->assertStringContainsString('token=', $launch['redirect_url']);
         $this->assertStringNotContainsString('email=', $launch['redirect_url']);
 
         $signer = app(ProtocolV1Signer::class);
         $this->assertTrue($signer->verify($launch['assertion'], $result['credentials']['client_secret']));
+    }
+
+    public function test_demo_admin_launch_is_rejected(): void
+    {
+        $product = $this->seedWebsiteProduct();
+        $result = app(SiteIntegrationAdminService::class)->create([
+            'platform_product_id' => $product->id,
+            'base_url' => 'https://demo.example.com',
+            'demo_user_email' => 'demo-user@example.com',
+            'demo_admin_email' => 'demo-admin@example.com',
+        ]);
+        $integration = $result['integration'];
+        $integration->status = SiteIntegrationStatus::Active;
+        $integration->save();
+
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $user->assignRole('user');
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Demo admin login is not available.');
+
+        app(DemoLaunchService::class)->launchDemo($user, $integration, 'admin');
     }
 
     public function test_renew_extends_same_user_tool_row(): void
