@@ -84,4 +84,20 @@ class NotificationDedupeService
             return false;
         }
     }
+
+    /**
+     * Drop a claim so a failed send can be retried (claims are otherwise held for 24h).
+     */
+    public function release(string $type, ?string $dedupeKey, string $channel = 'mail'): void
+    {
+        if (! $dedupeKey || ! Schema::hasTable('notification_dedupe_claims')) {
+            return;
+        }
+
+        NotificationDedupeClaim::query()
+            ->where('notification_type', $type)
+            ->where('dedupe_key', $dedupeKey)
+            ->where('channel', $channel)
+            ->delete();
+    }
 }

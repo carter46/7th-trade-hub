@@ -132,8 +132,9 @@ class MailChannel implements NotificationChannel
             }
         }
 
-        if (! $sentAny && $emails->isNotEmpty()) {
-            return;
+        // Do not block retries for 24h when the provider never accepted the message.
+        if (! $sentAny) {
+            $this->dedupe->release($message->type, $message->dedupeKey, 'mail');
         }
     }
 

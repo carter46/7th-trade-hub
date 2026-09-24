@@ -102,10 +102,46 @@ class DomainManualRejectReplaceTest extends TestCase
             ->assertSee('replacement-ok.com')
             ->assertSee('Reject domain');
 
-        $approved = $service->markManualRegistered($rejected, 'OFFLINE-1', null, $admin->id);
-        $this->assertFalse($approved[1]);
-        $this->assertSame(DomainRegistration::STATUS_REGISTERED, $approved[0]->status);
-        $this->assertSame('replacement-ok.com', $approved[0]->fqdn);
+        $approvedTuple = $service->markManualRegistered($rejected, 'OFFLINE-1', null, $admin->id);
+        $this->assertFalse($approvedTuple[1]);
+        $this->assertSame(DomainRegistration::STATUS_REGISTERED, $approvedTuple[0]->status);
+        $this->assertSame('replacement-ok.com', $approvedTuple[0]->fqdn);
+    }
+
+    public function test_reject_and_approve_dispatch_user_mail_notifications(): void
+    {
+        [$user, $registration] = $this->seedManualPendingRegistration();
+        $admin = User::factory()->create(['email_verified_at' => now()]);
+        $admin->assignRole('admin');
+
+        $dispatcher = \Mockery::mock(\App\Services\Notifications\NotificationDispatcher::class);
+        $dispatcher->shouldReceive('notifyUser')
+            ->once()
+            ->withArgs(function ($notifiable, $message, $channels) use ($user) {
+                return (int) $notifiable->id === (int) $user->id
+                    && $message->type === 'order.domain_rejected'
+                    && in_array('mail', $channels, true);
+            });
+        $dispatcher->shouldReceive('notifyAdmins')->once();
+        $dispatcher->shouldReceive('notifyUser')
+            ->once()
+            ->withArgs(function ($notifiable, $message, $channels) use ($user) {
+                return (int) $notifiable->id === (int) $user->id
+                    && $message->type === 'order.domain_approved'
+                    && in_array('mail', $channels, true);
+            });
+
+        $this->app->instance(\App\Services\Notifications\NotificationDispatcher::class, $dispatcher);
+
+        $service = $this->app->make(DomainRegistrationFulfillmentService::class);
+        $rejected = $service->rejectManualRegistration($registration, 'Not available at registrar.', $admin->id);
+        $this->assertSame(DomainRegistration::STATUS_REJECTED, $rejected->status);
+
+        $pending = $service->requestManualReplacement($rejected, 'approved-now.com', $user);
+        $this->assertSame(DomainRegistration::STATUS_PENDING_REPLACEMENT, $pending->status);
+
+        [$approved] = $service->markManualRegistered($pending, null, null, $admin->id);
+        $this->assertSame(DomainRegistration::STATUS_REGISTERED, $approved->status);
     }
 
     public function test_provider_domain_cannot_use_manual_reject(): void

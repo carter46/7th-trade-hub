@@ -286,12 +286,12 @@ class DomainRegistrationFulfillmentService
      */
     public function markManualRegistered(DomainRegistration $registration, ?string $providerReference = null, ?array $nameservers = null, ?int $adminId = null): array
     {
-        return DB::transaction(function () use ($registration, $providerReference, $nameservers, $adminId) {
+        $result = DB::transaction(function () use ($registration, $providerReference, $nameservers, $adminId) {
             /** @var DomainRegistration $locked */
             $locked = DomainRegistration::query()->whereKey($registration->id)->lockForUpdate()->firstOrFail();
 
             if ($locked->status === DomainRegistration::STATUS_REGISTERED) {
-                return [$locked->fresh(['order.user']), true];
+                return [$locked->fresh(['order.user']), true, false];
             }
 
             if (! $locked->isManualFulfillment()
@@ -335,10 +335,21 @@ class DomainRegistrationFulfillmentService
                 'admin_id' => $adminId,
             ]);
 
-            $this->notifyUserDomainApproved($fresh, $wasReplacement);
-
-            return [$fresh->fresh(['order.user']), false];
+            return [$fresh->fresh(['order.user']), false, $wasReplacement];
         });
+
+        [$fresh, $alreadyRegistered, $wasReplacement] = $result;
+
+        if (! $alreadyRegistered) {
+            $this->dispatchAfterCommit(function () use ($fresh, $wasReplacement) {
+                $registration = DomainRegistration::query()->with(['order.user'])->find($fresh->id);
+                if ($registration) {
+                    $this->notifyUserDomainApproved($registration, $wasReplacement);
+                }
+            });
+        }
+
+        return [$fresh, $alreadyRegistered];
     }
 
     public function rejectManualRegistration(DomainRegistration $registration, string $reason, ?int $adminId = null): DomainRegistration
@@ -348,7 +359,7 @@ class DomainRegistrationFulfillmentService
             throw new InvalidArgumentException('A rejection reason is required.');
         }
 
-        return DB::transaction(function () use ($registration, $reason, $adminId) {
+        $fresh = DB::transaction(function () use ($registration, $reason, $adminId) {
             /** @var DomainRegistration $locked */
             $locked = DomainRegistration::query()->whereKey($registration->id)->lockForUpdate()->firstOrFail();
 
@@ -390,17 +401,24 @@ class DomainRegistrationFulfillmentService
                 ]),
             ]);
 
-            $fresh = $locked->fresh(['order.user']);
-            $this->audit->log('domains.fulfillment.rejected', $fresh, [
+            $updated = $locked->fresh(['order.user']);
+            $this->audit->log('domains.fulfillment.rejected', $updated, [
                 'fqdn' => $rejectedFqdn,
                 'reason' => Str::limit($reason, 200),
                 'admin_id' => $adminId,
             ]);
 
-            $this->notifyUserDomainRejected($fresh);
-
-            return $fresh;
+            return $updated;
         });
+
+        $this->dispatchAfterCommit(function () use ($fresh) {
+            $registration = DomainRegistration::query()->with(['order.user'])->find($fresh->id);
+            if ($registration) {
+                $this->notifyUserDomainRejected($registration);
+            }
+        });
+
+        return $fresh;
     }
 
     /**
@@ -414,7 +432,7 @@ class DomainRegistrationFulfillmentService
             throw $e;
         }
 
-        return DB::transaction(function () use ($registration, $normalized, $actor) {
+        [$fresh, $notifyAdmins] = DB::transaction(function () use ($registration, $normalized, $actor) {
             /** @var DomainRegistration $locked */
             $locked = DomainRegistration::query()->whereKey($registration->id)->lockForUpdate()->firstOrFail();
 
@@ -448,22 +466,42 @@ class DomainRegistrationFulfillmentService
                 ]),
             ]);
 
-            $fresh = $locked->fresh(['order.user', 'orderItem']);
-            $this->syncOrderFqdnReferences($fresh, $previousFqdn);
+            $updated = $locked->fresh(['order.user', 'orderItem']);
+            $this->syncOrderFqdnReferences($updated, $previousFqdn);
 
-            $this->audit->log('domains.fulfillment.replacement_requested', $fresh, [
+            $this->audit->log('domains.fulfillment.replacement_requested', $updated, [
                 'rejected_fqdn' => $rejectedFqdn,
                 'proposed_fqdn' => $normalized,
                 'user_id' => $actor?->id,
             ]);
 
-            // Notify admins once per rejection cycle, not on every FQDN correction.
-            if (! $wasAlreadyPendingReplacement) {
-                $this->notifyAdminsReplacementRequested($fresh);
-            }
-
-            return $fresh;
+            return [$updated, ! $wasAlreadyPendingReplacement];
         });
+
+        if ($notifyAdmins) {
+            $this->dispatchAfterCommit(function () use ($fresh) {
+                $registration = DomainRegistration::query()->with(['order.user'])->find($fresh->id);
+                if ($registration) {
+                    $this->notifyAdminsReplacementRequested($registration);
+                }
+            });
+        }
+
+        return $fresh;
+    }
+
+    /**
+     * Run side-effects after the surrounding transaction commits (or immediately if none).
+     */
+    private function dispatchAfterCommit(callable $callback): void
+    {
+        if (DB::transactionLevel() > 0) {
+            DB::afterCommit($callback);
+
+            return;
+        }
+
+        $callback();
     }
 
     private function assertFqdnAvailableForReplacement(string $fqdn, int $exceptRegistrationId): void
@@ -542,8 +580,14 @@ class DomainRegistrationFulfillmentService
 
     private function notifyUserDomainRejected(DomainRegistration $registration): void
     {
-        $user = $registration->order?->user;
-        if (! $user) {
+        $user = $this->resolveOrderUser($registration);
+        if (! $user?->email) {
+            Log::warning('domains.fulfillment.reject_notify_skipped', [
+                'registration_id' => $registration->id,
+                'order_id' => $registration->order_id,
+                'reason' => 'missing_user_or_email',
+            ]);
+
             return;
         }
 
@@ -551,31 +595,45 @@ class DomainRegistrationFulfillmentService
             ? route('dashboard.my-domains.show', $registration)
             : null;
 
-        $this->notifications->notifyUser(
-            $user,
-            new NotificationMessage(
-                type: 'order.domain_rejected',
-                title: __('Domain registration rejected'),
-                body: __('We could not register :fqdn. Reason: :reason. You can submit a free replacement domain.', [
-                    'fqdn' => $registration->fqdn,
-                    'reason' => $registration->error_message ?? '—',
-                ]),
-                actionUrl: $url,
-                meta: [
-                    'domain_registration_id' => $registration->id,
-                    'action_label' => __('Replace domain'),
-                ],
-                emailSubject: __('Domain rejected — replace :fqdn', ['fqdn' => $registration->fqdn]),
-                dedupeKey: 'domain.rejected.'.$registration->id.'.'.md5((string) $registration->error_message),
-            ),
-            ['database', 'mail']
-        );
+        try {
+            $this->notifications->notifyUser(
+                $user,
+                new NotificationMessage(
+                    type: 'order.domain_rejected',
+                    title: __('Domain registration rejected'),
+                    body: __('We could not register :fqdn. Reason: :reason. You can submit a free replacement domain.', [
+                        'fqdn' => $registration->fqdn,
+                        'reason' => $registration->error_message ?? '—',
+                    ]),
+                    actionUrl: $url,
+                    meta: [
+                        'domain_registration_id' => $registration->id,
+                        'action_label' => __('Replace domain'),
+                    ],
+                    emailSubject: __('Domain rejected — replace :fqdn', ['fqdn' => $registration->fqdn]),
+                    dedupeKey: 'domain.rejected.'.$registration->id.'.'.md5((string) $registration->error_message),
+                ),
+                ['database', 'mail']
+            );
+        } catch (\Throwable $e) {
+            Log::error('domains.fulfillment.reject_notify_failed', [
+                'registration_id' => $registration->id,
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     private function notifyUserDomainApproved(DomainRegistration $registration, bool $wasReplacement): void
     {
-        $user = $registration->order?->user;
-        if (! $user) {
+        $user = $this->resolveOrderUser($registration);
+        if (! $user?->email) {
+            Log::warning('domains.fulfillment.approve_notify_skipped', [
+                'registration_id' => $registration->id,
+                'order_id' => $registration->order_id,
+                'reason' => 'missing_user_or_email',
+            ]);
+
             return;
         }
 
@@ -591,22 +649,50 @@ class DomainRegistrationFulfillmentService
             ? __('Your replacement domain :fqdn has been approved and registered.', ['fqdn' => $registration->fqdn])
             : __('Your domain :fqdn has been registered successfully.', ['fqdn' => $registration->fqdn]);
 
-        $this->notifications->notifyUser(
-            $user,
-            new NotificationMessage(
-                type: 'order.domain_approved',
-                title: $title,
-                body: $body,
-                actionUrl: $url,
-                meta: [
-                    'domain_registration_id' => $registration->id,
-                    'action_label' => __('View domain'),
-                ],
-                emailSubject: $title.' — '.$registration->fqdn,
-                dedupeKey: 'domain.approved.'.$registration->id.'.'.$registration->fqdn,
-            ),
-            ['database', 'mail']
-        );
+        try {
+            $this->notifications->notifyUser(
+                $user,
+                new NotificationMessage(
+                    type: 'order.domain_approved',
+                    title: $title,
+                    body: $body,
+                    actionUrl: $url,
+                    meta: [
+                        'domain_registration_id' => $registration->id,
+                        'action_label' => __('View domain'),
+                    ],
+                    emailSubject: $title.' — '.$registration->fqdn,
+                    dedupeKey: 'domain.approved.'.$registration->id.'.'.$registration->fqdn,
+                ),
+                ['database', 'mail']
+            );
+        } catch (\Throwable $e) {
+            Log::error('domains.fulfillment.approve_notify_failed', [
+                'registration_id' => $registration->id,
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function resolveOrderUser(DomainRegistration $registration): ?User
+    {
+        $registration->loadMissing('order.user');
+
+        if ($registration->order?->user instanceof User) {
+            return $registration->order->user;
+        }
+
+        $userId = $registration->order?->user_id
+            ?? ($registration->order_id
+                ? Order::query()->whereKey($registration->order_id)->value('user_id')
+                : null);
+
+        if (! $userId) {
+            return null;
+        }
+
+        return User::query()->find($userId);
     }
 
     private function notifyAdminsReplacementRequested(DomainRegistration $registration): void
