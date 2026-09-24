@@ -172,6 +172,9 @@ class AdminEmailRoutingTest extends TestCase
         $mock = Mockery::mock(EmailService::class);
         $mock->shouldReceive('sendMailableHtml')->andReturn(SendResult::fail('brevo', 'Provider down'));
         $this->app->instance(EmailService::class, $mock);
+        $this->app->forgetInstance(\App\Services\Communications\Email\OutboundMail::class);
+        $this->app->forgetInstance(\App\Services\Notifications\Channels\MailChannel::class);
+        $this->app->forgetInstance(\App\Services\Notifications\NotificationDispatcher::class);
 
         $user = User::factory()->kycApproved()->create();
         $user->assignRole('user');
@@ -343,5 +346,8 @@ class AdminEmailRoutingTest extends TestCase
         $mock = Mockery::mock(EmailService::class);
         $mock->shouldReceive('sendMailableHtml')->andReturn(SendResult::ok('test', 'msg-1'));
         $this->app->instance(EmailService::class, $mock);
+        $this->app->forgetInstance(\App\Services\Communications\Email\OutboundMail::class);
+        $this->app->forgetInstance(\App\Services\Notifications\Channels\MailChannel::class);
+        $this->app->forgetInstance(\App\Services\Notifications\NotificationDispatcher::class);
     }
 }

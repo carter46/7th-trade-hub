@@ -16,8 +16,7 @@ use App\Services\Analytics\Providers\MicrosoftClarityProvider;
 use App\Services\Tracking\TrackingScriptRenderer;
 use App\Services\Branding\SiteBrandingRepository;
 use App\Services\Communications\Contact\PlatformContactRepository;
-use App\Services\Communications\Email\EmailProfile;
-use App\Services\Communications\Email\EmailService;
+use App\Services\Communications\Email\OutboundMail;
 use App\Services\Communications\LiveChat\LiveChatManager;
 use App\Services\Communications\Social\SocialLinkRepository;
 use Illuminate\Http\JsonResponse;
@@ -38,7 +37,7 @@ class SettingsController extends Controller
         private PlatformContactRepository $contact,
         private LiveChatManager $liveChat,
         private SocialLinkRepository $socialLinks,
-        private EmailService $emails,
+        private OutboundMail $emails,
     ) {}
 
     public function index(): View
@@ -356,11 +355,10 @@ class SettingsController extends Controller
         $wantsJson = $request->expectsJson() || $request->ajax();
 
         try {
-            $result = $this->emails->sendRaw(
+            $result = $this->emails->sendTestRaw(
                 $to,
                 $subject,
                 "This is a test email from {$siteName} Admin Settings.\n\nIf you received this, your mail configuration is working.\n\nSent at: ".now()->toDateTimeString(),
-                EmailProfile::NoReply,
             );
 
             $brevo = IntegrationProvider::forProvider(IntegrationProvider::BREVO)->fresh();

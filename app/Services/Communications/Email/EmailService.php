@@ -22,6 +22,10 @@ class EmailService
     ) {}
 
     /**
+     * Low-level transport. Application code should prefer OutboundMail (HTML)
+     * or NotificationDispatcher → MailChannel (notifications) so profile
+     * fallback stays consistent.
+     *
      * @param  int  $deferredStage  0 = initial send, 1 = after 5m retry, 2 = after 30m retry
      */
     public function send(OutgoingEmail $email, int $deferredStage = 0): SendResult

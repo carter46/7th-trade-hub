@@ -2,9 +2,9 @@
 
 namespace App\Services\Notifications\Channels;
 
-use App\Models\EmailIdentity;
 use App\Models\User;
-use App\Services\Communications\Email\EmailService;
+use App\Services\Communications\Email\OutboundMail;
+use App\Services\Communications\Email\SendResult;
 use App\Services\Notifications\EmailIdentityResolver;
 use App\Services\Notifications\NotificationDedupeService;
 use App\Services\Notifications\NotificationDeliveryTracer;
@@ -14,10 +14,13 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
+/**
+ * Canonical notification mail path: resolve profile → render layout → OutboundMail.
+ */
 class MailChannel implements NotificationChannel
 {
     public function __construct(
-        private EmailService $emails,
+        private OutboundMail $outbound,
         private EmailIdentityResolver $identityResolver,
         private NotificationDedupeService $dedupe,
         private NotificationDeliveryTracer $tracer,
@@ -25,6 +28,14 @@ class MailChannel implements NotificationChannel
     ) {}
 
     public function send(NotificationMessage $message, string $audience, ?iterable $recipients = null): void
+    {
+        $this->sendWithResult($message, $audience, $recipients);
+    }
+
+    /**
+     * Same as send(), but returns the last recipient's SendResult (for admin UX).
+     */
+    public function sendWithResult(NotificationMessage $message, string $audience, ?iterable $recipients = null): ?SendResult
     {
         $profile = $this->identityResolver->resolveProfileForType($message->type);
 
@@ -38,7 +49,7 @@ class MailChannel implements NotificationChannel
                 event: $message->meta['event'] ?? null,
             );
 
-            return;
+            return SendResult::fail('dedupe', 'Skipped: duplicate mail claim for '.$message->type);
         }
 
         if (! $this->dedupe->tryClaim($message->type, $message->dedupeKey, 'mail')) {
@@ -51,7 +62,7 @@ class MailChannel implements NotificationChannel
                 event: $message->meta['event'] ?? null,
             );
 
-            return;
+            return SendResult::fail('dedupe', 'Skipped: could not claim mail dedupe for '.$message->type);
         }
 
         $emails = $this->resolveRecipientEmails($audience, $recipients, $profile);
@@ -66,11 +77,12 @@ class MailChannel implements NotificationChannel
                 failureReason: 'No recipients',
             );
 
-            return;
+            return SendResult::fail('outbound', 'No mail recipients');
         }
 
         $context = $message->meta['email_context'] ?? [];
         $sentAny = false;
+        $lastResult = null;
 
         foreach ($emails as $entry) {
             $to = $entry['email'];
@@ -81,13 +93,14 @@ class MailChannel implements NotificationChannel
                     ? $this->renderer->renderAdmin($message, $user ?? new User(['name' => 'Admin', 'email' => $to]), $context)
                     : $this->renderer->renderUser($message, $user ?? new User(['name' => 'User', 'email' => $to]), $context);
 
-                $result = $this->emails->sendMailableHtml(
+                $result = $this->outbound->sendHtml(
                     to: $to,
                     subject: $message->emailSubject ?: $message->title,
                     html: $html,
                     profile: $profile,
                     templateKey: 'notification',
                 );
+                $lastResult = $result;
 
                 if ($result->success) {
                     $sentAny = true;
@@ -119,6 +132,8 @@ class MailChannel implements NotificationChannel
                     'error' => $e->getMessage(),
                 ]);
 
+                $lastResult = SendResult::fail('outbound', $e->getMessage());
+
                 $this->tracer->record(
                     notificationType: $message->type,
                     channel: 'mail',
@@ -136,6 +151,8 @@ class MailChannel implements NotificationChannel
         if (! $sentAny) {
             $this->dedupe->release($message->type, $message->dedupeKey, 'mail');
         }
+
+        return $lastResult;
     }
 
     /**

@@ -20,6 +20,21 @@ class DomainManualRejectReplaceTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Canonical mail path: Dispatcher → MailChannel → OutboundMail → EmailService.
+        $emails = \Mockery::mock(EmailService::class)->makePartial();
+        $emails->shouldReceive('sendMailableHtml')
+            ->byDefault()
+            ->andReturn(\App\Services\Communications\Email\SendResult::ok('test'));
+        $this->app->instance(EmailService::class, $emails);
+        $this->app->forgetInstance(\App\Services\Communications\Email\OutboundMail::class);
+        $this->app->forgetInstance(\App\Services\Notifications\Channels\MailChannel::class);
+        $this->app->forgetInstance(\App\Services\Notifications\NotificationDispatcher::class);
+    }
+
     /**
      * @return array{0: User, 1: DomainRegistration}
      */
@@ -120,16 +135,19 @@ class DomainManualRejectReplaceTest extends TestCase
             ->withArgs(function ($notifiable, $message, $channels) use ($user) {
                 return (int) $notifiable->id === (int) $user->id
                     && $message->type === 'order.domain_rejected'
-                    && in_array('mail', $channels, true);
-            });
+                    && $channels === ['database', 'mail']
+                    && filled($message->dedupeKey);
+            })
+            ->andReturn(\App\Services\Communications\Email\SendResult::ok('test'));
         $dispatcher->shouldReceive('notifyAdmins')->once();
         $dispatcher->shouldReceive('notifyUser')
             ->once()
             ->withArgs(function ($notifiable, $message, $channels) use ($user) {
                 return (int) $notifiable->id === (int) $user->id
                     && $message->type === 'order.domain_approved'
-                    && in_array('mail', $channels, true);
-            });
+                    && $channels === ['database', 'mail'];
+            })
+            ->andReturn(\App\Services\Communications\Email\SendResult::ok('test'));
 
         $this->app->instance(\App\Services\Notifications\NotificationDispatcher::class, $dispatcher);
 
@@ -226,6 +244,44 @@ class DomainManualRejectReplaceTest extends TestCase
         $this->assertStringContainsString('Manual', $metas);
     }
 
+    public function test_reject_route_sends_mail_via_sales_profile_through_outbound_mail(): void
+    {
+        [$user, $registration] = $this->seedManualPendingRegistration();
+        $admin = User::factory()->create(['email_verified_at' => now()]);
+        $admin->assignRole('admin');
+        $admin->givePermissionTo('users.manage');
+
+        $emails = \Mockery::mock(EmailService::class);
+        $emails->shouldReceive('sendMailableHtml')
+            ->once()
+            ->withArgs(function ($to, $subject, $html, $text, $profile) use ($user) {
+                return $to === $user->email
+                    && is_string($subject)
+                    && str_contains($subject, 'reject-me.com')
+                    && is_string($html)
+                    && $html !== ''
+                    && $profile === EmailProfile::Sales;
+            })
+            ->andReturn(\App\Services\Communications\Email\SendResult::ok('brevo', 'msg-1'));
+        $this->app->instance(EmailService::class, $emails);
+        $this->app->forgetInstance(\App\Services\Communications\Email\OutboundMail::class);
+        $this->app->forgetInstance(\App\Services\Notifications\Channels\MailChannel::class);
+        $this->app->forgetInstance(\App\Services\Notifications\NotificationDispatcher::class);
+        $this->app->forgetInstance(DomainRegistrationFulfillmentService::class);
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.domains.registrations.reject', [$user, $registration]), [
+                'reason' => 'Name not available at the registrar right now.',
+            ])
+            ->assertRedirect(route('admin.users.domains.registrations.show', [$user, $registration]))
+            ->assertSessionHas('status', function (string $status) use ($user) {
+                return str_contains($status, 'Rejected')
+                    && str_contains($status, 'Rejection email sent to '.$user->email);
+            });
+
+        $this->assertSame(DomainRegistration::STATUS_REJECTED, $registration->fresh()->status);
+    }
+
     public function test_email_from_name_never_uses_raw_address(): void
     {
         EmailIdentity::query()->updateOrCreate(
@@ -238,7 +294,8 @@ class DomainManualRejectReplaceTest extends TestCase
             ]
         );
 
-        $service = app(EmailService::class);
+        $this->app->forgetInstance(EmailService::class);
+        $service = $this->app->make(EmailService::class);
         $method = new \ReflectionMethod($service, 'resolveIdentity');
         $method->setAccessible(true);
 

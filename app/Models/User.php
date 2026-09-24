@@ -375,7 +375,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'user' => $this,
         ])->render();
 
-        app(\App\Services\Communications\Email\EmailService::class)->sendMailableHtml(
+        app(\App\Services\Communications\Email\OutboundMail::class)->sendHtml(
             to: $this->email,
             subject: 'Reset your password - '.config('app.name'),
             html: $html,

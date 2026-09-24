@@ -98,18 +98,37 @@ class UserDomainAdminController extends Controller
             return back()->withInput()->with('error', $e->getMessage());
         }
 
+        $updated->loadMissing('order.user');
+
         $this->audit->log(
             $request->user()?->id,
             'domains.manual_rejected',
             $updated,
             null,
-            ['status' => $updated->status, 'fqdn' => $updated->fqdn, 'reason' => $data['reason']],
+            [
+                'status' => $updated->status,
+                'fqdn' => $updated->fqdn,
+                'reason' => $data['reason'],
+                'mail_sent' => (bool) $updated->getAttribute('_reject_mail_sent'),
+                'mail_error' => $updated->getAttribute('_reject_mail_error'),
+            ],
             $request->ip(),
         );
 
+        $status = 'Rejected '.$updated->fqdn.'. The customer can submit a free replacement.';
+        if ($updated->getAttribute('_reject_mail_sent')) {
+            $customerEmail = $updated->order?->user?->email
+                ?? $user->email
+                ?? 'the customer';
+            $status .= ' Rejection email sent to '.$customerEmail.'.';
+        } else {
+            $mailError = $updated->getAttribute('_reject_mail_error') ?: 'unknown error';
+            $status .= ' Warning: rejection email was NOT sent ('.$mailError.'). Check storage/logs.';
+        }
+
         return redirect()
             ->route('admin.users.domains.registrations.show', [$user, $updated])
-            ->with('status', 'Rejected '.$updated->fqdn.'. The customer can submit a free replacement.');
+            ->with('status', $status);
     }
 
     public function showConnection(User $user, DomainConnection $connection): View

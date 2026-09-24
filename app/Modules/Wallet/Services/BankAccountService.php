@@ -8,7 +8,7 @@ use App\Models\Withdrawal;
 use App\Modules\Admin\Services\AuditLogService;
 use App\Modules\Wallet\Payments\Contracts\PaymentRailInterface;
 use App\Services\Communications\Email\EmailProfile;
-use App\Services\Communications\Email\EmailService;
+use App\Services\Communications\Email\OutboundMail;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
 use Illuminate\Validation\ValidationException;
@@ -20,7 +20,7 @@ class BankAccountService
         private PaymentRailInterface $rail,
         private BankCatalogService $bankCatalog,
         private AuditLogService $audit,
-        private EmailService $email,
+        private OutboundMail $email,
         private SecurityVerificationService $security,
     ) {}
 
@@ -55,11 +55,11 @@ class BankAccountService
         );
 
         $html = View::make('emails.bank-replace-otp', ['code' => $code, 'user' => $user])->render();
-        $this->email->sendMailableHtml(
+        $this->email->sendHtml(
             to: $user->email,
             subject: 'Withdrawal bank change verification code',
             html: $html,
-            profile: EmailProfile::NoReply,
+            profile: EmailProfile::Security,
             templateKey: 'bank_replace_otp',
         );
     }
@@ -175,11 +175,11 @@ class BankAccountService
                 'newBank' => $new,
             ])->render();
 
-            $this->email->sendMailableHtml(
+            $this->email->sendHtml(
                 to: $user->email,
                 subject: 'Your withdrawal bank has been updated',
                 html: $html,
-                profile: EmailProfile::NoReply,
+                profile: EmailProfile::Security,
                 templateKey: 'bank_replaced',
             );
 

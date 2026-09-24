@@ -3,6 +3,7 @@
 namespace App\Services\Notifications;
 
 use App\Models\User;
+use App\Services\Communications\Email\SendResult;
 use App\Services\Notifications\Channels\DatabaseChannel;
 use App\Services\Notifications\Channels\MailChannel;
 use App\Services\Notifications\Channels\NotificationChannel;
@@ -19,7 +20,7 @@ class NotificationDispatcher
 
     public function __construct(
         DatabaseChannel $database,
-        MailChannel $mail,
+        private MailChannel $mail,
         SmsChannel $sms,
         PushChannel $push,
     ) {
@@ -35,28 +36,32 @@ class NotificationDispatcher
 
     /**
      * @param  list<string>  $channels
+     * @return SendResult|null  Mail result when the mail channel ran; otherwise null
      */
-    public function notifyUser(User $user, NotificationMessage $message, array $channels = ['database', 'mail']): void
+    public function notifyUser(User $user, NotificationMessage $message, array $channels = ['database', 'mail']): ?SendResult
     {
-        $this->dispatch('user', $message, collect([$user]), $channels);
+        return $this->dispatch('user', $message, collect([$user]), $channels);
     }
 
     /**
      * @param  list<string>  $channels
+     * @return SendResult|null
      */
-    public function notifyAdmins(NotificationMessage $message, array $channels = ['database', 'mail']): void
+    public function notifyAdmins(NotificationMessage $message, array $channels = ['database', 'mail']): ?SendResult
     {
         $recipients = $this->adminRecipients($message->permission);
-        $this->dispatch('admin', $message, $recipients, $channels);
+
+        return $this->dispatch('admin', $message, $recipients, $channels);
     }
 
     /**
      * @param  iterable<User>  $users
      * @param  list<string>  $channels
+     * @return SendResult|null
      */
-    public function notifyMany(iterable $users, NotificationMessage $message, array $channels = ['database', 'mail']): void
+    public function notifyMany(iterable $users, NotificationMessage $message, array $channels = ['database', 'mail']): ?SendResult
     {
-        $this->dispatch('user', $message, collect($users), $channels);
+        return $this->dispatch('user', $message, collect($users), $channels);
     }
 
     /**
@@ -64,8 +69,10 @@ class NotificationDispatcher
      * @param  Collection<int, User>  $recipients
      * @param  list<string>  $channels
      */
-    private function dispatch(string $audience, NotificationMessage $message, Collection $recipients, array $channels): void
+    private function dispatch(string $audience, NotificationMessage $message, Collection $recipients, array $channels): ?SendResult
     {
+        $mailResult = null;
+
         foreach ($channels as $channelName) {
             $channel = $this->channels[$channelName] ?? null;
             if (! $channel) {
@@ -89,7 +96,11 @@ class NotificationDispatcher
                     continue;
                 }
 
-                $channel->send($message, $audience, $channelRecipients);
+                if ($channelName === 'mail') {
+                    $mailResult = $this->mail->sendWithResult($message, $audience, $channelRecipients);
+                } else {
+                    $channel->send($message, $audience, $channelRecipients);
+                }
             } catch (Throwable $e) {
                 Log::warning('notification.channel_failed', [
                     'channel' => $channelName,
@@ -97,8 +108,13 @@ class NotificationDispatcher
                     'audience' => $audience,
                     'error' => $e->getMessage(),
                 ]);
+                if ($channelName === 'mail') {
+                    $mailResult = SendResult::fail('outbound', $e->getMessage());
+                }
             }
         }
+
+        return $mailResult;
     }
 
     /**

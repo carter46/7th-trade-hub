@@ -411,12 +411,25 @@ class DomainRegistrationFulfillmentService
             return $updated;
         });
 
-        $this->dispatchAfterCommit(function () use ($fresh) {
+        // Status row is already committed by the transaction above. Send mail now so we can
+        // report success/failure to the admin (afterCommit would run too late for the flash).
+        $mailSent = false;
+        $mailError = null;
+        $sendMail = function () use ($fresh, &$mailSent, &$mailError): void {
             $registration = DomainRegistration::query()->with(['order.user'])->find($fresh->id);
             if ($registration) {
-                $this->notifyUserDomainRejected($registration);
+                [$mailSent, $mailError] = $this->notifyUserDomainRejected($registration);
             }
-        });
+        };
+
+        if (DB::transactionLevel() > 0) {
+            DB::afterCommit($sendMail);
+        } else {
+            $sendMail();
+        }
+
+        $fresh->setAttribute('_reject_mail_sent', $mailSent);
+        $fresh->setAttribute('_reject_mail_error', $mailError);
 
         return $fresh;
     }
@@ -578,7 +591,10 @@ class DomainRegistrationFulfillmentService
         }
     }
 
-    private function notifyUserDomainRejected(DomainRegistration $registration): void
+    /**
+     * @return array{0: bool, 1: ?string} [mailSent, error]
+     */
+    private function notifyUserDomainRejected(DomainRegistration $registration): array
     {
         $user = $this->resolveOrderUser($registration);
         if (! $user?->email) {
@@ -588,40 +604,33 @@ class DomainRegistrationFulfillmentService
                 'reason' => 'missing_user_or_email',
             ]);
 
-            return;
+            return [false, 'Customer has no email on the order account.'];
         }
 
         $url = Route::has('dashboard.my-domains.show')
             ? route('dashboard.my-domains.show', $registration)
             : null;
 
-        try {
-            $this->notifications->notifyUser(
-                $user,
-                new NotificationMessage(
-                    type: 'order.domain_rejected',
-                    title: __('Domain registration rejected'),
-                    body: __('We could not register :fqdn. Reason: :reason. You can submit a free replacement domain.', [
-                        'fqdn' => $registration->fqdn,
-                        'reason' => $registration->error_message ?? '—',
-                    ]),
-                    actionUrl: $url,
-                    meta: [
-                        'domain_registration_id' => $registration->id,
-                        'action_label' => __('Replace domain'),
-                    ],
-                    emailSubject: __('Domain rejected — replace :fqdn', ['fqdn' => $registration->fqdn]),
-                    dedupeKey: 'domain.rejected.'.$registration->id.'.'.md5((string) $registration->error_message),
-                ),
-                ['database', 'mail']
-            );
-        } catch (\Throwable $e) {
-            Log::error('domains.fulfillment.reject_notify_failed', [
-                'registration_id' => $registration->id,
-                'user_id' => $user->id,
-                'error' => $e->getMessage(),
-            ]);
-        }
+        $rejectedAt = (string) (($registration->provider_meta ?? [])['rejected_at'] ?? now()->toIso8601String());
+
+        $message = new NotificationMessage(
+            type: 'order.domain_rejected',
+            title: __('Domain registration rejected'),
+            body: __('We could not register :fqdn. Reason: :reason. You can submit a free replacement domain.', [
+                'fqdn' => $registration->fqdn,
+                'reason' => $registration->error_message ?? '—',
+            ]),
+            actionUrl: $url,
+            meta: [
+                'domain_registration_id' => $registration->id,
+                'action_label' => __('Replace domain'),
+            ],
+            emailSubject: __('Domain rejected — replace :fqdn', ['fqdn' => $registration->fqdn]),
+            // Unique per reject event so retries after a failed send are not swallowed.
+            dedupeKey: 'domain.reject.'.$registration->id.'.'.md5($rejectedAt.(string) $registration->error_message),
+        );
+
+        return $this->deliverUserNotification($user, $message, 'reject', $registration->id);
     }
 
     private function notifyUserDomainApproved(DomainRegistration $registration, bool $wasReplacement): void
@@ -649,30 +658,65 @@ class DomainRegistrationFulfillmentService
             ? __('Your replacement domain :fqdn has been approved and registered.', ['fqdn' => $registration->fqdn])
             : __('Your domain :fqdn has been registered successfully.', ['fqdn' => $registration->fqdn]);
 
+        $registeredAt = optional($registration->registered_at)?->toIso8601String() ?: now()->toIso8601String();
+
+        $message = new NotificationMessage(
+            type: 'order.domain_approved',
+            title: $title,
+            body: $body,
+            actionUrl: $url,
+            meta: [
+                'domain_registration_id' => $registration->id,
+                'action_label' => __('View domain'),
+            ],
+            emailSubject: $title.' — '.$registration->fqdn,
+            dedupeKey: 'domain.approve.'.$registration->id.'.'.md5($registeredAt),
+        );
+
+        $this->deliverUserNotification($user, $message, 'approve', $registration->id);
+    }
+
+    /**
+     * Canonical path: NotificationDispatcher → MailChannel → OutboundMail → EmailService.
+     *
+     * @return array{0: bool, 1: ?string} [mailSent, error]
+     */
+    private function deliverUserNotification(User $user, NotificationMessage $message, string $action, int $registrationId): array
+    {
         try {
-            $this->notifications->notifyUser(
-                $user,
-                new NotificationMessage(
-                    type: 'order.domain_approved',
-                    title: $title,
-                    body: $body,
-                    actionUrl: $url,
-                    meta: [
-                        'domain_registration_id' => $registration->id,
-                        'action_label' => __('View domain'),
-                    ],
-                    emailSubject: $title.' — '.$registration->fqdn,
-                    dedupeKey: 'domain.approved.'.$registration->id.'.'.$registration->fqdn,
-                ),
-                ['database', 'mail']
-            );
+            $mailResult = $this->notifications->notifyUser($user, $message, ['database', 'mail']);
         } catch (\Throwable $e) {
-            Log::error('domains.fulfillment.approve_notify_failed', [
-                'registration_id' => $registration->id,
+            Log::error('domains.fulfillment.'.$action.'_notify_exception', [
+                'registration_id' => $registrationId,
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
             ]);
+
+            return [false, $e->getMessage()];
         }
+
+        if ($mailResult?->success) {
+            Log::info('domains.fulfillment.'.$action.'_mail_sent', [
+                'registration_id' => $registrationId,
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'provider' => $mailResult->provider,
+                'message_id' => $mailResult->messageId,
+            ]);
+
+            return [true, null];
+        }
+
+        $error = trim((string) ($mailResult?->error ?: 'Mail channel did not report success'));
+        Log::error('domains.fulfillment.'.$action.'_mail_failed', [
+            'registration_id' => $registrationId,
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'provider' => $mailResult?->provider,
+            'error' => $error,
+        ]);
+
+        return [false, $error];
     }
 
     private function resolveOrderUser(DomainRegistration $registration): ?User

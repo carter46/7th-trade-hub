@@ -28,6 +28,7 @@ class PasswordResetTest extends TestCase
             ->once()
             ->andReturn(SendResult::ok('laravel_mail'));
         $this->app->instance(EmailService::class, $emails);
+        $this->app->forgetInstance(\App\Services\Communications\Email\OutboundMail::class);
 
         $user = User::factory()->create();
 

@@ -7,7 +7,7 @@ use App\Models\SystemSetting;
 use App\Models\User;
 use App\Models\Withdrawal;
 use App\Services\Communications\Email\EmailProfile;
-use App\Services\Communications\Email\EmailService;
+use App\Services\Communications\Email\OutboundMail;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
@@ -18,7 +18,7 @@ class WithdrawalConfirmationService
     public function __construct(
         private SecurityVerificationService $security,
         private WalletService $wallets,
-        private EmailService $email,
+        private OutboundMail $email,
     ) {}
 
     public function assertCanRequest(User $user): void
@@ -101,11 +101,11 @@ class WithdrawalConfirmationService
         );
 
         $html = View::make('emails.withdrawal-request-otp', ['code' => $code, 'user' => $user])->render();
-        $this->email->sendMailableHtml(
+        $this->email->sendHtml(
             to: $user->email,
             subject: 'Withdrawal request verification code',
             html: $html,
-            profile: EmailProfile::NoReply,
+            profile: EmailProfile::Security,
             templateKey: 'withdrawal_request_otp',
         );
     }
