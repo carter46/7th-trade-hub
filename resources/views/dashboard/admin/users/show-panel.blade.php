@@ -93,6 +93,9 @@
                     <x-dashboard.td>
                         <div class="font-medium text-text-primary">{{ $tool->resolvedDisplayName() }}</div>
                         <div class="text-xs text-text-muted">#{{ $tool->id }} · {{ $tool->public_id }}</div>
+                        @if ($tool->connectedDomainFqdn())
+                            <div class="text-xs text-text-muted mt-0.5">Domain: <span class="font-mono">{{ $tool->connectedDomainFqdn() }}</span></div>
+                        @endif
                     </x-dashboard.td>
                     <x-dashboard.td>
                         <x-dashboard.badge :status="$tool->status->value" />
@@ -117,6 +120,67 @@
         @if (($tools ?? null) instanceof \Illuminate\Contracts\Pagination\Paginator)
             <x-dashboard.pagination :paginator="$tools" />
         @endif
+
+        @php
+            $domainRegistrations = $domainRegistrations ?? collect();
+            $domainConnections = $domainConnections ?? collect();
+            $hasDomains = $domainRegistrations->isNotEmpty() || $domainConnections->isNotEmpty();
+        @endphp
+        <div class="mt-8">
+            <h3 class="mb-3 text-sm font-semibold text-text-primary">Domains</h3>
+            <x-dashboard.table :empty="! $hasDomains" empty-title="No domains" empty-description="Purchased or connected domains for this user appear here." striped>
+                <x-slot:head>
+                    <x-dashboard.th>Domain</x-dashboard.th>
+                    <x-dashboard.th>Type</x-dashboard.th>
+                    <x-dashboard.th>Status</x-dashboard.th>
+                    <x-dashboard.th>Order</x-dashboard.th>
+                    <x-dashboard.th></x-dashboard.th>
+                </x-slot:head>
+                @foreach ($domainRegistrations as $registration)
+                    <tr>
+                        <x-dashboard.td>
+                            <div class="font-mono font-medium text-text-primary break-all">{{ $registration->fqdn }}</div>
+                            @if ($registration->rejectedFqdn() && $registration->rejectedFqdn() !== $registration->fqdn)
+                                <div class="text-xs text-danger mt-0.5">Was: {{ $registration->rejectedFqdn() }}</div>
+                            @endif
+                        </x-dashboard.td>
+                        <x-dashboard.td class="text-xs text-text-muted">
+                            {{ $registration->isManualFulfillment() ? 'Buy · Manual' : 'Buy · Provider' }}
+                        </x-dashboard.td>
+                        <x-dashboard.td><x-dashboard.badge :status="$registration->status" /></x-dashboard.td>
+                        <x-dashboard.td class="text-xs text-text-muted">{{ $registration->order?->reference ?? '—' }}</x-dashboard.td>
+                        <x-dashboard.td>
+                            <x-dashboard.button
+                                :href="route('admin.users.domains.registrations.show', [$user, $registration])"
+                                size="sm"
+                                variant="secondary"
+                            >
+                                Manage domain
+                            </x-dashboard.button>
+                        </x-dashboard.td>
+                    </tr>
+                @endforeach
+                @foreach ($domainConnections as $connection)
+                    <tr>
+                        <x-dashboard.td>
+                            <div class="font-mono font-medium text-text-primary break-all">{{ $connection->fqdn }}</div>
+                        </x-dashboard.td>
+                        <x-dashboard.td class="text-xs text-text-muted">Connect existing</x-dashboard.td>
+                        <x-dashboard.td><x-dashboard.badge :status="$connection->verification_status" /></x-dashboard.td>
+                        <x-dashboard.td class="text-xs text-text-muted">{{ $connection->order?->reference ?? '—' }}</x-dashboard.td>
+                        <x-dashboard.td>
+                            <x-dashboard.button
+                                :href="route('admin.users.domains.connections.show', [$user, $connection])"
+                                size="sm"
+                                variant="secondary"
+                            >
+                                Manage domain
+                            </x-dashboard.button>
+                        </x-dashboard.td>
+                    </tr>
+                @endforeach
+            </x-dashboard.table>
+        </div>
     @elseif ($activeTab === 'listings')
         <x-dashboard.table :empty="($listings ?? collect())->isEmpty()" empty-title="No listings" striped>
             <x-slot:head>

@@ -197,21 +197,58 @@ class UserManagementController extends Controller
     {
         $this->ensureMember($user);
 
+        $domainRegistrations = \App\Models\DomainRegistration::query()
+            ->forUser($user->id)
+            ->with('order')
+            ->orderByDesc('created_at')
+            ->get();
+
+        $domainConnections = \App\Models\DomainConnection::query()
+            ->forUser($user->id)
+            ->whereHas('order', fn ($q) => $q->where('status', 'paid'))
+            ->with('order')
+            ->orderByDesc('created_at')
+            ->get();
+
         return $this->userTabView($request, $user, 'tools', [
             'tools' => \App\Models\UserTool::query()
                 ->where('user_id', $user->id)
-                ->with(['product', 'variant', 'integration'])
+                ->with(['product', 'variant', 'integration', 'orderItem', 'domainConnection'])
                 ->orderByDesc('purchased_at')
                 ->paginate(20),
+            'domainRegistrations' => $domainRegistrations,
+            'domainConnections' => $domainConnections,
         ]);
     }
 
     public function manageTool(User $user, \App\Models\UserTool $tool): View
     {
         $this->ensureMember($user);
-        abort_unless($tool->user_id === $user->id, 404);
+        abort_unless((int) $tool->user_id === (int) $user->id, 404);
 
         $tool->load(['product', 'variant', 'integration', 'orderItem', 'domainConnection']);
+
+        $siblingRegistration = null;
+        if ($tool->order_item_id) {
+            $siblingRegistration = \App\Models\DomainRegistration::query()
+                ->where('order_item_id', $tool->order_item_id)
+                ->orderByDesc('id')
+                ->first();
+        }
+        if (! $siblingRegistration && $tool->order_id) {
+            $websiteFqdn = strtolower((string) ($tool->orderItem?->options['domain_fqdn']
+                ?? $tool->orderItem?->options['domain_name']
+                ?? ''));
+            $query = \App\Models\DomainRegistration::query()
+                ->where('order_id', $tool->order_id)
+                ->orderByDesc('id');
+            if ($websiteFqdn !== '') {
+                $siblingRegistration = (clone $query)->whereRaw('LOWER(fqdn) = ?', [$websiteFqdn])->first()
+                    ?? $query->first();
+            } else {
+                $siblingRegistration = $query->first();
+            }
+        }
 
         $logs = $tool->integration
             ? SiteIntegrationCheckLog::query()
@@ -227,6 +264,8 @@ class UserManagementController extends Controller
             'tool' => $tool,
             'logs' => $logs,
             'freshCredentials' => session('fresh_tool_credentials'),
+            'siblingDomainRegistration' => $siblingRegistration,
+
             'suggestedSiteUrl' => $tool->suggestedSiteUrl(),
         ]);
     }

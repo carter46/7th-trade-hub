@@ -31,9 +31,11 @@
         'inactive' => 'bg-warning/20 text-warning',
         'pending_setup' => 'bg-warning/20 text-warning',
         'pending_manual' => 'bg-warning/20 text-warning',
+        'pending_replacement' => 'bg-warning/20 text-warning',
         'processing' => 'bg-primary/15 text-primary',
         'registered' => 'bg-success/20 text-success',
         'reconciliation_required' => 'bg-warning/20 text-warning',
+        'rejected' => 'bg-danger/20 text-danger',
     ];
     $key = strtolower((string) $status);
     $label = str_replace('_', ' ', $key);

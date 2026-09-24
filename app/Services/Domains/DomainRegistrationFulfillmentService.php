@@ -8,8 +8,16 @@ use App\Models\DomainRegistration;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PlatformProduct;
+use App\Models\User;
+use App\Models\UserTool;
+use App\Services\Notifications\NotificationDispatcher;
+use App\Services\Notifications\NotificationMessage;
+use App\Support\Domains\DomainFqdn;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 
 class DomainRegistrationFulfillmentService
 {
@@ -18,6 +26,7 @@ class DomainRegistrationFulfillmentService
         private PlatformDomainPricingPolicy $pricing,
         private DomainAuditLogger $audit,
         private DomainNameserverService $nameservers,
+        private NotificationDispatcher $notifications,
     ) {}
 
     public function fulfillOrder(Order $order): void
@@ -270,46 +279,368 @@ class DomainRegistrationFulfillmentService
     }
 
     /**
-     * Admin completes offline registration for a pending_manual row.
+     * Admin completes offline registration for a pending_manual / pending_replacement row.
      *
      * @param  list<string>|null  $nameservers
+     * @return array{0: DomainRegistration, 1: bool}  [registration, alreadyRegistered]
      */
-    public function markManualRegistered(DomainRegistration $registration, ?string $providerReference = null, ?array $nameservers = null): DomainRegistration
+    public function markManualRegistered(DomainRegistration $registration, ?string $providerReference = null, ?array $nameservers = null, ?int $adminId = null): array
     {
-        if ($registration->status === DomainRegistration::STATUS_REGISTERED) {
-            return $registration;
+        return DB::transaction(function () use ($registration, $providerReference, $nameservers, $adminId) {
+            /** @var DomainRegistration $locked */
+            $locked = DomainRegistration::query()->whereKey($registration->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->status === DomainRegistration::STATUS_REGISTERED) {
+                return [$locked->fresh(['order.user']), true];
+            }
+
+            if (! $locked->isManualFulfillment()
+                || ! in_array($locked->status, [
+                    DomainRegistration::STATUS_PENDING_MANUAL,
+                    DomainRegistration::STATUS_PENDING_REPLACEMENT,
+                ], true)) {
+                throw new InvalidArgumentException('Only pending manual domain registrations can be marked registered this way.');
+            }
+
+            $ns = is_array($nameservers)
+                ? array_values(array_filter(array_map(fn ($v) => strtolower(trim((string) $v)), $nameservers)))
+                : [];
+
+            $wasReplacement = $locked->isPendingReplacement();
+            $previousFqdn = strtolower((string) $locked->fqdn);
+
+            $locked->update([
+                'status' => DomainRegistration::STATUS_REGISTERED,
+                'provider_reference' => $providerReference !== null && $providerReference !== ''
+                    ? Str::limit($providerReference, 191, '')
+                    : $locked->provider_reference,
+                'nameservers' => $ns !== [] ? $ns : $locked->nameservers,
+                'nameservers_updated_at' => $ns !== [] ? now() : $locked->nameservers_updated_at,
+                'registered_at' => now(),
+                'error_message' => null,
+                'provider_meta' => array_merge($locked->provider_meta ?? [], [
+                    'fulfillment' => 'manual',
+                    'domain_fulfillment' => 'manual',
+                    'marked_registered_at' => now()->toIso8601String(),
+                    'approved_by_admin_id' => $adminId,
+                ]),
+            ]);
+
+            $fresh = $locked->fresh(['order.user', 'orderItem']);
+            $this->syncOrderFqdnReferences($fresh, $previousFqdn);
+
+            $this->audit->log('domains.fulfillment.registered', $fresh, [
+                'manual' => true,
+                'replacement' => $wasReplacement,
+                'admin_id' => $adminId,
+            ]);
+
+            $this->notifyUserDomainApproved($fresh, $wasReplacement);
+
+            return [$fresh->fresh(['order.user']), false];
+        });
+    }
+
+    public function rejectManualRegistration(DomainRegistration $registration, string $reason, ?int $adminId = null): DomainRegistration
+    {
+        $reason = trim(strip_tags($reason));
+        if ($reason === '') {
+            throw new InvalidArgumentException('A rejection reason is required.');
         }
 
-        if ($registration->status !== DomainRegistration::STATUS_PENDING_MANUAL
-            || $registration->provider_key !== DomainQuote::PROVIDER_KEY_MANUAL) {
-            throw new \InvalidArgumentException('Only pending manual domain registrations can be marked registered this way.');
+        return DB::transaction(function () use ($registration, $reason, $adminId) {
+            /** @var DomainRegistration $locked */
+            $locked = DomainRegistration::query()->whereKey($registration->id)->lockForUpdate()->firstOrFail();
+
+            if (! $locked->isManualFulfillment()) {
+                throw new InvalidArgumentException('Only manual domain registrations can be rejected this way.');
+            }
+
+            if (! in_array($locked->status, [
+                DomainRegistration::STATUS_PENDING_MANUAL,
+                DomainRegistration::STATUS_PENDING_REPLACEMENT,
+            ], true)) {
+                throw new InvalidArgumentException('Only pending manual domains can be rejected.');
+            }
+
+            $rejectedFqdn = strtolower((string) $locked->fqdn);
+            $meta = $locked->provider_meta ?? [];
+            $history = is_array($meta['replacement_history'] ?? null) ? $meta['replacement_history'] : [];
+            $history[] = [
+                'fqdn' => $rejectedFqdn,
+                'rejected_at' => now()->toIso8601String(),
+                'reason' => Str::limit($reason, 500),
+                'admin_id' => $adminId,
+            ];
+            if (count($history) > 20) {
+                $history = array_slice($history, -20);
+            }
+
+            $locked->update([
+                'status' => DomainRegistration::STATUS_REJECTED,
+                'error_message' => Str::limit($reason, 500),
+                'provider_meta' => array_merge($meta, [
+                    'fulfillment' => 'manual',
+                    'domain_fulfillment' => 'manual',
+                    'rejected_fqdn' => $rejectedFqdn,
+                    'rejection_reason' => Str::limit($reason, 500),
+                    'rejected_at' => now()->toIso8601String(),
+                    'rejected_by_admin_id' => $adminId,
+                    'replacement_history' => $history,
+                ]),
+            ]);
+
+            $fresh = $locked->fresh(['order.user']);
+            $this->audit->log('domains.fulfillment.rejected', $fresh, [
+                'fqdn' => $rejectedFqdn,
+                'reason' => Str::limit($reason, 200),
+                'admin_id' => $adminId,
+            ]);
+
+            $this->notifyUserDomainRejected($fresh);
+
+            return $fresh;
+        });
+    }
+
+    /**
+     * Free FQDN replacement after rejection (no new quote/charge).
+     */
+    public function requestManualReplacement(DomainRegistration $registration, string $newFqdn, ?User $actor = null): DomainRegistration
+    {
+        try {
+            $normalized = DomainFqdn::normalizeFqdn($newFqdn, true);
+        } catch (InvalidArgumentException $e) {
+            throw $e;
         }
 
-        $ns = is_array($nameservers)
-            ? array_values(array_filter(array_map(fn ($v) => strtolower(trim((string) $v)), $nameservers)))
-            : [];
+        return DB::transaction(function () use ($registration, $normalized, $actor) {
+            /** @var DomainRegistration $locked */
+            $locked = DomainRegistration::query()->whereKey($registration->id)->lockForUpdate()->firstOrFail();
 
-        $registration->update([
-            'status' => DomainRegistration::STATUS_REGISTERED,
-            'provider_reference' => $providerReference !== null && $providerReference !== ''
-                ? Str::limit($providerReference, 191, '')
-                : $registration->provider_reference,
-            'nameservers' => $ns !== [] ? $ns : $registration->nameservers,
-            'nameservers_updated_at' => $ns !== [] ? now() : $registration->nameservers_updated_at,
-            'registered_at' => now(),
-            'error_message' => null,
-            'provider_meta' => array_merge($registration->provider_meta ?? [], [
-                'fulfillment' => 'manual',
-                'domain_fulfillment' => 'manual',
-                'marked_registered_at' => now()->toIso8601String(),
-            ]),
-        ]);
+            if (! $locked->canRequestReplacement()) {
+                throw new InvalidArgumentException('A replacement can only be requested after a manual domain rejection.');
+            }
 
-        $this->audit->log('domains.fulfillment.registered', $registration->fresh(), [
-            'manual' => true,
-        ]);
+            if (strcasecmp($normalized, (string) $locked->fqdn) === 0
+                && $locked->isPendingReplacement()) {
+                throw new InvalidArgumentException('Enter a different domain name for the replacement.');
+            }
 
-        return $registration->fresh();
+            $this->assertFqdnAvailableForReplacement($normalized, (int) $locked->id);
+
+            $wasAlreadyPendingReplacement = $locked->isPendingReplacement();
+            $previousFqdn = strtolower((string) $locked->fqdn);
+            $meta = $locked->provider_meta ?? [];
+            $rejectedFqdn = $locked->rejectedFqdn() ?: $previousFqdn;
+
+            $locked->update([
+                'fqdn' => $normalized,
+                'status' => DomainRegistration::STATUS_PENDING_REPLACEMENT,
+                'error_message' => $locked->rejectionReason() ?: $locked->error_message,
+                'provider_meta' => array_merge($meta, [
+                    'fulfillment' => 'manual',
+                    'domain_fulfillment' => 'manual',
+                    'rejected_fqdn' => $rejectedFqdn,
+                    'proposed_fqdn' => $normalized,
+                    'replacement_requested_at' => now()->toIso8601String(),
+                    'replacement_requested_by_user_id' => $actor?->id,
+                ]),
+            ]);
+
+            $fresh = $locked->fresh(['order.user', 'orderItem']);
+            $this->syncOrderFqdnReferences($fresh, $previousFqdn);
+
+            $this->audit->log('domains.fulfillment.replacement_requested', $fresh, [
+                'rejected_fqdn' => $rejectedFqdn,
+                'proposed_fqdn' => $normalized,
+                'user_id' => $actor?->id,
+            ]);
+
+            // Notify admins once per rejection cycle, not on every FQDN correction.
+            if (! $wasAlreadyPendingReplacement) {
+                $this->notifyAdminsReplacementRequested($fresh);
+            }
+
+            return $fresh;
+        });
+    }
+
+    private function assertFqdnAvailableForReplacement(string $fqdn, int $exceptRegistrationId): void
+    {
+        $conflict = DomainRegistration::query()
+            ->whereRaw('LOWER(fqdn) = ?', [strtolower($fqdn)])
+            ->where('id', '!=', $exceptRegistrationId)
+            ->whereIn('status', [
+                DomainRegistration::STATUS_PENDING,
+                DomainRegistration::STATUS_PENDING_MANUAL,
+                DomainRegistration::STATUS_PENDING_REPLACEMENT,
+                DomainRegistration::STATUS_PROCESSING,
+                DomainRegistration::STATUS_REGISTERED,
+                DomainRegistration::STATUS_RECONCILIATION_REQUIRED,
+            ])
+            ->exists();
+
+        if ($conflict) {
+            throw new InvalidArgumentException('That domain is already attached to another active registration. Choose a different name.');
+        }
+    }
+
+    /**
+     * Keep website bundle lines + related tools in sync when the registration FQDN changes.
+     */
+    private function syncOrderFqdnReferences(DomainRegistration $registration, ?string $previousFqdn = null): void
+    {
+        $registration->loadMissing(['order.items', 'orderItem']);
+        $order = $registration->order;
+        if (! $order) {
+            return;
+        }
+
+        $newFqdn = strtolower((string) $registration->fqdn);
+        $previousFqdn = $previousFqdn !== null ? strtolower($previousFqdn) : null;
+        $tld = null;
+        try {
+            $tld = DomainFqdn::fromFqdn($newFqdn, true)['tld'];
+        } catch (\Throwable) {
+            // Keep previous tld if parse fails.
+        }
+
+        foreach ($order->items as $item) {
+            $options = $item->options ?? [];
+            $itemFqdn = strtolower((string) ($options['domain_fqdn'] ?? $options['domain_name'] ?? ''));
+            $isRegistrationLine = (int) $item->id === (int) $registration->order_item_id;
+            $matchesPrevious = $previousFqdn !== null && $itemFqdn !== '' && $itemFqdn === $previousFqdn;
+            $isBuyDomainContext = ($options['domain_mode'] ?? null) === 'buy' && $matchesPrevious;
+
+            if (! $isRegistrationLine && ! $matchesPrevious && ! $isBuyDomainContext) {
+                continue;
+            }
+
+            $options['domain_fqdn'] = $newFqdn;
+            if ($tld) {
+                $options['tld'] = $tld;
+            }
+            $item->update(['options' => $options]);
+        }
+
+        $tools = UserTool::query()->where('order_id', $order->id)->get();
+        foreach ($tools as $tool) {
+            $siteHost = null;
+            if (filled($tool->site_url)) {
+                $siteHost = strtolower((string) (parse_url((string) $tool->site_url, PHP_URL_HOST) ?: ''));
+            }
+
+            $shouldUpdateSiteUrl = ! filled($tool->site_url)
+                || ($previousFqdn !== null && $siteHost === $previousFqdn);
+
+            if ($shouldUpdateSiteUrl) {
+                $tool->update(['site_url' => 'https://'.$newFqdn]);
+            }
+        }
+    }
+
+    private function notifyUserDomainRejected(DomainRegistration $registration): void
+    {
+        $user = $registration->order?->user;
+        if (! $user) {
+            return;
+        }
+
+        $url = Route::has('dashboard.my-domains.show')
+            ? route('dashboard.my-domains.show', $registration)
+            : null;
+
+        $this->notifications->notifyUser(
+            $user,
+            new NotificationMessage(
+                type: 'order.domain_rejected',
+                title: __('Domain registration rejected'),
+                body: __('We could not register :fqdn. Reason: :reason. You can submit a free replacement domain.', [
+                    'fqdn' => $registration->fqdn,
+                    'reason' => $registration->error_message ?? '—',
+                ]),
+                actionUrl: $url,
+                meta: [
+                    'domain_registration_id' => $registration->id,
+                    'action_label' => __('Replace domain'),
+                ],
+                emailSubject: __('Domain rejected — replace :fqdn', ['fqdn' => $registration->fqdn]),
+                dedupeKey: 'domain.rejected.'.$registration->id.'.'.md5((string) $registration->error_message),
+            ),
+            ['database', 'mail']
+        );
+    }
+
+    private function notifyUserDomainApproved(DomainRegistration $registration, bool $wasReplacement): void
+    {
+        $user = $registration->order?->user;
+        if (! $user) {
+            return;
+        }
+
+        $url = Route::has('dashboard.my-domains.show')
+            ? route('dashboard.my-domains.show', $registration)
+            : null;
+
+        $title = $wasReplacement
+            ? __('Domain replacement approved')
+            : __('Domain registered');
+
+        $body = $wasReplacement
+            ? __('Your replacement domain :fqdn has been approved and registered.', ['fqdn' => $registration->fqdn])
+            : __('Your domain :fqdn has been registered successfully.', ['fqdn' => $registration->fqdn]);
+
+        $this->notifications->notifyUser(
+            $user,
+            new NotificationMessage(
+                type: 'order.domain_approved',
+                title: $title,
+                body: $body,
+                actionUrl: $url,
+                meta: [
+                    'domain_registration_id' => $registration->id,
+                    'action_label' => __('View domain'),
+                ],
+                emailSubject: $title.' — '.$registration->fqdn,
+                dedupeKey: 'domain.approved.'.$registration->id.'.'.$registration->fqdn,
+            ),
+            ['database', 'mail']
+        );
+    }
+
+    private function notifyAdminsReplacementRequested(DomainRegistration $registration): void
+    {
+        $user = $registration->order?->user;
+        $manageUrl = null;
+        if ($user && Route::has('admin.users.domains.registrations.show')) {
+            $manageUrl = route('admin.users.domains.registrations.show', [$user, $registration]);
+        } elseif ($registration->order_id && Route::has('admin.orders.show')) {
+            $manageUrl = route('admin.orders.show', $registration->order_id);
+        }
+
+        $this->notifications->notifyAdmins(
+            new NotificationMessage(
+                type: 'order.domain_replacement_requested',
+                title: __('Domain replacement requested'),
+                body: __(':name requested :fqdn to replace :rejected (order :ref).', [
+                    'name' => $user?->name ?? 'Customer',
+                    'fqdn' => $registration->fqdn,
+                    'rejected' => $registration->rejectedFqdn() ?? '—',
+                    'ref' => $registration->order?->reference ?? '#'.$registration->order_id,
+                ]),
+                actionUrl: $manageUrl,
+                meta: [
+                    'domain_registration_id' => $registration->id,
+                    'order_id' => $registration->order_id,
+                ],
+                emailSubject: __('Domain replacement — :fqdn', ['fqdn' => $registration->fqdn]),
+                permission: 'users.manage',
+                // One notify per registration rejection cycle (not per FQDN edit).
+                dedupeKey: 'domain.replacement.'.$registration->id,
+            ),
+            ['database', 'mail']
+        );
     }
 
     private function isDomainPurchaseLine(OrderItem $item): bool

@@ -167,6 +167,9 @@ export function registerManualBankPayment(Alpine) {
                 }));
             } finally {
                 this.submitting = false;
+                if (typeof window.hideDashboardPageLoader === 'function') {
+                    window.hideDashboardPageLoader();
+                }
             }
         },
         goToDashboard() {

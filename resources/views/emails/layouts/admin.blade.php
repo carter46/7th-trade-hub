@@ -1,7 +1,10 @@
 @php
     $siteName = $branding['site_name'] ?? config('app.name');
-    $logoUrl = absolute_media_url_from_id($branding['logo_light_media_id'] ?? null, null, 'medium');
+    $logoMediaId = $branding['logo_dark_media_id'] ?? $branding['logo_light_media_id'] ?? null;
+    $logoUrl = absolute_media_url_from_id($logoMediaId ? (int) $logoMediaId : null, null, 'medium');
     $adminUrl = \Illuminate\Support\Facades\Route::has('admin.dashboard') ? route('admin.dashboard') : config('app.url');
+    $preheader = \Illuminate\Support\Str::limit(trim(strip_tags((string) ($message->body ?? ''))), 140, '…');
+    $headerTitle = $message->title ?? 'Admin alert';
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -11,6 +14,9 @@
     <title>{{ $message->emailSubject ?: $message->title }}</title>
 </head>
 <body style="margin:0;padding:0;background:#f4f6f8;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#111827;">
+@if($preheader !== '')
+<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">{{ $preheader }}</div>
+@endif
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f6f8;padding:24px 12px;">
     <tr>
         <td align="center">
@@ -22,6 +28,7 @@
                         @endif
                         <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;opacity:.8;">Admin alert</div>
                         <div style="font-size:18px;font-weight:700;line-height:1.3;margin-top:4px;">{{ $siteName }}</div>
+                        <div style="font-size:14px;font-weight:600;line-height:1.4;margin-top:6px;opacity:.95;">{{ $headerTitle }}</div>
                     </td>
                 </tr>
                 <tr>
@@ -38,6 +45,26 @@
                                 @endif
                             </table>
                         @endisset
+                        @if(!empty($context['lines']) && is_array($context['lines']))
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:8px 0 16px;font-size:14px;border-collapse:collapse;">
+                                <tr>
+                                    <td colspan="2" style="padding:8px 0 6px;font-weight:700;color:#111827;border-bottom:1px solid #e5e7eb;">Items</td>
+                                </tr>
+                                @foreach($context['lines'] as $line)
+                                    <tr>
+                                        <td style="padding:10px 0;vertical-align:top;border-bottom:1px solid #f3f4f6;">
+                                            <div style="font-weight:600;">{{ $line['title'] ?? 'Item' }}</div>
+                                            @if(!empty($line['subtitle']))
+                                                <div style="margin-top:2px;font-size:13px;color:#6b7280;">{{ $line['subtitle'] }}</div>
+                                            @endif
+                                        </td>
+                                        <td style="padding:10px 0;vertical-align:top;text-align:right;font-weight:600;border-bottom:1px solid #f3f4f6;white-space:nowrap;">
+                                            ₦{{ number_format((float) ($line['line_total'] ?? 0), 2) }}
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </table>
+                        @endif
                         @if($message->actionUrl)
                             <p style="margin:20px 0 0;">
                                 <a href="{{ $message->actionUrl }}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:600;font-size:14px;">Open in admin</a>

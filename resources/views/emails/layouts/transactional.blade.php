@@ -1,8 +1,10 @@
 @php
     $brandingRepo = app(\App\Services\Branding\SiteBrandingRepository::class);
     $contactRepo = app(\App\Services\Communications\Contact\PlatformContactRepository::class);
-    $siteName = $brandingRepo->all()['site_name'] ?? config('app.name');
-    $logoUrl = absolute_media_url_from_id($brandingRepo->all()['logo_light_media_id'] ?? null, null, 'medium');
+    $branding = $brandingRepo->all();
+    $siteName = $branding['site_name'] ?? config('app.name');
+    $logoMediaId = $branding['logo_dark_media_id'] ?? $branding['logo_light_media_id'] ?? null;
+    $logoUrl = absolute_media_url_from_id($logoMediaId ? (int) $logoMediaId : null, null, 'medium');
     $siteUrl = absolute_url(config('app.url')) ?? config('app.url');
     $supportEmail = $contactRepo->all()['email_support'] ?? null;
     $pageTitle = trim($__env->yieldContent('title')) ?: $siteName;
@@ -26,6 +28,7 @@
                             <img src="{{ $logoUrl }}" alt="{{ $siteName }}" style="max-height:40px;max-width:180px;display:block;margin-bottom:8px;">
                         @endif
                         <div style="font-size:18px;font-weight:700;line-height:1.3;">{{ $siteName }}</div>
+                        <div style="font-size:14px;font-weight:600;line-height:1.4;margin-top:6px;opacity:.95;">{{ $heading }}</div>
                     </td>
                 </tr>
                 <tr>

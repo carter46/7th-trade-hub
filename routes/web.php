@@ -295,6 +295,9 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->name('dashboard')-
         ->middleware('throttle:10,1')
         ->name('.my-domains.connections.check');
     Route::get('/my-domains/{registration}', [\App\Http\Controllers\Dashboard\MyDomainsController::class, 'show'])->name('.my-domains.show');
+    Route::post('/my-domains/{registration}/replace', [\App\Http\Controllers\Dashboard\MyDomainsController::class, 'replace'])
+        ->middleware('throttle:10,1')
+        ->name('.my-domains.replace');
     Route::put('/my-domains/{registration}/nameservers', [\App\Http\Controllers\Dashboard\MyDomainsController::class, 'updateNameservers'])
         ->middleware('throttle:10,1')
         ->name('.my-domains.nameservers.update');
@@ -404,6 +407,11 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::post('/users/{user}/tools/{tool}/expiry', [UserManagementController::class, 'adjustToolExpiry'])->name('.users.tools.expiry');
         Route::post('/users/{user}/tools/{tool}/shutdown', [UserManagementController::class, 'shutdownTool'])->name('.users.tools.shutdown');
         Route::post('/users/{user}/tools/{tool}/enable', [UserManagementController::class, 'enableTool'])->name('.users.tools.enable');
+        Route::get('/users/{user}/domains/registrations/{registration}', [\App\Http\Controllers\Admin\UserDomainAdminController::class, 'showRegistration'])->name('.users.domains.registrations.show');
+        Route::post('/users/{user}/domains/registrations/{registration}/approve', [\App\Http\Controllers\Admin\UserDomainAdminController::class, 'approveRegistration'])->name('.users.domains.registrations.approve');
+        Route::post('/users/{user}/domains/registrations/{registration}/reject', [\App\Http\Controllers\Admin\UserDomainAdminController::class, 'rejectRegistration'])->name('.users.domains.registrations.reject');
+        Route::get('/users/{user}/domains/connections/{connection}', [\App\Http\Controllers\Admin\UserDomainAdminController::class, 'showConnection'])->name('.users.domains.connections.show');
+        Route::post('/users/{user}/domains/connections/{connection}/approve', [\App\Http\Controllers\Admin\UserDomainAdminController::class, 'approveConnection'])->name('.users.domains.connections.approve');
         Route::post('/users/{user}/domain-connections/{connection}/approve', [UserManagementController::class, 'approveDomainConnection'])->name('.users.domain-connections.approve');
         Route::get('/users/{user}/listings', [UserManagementController::class, 'listings'])->name('.users.listings');
         Route::get('/users/{user}/escrows', [UserManagementController::class, 'escrows'])->name('.users.escrows');

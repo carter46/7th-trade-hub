@@ -184,32 +184,28 @@
     @if (($pendingManualDomains ?? collect())->isNotEmpty())
         <x-dashboard.card class="mt-6 space-y-4 text-sm">
             <h2 class="text-lg font-semibold text-text-primary">Manual domain fulfillment</h2>
-            <p class="text-xs text-text-muted">These domains were purchased while registrar providers were offline. Register them offline, then mark them registered here.</p>
+            <p class="text-xs text-text-muted">These domains need offline registration. Open Manage domain to approve or reject with a reason.</p>
             @foreach ($pendingManualDomains as $registration)
                 <div class="rounded-xl border border-border-subtle px-4 py-3 space-y-3">
                     <div class="flex flex-wrap items-center justify-between gap-2">
-                        <p class="font-semibold text-text-primary">{{ $registration->fqdn }}</p>
-                        <x-dashboard.badge status="pending_manual" />
+                        <p class="font-semibold text-text-primary font-mono">{{ $registration->fqdn }}</p>
+                        <x-dashboard.badge :status="$registration->status" />
                     </div>
                     @if (is_array($registration->registrant_contact))
                         <dl class="grid gap-1 sm:grid-cols-2 text-xs">
                             <div><span class="text-text-muted">Name:</span> {{ trim(($registration->registrant_contact['first_name'] ?? $registration->registrant_contact['firstName'] ?? '').' '.($registration->registrant_contact['last_name'] ?? $registration->registrant_contact['lastName'] ?? '')) }}</div>
                             <div><span class="text-text-muted">Email:</span> {{ $registration->registrant_contact['email'] ?? '—' }}</div>
-                            <div><span class="text-text-muted">Phone:</span> {{ $registration->registrant_contact['phone'] ?? '—' }}</div>
-                            <div><span class="text-text-muted">Country:</span> {{ $registration->registrant_contact['country'] ?? '—' }}</div>
                         </dl>
                     @endif
-                    <form method="POST" action="{{ route('admin.orders.domains.mark-registered', [$order, $registration]) }}" class="grid gap-2 sm:grid-cols-2">
-                        @csrf
-                        <x-dashboard.input name="provider_reference" label="Registrar reference (optional)" :value="old('provider_reference')" />
-                        <div>
-                            <label class="mb-1 block text-xs text-text-muted">Nameservers (optional, comma-separated)</label>
-                            <input type="text" name="nameservers" value="{{ old('nameservers') }}" class="w-full rounded-lg border border-border-default bg-elevated px-3 py-2 text-sm" placeholder="ns1.example.com, ns2.example.com">
-                        </div>
-                        <div class="sm:col-span-2">
-                            <x-dashboard.button type="submit" size="sm" variant="primary">Mark registered</x-dashboard.button>
-                        </div>
-                    </form>
+                    @if ($order->user)
+                        <x-dashboard.button
+                            :href="route('admin.users.domains.registrations.show', [$order->user, $registration])"
+                            size="sm"
+                            variant="primary"
+                        >
+                            Manage domain
+                        </x-dashboard.button>
+                    @endif
                 </div>
             @endforeach
         </x-dashboard.card>

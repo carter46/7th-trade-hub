@@ -41,7 +41,59 @@
             </div>
         @endif
 
-        @if($registration->isPendingManual())
+        @if($registration->isRejected() || $registration->isPendingReplacement())
+            <div class="space-y-3 rounded-xl border border-danger/30 bg-danger/5 px-4 py-4">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-danger">Rejected domain</p>
+                    <p class="mt-1 font-mono font-semibold text-text-primary">{{ $registration->rejectedFqdn() ?: $registration->fqdn }}</p>
+                    @if($registration->rejectionReason())
+                        <p class="mt-2 text-sm text-text-secondary">{{ $registration->rejectionReason() }}</p>
+                    @endif
+                </div>
+
+                @if($registration->isPendingReplacement())
+                    <div class="rounded-lg border border-primary/20 bg-primary/5 px-3 py-3">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-primary">Pending replacement</p>
+                        <p class="mt-1 font-mono font-semibold text-text-primary">{{ $registration->fqdn }}</p>
+                        <p class="mt-1 text-xs text-text-muted">Awaiting admin approval. You can submit a different domain below if needed.</p>
+                    </div>
+                @endif
+
+                @if($registration->canRequestReplacement())
+                    <div x-data="{ open: {{ $errors->has('fqdn') ? 'true' : 'false' }} }" class="space-y-3">
+                        <x-dashboard.button type="button" variant="primary" size="sm" x-on:click="open = !open" x-text="open ? 'Hide replace form' : 'Replace domain'">
+                            Replace domain
+                        </x-dashboard.button>
+                        <form
+                            method="POST"
+                            action="{{ route('dashboard.my-domains.replace', $registration) }}"
+                            class="space-y-3"
+                            x-show="open"
+                            x-cloak
+                        >
+                            @csrf
+                            <div>
+                                <label for="fqdn" class="mb-1 block text-sm font-medium text-text-primary">New domain</label>
+                                <input
+                                    id="fqdn"
+                                    type="text"
+                                    name="fqdn"
+                                    value="{{ old('fqdn') }}"
+                                    required
+                                    placeholder="example.com"
+                                    class="w-full rounded-lg border border-border-default bg-elevated px-3 py-2 text-sm font-mono"
+                                >
+                                @error('fqdn')
+                                    <p class="mt-1 text-xs text-danger">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <p class="text-xs text-text-muted">Free replacement — no extra charge. Same order price applies.</p>
+                            <x-dashboard.button type="submit" variant="primary" size="sm">Submit replacement</x-dashboard.button>
+                        </form>
+                    </div>
+                @endif
+            </div>
+        @elseif($registration->isPendingManual())
             <x-dashboard.alert type="info">
                 Your domain purchase is queued for manual registration. We will update this page once an admin completes registration.
             </x-dashboard.alert>

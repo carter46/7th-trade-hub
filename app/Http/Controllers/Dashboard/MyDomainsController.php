@@ -7,6 +7,7 @@ use App\Models\DomainConnection;
 use App\Models\DomainRegistration;
 use App\Services\Domains\DomainConnectionService;
 use App\Services\Domains\DomainNameserverService;
+use App\Services\Domains\DomainRegistrationFulfillmentService;
 use App\Services\Domains\Exceptions\DomainBusinessException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,6 +19,7 @@ class MyDomainsController extends Controller
     public function __construct(
         private DomainNameserverService $nameservers,
         private DomainConnectionService $connections,
+        private DomainRegistrationFulfillmentService $domainFulfillment,
     ) {}
 
     public function index(Request $request): RedirectResponse
@@ -128,14 +130,41 @@ class MyDomainsController extends Controller
             ->with('status', 'Nameservers refreshed from the registrar.');
     }
 
+    public function replace(Request $request, DomainRegistration $registration): RedirectResponse
+    {
+        $this->authorizeRegistration($request, $registration);
+
+        $data = $request->validate([
+            'fqdn' => ['required', 'string', 'max:253'],
+        ]);
+
+        try {
+            $updated = $this->domainFulfillment->requestManualReplacement(
+                $registration,
+                $data['fqdn'],
+                $request->user(),
+            );
+        } catch (InvalidArgumentException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+
+        return redirect()
+            ->route('dashboard.my-domains.show', $updated)
+            ->with('status', 'Replacement domain submitted. We will review '.$updated->fqdn.' shortly.');
+    }
+
     private function authorizeRegistration(Request $request, DomainRegistration $registration): void
     {
         $registration->loadMissing('order');
-        abort_unless($registration->order && $registration->order->user_id === $request->user()->id, 404);
+        abort_unless(
+            $registration->order
+            && (int) $registration->order->user_id === (int) $request->user()->id,
+            404
+        );
     }
 
     private function authorizeConnection(Request $request, DomainConnection $connection): void
     {
-        abort_unless($connection->user_id === $request->user()->id, 404);
+        abort_unless((int) $connection->user_id === (int) $request->user()->id, 404);
     }
 }

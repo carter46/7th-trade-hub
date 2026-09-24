@@ -46,7 +46,10 @@ class OrderAdminController extends Controller
                 ->where('status', 'cancelled');
         } elseif ($request->string('filter')->toString() === 'pending_manual_domains') {
             $query->whereHas('domainRegistrations', function ($q) {
-                $q->where('status', DomainRegistration::STATUS_PENDING_MANUAL);
+                $q->whereIn('status', [
+                    DomainRegistration::STATUS_PENDING_MANUAL,
+                    DomainRegistration::STATUS_PENDING_REPLACEMENT,
+                ]);
             });
         }
 
@@ -75,7 +78,10 @@ class OrderAdminController extends Controller
             'order' => $order,
             'bankDetails' => SystemSetting::manualBankTransferDetails(),
             'pendingManualDomains' => $order->domainRegistrations
-                ->where('status', DomainRegistration::STATUS_PENDING_MANUAL)
+                ->filter(fn ($row) => in_array($row->status, [
+                    DomainRegistration::STATUS_PENDING_MANUAL,
+                    DomainRegistration::STATUS_PENDING_REPLACEMENT,
+                ], true))
                 ->values(),
             'proofMime' => $proofMime,
             'proofIsImage' => is_string($proofMime) && str_starts_with($proofMime, 'image/'),
@@ -99,25 +105,30 @@ class OrderAdminController extends Controller
         }
 
         try {
-            $updated = $this->domainFulfillment->markManualRegistered(
+            [$updated, $alreadyRegistered] = $this->domainFulfillment->markManualRegistered(
                 $registration,
                 $data['provider_reference'] ?? null,
                 $nameservers,
+                $request->user()?->id,
             );
         } catch (InvalidArgumentException $e) {
             return back()->with('error', $e->getMessage());
         }
 
-        $this->audit->log(
-            $request->user()?->id,
-            'domains.manual_registered',
-            $updated,
-            ['status' => DomainRegistration::STATUS_PENDING_MANUAL],
-            ['status' => $updated->status, 'fqdn' => $updated->fqdn, 'order_id' => $order->id],
-            $request->ip(),
-        );
+        if (! $alreadyRegistered) {
+            $this->audit->log(
+                $request->user()?->id,
+                'domains.manual_registered',
+                $updated,
+                ['status' => DomainRegistration::STATUS_PENDING_MANUAL],
+                ['status' => $updated->status, 'fqdn' => $updated->fqdn, 'order_id' => $order->id],
+                $request->ip(),
+            );
+        }
 
-        return back()->with('status', 'Marked '.$updated->fqdn.' as registered.');
+        return back()->with('status', $alreadyRegistered
+            ? $updated->fqdn.' was already registered.'
+            : 'Marked '.$updated->fqdn.' as registered.');
     }
 
     public function create(): View

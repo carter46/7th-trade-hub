@@ -11,9 +11,13 @@ class DomainRegistration extends Model
 
     public const STATUS_PENDING_MANUAL = 'pending_manual';
 
+    public const STATUS_PENDING_REPLACEMENT = 'pending_replacement';
+
     public const STATUS_PROCESSING = 'processing';
 
     public const STATUS_REGISTERED = 'registered';
+
+    public const STATUS_REJECTED = 'rejected';
 
     public const STATUS_FAILED = 'failed';
 
@@ -79,6 +83,31 @@ class DomainRegistration extends Model
         return $this->status === self::STATUS_PENDING_MANUAL;
     }
 
+    public function isPendingReplacement(): bool
+    {
+        return $this->status === self::STATUS_PENDING_REPLACEMENT;
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->status === self::STATUS_REJECTED;
+    }
+
+    public function awaitsManualAdminAction(): bool
+    {
+        return $this->isManualFulfillment()
+            && in_array($this->status, [
+                self::STATUS_PENDING_MANUAL,
+                self::STATUS_PENDING_REPLACEMENT,
+            ], true);
+    }
+
+    public function canRequestReplacement(): bool
+    {
+        return $this->isManualFulfillment()
+            && ($this->isRejected() || $this->isPendingReplacement());
+    }
+
     public function isManualFulfillment(): bool
     {
         if ($this->provider_key === DomainQuote::PROVIDER_KEY_MANUAL) {
@@ -89,6 +118,36 @@ class DomainRegistration extends Model
 
         return ($meta['fulfillment'] ?? null) === 'manual'
             || ($meta['domain_fulfillment'] ?? null) === 'manual';
+    }
+
+    public function rejectedFqdn(): ?string
+    {
+        $meta = $this->provider_meta ?? [];
+        $value = $meta['rejected_fqdn'] ?? null;
+
+        return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    public function rejectionReason(): ?string
+    {
+        if ($this->isRejected() || $this->isPendingReplacement()) {
+            return $this->error_message;
+        }
+
+        $meta = $this->provider_meta ?? [];
+        $value = $meta['rejection_reason'] ?? null;
+
+        return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    /**
+     * @return list<array{fqdn: string, rejected_at: string, reason: string}>
+     */
+    public function replacementHistory(): array
+    {
+        $history = $this->provider_meta['replacement_history'] ?? [];
+
+        return is_array($history) ? array_values($history) : [];
     }
 
     /**

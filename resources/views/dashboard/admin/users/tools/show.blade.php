@@ -102,17 +102,41 @@
                     <dd class="font-medium text-text-primary">{{ $dc->verified_at?->format('j M Y H:i') ?? '—' }}</dd>
                 </div>
             </dl>
-            @if ($dc->verification_status !== 'verified')
-                <div class="flex flex-col gap-3 rounded-lg border border-amber-300/40 bg-amber-50/50 px-4 py-3 sm:flex-row sm:items-center">
-                    <p class="flex-1 text-xs text-text-secondary">
-                        DNS hasn't been verified yet. If this customer uses external hosting and doesn't need to change nameservers, you can approve manually.
-                    </p>
-                    <form method="POST" action="{{ route('admin.users.domain-connections.approve', [$user, $dc]) }}">
-                        @csrf
-                        <x-dashboard.button type="submit" size="sm" variant="secondary">Approve domain</x-dashboard.button>
-                    </form>
+            <x-dashboard.button
+                :href="route('admin.users.domains.connections.show', [$user, $dc])"
+                size="sm"
+                variant="secondary"
+            >
+                Manage domain
+            </x-dashboard.button>
+        </x-dashboard.card>
+    @endif
+
+    @if (!empty($siblingDomainRegistration))
+        @php $reg = $siblingDomainRegistration; @endphp
+        <x-dashboard.card class="mb-6 space-y-3">
+            <h3 class="text-sm font-semibold text-text-primary">Purchased domain</h3>
+            <dl class="grid gap-3 sm:grid-cols-3 text-sm">
+                <div>
+                    <dt class="text-text-muted">Domain</dt>
+                    <dd class="font-mono font-medium text-text-primary break-all">{{ $reg->fqdn }}</dd>
                 </div>
-            @endif
+                <div>
+                    <dt class="text-text-muted">Status</dt>
+                    <dd><x-dashboard.badge :status="$reg->status" /></dd>
+                </div>
+                <div>
+                    <dt class="text-text-muted">Fulfillment</dt>
+                    <dd class="font-medium text-text-primary">{{ $reg->isManualFulfillment() ? 'Manual' : 'Provider' }}</dd>
+                </div>
+            </dl>
+            <x-dashboard.button
+                :href="route('admin.users.domains.registrations.show', [$user, $reg])"
+                size="sm"
+                variant="secondary"
+            >
+                Manage domain
+            </x-dashboard.button>
         </x-dashboard.card>
     @endif
 

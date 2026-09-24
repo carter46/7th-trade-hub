@@ -241,9 +241,19 @@ class EmailService
         $identity = EmailIdentity::forProfile($email->profile->value)
             ?? EmailIdentity::defaultIdentity();
 
-        $fromName = $identity?->from_name ?: (string) config('mail.from.name', config('app.name'));
         $fromEmail = $identity?->from_email ?: (string) config('mail.from.address', 'noreply@example.com');
         $replyTo = $email->replyTo ?: ($identity?->reply_to_email);
+
+        $siteName = app(\App\Services\Branding\SiteBrandingRepository::class)->siteName()
+            ?: (string) config('mail.from.name', config('app.name', '7th Trade Hub'));
+
+        $fromName = trim((string) ($identity?->from_name ?: ''));
+        if ($fromName === ''
+            || filter_var($fromName, FILTER_VALIDATE_EMAIL)
+            || strcasecmp($fromName, $fromEmail) === 0
+        ) {
+            $fromName = $siteName;
+        }
 
         return [$fromName, $fromEmail, $replyTo];
     }

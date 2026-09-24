@@ -1,10 +1,14 @@
 @php
     $siteName = $branding['site_name'] ?? config('app.name');
-    $logoUrl = absolute_media_url_from_id($branding['logo_light_media_id'] ?? null, null, 'medium');
+    // Green header (#0b6a39): prefer dark-theme logo (light/white mark). Fall back to light-theme logo.
+    $logoMediaId = $branding['logo_dark_media_id'] ?? $branding['logo_light_media_id'] ?? null;
+    $logoUrl = absolute_media_url_from_id($logoMediaId ? (int) $logoMediaId : null, null, 'medium');
     $siteUrl = config('app.url');
     $unsubscribeUrl = \Illuminate\Support\Facades\Route::has('dashboard.notifications')
         ? route('dashboard.notifications')
         : $siteUrl;
+    $preheader = \Illuminate\Support\Str::limit(trim(strip_tags((string) ($message->body ?? ''))), 140, '…');
+    $headerTitle = $message->title ?? $siteName;
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -14,6 +18,9 @@
     <title>{{ $message->emailSubject ?: $message->title }}</title>
 </head>
 <body style="margin:0;padding:0;background:#f4f6f8;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#111827;">
+@if($preheader !== '')
+<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">{{ $preheader }}</div>
+@endif
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f6f8;padding:24px 12px;">
     <tr>
         <td align="center">
@@ -24,6 +31,7 @@
                             <img src="{{ $logoUrl }}" alt="{{ $siteName }}" style="max-height:40px;max-width:180px;display:block;margin-bottom:8px;">
                         @endif
                         <div style="font-size:18px;font-weight:700;line-height:1.3;">{{ $siteName }}</div>
+                        <div style="font-size:14px;font-weight:600;line-height:1.4;margin-top:6px;opacity:.95;">{{ $headerTitle }}</div>
                     </td>
                 </tr>
                 <tr>
@@ -33,19 +41,55 @@
                             <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#374151;">{{ $message->body }}</p>
                         @endif
                         @isset($context['order_reference'])
-                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:16px 0;font-size:14px;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:16px 0;font-size:14px;border-collapse:collapse;">
                                 <tr><td style="padding:4px 0;color:#6b7280;">Order</td><td style="padding:4px 0;font-weight:600;">{{ $context['order_reference'] }}</td></tr>
-                                @if(!empty($context['total_amount']))
-                                    <tr><td style="padding:4px 0;color:#6b7280;">Amount</td><td style="padding:4px 0;font-weight:600;">₦{{ number_format((float) $context['total_amount'], 2) }}</td></tr>
+                                @if(!empty($context['payment_method_label']))
+                                    <tr><td style="padding:4px 0;color:#6b7280;">Payment</td><td style="padding:4px 0;">{{ $context['payment_method_label'] }}@if(!empty($context['payment_status'])) · {{ $context['payment_status'] }}@endif</td></tr>
                                 @endif
                                 @if(!empty($context['buyer_name']))
                                     <tr><td style="padding:4px 0;color:#6b7280;">Customer</td><td style="padding:4px 0;">{{ $context['buyer_name'] }}</td></tr>
                                 @endif
                             </table>
                         @endisset
+                        @if(!empty($context['lines']) && is_array($context['lines']))
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:8px 0 16px;font-size:14px;border-collapse:collapse;">
+                                <tr>
+                                    <td colspan="2" style="padding:8px 0 6px;font-weight:700;color:#111827;border-bottom:1px solid #e5e7eb;">Items</td>
+                                </tr>
+                                @foreach($context['lines'] as $line)
+                                    <tr>
+                                        <td style="padding:10px 0;vertical-align:top;border-bottom:1px solid #f3f4f6;">
+                                            <div style="font-weight:600;color:#111827;">{{ $line['title'] ?? 'Item' }}</div>
+                                            @if(!empty($line['subtitle']))
+                                                <div style="margin-top:2px;font-size:13px;color:#6b7280;">{{ $line['subtitle'] }}</div>
+                                            @endif
+                                            @if(!empty($line['meta']))
+                                                <div style="margin-top:2px;font-size:12px;color:#9ca3af;">{{ $line['meta'] }}</div>
+                                            @endif
+                                            @if(!empty($line['quantity']) && (int) $line['quantity'] > 1)
+                                                <div style="margin-top:2px;font-size:12px;color:#6b7280;">Qty {{ (int) $line['quantity'] }}</div>
+                                            @endif
+                                        </td>
+                                        <td style="padding:10px 0;vertical-align:top;text-align:right;font-weight:600;border-bottom:1px solid #f3f4f6;white-space:nowrap;">
+                                            ₦{{ number_format((float) ($line['line_total'] ?? 0), 2) }}
+                                        </td>
+                                    </tr>
+                                @endforeach
+                                @if(!empty($context['total_amount']))
+                                    <tr>
+                                        <td style="padding:12px 0 4px;font-weight:700;color:#111827;">Total</td>
+                                        <td style="padding:12px 0 4px;text-align:right;font-weight:700;color:#111827;">₦{{ number_format((float) $context['total_amount'], 2) }}</td>
+                                    </tr>
+                                @endif
+                            </table>
+                        @elseif(!empty($context['total_amount']))
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:16px 0;font-size:14px;">
+                                <tr><td style="padding:4px 0;color:#6b7280;">Amount</td><td style="padding:4px 0;font-weight:600;">₦{{ number_format((float) $context['total_amount'], 2) }}</td></tr>
+                            </table>
+                        @endif
                         @if($message->actionUrl)
                             <p style="margin:20px 0 0;">
-                                <a href="{{ $message->actionUrl }}" style="display:inline-block;background:#0b6a39;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:600;font-size:14px;">View details</a>
+                                <a href="{{ $message->actionUrl }}" style="display:inline-block;background:#0b6a39;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:600;font-size:14px;">{{ $message->meta['action_label'] ?? 'View details' }}</a>
                             </p>
                         @endif
                     </td>

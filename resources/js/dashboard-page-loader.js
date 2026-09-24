@@ -319,7 +319,7 @@ export function initDashboardPageLoader() {
     });
 
     document.addEventListener('click', (event) => {
-        if (event.defaultPrevented || event.button !== 0) {
+        if (event.button !== 0) {
             return;
         }
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
@@ -331,15 +331,29 @@ export function initDashboardPageLoader() {
             return;
         }
 
-        showDashboardPageLoader();
+        // Defer so Alpine/@click.prevent can cancel navigation first.
+        queueMicrotask(() => {
+            if (event.defaultPrevented || !isInternalNavLink(anchor)) {
+                return;
+            }
+            showDashboardPageLoader();
+        });
     }, true);
 
     document.addEventListener('submit', (event) => {
-        if (event.defaultPrevented || !shouldShowLoaderForForm(event.target)) {
+        const form = event.target;
+        if (!shouldShowLoaderForForm(form)) {
             return;
         }
 
-        showDashboardPageLoader();
+        // Defer so Alpine @submit.prevent + fetch can cancel default submit first.
+        // AJAX forms must not leave the overlay stuck; real navigations still show it.
+        queueMicrotask(() => {
+            if (event.defaultPrevented || !shouldShowLoaderForForm(form)) {
+                return;
+            }
+            showDashboardPageLoader();
+        });
     }, true);
 
     window.addEventListener('beforeunload', () => {
