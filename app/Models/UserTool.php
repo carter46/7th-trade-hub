@@ -336,6 +336,22 @@ class UserTool extends Model
             return strtolower(trim($fromOrder));
         }
 
+        if ($this->order_id) {
+            $fromRegistration = DomainRegistration::query()
+                ->where('order_id', $this->order_id)
+                ->whereIn('status', [
+                    DomainRegistration::STATUS_REGISTERED,
+                    DomainRegistration::STATUS_PENDING_MANUAL,
+                    DomainRegistration::STATUS_PENDING_REPLACEMENT,
+                    DomainRegistration::STATUS_PROCESSING,
+                ])
+                ->orderByDesc('id')
+                ->value('fqdn');
+            if (is_string($fromRegistration) && trim($fromRegistration) !== '') {
+                return strtolower(trim($fromRegistration));
+            }
+        }
+
         $connection = $this->relationLoaded('domainConnection')
             ? $this->getRelation('domainConnection')
             : DomainConnection::query()->where('user_tool_id', $this->id)->first();

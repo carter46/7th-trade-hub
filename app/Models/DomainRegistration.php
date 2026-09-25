@@ -128,6 +128,28 @@ class DomainRegistration extends Model
         return is_string($value) && $value !== '' ? $value : null;
     }
 
+    /**
+     * Original domain the customer asked for when admin registered a closely related name instead.
+     */
+    public function unavailableFqdn(): ?string
+    {
+        $meta = $this->provider_meta ?? [];
+        $value = $meta['unavailable_fqdn'] ?? $meta['original_requested_fqdn'] ?? null;
+
+        return is_string($value) && $value !== '' ? strtolower($value) : null;
+    }
+
+    public function closelyRelatedFqdn(): ?string
+    {
+        if (! $this->unavailableFqdn()) {
+            return null;
+        }
+
+        $fqdn = strtolower(trim((string) $this->fqdn));
+
+        return $fqdn !== '' ? $fqdn : null;
+    }
+
     public function rejectionReason(): ?string
     {
         if ($this->isRejected() || $this->isPendingReplacement()) {

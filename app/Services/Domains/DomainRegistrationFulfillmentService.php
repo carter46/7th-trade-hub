@@ -3,6 +3,7 @@
 namespace App\Services\Domains;
 
 use App\Enums\PlatformProductType;
+use App\Models\DomainConnection;
 use App\Models\DomainQuote;
 use App\Models\DomainRegistration;
 use App\Models\Order;
@@ -284,9 +285,23 @@ class DomainRegistrationFulfillmentService
      * @param  list<string>|null  $nameservers
      * @return array{0: DomainRegistration, 1: bool}  [registration, alreadyRegistered]
      */
-    public function markManualRegistered(DomainRegistration $registration, ?string $providerReference = null, ?array $nameservers = null, ?int $adminId = null): array
-    {
-        $result = DB::transaction(function () use ($registration, $providerReference, $nameservers, $adminId) {
+    public function markManualRegistered(
+        DomainRegistration $registration,
+        ?string $providerReference = null,
+        ?array $nameservers = null,
+        ?int $adminId = null,
+        ?string $closelyRelatedFqdn = null,
+    ): array {
+        $normalizedCloselyRelated = null;
+        if (filled($closelyRelatedFqdn)) {
+            try {
+                $normalizedCloselyRelated = DomainFqdn::normalizeFqdn((string) $closelyRelatedFqdn, true);
+            } catch (InvalidArgumentException $e) {
+                throw new InvalidArgumentException('Closely related domain is invalid: '.$e->getMessage());
+            }
+        }
+
+        $result = DB::transaction(function () use ($registration, $providerReference, $nameservers, $adminId, $normalizedCloselyRelated) {
             /** @var DomainRegistration $locked */
             $locked = DomainRegistration::query()->whereKey($registration->id)->lockForUpdate()->firstOrFail();
 
@@ -308,8 +323,26 @@ class DomainRegistrationFulfillmentService
 
             $wasReplacement = $locked->isPendingReplacement();
             $previousFqdn = strtolower((string) $locked->fqdn);
+            $finalFqdn = $previousFqdn;
+            $meta = $locked->provider_meta ?? [];
+            $appliedCloselyRelated = false;
+
+            if ($normalizedCloselyRelated !== null
+                && strcasecmp($normalizedCloselyRelated, $previousFqdn) !== 0) {
+                $this->assertFqdnAvailableForReplacement($normalizedCloselyRelated, (int) $locked->id);
+                $finalFqdn = $normalizedCloselyRelated;
+                $appliedCloselyRelated = true;
+                $meta = array_merge($meta, [
+                    'unavailable_fqdn' => $previousFqdn,
+                    'original_requested_fqdn' => $previousFqdn,
+                    'closely_related_fqdn' => $finalFqdn,
+                    'closely_related_applied_at' => now()->toIso8601String(),
+                    'closely_related_by_admin_id' => $adminId,
+                ]);
+            }
 
             $locked->update([
+                'fqdn' => $finalFqdn,
                 'status' => DomainRegistration::STATUS_REGISTERED,
                 'provider_reference' => $providerReference !== null && $providerReference !== ''
                     ? Str::limit($providerReference, 191, '')
@@ -318,7 +351,7 @@ class DomainRegistrationFulfillmentService
                 'nameservers_updated_at' => $ns !== [] ? now() : $locked->nameservers_updated_at,
                 'registered_at' => now(),
                 'error_message' => null,
-                'provider_meta' => array_merge($locked->provider_meta ?? [], [
+                'provider_meta' => array_merge($meta, [
                     'fulfillment' => 'manual',
                     'domain_fulfillment' => 'manual',
                     'marked_registered_at' => now()->toIso8601String(),
@@ -327,11 +360,19 @@ class DomainRegistrationFulfillmentService
             ]);
 
             $fresh = $locked->fresh(['order.user', 'orderItem']);
-            $this->syncOrderFqdnReferences($fresh, $previousFqdn);
+            $this->syncOrderFqdnReferences(
+                $fresh,
+                $previousFqdn,
+                forceAllOrderTools: $appliedCloselyRelated || strcasecmp($finalFqdn, $previousFqdn) !== 0,
+            );
 
             $this->audit->log('domains.fulfillment.registered', $fresh, [
                 'manual' => true,
                 'replacement' => $wasReplacement,
+                'closely_related' => $appliedCloselyRelated,
+                'unavailable_fqdn' => $appliedCloselyRelated ? $previousFqdn : null,
+                'fqdn' => $finalFqdn,
+                'provider_reference' => $fresh->provider_reference,
                 'admin_id' => $adminId,
             ]);
 
@@ -540,8 +581,11 @@ class DomainRegistrationFulfillmentService
     /**
      * Keep website bundle lines + related tools in sync when the registration FQDN changes.
      */
-    private function syncOrderFqdnReferences(DomainRegistration $registration, ?string $previousFqdn = null): void
-    {
+    private function syncOrderFqdnReferences(
+        DomainRegistration $registration,
+        ?string $previousFqdn = null,
+        bool $forceAllOrderTools = false,
+    ): void {
         $registration->loadMissing(['order.items', 'orderItem']);
         $order = $registration->order;
         if (! $order) {
@@ -550,6 +594,8 @@ class DomainRegistrationFulfillmentService
 
         $newFqdn = strtolower((string) $registration->fqdn);
         $previousFqdn = $previousFqdn !== null ? strtolower($previousFqdn) : null;
+        $unavailableFqdn = $registration->unavailableFqdn();
+        $legacyHosts = array_values(array_unique(array_filter([$previousFqdn, $unavailableFqdn])));
         $tld = null;
         try {
             $tld = DomainFqdn::fromFqdn($newFqdn, true)['tld'];
@@ -561,16 +607,20 @@ class DomainRegistrationFulfillmentService
             $options = $item->options ?? [];
             $itemFqdn = strtolower((string) ($options['domain_fqdn'] ?? $options['domain_name'] ?? ''));
             $isRegistrationLine = (int) $item->id === (int) $registration->order_item_id;
-            $matchesPrevious = $previousFqdn !== null && $itemFqdn !== '' && $itemFqdn === $previousFqdn;
-            $isBuyDomainContext = ($options['domain_mode'] ?? null) === 'buy' && $matchesPrevious;
+            $matchesLegacy = $itemFqdn !== '' && in_array($itemFqdn, $legacyHosts, true);
+            $isBuyDomainLine = ($options['domain_mode'] ?? null) === 'buy' && ($matchesLegacy || $isRegistrationLine);
 
-            if (! $isRegistrationLine && ! $matchesPrevious && ! $isBuyDomainContext) {
+            if (! $isRegistrationLine && ! $matchesLegacy && ! $isBuyDomainLine) {
                 continue;
             }
 
             $options['domain_fqdn'] = $newFqdn;
             if ($tld) {
                 $options['tld'] = $tld;
+            }
+            if ($unavailableFqdn) {
+                $options['unavailable_domain_fqdn'] = $unavailableFqdn;
+                $options['closely_related_domain_fqdn'] = $newFqdn;
             }
             $item->update(['options' => $options]);
         }
@@ -582,12 +632,23 @@ class DomainRegistrationFulfillmentService
                 $siteHost = strtolower((string) (parse_url((string) $tool->site_url, PHP_URL_HOST) ?: ''));
             }
 
-            $shouldUpdateSiteUrl = ! filled($tool->site_url)
-                || ($previousFqdn !== null && $siteHost === $previousFqdn);
+            $shouldUpdateSiteUrl = $forceAllOrderTools
+                || ! filled($tool->site_url)
+                || ($siteHost !== null && in_array($siteHost, $legacyHosts, true));
 
             if ($shouldUpdateSiteUrl) {
                 $tool->update(['site_url' => 'https://'.$newFqdn]);
             }
+        }
+
+        if ($legacyHosts !== []) {
+            DomainConnection::query()
+                ->where('order_id', $order->id)
+                ->whereIn('fqdn', $legacyHosts)
+                ->update([
+                    'fqdn' => $newFqdn,
+                    'claim_key' => $newFqdn,
+                ]);
         }
     }
 
@@ -650,13 +711,32 @@ class DomainRegistrationFulfillmentService
             ? route('dashboard.my-domains.show', $registration)
             : null;
 
-        $title = $wasReplacement
-            ? __('Domain replacement approved')
-            : __('Domain registered');
+        $unavailable = $registration->unavailableFqdn();
+        $reference = filled($registration->provider_reference)
+            ? (string) $registration->provider_reference
+            : null;
+        $nameservers = $registration->nameserverList();
 
-        $body = $wasReplacement
-            ? __('Your replacement domain :fqdn has been approved and registered.', ['fqdn' => $registration->fqdn])
-            : __('Your domain :fqdn has been registered successfully.', ['fqdn' => $registration->fqdn]);
+        if ($unavailable) {
+            $title = __('Closely related domain registered');
+            $body = __('Your requested domain :unavailable was not available. We registered the closely related domain :fqdn instead.', [
+                'unavailable' => $unavailable,
+                'fqdn' => $registration->fqdn,
+            ]);
+        } elseif ($wasReplacement) {
+            $title = __('Domain replacement approved');
+            $body = __('Your replacement domain :fqdn has been approved and registered.', ['fqdn' => $registration->fqdn]);
+        } else {
+            $title = __('Domain registered');
+            $body = __('Your domain :fqdn has been registered successfully.', ['fqdn' => $registration->fqdn]);
+        }
+
+        if ($reference) {
+            $body .= ' '.__('Registrar reference: :ref.', ['ref' => $reference]);
+        }
+        if ($nameservers !== []) {
+            $body .= ' '.__('Nameservers: :ns.', ['ns' => implode(', ', $nameservers)]);
+        }
 
         $registeredAt = optional($registration->registered_at)?->toIso8601String() ?: now()->toIso8601String();
 
@@ -668,9 +748,12 @@ class DomainRegistrationFulfillmentService
             meta: [
                 'domain_registration_id' => $registration->id,
                 'action_label' => __('View domain'),
+                'provider_reference' => $reference,
+                'unavailable_fqdn' => $unavailable,
+                'fqdn' => $registration->fqdn,
             ],
             emailSubject: $title.' — '.$registration->fqdn,
-            dedupeKey: 'domain.approve.'.$registration->id.'.'.md5($registeredAt),
+            dedupeKey: 'domain.approve.'.$registration->id.'.'.md5($registeredAt.(string) $reference.(string) $unavailable),
         );
 
         $this->deliverUserNotification($user, $message, 'approve', $registration->id);

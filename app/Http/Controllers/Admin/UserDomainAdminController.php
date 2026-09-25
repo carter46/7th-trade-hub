@@ -43,6 +43,7 @@ class UserDomainAdminController extends Controller
         $data = $request->validate([
             'provider_reference' => ['nullable', 'string', 'max:191'],
             'nameservers' => ['nullable', 'string', 'max:1000'],
+            'closely_related_fqdn' => ['nullable', 'string', 'max:255'],
         ]);
 
         $nameservers = null;
@@ -56,9 +57,10 @@ class UserDomainAdminController extends Controller
                 $data['provider_reference'] ?? null,
                 $nameservers,
                 $request->user()?->id,
+                $data['closely_related_fqdn'] ?? null,
             );
         } catch (InvalidArgumentException $e) {
-            return back()->with('error', $e->getMessage());
+            return back()->withInput()->with('error', $e->getMessage());
         }
 
         if (! $alreadyRegistered) {
@@ -67,16 +69,28 @@ class UserDomainAdminController extends Controller
                 'domains.manual_registered',
                 $updated,
                 null,
-                ['status' => $updated->status, 'fqdn' => $updated->fqdn, 'order_id' => $updated->order_id],
+                [
+                    'status' => $updated->status,
+                    'fqdn' => $updated->fqdn,
+                    'unavailable_fqdn' => $updated->unavailableFqdn(),
+                    'provider_reference' => $updated->provider_reference,
+                    'order_id' => $updated->order_id,
+                ],
                 $request->ip(),
             );
         }
 
+        $status = $alreadyRegistered
+            ? $updated->fqdn.' was already registered.'
+            : 'Approved and marked '.$updated->fqdn.' as registered.';
+        if (! $alreadyRegistered && $updated->unavailableFqdn()) {
+            $status = 'Approved closely related domain '.$updated->fqdn
+                .' (requested '.$updated->unavailableFqdn().' was unavailable). Website URLs and order lines were updated.';
+        }
+
         return redirect()
             ->route('admin.users.domains.registrations.show', [$user, $updated])
-            ->with('status', $alreadyRegistered
-                ? $updated->fqdn.' was already registered.'
-                : 'Approved and marked '.$updated->fqdn.' as registered.');
+            ->with('status', $status);
     }
 
     public function rejectRegistration(Request $request, User $user, DomainRegistration $registration): RedirectResponse

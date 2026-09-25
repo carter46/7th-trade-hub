@@ -100,6 +100,21 @@
         @elseif($registration->error_message && ! $registration->isRegistered())
             <x-dashboard.alert type="warning">{{ $registration->error_message }}</x-dashboard.alert>
         @endif
+
+        @if($registration->isRegistered() && $registration->unavailableFqdn())
+            <div class="rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-4">
+                <p class="text-xs font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-300">Closely related domain</p>
+                <p class="mt-2 text-sm text-text-secondary">Your requested domain <span class="font-mono">{{ $registration->unavailableFqdn() }}</span> was not available.</p>
+                <p class="mt-1 text-sm text-text-primary">Registered domain: <span class="font-mono font-semibold">{{ $registration->fqdn }}</span></p>
+            </div>
+        @endif
+
+        @if($registration->isRegistered() && $registration->provider_reference)
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wider text-text-muted">Registrar reference</p>
+                <p class="mt-1 font-mono text-sm text-text-primary">{{ $registration->provider_reference }}</p>
+            </div>
+        @endif
     </x-dashboard.card>
 
     <x-dashboard.card class="mt-5 space-y-4">

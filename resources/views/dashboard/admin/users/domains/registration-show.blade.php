@@ -51,7 +51,21 @@
                 <dt class="text-text-muted">Registered at</dt>
                 <dd class="font-medium text-text-primary">{{ $registration->registered_at?->format('j M Y H:i') ?? '—' }}</dd>
             </div>
+            @if($registration->provider_reference)
+                <div>
+                    <dt class="text-text-muted">Registrar reference</dt>
+                    <dd class="font-medium text-text-primary font-mono">{{ $registration->provider_reference }}</dd>
+                </div>
+            @endif
         </dl>
+
+        @if($registration->unavailableFqdn())
+            <div class="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm">
+                <p class="font-semibold text-amber-700 dark:text-amber-300">Closely related domain used</p>
+                <p class="mt-1 text-text-secondary">Requested <span class="font-mono">{{ $registration->unavailableFqdn() }}</span> was unavailable.</p>
+                <p class="mt-1 text-text-primary">Registered: <span class="font-mono font-semibold">{{ $registration->fqdn }}</span></p>
+            </div>
+        @endif
 
         @if($registration->rejectedFqdn())
             <div class="rounded-lg border border-danger/30 bg-danger/5 px-4 py-3 text-sm">
@@ -99,10 +113,17 @@
         <div class="mt-6 grid gap-6 lg:grid-cols-2">
             <x-dashboard.card class="space-y-4">
                 <h3 class="text-sm font-semibold text-text-primary">Approve domain</h3>
-                <p class="text-xs text-text-muted">Confirm you have registered this domain offline, then approve.</p>
+                <p class="text-xs text-text-muted">Confirm you have registered this domain offline, then approve. If the requested name was taken, enter the closely related domain you registered instead — it replaces the FQDN everywhere (order, tools, Website URL setup).</p>
                 <form method="POST" action="{{ route('admin.users.domains.registrations.approve', [$user, $registration]) }}" class="space-y-3">
                     @csrf
-                    <x-dashboard.input name="provider_reference" label="Registrar reference (optional)" :value="old('provider_reference')" />
+                    <x-dashboard.input name="provider_reference" label="Registrar reference (optional)" :value="old('provider_reference')" hint="Included in the customer confirmation email when provided." />
+                    <x-dashboard.input
+                        name="closely_related_fqdn"
+                        label="Closely related domain (if requested name unavailable)"
+                        :value="old('closely_related_fqdn')"
+                        placeholder="example-alt.com"
+                        hint="Leave blank if you registered the exact requested domain. When set, this FQDN becomes the registered domain and updates Website URL / tools."
+                    />
                     <div>
                         <label class="mb-1 block text-xs text-text-muted">Nameservers (optional, comma-separated)</label>
                         <input type="text" name="nameservers" value="{{ old('nameservers') }}" class="w-full rounded-lg border border-border-default bg-elevated px-3 py-2 text-sm" placeholder="ns1.example.com, ns2.example.com">

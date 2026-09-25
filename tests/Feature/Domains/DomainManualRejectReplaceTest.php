@@ -282,6 +282,69 @@ class DomainManualRejectReplaceTest extends TestCase
         $this->assertSame(DomainRegistration::STATUS_REJECTED, $registration->fresh()->status);
     }
 
+    public function test_approve_with_closely_related_updates_tools_and_includes_reference_in_mail(): void
+    {
+        [$user, $registration] = $this->seedManualPendingRegistration();
+        $admin = User::factory()->create(['email_verified_at' => now()]);
+        $admin->assignRole('admin');
+        $admin->givePermissionTo('users.manage');
+
+        $tool = \App\Models\UserTool::query()->create([
+            'public_id' => (string) \Illuminate\Support\Str::uuid(),
+            'user_id' => $user->id,
+            'order_id' => $registration->order_id,
+            'order_item_id' => $registration->order_item_id,
+            'platform_product_id' => 1,
+            'status' => \App\Enums\UserToolStatus::PendingSetup,
+            'site_url' => null,
+            'purchased_at' => now(),
+        ]);
+
+        $captured = null;
+        $emails = \Mockery::mock(EmailService::class);
+        $emails->shouldReceive('sendMailableHtml')
+            ->once()
+            ->withArgs(function ($to, $subject, $html, $text, $profile) use ($user, &$captured) {
+                $captured = compact('to', 'subject', 'html', 'profile');
+
+                return $to === $user->email && $profile === EmailProfile::Sales;
+            })
+            ->andReturn(\App\Services\Communications\Email\SendResult::ok('brevo', 'msg-approve'));
+        $this->app->instance(EmailService::class, $emails);
+        $this->app->forgetInstance(\App\Services\Communications\Email\OutboundMail::class);
+        $this->app->forgetInstance(\App\Services\Notifications\Channels\MailChannel::class);
+        $this->app->forgetInstance(\App\Services\Notifications\NotificationDispatcher::class);
+        $this->app->forgetInstance(DomainRegistrationFulfillmentService::class);
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.domains.registrations.approve', [$user, $registration]), [
+                'provider_reference' => 'REG-7788',
+                'closely_related_fqdn' => 'reject-me-hq.com',
+            ])
+            ->assertRedirect(route('admin.users.domains.registrations.show', [$user, $registration]))
+            ->assertSessionHas('status', fn (string $s) => str_contains($s, 'reject-me-hq.com')
+                && str_contains($s, 'reject-me.com'));
+
+        $registration->refresh();
+        $this->assertSame(DomainRegistration::STATUS_REGISTERED, $registration->status);
+        $this->assertSame('reject-me-hq.com', $registration->fqdn);
+        $this->assertSame('reject-me.com', $registration->unavailableFqdn());
+        $this->assertSame('REG-7788', $registration->provider_reference);
+
+        $tool->refresh();
+        $this->assertSame('https://reject-me-hq.com', $tool->site_url);
+        $this->assertSame('reject-me-hq.com', $tool->connectedDomainFqdn());
+
+        $item = $registration->orderItem()->first();
+        $this->assertSame('reject-me-hq.com', $item->options['domain_fqdn'] ?? null);
+
+        $this->assertNotNull($captured);
+        $this->assertStringContainsString('reject-me-hq.com', $captured['subject']);
+        $this->assertStringContainsString('reject-me.com', $captured['html']);
+        $this->assertStringContainsString('reject-me-hq.com', $captured['html']);
+        $this->assertStringContainsString('REG-7788', $captured['html']);
+    }
+
     public function test_email_from_name_never_uses_raw_address(): void
     {
         EmailIdentity::query()->updateOrCreate(
