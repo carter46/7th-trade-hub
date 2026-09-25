@@ -1,8 +1,9 @@
 @php
     $siteName = $branding['site_name'] ?? config('app.name');
     // Green header (#0b6a39): prefer dark-theme logo (light/white mark). Fall back to light-theme logo.
+    // Use email-safe PNG/JPEG — Gmail converts WebP→JPEG and fills transparency with black.
     $logoMediaId = $branding['logo_dark_media_id'] ?? $branding['logo_light_media_id'] ?? null;
-    $logoUrl = absolute_media_url_from_id($logoMediaId ? (int) $logoMediaId : null, null, 'medium');
+    $logoUrl = email_branding_logo_url($logoMediaId ? (int) $logoMediaId : null);
     $siteUrl = config('app.url');
     $unsubscribeUrl = \Illuminate\Support\Facades\Route::has('dashboard.notifications')
         ? route('dashboard.notifications')
@@ -28,7 +29,7 @@
                 <tr>
                     <td style="padding:24px 28px;border-bottom:1px solid #e5e7eb;background:#0b6a39;color:#ffffff;">
                         @if($logoUrl)
-                            <img src="{{ $logoUrl }}" alt="{{ $siteName }}" style="max-height:40px;max-width:180px;display:block;margin-bottom:8px;">
+                            <img src="{{ $logoUrl }}" alt="{{ $siteName }}" width="180" height="40" style="max-height:40px;max-width:180px;height:auto;width:auto;display:block;margin-bottom:8px;border:0;outline:none;text-decoration:none;">
                         @endif
                         <div style="font-size:18px;font-weight:700;line-height:1.3;">{{ $siteName }}</div>
                         <div style="font-size:14px;font-weight:600;line-height:1.4;margin-top:6px;opacity:.95;">{{ $headerTitle }}</div>

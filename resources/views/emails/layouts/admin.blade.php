@@ -1,7 +1,7 @@
 @php
     $siteName = $branding['site_name'] ?? config('app.name');
     $logoMediaId = $branding['logo_dark_media_id'] ?? $branding['logo_light_media_id'] ?? null;
-    $logoUrl = absolute_media_url_from_id($logoMediaId ? (int) $logoMediaId : null, null, 'medium');
+    $logoUrl = email_branding_logo_url($logoMediaId ? (int) $logoMediaId : null);
     $adminUrl = \Illuminate\Support\Facades\Route::has('admin.dashboard') ? route('admin.dashboard') : config('app.url');
     $preheader = \Illuminate\Support\Str::limit(trim(strip_tags((string) ($message->body ?? ''))), 140, '…');
     $headerTitle = $message->title ?? 'Admin alert';
@@ -24,7 +24,7 @@
                 <tr>
                     <td style="padding:24px 28px;border-bottom:1px solid #e5e7eb;background:#111827;color:#ffffff;">
                         @if($logoUrl)
-                            <img src="{{ $logoUrl }}" alt="{{ $siteName }}" style="max-height:36px;max-width:160px;display:block;margin-bottom:8px;">
+                            <img src="{{ $logoUrl }}" alt="{{ $siteName }}" width="160" height="36" style="max-height:36px;max-width:160px;height:auto;width:auto;display:block;margin-bottom:8px;border:0;outline:none;text-decoration:none;">
                         @endif
                         <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;opacity:.8;">Admin alert</div>
                         <div style="font-size:18px;font-weight:700;line-height:1.3;margin-top:4px;">{{ $siteName }}</div>
