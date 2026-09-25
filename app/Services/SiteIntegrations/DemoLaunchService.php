@@ -94,6 +94,10 @@ class DemoLaunchService
             throw new InvalidArgumentException('Owned admin login is not enabled for this tool.');
         }
 
+        if ($integration->connection_status !== 'ok') {
+            throw new InvalidArgumentException('This website is not connected yet. Admin must finish setup and Check connection before Auto Login works.');
+        }
+
         return $this->issueLaunch(
             context: SiteLaunchContext::OwnedTool,
             role: 'admin',

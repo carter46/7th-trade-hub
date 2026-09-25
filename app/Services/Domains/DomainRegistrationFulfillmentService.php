@@ -843,8 +843,34 @@ class DomainRegistrationFulfillmentService
             ->whereIn('user_tool_id', $toolIds)
             ->update([
                 'connection_status' => 'unchecked',
-                'last_error' => 'Domain was replaced. Install credentials on the new site (if needed) and run Check connection.',
+                'last_error' => 'Domain was replaced. Reconfigure the site on the new domain, install Hub credentials, then run Check connection.',
             ]);
+
+        // Rewrite admin login URLs that still pointed at the old host so they track the new domain.
+        $newFqdn = strtolower((string) $registration->fqdn);
+        $legacyHosts = array_values(array_filter([
+            $previousFqdn !== null ? strtolower($previousFqdn) : null,
+            $registration->unavailableFqdn(),
+        ]));
+
+        foreach ($tools as $tool) {
+            if (! in_array($tool->id, $toolIds, true) || ! filled($tool->admin_login_url)) {
+                continue;
+            }
+
+            $loginHost = strtolower((string) (parse_url((string) $tool->admin_login_url, PHP_URL_HOST) ?: ''));
+            if ($loginHost === '' || ! in_array($loginHost, $legacyHosts, true)) {
+                continue;
+            }
+
+            $parts = parse_url((string) $tool->admin_login_url);
+            $path = $parts['path'] ?? '/';
+            $query = isset($parts['query']) ? '?'.$parts['query'] : '';
+            $fragment = isset($parts['fragment']) ? '#'.$parts['fragment'] : '';
+            $tool->update([
+                'admin_login_url' => 'https://'.$newFqdn.$path.$query.$fragment,
+            ]);
+        }
     }
 
     private function notifyUserDomainAdminReplaced(DomainRegistration $registration, string $previousFqdn): void

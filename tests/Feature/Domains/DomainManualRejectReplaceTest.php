@@ -393,6 +393,7 @@ class DomainManualRejectReplaceTest extends TestCase
         $tool->refresh();
         $this->assertSame('https://brand-new.com', $tool->site_url);
         $this->assertSame('unchecked', $tool->integration?->fresh()->connection_status);
+        $this->assertFalse($tool->fresh(['integration'])->canLaunchAdmin());
 
         $item = $registered->orderItem()->first();
         $this->assertSame('brand-new.com', $item->options['domain_fqdn'] ?? null);

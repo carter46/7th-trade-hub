@@ -511,7 +511,7 @@ class SiteIntegrationPlatformTest extends TestCase
         $this->assertSame('pending_merchant', $tool->fresh('integration')->integration->connection_status);
     }
 
-    public function test_can_launch_admin_when_pending_merchant_but_not_on_hard_error(): void
+    public function test_can_launch_admin_only_when_connection_ok(): void
     {
         $product = $this->seedWebsiteProduct();
         $user = User::factory()->create(['email_verified_at' => now()]);
@@ -535,10 +535,13 @@ class SiteIntegrationPlatformTest extends TestCase
             'client_secret' => 'owned-secret',
             'webhook_secret' => 'wh-owned',
             'capabilities' => UserToolIntegration::defaultCapabilities(),
-            'connection_status' => 'pending_merchant',
+            'connection_status' => 'ok',
         ]);
 
         $this->assertTrue($tool->fresh('integration')->canLaunchAdmin());
+
+        $tool->integration->update(['connection_status' => 'unchecked']);
+        $this->assertFalse($tool->fresh('integration')->canLaunchAdmin());
 
         $tool->integration->update(['connection_status' => 'error']);
         $this->assertFalse($tool->fresh('integration')->canLaunchAdmin());
