@@ -345,6 +345,59 @@ class DomainManualRejectReplaceTest extends TestCase
         $this->assertStringContainsString('REG-7788', $captured['html']);
     }
 
+    public function test_admin_can_replace_registered_domain_everywhere(): void
+    {
+        [$user, $registration] = $this->seedManualPendingRegistration();
+        $admin = User::factory()->create(['email_verified_at' => now()]);
+        $admin->assignRole('admin');
+        $admin->givePermissionTo('users.manage');
+
+        $service = app(DomainRegistrationFulfillmentService::class);
+        [$registered] = $service->markManualRegistered($registration, 'REF-1', null, $admin->id);
+        $this->assertSame(DomainRegistration::STATUS_REGISTERED, $registered->status);
+
+        $tool = \App\Models\UserTool::query()->create([
+            'public_id' => (string) \Illuminate\Support\Str::uuid(),
+            'user_id' => $user->id,
+            'order_id' => $registered->order_id,
+            'order_item_id' => $registered->order_item_id,
+            'platform_product_id' => 1,
+            'status' => \App\Enums\UserToolStatus::Active,
+            'site_url' => 'https://reject-me.com',
+            'purchased_at' => now(),
+            'configured_at' => now(),
+        ]);
+
+        \App\Models\UserToolIntegration::query()->create([
+            'user_tool_id' => $tool->id,
+            'integration_id' => 'int-'.\Illuminate\Support\Str::lower(\Illuminate\Support\Str::random(8)),
+            'client_id' => 'cid-'.\Illuminate\Support\Str::lower(\Illuminate\Support\Str::random(8)),
+            'client_secret' => 'secret',
+            'webhook_secret' => 'whsec',
+            'connection_status' => 'ok',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.domains.registrations.replace', [$user, $registered]), [
+                'fqdn' => 'brand-new.com',
+                'note' => 'Customer requested rename.',
+            ])
+            ->assertRedirect(route('admin.users.domains.registrations.show', [$user, $registered]))
+            ->assertSessionHas('status', fn (string $s) => str_contains($s, 'brand-new.com'));
+
+        $registered->refresh();
+        $this->assertSame('brand-new.com', $registered->fqdn);
+        $this->assertSame(DomainRegistration::STATUS_REGISTERED, $registered->status);
+        $this->assertSame('reject-me.com', $registered->provider_meta['admin_replaced_from_fqdn'] ?? null);
+
+        $tool->refresh();
+        $this->assertSame('https://brand-new.com', $tool->site_url);
+        $this->assertSame('unchecked', $tool->integration?->fresh()->connection_status);
+
+        $item = $registered->orderItem()->first();
+        $this->assertSame('brand-new.com', $item->options['domain_fqdn'] ?? null);
+    }
+
     public function test_email_from_name_never_uses_raw_address(): void
     {
         EmailIdentity::query()->updateOrCreate(

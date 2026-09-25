@@ -145,6 +145,53 @@ class UserDomainAdminController extends Controller
             ->with('status', $status);
     }
 
+    public function replaceRegistration(Request $request, User $user, DomainRegistration $registration): RedirectResponse
+    {
+        $this->ensureMember($user);
+        $this->assertRegistrationBelongsToUser($user, $registration);
+
+        $data = $request->validate([
+            'fqdn' => ['required', 'string', 'max:255'],
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        try {
+            $updated = $this->domainFulfillment->adminReplaceFqdn(
+                $registration,
+                $data['fqdn'],
+                $request->user()?->id,
+                $data['note'] ?? null,
+            );
+        } catch (InvalidArgumentException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        } catch (\Illuminate\Database\QueryException $e) {
+            report($e);
+
+            return back()->withInput()->with(
+                'error',
+                'Could not replace the domain because it conflicts with another record. Choose a different name.'
+            );
+        }
+
+        $from = (string) (($updated->provider_meta ?? [])['admin_replaced_from_fqdn'] ?? $registration->fqdn);
+
+        $this->audit->log(
+            $request->user()?->id,
+            'domains.admin_replaced',
+            $updated,
+            ['fqdn' => $from],
+            ['fqdn' => $updated->fqdn, 'status' => $updated->status, 'note' => $data['note'] ?? null],
+            $request->ip(),
+        );
+
+        $status = 'Domain replaced: '.$from.' → '.$updated->fqdn
+            .'. Order lines and Website URLs were updated. Re-run Check connection on linked tools if the site was already integrated.';
+
+        return redirect()
+            ->route('admin.users.domains.registrations.show', [$user, $updated])
+            ->with('status', $status);
+    }
+
     public function showConnection(User $user, DomainConnection $connection): View
     {
         $this->ensureMember($user);

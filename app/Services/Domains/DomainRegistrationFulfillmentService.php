@@ -545,6 +545,88 @@ class DomainRegistrationFulfillmentService
     }
 
     /**
+     * Admin replaces the FQDN on any registration (registered or not).
+     * Updates order lines, tool Website URLs, and domain connections. Status is preserved.
+     */
+    public function adminReplaceFqdn(
+        DomainRegistration $registration,
+        string $newFqdn,
+        ?int $adminId = null,
+        ?string $note = null,
+    ): DomainRegistration {
+        try {
+            $normalized = DomainFqdn::normalizeFqdn($newFqdn, true);
+        } catch (InvalidArgumentException $e) {
+            throw new InvalidArgumentException('New domain is invalid: '.$e->getMessage(), 0, $e);
+        }
+
+        $fresh = DB::transaction(function () use ($registration, $normalized, $adminId, $note) {
+            /** @var DomainRegistration $locked */
+            $locked = DomainRegistration::query()->whereKey($registration->id)->lockForUpdate()->firstOrFail();
+
+            $previousFqdn = strtolower((string) $locked->fqdn);
+            if (strcasecmp($normalized, $previousFqdn) === 0) {
+                throw new InvalidArgumentException('Enter a different domain name.');
+            }
+
+            $this->assertFqdnAvailableForReplacement($normalized, (int) $locked->id);
+            $this->assertFqdnNotActivelyConnectedElsewhere($normalized, $locked->order_id ? (int) $locked->order_id : null);
+
+            $meta = $locked->provider_meta ?? [];
+            $history = is_array($meta['admin_replace_history'] ?? null) ? $meta['admin_replace_history'] : [];
+            $history[] = [
+                'from_fqdn' => $previousFqdn,
+                'to_fqdn' => $normalized,
+                'replaced_at' => now()->toIso8601String(),
+                'admin_id' => $adminId,
+                'note' => $note !== null && $note !== '' ? Str::limit(strip_tags($note), 500) : null,
+                'status_at_replace' => $locked->status,
+            ];
+            if (count($history) > 30) {
+                $history = array_slice($history, -30);
+            }
+
+            $metaPatch = [
+                'admin_replace_history' => $history,
+                'admin_replaced_from_fqdn' => $previousFqdn,
+                'admin_replaced_at' => now()->toIso8601String(),
+                'admin_replaced_by_admin_id' => $adminId,
+                // Keep proposed_fqdn in sync when replacing a pending customer proposal.
+                'proposed_fqdn' => $normalized,
+            ];
+
+            $locked->update([
+                'fqdn' => $normalized,
+                'provider_meta' => array_merge($meta, $metaPatch),
+            ]);
+
+            $updated = $locked->fresh(['order.user', 'orderItem']);
+            // Do not force-overwrite unrelated tool site URLs on the same order.
+            $this->syncOrderFqdnReferences($updated, $previousFqdn, forceAllOrderTools: false);
+            $this->markOrderToolsConnectionUnchecked($updated, $previousFqdn);
+
+            $this->audit->log('domains.fulfillment.admin_replaced', $updated, [
+                'from_fqdn' => $previousFqdn,
+                'to_fqdn' => $normalized,
+                'admin_id' => $adminId,
+                'status' => $updated->status,
+            ]);
+
+            return $updated->fresh(['order.user']);
+        });
+
+        $previousFqdn = (string) (($fresh->provider_meta ?? [])['admin_replaced_from_fqdn'] ?? '');
+        $this->dispatchAfterCommit(function () use ($fresh, $previousFqdn) {
+            $registration = DomainRegistration::query()->with(['order.user'])->find($fresh->id);
+            if ($registration) {
+                $this->notifyUserDomainAdminReplaced($registration, $previousFqdn);
+            }
+        });
+
+        return $fresh;
+    }
+
+    /**
      * Run side-effects after the surrounding transaction commits (or immediately if none).
      */
     private function dispatchAfterCommit(callable $callback): void
@@ -575,6 +657,51 @@ class DomainRegistrationFulfillmentService
 
         if ($conflict) {
             throw new InvalidArgumentException('That domain is already attached to another active registration. Choose a different name.');
+        }
+    }
+
+    /**
+     * claim_key is UNIQUE on domain_connections — refuse replaces that would collide.
+     */
+    private function assertFqdnNotActivelyConnectedElsewhere(string $fqdn, ?int $exceptOrderId): void
+    {
+        $fqdn = strtolower($fqdn);
+
+        $query = DomainConnection::query()
+            ->activeClaim()
+            ->whereRaw('LOWER(fqdn) = ?', [$fqdn]);
+
+        if ($exceptOrderId !== null) {
+            $query->where('order_id', '!=', $exceptOrderId);
+        }
+
+        if ($query->exists()) {
+            throw new InvalidArgumentException('That domain is already connected on another order/account. Choose a different name.');
+        }
+
+        // Stale claim_key rows (failed/released) with the same key still block UNIQUE updates.
+        $staleClaim = DomainConnection::query()
+            ->whereRaw('LOWER(claim_key) = ?', [$fqdn])
+            ->when($exceptOrderId !== null, fn ($q) => $q->where('order_id', '!=', $exceptOrderId))
+            ->exists();
+
+        if ($staleClaim) {
+            // Clear inactive claims so this order can take the key safely.
+            DomainConnection::query()
+                ->whereRaw('LOWER(claim_key) = ?', [$fqdn])
+                ->whereNotIn('verification_status', [
+                    DomainConnection::STATUS_PENDING,
+                    DomainConnection::STATUS_VERIFIED,
+                ])
+                ->when($exceptOrderId !== null, fn ($q) => $q->where('order_id', '!=', $exceptOrderId))
+                ->update(['claim_key' => null]);
+
+            if (DomainConnection::query()
+                ->whereRaw('LOWER(claim_key) = ?', [$fqdn])
+                ->when($exceptOrderId !== null, fn ($q) => $q->where('order_id', '!=', $exceptOrderId))
+                ->exists()) {
+                throw new InvalidArgumentException('That domain claim is still held by another connection. Choose a different name.');
+            }
         }
     }
 
@@ -632,9 +759,9 @@ class DomainRegistrationFulfillmentService
                 $siteHost = strtolower((string) (parse_url((string) $tool->site_url, PHP_URL_HOST) ?: ''));
             }
 
-            $shouldUpdateSiteUrl = $forceAllOrderTools
-                || ! filled($tool->site_url)
-                || ($siteHost !== null && in_array($siteHost, $legacyHosts, true));
+            // Never overwrite a tool that already points at an unrelated custom host.
+            $shouldUpdateSiteUrl = ! filled($tool->site_url)
+                || ($siteHost !== null && $siteHost !== '' && in_array($siteHost, $legacyHosts, true));
 
             if ($shouldUpdateSiteUrl) {
                 $tool->update(['site_url' => 'https://'.$newFqdn]);
@@ -642,14 +769,120 @@ class DomainRegistrationFulfillmentService
         }
 
         if ($legacyHosts !== []) {
-            DomainConnection::query()
+            $connections = DomainConnection::query()
                 ->where('order_id', $order->id)
-                ->whereIn('fqdn', $legacyHosts)
-                ->update([
+                ->where(function ($q) use ($legacyHosts) {
+                    $q->whereIn('fqdn', $legacyHosts)
+                        ->orWhereIn('claim_key', $legacyHosts);
+                })
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+
+            $claimAssigned = DomainConnection::query()
+                ->whereRaw('LOWER(claim_key) = ?', [$newFqdn])
+                ->whereNotIn('id', $connections->pluck('id'))
+                ->exists();
+
+            foreach ($connections as $connection) {
+                $isActive = in_array($connection->verification_status, [
+                    DomainConnection::STATUS_PENDING,
+                    DomainConnection::STATUS_VERIFIED,
+                ], true);
+
+                // UNIQUE(claim_key): only one row may hold the new key.
+                $nextClaim = null;
+                if ($isActive && ! $claimAssigned) {
+                    $nextClaim = $newFqdn;
+                    $claimAssigned = true;
+                }
+
+                $connection->update([
                     'fqdn' => $newFqdn,
-                    'claim_key' => $newFqdn,
+                    'claim_key' => $nextClaim,
                 ]);
+            }
         }
+    }
+
+    /**
+     * After an FQDN change, force hub↔site health to be re-verified on linked tools
+     * whose site URL still tracks this domain.
+     */
+    private function markOrderToolsConnectionUnchecked(DomainRegistration $registration, ?string $previousFqdn = null): void
+    {
+        $orderId = $registration->order_id;
+        if (! $orderId) {
+            return;
+        }
+
+        $hosts = array_values(array_unique(array_filter([
+            strtolower((string) $registration->fqdn),
+            $previousFqdn !== null ? strtolower($previousFqdn) : null,
+            $registration->unavailableFqdn(),
+        ])));
+
+        $tools = UserTool::query()->where('order_id', $orderId)->get();
+        $toolIds = [];
+        foreach ($tools as $tool) {
+            if (! filled($tool->site_url)) {
+                $toolIds[] = $tool->id;
+                continue;
+            }
+            $host = strtolower((string) (parse_url((string) $tool->site_url, PHP_URL_HOST) ?: ''));
+            if ($host !== '' && in_array($host, $hosts, true)) {
+                $toolIds[] = $tool->id;
+            }
+        }
+
+        if ($toolIds === []) {
+            return;
+        }
+
+        \App\Models\UserToolIntegration::query()
+            ->whereIn('user_tool_id', $toolIds)
+            ->update([
+                'connection_status' => 'unchecked',
+                'last_error' => 'Domain was replaced. Install credentials on the new site (if needed) and run Check connection.',
+            ]);
+    }
+
+    private function notifyUserDomainAdminReplaced(DomainRegistration $registration, string $previousFqdn): void
+    {
+        $user = $this->resolveOrderUser($registration);
+        if (! $user?->email) {
+            Log::warning('domains.fulfillment.admin_replace_notify_skipped', [
+                'registration_id' => $registration->id,
+                'reason' => 'missing_user_or_email',
+            ]);
+
+            return;
+        }
+
+        $url = Route::has('dashboard.my-domains.show')
+            ? route('dashboard.my-domains.show', $registration)
+            : null;
+
+        $from = $previousFqdn !== '' ? $previousFqdn : '—';
+        $message = new NotificationMessage(
+            type: 'order.domain_replaced',
+            title: __('Your domain was updated'),
+            body: __('An administrator changed your domain from :from to :to. Order and website details now use the new domain.', [
+                'from' => $from,
+                'to' => $registration->fqdn,
+            ]),
+            actionUrl: $url,
+            meta: [
+                'domain_registration_id' => $registration->id,
+                'action_label' => __('View domain'),
+                'from_fqdn' => $from,
+                'to_fqdn' => $registration->fqdn,
+            ],
+            emailSubject: __('Domain updated — :fqdn', ['fqdn' => $registration->fqdn]),
+            dedupeKey: 'domain.admin_replace.'.$registration->id.'.'.md5($from.'|'.$registration->fqdn.'|'.now()->timestamp),
+        );
+
+        $this->deliverUserNotification($user, $message, 'admin_replace', $registration->id);
     }
 
     /**

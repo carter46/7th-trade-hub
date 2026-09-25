@@ -410,6 +410,7 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::get('/users/{user}/domains/registrations/{registration}', [\App\Http\Controllers\Admin\UserDomainAdminController::class, 'showRegistration'])->name('.users.domains.registrations.show');
         Route::post('/users/{user}/domains/registrations/{registration}/approve', [\App\Http\Controllers\Admin\UserDomainAdminController::class, 'approveRegistration'])->name('.users.domains.registrations.approve');
         Route::post('/users/{user}/domains/registrations/{registration}/reject', [\App\Http\Controllers\Admin\UserDomainAdminController::class, 'rejectRegistration'])->name('.users.domains.registrations.reject');
+        Route::post('/users/{user}/domains/registrations/{registration}/replace', [\App\Http\Controllers\Admin\UserDomainAdminController::class, 'replaceRegistration'])->name('.users.domains.registrations.replace');
         Route::get('/users/{user}/domains/connections/{connection}', [\App\Http\Controllers\Admin\UserDomainAdminController::class, 'showConnection'])->name('.users.domains.connections.show');
         Route::post('/users/{user}/domains/connections/{connection}/approve', [\App\Http\Controllers\Admin\UserDomainAdminController::class, 'approveConnection'])->name('.users.domains.connections.approve');
         Route::post('/users/{user}/domain-connections/{connection}/approve', [UserManagementController::class, 'approveDomainConnection'])->name('.users.domain-connections.approve');

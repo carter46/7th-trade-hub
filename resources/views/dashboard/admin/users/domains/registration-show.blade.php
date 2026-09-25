@@ -109,6 +109,45 @@
         @endif
     </x-dashboard.card>
 
+    <x-dashboard.card class="mt-6 space-y-4" x-data="{ open: {{ (old('fqdn') !== null || $errors->has('fqdn')) ? 'true' : 'false' }} }">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <h3 class="text-sm font-semibold text-text-primary">Replace domain</h3>
+                <p class="mt-1 text-xs text-text-muted">
+                    Change the FQDN whether this domain is pending or already registered. Updates order lines, tool Website URLs, and domain connections. If a website was already integrated, re-install credentials on the new host and run Check connection.
+                </p>
+            </div>
+            <x-dashboard.button type="button" variant="secondary" size="sm" x-on:click="open = !open" x-text="open ? 'Hide' : 'Replace domain'">
+                Replace domain
+            </x-dashboard.button>
+        </div>
+        <form
+            method="POST"
+            action="{{ route('admin.users.domains.registrations.replace', [$user, $registration]) }}"
+            class="space-y-3 border-t border-border-subtle pt-4"
+            x-show="open"
+            x-cloak
+        >
+            @csrf
+            <x-dashboard.input
+                name="fqdn"
+                label="New domain"
+                :value="old('fqdn')"
+                placeholder="example.com"
+                required
+                hint="Apex domain only (e.g. example.com)."
+            />
+            @error('fqdn')
+                <p class="text-xs text-danger">{{ $message }}</p>
+            @enderror
+            <div>
+                <label for="replace_note" class="mb-1 block text-xs text-text-muted">Internal note (optional)</label>
+                <textarea id="replace_note" name="note" rows="2" maxlength="500" class="w-full rounded-lg border border-border-default bg-elevated px-3 py-2 text-sm" placeholder="Why this domain was changed…">{{ old('note') }}</textarea>
+            </div>
+            <x-dashboard.button type="submit" variant="primary">Save new domain</x-dashboard.button>
+        </form>
+    </x-dashboard.card>
+
     @if($registration->isManualFulfillment() && $registration->awaitsManualAdminAction())
         <div class="mt-6 grid gap-6 lg:grid-cols-2">
             <x-dashboard.card class="space-y-4">
@@ -151,12 +190,12 @@
     @elseif(! $registration->isManualFulfillment())
         <x-dashboard.card class="mt-6">
             <p class="text-sm text-text-secondary">
-                This domain uses <strong>provider fulfillment</strong>. Manual approve/reject/replace does not apply. Check registrar status and order fulfillment logs if needed.
+                This domain uses <strong>provider fulfillment</strong>. Manual approve/reject does not apply, but you can still use <strong>Replace domain</strong> above to change the FQDN across orders and tools.
             </p>
         </x-dashboard.card>
     @elseif($registration->isRejected())
         <x-dashboard.card class="mt-6">
-            <p class="text-sm text-text-secondary">Waiting for the customer to submit a free replacement domain.</p>
+            <p class="text-sm text-text-secondary">Waiting for the customer to submit a free replacement domain — or use <strong>Replace domain</strong> above to set one yourself.</p>
         </x-dashboard.card>
     @endif
 
