@@ -53,19 +53,20 @@ class PurchasedWebsitesAdminTest extends TestCase
             ->assertOk()
             ->assertSee('Total sites', false)
             ->assertSee('https://bank.example.com', false)
-            ->assertSee('Online banking v1', false)
             ->assertSee('Website Owner', false)
-            ->assertSee('owner@example.com', false)
+            ->assertDontSee('owner@example.com', false)
+            ->assertDontSee('Online banking v1', false)
             ->assertSee('Expires', false)
             ->assertSee(route('admin.users.tools.show', [$member, $tool]), false);
 
-        // URL is primary (appears before product name in the Website cell HTML).
+        // URL is primary; username sits under it in the Website cell (no Owner column / email).
         $html = $this->actingAs($admin)->get(route('admin.websites'))->getContent();
         $urlPos = strpos($html, 'https://bank.example.com');
-        $namePos = strpos($html, 'Online banking v1');
+        $ownerPos = strpos($html, 'Website Owner');
         $this->assertNotFalse($urlPos);
-        $this->assertNotFalse($namePos);
-        $this->assertLessThan($namePos, $urlPos);
+        $this->assertNotFalse($ownerPos);
+        $this->assertLessThan($ownerPos, $urlPos);
+        $this->assertStringNotContainsString('>Owner<', $html);
 
         $this->actingAs($admin)
             ->get(route('admin.users.tools.show', [$member, $tool]))
@@ -141,7 +142,7 @@ class PurchasedWebsitesAdminTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.websites'))
             ->assertOk()
-            ->assertSee('Keep Website', false)
+            ->assertSee('Keep Me', false)
             ->assertDontSee('Anonymized Website', false)
             ->assertDontSee('Should Not List Domain', false)
             ->assertDontSee('Gone Owner', false);
@@ -182,13 +183,13 @@ class PurchasedWebsitesAdminTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.websites', ['status' => 'expired']))
             ->assertOk()
-            ->assertSee('Stale Banking', false)
+            ->assertSee('Stale Owner', false)
             ->assertSee('Expired', false);
 
         $this->actingAs($admin)
             ->get(route('admin.websites', ['status' => 'active']))
             ->assertOk()
-            ->assertDontSee('Stale Banking', false);
+            ->assertDontSee('Stale Owner', false);
     }
 
     public function test_non_admin_cannot_access_websites_index(): void
@@ -240,12 +241,12 @@ class PurchasedWebsitesAdminTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.websites', ['status' => 'expired']))
             ->assertOk()
-            ->assertDontSee('Hold Banking', false);
+            ->assertDontSee('Hold Owner', false);
 
         $this->actingAs($admin)
             ->get(route('admin.websites', ['status' => 'cancelled']))
             ->assertOk()
-            ->assertSee('Hold Banking', false)
+            ->assertSee('Hold Owner', false)
             ->assertSee('Paid until '.$resumeAt->format('j M Y'), false)
             ->assertDontSee('Expired '.$resumeAt->format('j M Y'), false);
     }

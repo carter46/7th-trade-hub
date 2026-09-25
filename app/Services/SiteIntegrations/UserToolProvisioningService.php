@@ -25,6 +25,7 @@ class UserToolProvisioningService
         private AuditLogService $audit,
         private IntegrationOutboundUrlGuard $urlGuard,
         private DomainConnectionService $domainConnections,
+        private UserToolLifecycleNotifier $lifecycleNotifier,
     ) {}
 
     public function createFromOrderItem(Order $order, OrderItem $item): ?UserTool
@@ -188,6 +189,10 @@ class UserToolProvisioningService
 
             return $locked->fresh(['integration']);
         });
+
+        // Notify member as soon as admin finishes initial setup (My Tools link).
+        // Connection-check uses the same dedupe key so a later health OK does not double-email.
+        $this->lifecycleNotifier->notifySetupComplete($tool->fresh(['product', 'user']));
 
         // HTTP outside the DB transaction — defer health check and subscription sync until
         // merchant installs credentials (operator runs Check connection manually).

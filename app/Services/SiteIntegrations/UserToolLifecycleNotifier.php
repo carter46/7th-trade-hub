@@ -14,6 +14,40 @@ class UserToolLifecycleNotifier
         private NotificationDispatcher $dispatcher,
     ) {}
 
+    /**
+     * Email + inbox when a purchased website is ready for the member (My Tools).
+     * Same dedupe key for admin setup and first successful connection check — only one mail.
+     */
+    public function notifySetupComplete(UserTool $tool): void
+    {
+        $user = $this->owner($tool);
+        if (! $user?->email) {
+            return;
+        }
+
+        $productName = $this->productName($tool);
+        $toolUrl = $this->toolUrl($tool);
+
+        $this->dispatcher->notifyUser(
+            $user,
+            new NotificationMessage(
+                type: 'tool.setup_complete',
+                title: __('Your website setup is complete'),
+                body: __(':product has been set up successfully. Open My Tools to view your website details and access.', [
+                    'product' => $productName,
+                ]),
+                actionUrl: $toolUrl,
+                meta: [
+                    'user_tool_id' => $tool->id,
+                    'action_label' => __('View tool'),
+                ],
+                emailSubject: __(':product — setup complete', ['product' => $productName]),
+                dedupeKey: 'tool.setup_complete.'.$tool->id,
+            ),
+            ['database', 'mail']
+        );
+    }
+
     public function notifyNaturallyExpired(UserTool $tool): void
     {
         $user = $this->owner($tool);
@@ -33,7 +67,10 @@ class UserToolLifecycleNotifier
                     'product' => $productName,
                 ]),
                 actionUrl: $toolUrl,
-                meta: ['user_tool_id' => $tool->id],
+                meta: [
+                    'user_tool_id' => $tool->id,
+                    'action_label' => __('View tool'),
+                ],
                 emailSubject: __(':product — subscription expired', ['product' => $productName]),
                 dedupeKey: 'tool.subscription_expired.'.$tool->id.'.'.$tool->expires_at?->timestamp,
             ),
@@ -67,6 +104,7 @@ class UserToolLifecycleNotifier
                 meta: [
                     'user_tool_id' => $tool->id,
                     'expires_at' => $tool->expires_at?->toIso8601String(),
+                    'action_label' => __('View tool'),
                 ],
                 emailSubject: __(':product — subscription extended', ['product' => $productName]),
                 dedupeKey: 'tool.subscription_extended.'.$tool->id.'.'.$tool->expires_at?->timestamp,

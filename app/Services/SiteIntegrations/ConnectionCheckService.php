@@ -4,14 +4,10 @@ namespace App\Services\SiteIntegrations;
 
 use App\Models\SiteIntegration;
 use App\Models\SiteIntegrationCheckLog;
-use App\Models\User;
 use App\Models\UserTool;
 use App\Models\UserToolIntegration;
-use App\Services\Notifications\NotificationDispatcher;
-use App\Services\Notifications\NotificationMessage;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Throwable;
@@ -24,7 +20,7 @@ class ConnectionCheckService
         private ProtocolV1Signer $signer,
         private IntegrationHttpClient $http,
         private SubscriptionSyncService $subscriptionSync,
-        private NotificationDispatcher $notificationDispatcher,
+        private UserToolLifecycleNotifier $lifecycleNotifier,
     ) {}
 
     /**
@@ -94,7 +90,7 @@ class ConnectionCheckService
             $this->subscriptionSync->push($tool->fresh(['integration']));
 
             if ($previousStatus !== 'ok' && $tool->configured_at !== null) {
-                $this->notifyUserToolReady($tool->fresh(['product']));
+                $this->lifecycleNotifier->notifySetupComplete($tool->fresh(['product', 'user']));
             }
         }
 
@@ -109,35 +105,6 @@ class ConnectionCheckService
         ]);
 
         return $result;
-    }
-
-    private function notifyUserToolReady(UserTool $tool): void
-    {
-        $user = User::query()->find($tool->user_id);
-        if (! $user) {
-            return;
-        }
-
-        $productName = $tool->product?->title ?? $tool->resolvedDisplayName();
-        $toolUrl = Route::has('dashboard.my-tools.show')
-            ? route('dashboard.my-tools.show', $tool)
-            : null;
-
-        $this->notificationDispatcher->notifyUser(
-            $user,
-            new NotificationMessage(
-                type: 'tool.setup_complete',
-                title: __('Your website is ready'),
-                body: __(':product has been set up and connected successfully. You can now access your website, admin login, and other details from My Tools.', [
-                    'product' => $productName,
-                ]),
-                actionUrl: $toolUrl,
-                meta: ['user_tool_id' => $tool->id],
-                emailSubject: __(':product — your website is ready', ['product' => $productName]),
-                dedupeKey: 'tool.setup_complete.'.$tool->id,
-            ),
-            ['database', 'mail']
-        );
     }
 
     /**
