@@ -139,7 +139,13 @@ class DomainManualRejectReplaceTest extends TestCase
                     && filled($message->dedupeKey);
             })
             ->andReturn(\App\Services\Communications\Email\SendResult::ok('test'));
-        $dispatcher->shouldReceive('notifyAdmins')->once();
+        $dispatcher->shouldReceive('notifyAdmins')
+            ->once()
+            ->withArgs(function ($message, $channels) {
+                return $message->type === 'domain.replacement_requested'
+                    && $channels === ['database', 'mail']
+                    && filled($message->dedupeKey);
+            });
         $dispatcher->shouldReceive('notifyUser')
             ->once()
             ->withArgs(function ($notifiable, $message, $channels) use ($user) {
@@ -160,6 +166,71 @@ class DomainManualRejectReplaceTest extends TestCase
 
         [$approved] = $service->markManualRegistered($pending, null, null, $admin->id);
         $this->assertSame(DomainRegistration::STATUS_REGISTERED, $approved->status);
+    }
+
+    public function test_user_replacement_notifies_general_inbox_not_sales(): void
+    {
+        EmailIdentity::query()->where('profile', EmailProfile::General->value)->update([
+            'notify_to_email' => 'info-inbox@example.com',
+        ]);
+        EmailIdentity::query()->where('profile', EmailProfile::Sales->value)->update([
+            'notify_to_email' => 'sales-inbox@example.com',
+        ]);
+
+        [$user, $registration] = $this->seedManualPendingRegistration();
+        $admin = User::factory()->create(['email_verified_at' => now()]);
+        $admin->assignRole('admin');
+        $admin->givePermissionTo('users.manage');
+
+        $service = app(DomainRegistrationFulfillmentService::class);
+        $rejected = $service->rejectManualRegistration($registration, 'Unavailable.', $admin->id);
+
+        $service->requestManualReplacement($rejected, 'new-choice.com', $user);
+
+        $this->assertDatabaseHas('admin_notifications', [
+            'type' => 'domain.replacement_requested',
+        ]);
+        $this->assertDatabaseHas('notification_delivery_logs', [
+            'notification_type' => 'domain.replacement_requested',
+            'recipient' => 'info-inbox@example.com',
+            'channel' => 'mail',
+            'status' => 'sent',
+        ]);
+        $this->assertDatabaseMissing('notification_delivery_logs', [
+            'notification_type' => 'domain.replacement_requested',
+            'recipient' => 'sales-inbox@example.com',
+        ]);
+    }
+
+    public function test_pending_manual_domain_notifies_general_inbox(): void
+    {
+        EmailIdentity::query()->where('profile', EmailProfile::General->value)->update([
+            'notify_to_email' => 'info-inbox@example.com',
+        ]);
+
+        $admin = User::factory()->create(['email_verified_at' => now()]);
+        $admin->assignRole('admin');
+        $admin->givePermissionTo('users.manage');
+
+        [$user, $registration] = $this->seedManualPendingRegistration();
+
+        // Simulate the post-create notify path used by fulfillManualOrderItem.
+        $dispatcher = app(\App\Services\Notifications\NotificationDispatcher::class);
+        $ref = new \ReflectionClass(DomainRegistrationFulfillmentService::class);
+        $method = $ref->getMethod('notifyAdminsPendingManual');
+        $method->setAccessible(true);
+        $method->invoke(app(DomainRegistrationFulfillmentService::class), $registration->fresh(['order.user']));
+
+        $this->assertDatabaseHas('admin_notifications', [
+            'type' => 'domain.pending_manual',
+        ]);
+        $this->assertDatabaseHas('notification_delivery_logs', [
+            'notification_type' => 'domain.pending_manual',
+            'recipient' => 'info-inbox@example.com',
+            'channel' => 'mail',
+            'status' => 'sent',
+        ]);
+        unset($dispatcher, $user, $admin);
     }
 
     public function test_provider_domain_cannot_use_manual_reject(): void

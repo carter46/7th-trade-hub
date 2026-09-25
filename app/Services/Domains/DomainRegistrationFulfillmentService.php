@@ -234,6 +234,13 @@ class DomainRegistrationFulfillmentService
             'fqdn' => $fqdn,
             'order_id' => $order->id,
         ]);
+
+        $this->dispatchAfterCommit(function () use ($registration) {
+            $fresh = DomainRegistration::query()->with(['order.user'])->find($registration->id);
+            if ($fresh) {
+                $this->notifyAdminsPendingManual($fresh);
+            }
+        });
     }
 
     private function markFailed(DomainRegistration $registration, string $message): void
@@ -1081,19 +1088,54 @@ class DomainRegistrationFulfillmentService
         return User::query()->find($userId);
     }
 
-    private function notifyAdminsReplacementRequested(DomainRegistration $registration): void
+    private function domainAdminManageUrl(DomainRegistration $registration): ?string
     {
         $user = $registration->order?->user;
-        $manageUrl = null;
         if ($user && Route::has('admin.users.domains.registrations.show')) {
-            $manageUrl = route('admin.users.domains.registrations.show', [$user, $registration]);
-        } elseif ($registration->order_id && Route::has('admin.orders.show')) {
-            $manageUrl = route('admin.orders.show', $registration->order_id);
+            return route('admin.users.domains.registrations.show', [$user, $registration]);
         }
+        if ($registration->order_id && Route::has('admin.orders.show')) {
+            return route('admin.orders.show', $registration->order_id);
+        }
+
+        return null;
+    }
+
+    private function notifyAdminsPendingManual(DomainRegistration $registration): void
+    {
+        $user = $registration->order?->user;
 
         $this->notifications->notifyAdmins(
             new NotificationMessage(
-                type: 'order.domain_replacement_requested',
+                type: 'domain.pending_manual',
+                title: __('Manual domain registration needed'),
+                body: __(':name ordered :fqdn (order :ref). Register it offline, then approve in admin.', [
+                    'name' => $user?->name ?? 'Customer',
+                    'fqdn' => $registration->fqdn,
+                    'ref' => $registration->order?->reference ?? '#'.$registration->order_id,
+                ]),
+                actionUrl: $this->domainAdminManageUrl($registration),
+                meta: [
+                    'domain_registration_id' => $registration->id,
+                    'order_id' => $registration->order_id,
+                ],
+                emailSubject: __('Register domain — :fqdn', ['fqdn' => $registration->fqdn]),
+                permission: 'users.manage',
+                dedupeKey: 'domain.pending_manual.'.$registration->id,
+            ),
+            ['database', 'mail']
+        );
+    }
+
+    private function notifyAdminsReplacementRequested(DomainRegistration $registration): void
+    {
+        $user = $registration->order?->user;
+        $requestedAt = (string) (($registration->provider_meta ?? [])['replacement_requested_at'] ?? now()->toIso8601String());
+
+        $this->notifications->notifyAdmins(
+            new NotificationMessage(
+                // domain.* → General (info) profile notify inbox — not Sales.
+                type: 'domain.replacement_requested',
                 title: __('Domain replacement requested'),
                 body: __(':name requested :fqdn to replace :rejected (order :ref).', [
                     'name' => $user?->name ?? 'Customer',
@@ -1101,15 +1143,15 @@ class DomainRegistrationFulfillmentService
                     'rejected' => $registration->rejectedFqdn() ?? '—',
                     'ref' => $registration->order?->reference ?? '#'.$registration->order_id,
                 ]),
-                actionUrl: $manageUrl,
+                actionUrl: $this->domainAdminManageUrl($registration),
                 meta: [
                     'domain_registration_id' => $registration->id,
                     'order_id' => $registration->order_id,
                 ],
                 emailSubject: __('Domain replacement — :fqdn', ['fqdn' => $registration->fqdn]),
                 permission: 'users.manage',
-                // One notify per registration rejection cycle (not per FQDN edit).
-                dedupeKey: 'domain.replacement.'.$registration->id,
+                // One notify per replacement submission (not sticky across reject→replace cycles).
+                dedupeKey: 'domain.replacement.'.$registration->id.'.'.md5($requestedAt),
             ),
             ['database', 'mail']
         );

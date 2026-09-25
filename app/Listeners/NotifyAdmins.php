@@ -5,6 +5,7 @@ namespace App\Listeners;
 use App\Events\EscrowDisputed;
 use App\Events\ListingApproved;
 use App\Events\ListingRejected;
+use App\Events\ListingSubmitted;
 use App\Events\OrderCompleted;
 use App\Events\OrderManualBankTransferPaymentFailed;
 use App\Events\OrderManualBankTransferSubmitted;
@@ -85,6 +86,21 @@ class NotifyAdmins
                 'permission' => 'catalog.manage',
                 'dedupeKey' => null,
             ],
+            ListingSubmitted::class => [
+                'type' => 'listing.submitted',
+                'title' => 'Listing submitted for review',
+                'body' => 'Listing #'.$event->listingId.' was submitted and needs review.',
+                'actionUrl' => Route::has('admin.listings')
+                    ? route('admin.listings', ['status' => 'pending'])
+                    : null,
+                'meta' => [
+                    'listing_id' => $event->listingId,
+                    'user_id' => $event->userId,
+                    'event' => $event::class,
+                ],
+                'permission' => 'catalog.manage',
+                'dedupeKey' => 'listing.submitted.'.$event->listingId.'.'.now()->format('YmdHi'),
+            ],
             UserRegistered::class => $this->userRegisteredPayload($event),
             UserVerified::class => $this->userVerifiedPayload($event),
             WalletFundingSubmitted::class => $this->depositSubmittedPayload($event),
@@ -103,13 +119,15 @@ class NotifyAdmins
             return;
         }
 
-        $channels = str_starts_with($payload['type'], 'ticket.')
-            ? AdminNotificationChannels::SUPPORT
-            : (str_starts_with($payload['type'], 'order.')
-                ? AdminNotificationChannels::SALES
-                : (str_starts_with($payload['type'], 'user.')
-                    ? AdminNotificationChannels::GENERAL
-                    : AdminNotificationChannels::FINANCE));
+        $channels = match (true) {
+            str_starts_with($payload['type'], 'ticket.') => AdminNotificationChannels::SUPPORT,
+            str_starts_with($payload['type'], 'user.'),
+            str_starts_with($payload['type'], 'listing.'),
+            str_starts_with($payload['type'], 'domain.') => AdminNotificationChannels::GENERAL,
+            str_starts_with($payload['type'], 'order.manual_bank_transfer_') => AdminNotificationChannels::FINANCE,
+            str_starts_with($payload['type'], 'order.') => AdminNotificationChannels::SALES,
+            default => AdminNotificationChannels::FINANCE,
+        };
 
         $this->dispatcher->notifyAdmins(
             new NotificationMessage(

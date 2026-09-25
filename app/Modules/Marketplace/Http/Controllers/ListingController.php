@@ -3,6 +3,7 @@
 namespace App\Modules\Marketplace\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Events\ListingSubmitted;
 use App\Models\Category;
 use App\Models\Listing;
 use App\Models\ListingVersion;
@@ -263,6 +264,8 @@ class ListingController extends Controller
         if ($listing->status !== 'published') {
             $listing->update(['status' => 'pending_review']);
         }
+
+        ListingSubmitted::dispatch($listing->id, $listing->user_id);
 
         return back()->with('status', __('Listing submitted for admin review. Listing collateral is held.'));
     }

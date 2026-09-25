@@ -57,6 +57,69 @@ class AdminEmailRoutingTest extends TestCase
         );
     }
 
+    public function test_domain_replacement_maps_to_general_not_sales(): void
+    {
+        $resolver = app(EmailIdentityResolver::class);
+
+        $this->assertSame(EmailProfile::General, $resolver->resolveProfileForType('domain.replacement_requested'));
+        $this->assertSame(EmailProfile::Sales, $resolver->resolveProfileForType('order.completed'));
+        $this->assertNotSame(
+            $resolver->resolveProfileForType('domain.replacement_requested'),
+            $resolver->resolveProfileForType('order.domain_purchased')
+        );
+    }
+
+    public function test_notification_type_profile_matrix(): void
+    {
+        $resolver = app(EmailIdentityResolver::class);
+
+        $expected = [
+            // Support
+            'ticket.opened' => EmailProfile::Support,
+            'ticket.replied' => EmailProfile::Support,
+            // General / info
+            'user.registered' => EmailProfile::General,
+            'user.verified' => EmailProfile::General,
+            'domain.replacement_requested' => EmailProfile::General,
+            'domain.pending_manual' => EmailProfile::General,
+            'listing.approved' => EmailProfile::General,
+            'listing.rejected' => EmailProfile::General,
+            'listing.submitted' => EmailProfile::General,
+            'listing' => EmailProfile::General,
+            // Billing
+            'wallet.deposit_submitted' => EmailProfile::Billing,
+            'wallet.withdrawal_requested' => EmailProfile::Billing,
+            'crypto.deposit_detected' => EmailProfile::Billing,
+            'payment.gateway_unmatched' => EmailProfile::Billing,
+            'escrow.disputed' => EmailProfile::Billing,
+            'treasury.unexpected_increase' => EmailProfile::Billing,
+            'order.manual_bank_transfer_proof' => EmailProfile::Billing,
+            'order.manual_bank_transfer_failed' => EmailProfile::Billing,
+            // Sales
+            'order.completed' => EmailProfile::Sales,
+            'order.domain_purchased' => EmailProfile::Sales,
+            'order.website_purchased' => EmailProfile::Sales,
+            'order.domain_rejected' => EmailProfile::Sales,
+            'order.domain_approved' => EmailProfile::Sales,
+            'tool.setup_complete' => EmailProfile::Sales,
+            // Security
+            'email.delivery_failed' => EmailProfile::Security,
+            'auth.login_alert' => EmailProfile::Security,
+            // NoReply
+            'message' => EmailProfile::NoReply,
+            'verification.otp' => EmailProfile::NoReply,
+            'password.reset' => EmailProfile::NoReply,
+        ];
+
+        foreach ($expected as $type => $profile) {
+            $this->assertSame(
+                $profile,
+                $resolver->resolveProfileForType($type),
+                "Type [{$type}] should map to {$profile->value}"
+            );
+        }
+    }
+
     public function test_order_completed_derives_website_and_domain_types(): void
     {
         $resolver = app(OrderNotificationTypeResolver::class);

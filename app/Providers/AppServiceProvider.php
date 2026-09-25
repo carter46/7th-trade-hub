@@ -11,6 +11,7 @@ use App\Events\EscrowOpened;
 use App\Events\EscrowReleased;
 use App\Events\ListingApproved;
 use App\Events\ListingRejected;
+use App\Events\ListingSubmitted;
 use App\Events\OrderCompleted;
 use App\Events\OrderManualBankTransferPaymentFailed;
 use App\Events\OrderManualBankTransferSubmitted;
@@ -71,6 +72,7 @@ class AppServiceProvider extends ServiceProvider
         EscrowDisputed::class,
         ListingApproved::class,
         ListingRejected::class,
+        ListingSubmitted::class,
         TicketOpened::class,
         TicketReplied::class,
         CryptoSold::class,
