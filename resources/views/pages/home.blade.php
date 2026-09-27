@@ -104,7 +104,7 @@
             <div class="text-center mb-10 sm:mb-14">
                 <h2 class="text-3xl sm:text-4xl font-bold mb-3 font-display">What we do</h2>
                 <p class="text-slate-400 text-base sm:text-lg max-w-3xl mx-auto leading-relaxed">
-                    {{ $brandName }} is a digital commerce platform offering digital services, website solutions, templates, and other digital products to customers online. Customers can browse available products and services, place orders, and make secure online payments through the platform. The platform also provides tools for managing digital purchases, orders, and related services.
+                    {{ $brandName }} is a digital commerce platform offering digital services, website solutions, templates, and other digital products to customers online.
                 </p>
                 <p class="mt-8 text-sm font-bold uppercase tracking-widest text-accent">Explore our services</p>
             </div>

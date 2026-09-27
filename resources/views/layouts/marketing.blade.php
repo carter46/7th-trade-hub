@@ -50,6 +50,8 @@
                 <div class="hidden lg:flex items-center space-x-8 text-sm font-medium text-slate-300">
                     <a class="hover:text-accent transition-colors" href="{{ route('home') }}">Home</a>
                     <a class="hover:text-accent transition-colors" href="{{ route('services') }}">Services</a>
+                    <a class="hover:text-accent transition-colors" href="{{ url('/services/website-services/website_package') }}">Website Services</a>
+                    <a class="hover:text-accent transition-colors" href="{{ url('/services/social-media/social_service') }}">Social Media</a>
                     <a class="hover:text-accent transition-colors" href="{{ route('about') }}">About</a>
                     <a class="hover:text-accent transition-colors" href="{{ route('help') }}">Help</a>
                 </div>
@@ -127,6 +129,8 @@
                 <nav class="flex flex-col p-4 gap-1">
                     <a class="px-4 py-3 rounded-xl text-sm font-medium text-slate-200 hover:bg-primary/15 hover:text-accent transition-colors" href="{{ route('home') }}" @click="close()">Home</a>
                     <a class="px-4 py-3 rounded-xl text-sm font-medium text-slate-200 hover:bg-primary/15 hover:text-accent transition-colors" href="{{ route('services') }}" @click="close()">Services</a>
+                    <a class="px-4 py-3 rounded-xl text-sm font-medium text-slate-200 hover:bg-primary/15 hover:text-accent transition-colors" href="{{ url('/services/website-services/website_package') }}" @click="close()">Website Services</a>
+                    <a class="px-4 py-3 rounded-xl text-sm font-medium text-slate-200 hover:bg-primary/15 hover:text-accent transition-colors" href="{{ url('/services/social-media/social_service') }}" @click="close()">Social Media</a>
                     <a class="px-4 py-3 rounded-xl text-sm font-medium text-slate-200 hover:bg-primary/15 hover:text-accent transition-colors" href="{{ route('about') }}" @click="close()">About</a>
                     <a class="px-4 py-3 rounded-xl text-sm font-medium text-slate-200 hover:bg-primary/15 hover:text-accent transition-colors" href="{{ route('help') }}" @click="close()">Help</a>
 
