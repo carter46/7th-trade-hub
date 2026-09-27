@@ -5,7 +5,7 @@
 @endphp
 
 @if ($section === 'traffic')
-    <x-dashboard.command.section-label title="Marketing — Traffic" accent="blue" />
+    <x-dashboard.command.section-label title="Marketing: Traffic" accent="blue" />
     @if (! ($gaEnabled ?? false) || ! ($gaConnected ?? false) || ! ($data['ga_connected'] ?? false))
         <div class="rounded-2xl border border-border-default bg-elevated p-5">
             <p class="text-sm text-text-secondary">{{ $data['message'] ?? 'Connect GA in Marketing & Tracking' }}. Open <a href="{{ route('admin.tracking') }}" class="text-brand hover:underline">Marketing & Tracking</a>.</p>
@@ -25,8 +25,8 @@
             <x-dashboard.command.tx-table
                 title="GA snapshots"
                 :rows="collect($marketing)->map(fn ($row) => [
-                    'reference' => $row['metric'] ?? '—',
-                    'user_name' => (($row['period_start'] ?? '') . ' — ' . ($row['period_end'] ?? '')),
+                    'reference' => $row['metric'] ?? 'N/A',
+                    'user_name' => (($row['period_start'] ?? '') . ' to ' . ($row['period_end'] ?? '')),
                     'user_initials' => 'GA',
                     'amount' => (float) ($row['payload']['value'] ?? 0),
                     'status' => 'ok',
@@ -36,7 +36,7 @@
     @endif
 
 @elseif ($section === 'revenue')
-    <x-dashboard.command.section-label title="Business — Revenue" accent="emerald" />
+    <x-dashboard.command.section-label title="Business: Revenue" accent="emerald" />
     @php
         $pulse = [
             [
@@ -75,7 +75,7 @@
             $revenueSlices = $byType->values()->map(function ($row, $i) use ($byTypeTotal, $typeColors) {
                 $val = (float) ($row['total'] ?? 0);
                 return [
-                    'label' => $row['type'] ?? '—',
+                    'label' => $row['type'] ?? 'N/A',
                     'value' => $val,
                     'percent' => round(($val / $byTypeTotal) * 100) . '%',
                     'color' => $typeColors[$i % count($typeColors)],
@@ -92,7 +92,7 @@
     </div>
 
 @elseif ($section === 'services')
-    <x-dashboard.command.section-label title="Business — Services" accent="emerald" />
+    <x-dashboard.command.section-label title="Business: Services" accent="emerald" />
     @php
         $pulse = [
             ['label' => 'Service orders', 'value' => number_format($data['service_orders'] ?? 0), 'accent' => 'emerald', 'href' => route('admin.orders')],
@@ -111,7 +111,7 @@
     @endif
 
 @elseif ($section === 'users')
-    <x-dashboard.command.section-label title="Business — Users" accent="blue" />
+    <x-dashboard.command.section-label title="Business: Users" accent="blue" />
     @php
         $pulse = [
             ['label' => 'Total users', 'value' => number_format($data['total'] ?? 0), 'accent' => 'blue', 'href' => route('admin.users')],
@@ -130,7 +130,7 @@
     @endif
 
 @elseif ($section === 'support')
-    <x-dashboard.command.section-label title="Business — Support" accent="orange" />
+    <x-dashboard.command.section-label title="Business: Support" accent="orange" />
     @php
         $pulse = [
             ['label' => 'Open / waiting', 'value' => number_format($data['open'] ?? 0), 'accent' => 'orange', 'href' => route('admin.tickets')],
@@ -157,7 +157,7 @@
     />
 
 @elseif ($section === 'kyc')
-    <x-dashboard.command.section-label title="Business — KYC" accent="amber" />
+    <x-dashboard.command.section-label title="Business: KYC" accent="amber" />
     @php
         $pulse = [
             ['label' => 'Pending', 'value' => number_format($data['pending'] ?? 0), 'accent' => 'amber', 'href' => route('admin.kyc', ['status' => 'pending'])],

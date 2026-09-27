@@ -185,7 +185,7 @@ class UserDomainAdminController extends Controller
         );
 
         $status = 'Domain replaced: '.$from.' → '.$updated->fqdn
-            .'. Order lines and Website URLs were updated. Reconfigure the site on the new domain, install Hub credentials, then run Check connection — Auto Login stays off until connection is OK.';
+            .'. Order lines and Website URLs were updated. Reconfigure the site on the new domain, install Hub credentials, then run Check connection. Auto Login stays off until connection is OK.';
 
         return redirect()
             ->route('admin.users.domains.registrations.show', [$user, $updated])

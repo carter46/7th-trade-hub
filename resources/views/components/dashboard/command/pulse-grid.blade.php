@@ -4,7 +4,7 @@
     @foreach ($items as $item)
         <x-dashboard.command.pulse-kpi
             :label="$item['label'] ?? ''"
-            :value="$item['value'] ?? '—'"
+            :value="$item['value'] ?? 'N/A'"
             :accent="$item['accent'] ?? 'emerald'"
             :delta="$item['delta'] ?? null"
             :delta-label="$item['delta_label'] ?? null"

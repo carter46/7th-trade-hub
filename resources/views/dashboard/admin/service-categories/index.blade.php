@@ -5,7 +5,7 @@
 @section('content')
 <x-layout.page
     title="Service Categories"
-    subtitle="Fixed platform categories. Sort controls public hub order. Rename, reorder, or activate/deactivate — you cannot add or delete."
+    subtitle="Fixed platform categories. Sort controls public hub order. Rename, reorder, or activate/deactivate. You cannot add or delete."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],

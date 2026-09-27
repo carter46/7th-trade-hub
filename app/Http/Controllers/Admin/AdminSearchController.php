@@ -83,7 +83,7 @@ class AdminSearchController extends Controller
                 ->get()
                 ->map(fn (SupportTicket $row) => [
                     'id' => 'ticket-'.$row->id,
-                    'label' => '#'.$row->id.' — '.$row->subject,
+                    'label' => '#'.$row->id.': '.$row->subject,
                     'subtitle' => $row->status,
                     'url' => route('admin.tickets.show', $row),
                     'group' => 'Tickets',

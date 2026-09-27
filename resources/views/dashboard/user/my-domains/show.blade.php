@@ -87,7 +87,7 @@
                                     <p class="mt-1 text-xs text-danger">{{ $message }}</p>
                                 @enderror
                             </div>
-                            <p class="text-xs text-text-muted">Free replacement — no extra charge. Same order price applies.</p>
+                            <p class="text-xs text-text-muted">Free replacement at no extra charge. Same order price applies.</p>
                             <x-dashboard.button type="submit" variant="primary" size="sm">Submit replacement</x-dashboard.button>
                         </form>
                     </div>

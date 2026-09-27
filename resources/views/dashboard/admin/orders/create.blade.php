@@ -5,7 +5,7 @@
 @section('content')
 <x-layout.page
     title="Create order for user"
-    subtitle="Manual bank transfer — works even when checkout toggle is off. Mark paid to fulfill immediately."
+    subtitle="Manual bank transfer. Works even when checkout toggle is off. Mark paid to fulfill immediately."
     width="default"
     :breadcrumb="[
         ['Admin', route('admin')],

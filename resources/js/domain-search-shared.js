@@ -15,7 +15,7 @@ export function sanitizeDomainLabel(raw, allowedTlds = new Set()) {
         if (maybeTld) {
             autoTld = maybeTld;
         }
-        error = error ?? 'Do not include an extension here — choose it from the dropdown.';
+        error = error ?? 'Do not include an extension here. Choose it from the dropdown.';
     } else {
         const sanitized = value.replace(/[^a-z0-9-]/g, '');
         if (sanitized !== value) {

@@ -21,7 +21,7 @@
             Secure Digital Services
         </h1>
         <p class="max-w-2xl mx-auto text-base sm:text-lg text-text-secondary mb-8 leading-relaxed">
-            Browse by category — network, communication, social, websites, and documents. Explore digital services built for businesses and creators.
+            Browse our digital services, website solutions, templates and other digital products by category. Each service lists its available products and prices.
         </p>
 
         <form method="GET" action="{{ route('services') }}" class="max-w-xl mx-auto relative group">

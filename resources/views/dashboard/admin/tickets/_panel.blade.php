@@ -27,7 +27,7 @@
                 <a href="{{ route('admin.tickets.show', $ticket) }}" class="text-text-primary hover:text-primary hover:underline">{{ $ticket->subject }}</a>
             </x-dashboard.td>
             <x-dashboard.td><x-dashboard.badge :status="$ticket->status" /></x-dashboard.td>
-            <x-dashboard.td class="text-xs">{{ $ticket->assignee?->name ?? '—' }}</x-dashboard.td>
+            <x-dashboard.td class="text-xs">{{ $ticket->assignee?->name ?? 'N/A' }}</x-dashboard.td>
             <x-dashboard.td class="text-text-muted text-xs">{{ $ticket->created_at->format('M j, Y H:i') }}</x-dashboard.td>
             <x-dashboard.td>
                 <x-dashboard.button :href="route('admin.tickets.show', $ticket)" variant="secondary" size="sm">View</x-dashboard.button>

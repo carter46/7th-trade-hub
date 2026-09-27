@@ -896,7 +896,7 @@ class DomainRegistrationFulfillmentService
             ? route('dashboard.my-domains.show', $registration)
             : null;
 
-        $from = $previousFqdn !== '' ? $previousFqdn : '—';
+        $from = $previousFqdn !== '' ? $previousFqdn : 'N/A';
         $message = new NotificationMessage(
             type: 'order.domain_replaced',
             title: __('Your domain was updated'),
@@ -911,7 +911,7 @@ class DomainRegistrationFulfillmentService
                 'from_fqdn' => $from,
                 'to_fqdn' => $registration->fqdn,
             ],
-            emailSubject: __('Domain updated — :fqdn', ['fqdn' => $registration->fqdn]),
+            emailSubject: __('Domain updated: :fqdn', ['fqdn' => $registration->fqdn]),
             dedupeKey: 'domain.admin_replace.'.$registration->id.'.'.md5($from.'|'.$registration->fqdn.'|'.now()->timestamp),
         );
 
@@ -945,14 +945,14 @@ class DomainRegistrationFulfillmentService
             title: __('Domain registration rejected'),
             body: __('We could not register :fqdn. Reason: :reason. You can submit a free replacement domain.', [
                 'fqdn' => $registration->fqdn,
-                'reason' => $registration->error_message ?? '—',
+                'reason' => $registration->error_message ?? 'N/A',
             ]),
             actionUrl: $url,
             meta: [
                 'domain_registration_id' => $registration->id,
                 'action_label' => __('Replace domain'),
             ],
-            emailSubject: __('Domain rejected — replace :fqdn', ['fqdn' => $registration->fqdn]),
+            emailSubject: __('Domain rejected: replace :fqdn', ['fqdn' => $registration->fqdn]),
             // Unique per reject event so retries after a failed send are not swallowed.
             dedupeKey: 'domain.reject.'.$registration->id.'.'.md5($rejectedAt.(string) $registration->error_message),
         );
@@ -1018,7 +1018,7 @@ class DomainRegistrationFulfillmentService
                 'unavailable_fqdn' => $unavailable,
                 'fqdn' => $registration->fqdn,
             ],
-            emailSubject: $title.' — '.$registration->fqdn,
+            emailSubject: $title.': '.$registration->fqdn,
             dedupeKey: 'domain.approve.'.$registration->id.'.'.md5($registeredAt.(string) $reference.(string) $unavailable),
         );
 
@@ -1119,7 +1119,7 @@ class DomainRegistrationFulfillmentService
                     'domain_registration_id' => $registration->id,
                     'order_id' => $registration->order_id,
                 ],
-                emailSubject: __('Register domain — :fqdn', ['fqdn' => $registration->fqdn]),
+                emailSubject: __('Register domain: :fqdn', ['fqdn' => $registration->fqdn]),
                 permission: 'users.manage',
                 dedupeKey: 'domain.pending_manual.'.$registration->id,
             ),
@@ -1140,7 +1140,7 @@ class DomainRegistrationFulfillmentService
                 body: __(':name requested :fqdn to replace :rejected (order :ref).', [
                     'name' => $user?->name ?? 'Customer',
                     'fqdn' => $registration->fqdn,
-                    'rejected' => $registration->rejectedFqdn() ?? '—',
+                    'rejected' => $registration->rejectedFqdn() ?? 'N/A',
                     'ref' => $registration->order?->reference ?? '#'.$registration->order_id,
                 ]),
                 actionUrl: $this->domainAdminManageUrl($registration),
@@ -1148,7 +1148,7 @@ class DomainRegistrationFulfillmentService
                     'domain_registration_id' => $registration->id,
                     'order_id' => $registration->order_id,
                 ],
-                emailSubject: __('Domain replacement — :fqdn', ['fqdn' => $registration->fqdn]),
+                emailSubject: __('Domain replacement: :fqdn', ['fqdn' => $registration->fqdn]),
                 permission: 'users.manage',
                 // One notify per replacement submission (not sticky across reject→replace cycles).
                 dedupeKey: 'domain.replacement.'.$registration->id.'.'.md5($requestedAt),

@@ -102,8 +102,8 @@
                             <span class="ml-1 text-xs text-amber-600">Expiring soon</span>
                         @endif
                     </x-dashboard.td>
-                    <x-dashboard.td class="text-xs text-text-muted">{{ $tool->expires_at?->format('j M Y') ?? '—' }}</x-dashboard.td>
-                    <x-dashboard.td class="text-xs text-text-muted">{{ $tool->integration?->connection_status ?? '—' }}</x-dashboard.td>
+                    <x-dashboard.td class="text-xs text-text-muted">{{ $tool->expires_at?->format('j M Y') ?? 'N/A' }}</x-dashboard.td>
+                    <x-dashboard.td class="text-xs text-text-muted">{{ $tool->integration?->connection_status ?? 'N/A' }}</x-dashboard.td>
                     <x-dashboard.td>
                         <x-dashboard.button
                             :href="route('admin.users.tools.show', [$user, $tool])"
@@ -147,7 +147,7 @@
                             {{ $registration->isManualFulfillment() ? 'Buy · Manual' : 'Buy · Provider' }}
                         </x-dashboard.td>
                         <x-dashboard.td><x-dashboard.badge :status="$registration->status" /></x-dashboard.td>
-                        <x-dashboard.td class="text-xs text-text-muted">{{ $registration->order?->reference ?? '—' }}</x-dashboard.td>
+                        <x-dashboard.td class="text-xs text-text-muted">{{ $registration->order?->reference ?? 'N/A' }}</x-dashboard.td>
                         <x-dashboard.td>
                             <x-dashboard.button
                                 :href="route('admin.users.domains.registrations.show', [$user, $registration])"
@@ -166,7 +166,7 @@
                         </x-dashboard.td>
                         <x-dashboard.td class="text-xs text-text-muted">Connect existing</x-dashboard.td>
                         <x-dashboard.td><x-dashboard.badge :status="$connection->verification_status" /></x-dashboard.td>
-                        <x-dashboard.td class="text-xs text-text-muted">{{ $connection->order?->reference ?? '—' }}</x-dashboard.td>
+                        <x-dashboard.td class="text-xs text-text-muted">{{ $connection->order?->reference ?? 'N/A' }}</x-dashboard.td>
                         <x-dashboard.td>
                             <x-dashboard.button
                                 :href="route('admin.users.domains.connections.show', [$user, $connection])"
@@ -204,7 +204,7 @@
             </x-slot:head>
             @foreach ($activity as $row)
                 <tr>
-                    <x-dashboard.td>{{ $row->action ?? $row->event ?? '—' }}</x-dashboard.td>
+                    <x-dashboard.td>{{ $row->action ?? $row->event ?? 'N/A' }}</x-dashboard.td>
                     <x-dashboard.td class="text-xs text-text-muted">{{ $row->created_at->format('j M Y H:i') }}</x-dashboard.td>
                 </tr>
             @endforeach

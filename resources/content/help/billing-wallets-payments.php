@@ -21,7 +21,7 @@ return [
             'nav' => 'Funding the Naira wallet',
             'title' => 'Funding the Naira wallet',
             'blocks' => [
-                ['type' => 'paragraph', 'content' => 'Fund your wallet via Monnify checkout or your reserved account (when available). Manual bank transfer is not used for wallet top-ups — it is only for paying platform service orders at checkout when the admin enables it.'],
+                ['type' => 'paragraph', 'content' => 'Fund your wallet via Monnify checkout or your reserved account (when available). Manual bank transfer is not used for wallet top-ups. It is only for paying platform service orders at checkout when the admin enables it.'],
                 [
                     'type' => 'screenshot',
                     'title' => 'Wallet page',
@@ -120,9 +120,9 @@ return [
             'title' => 'Understanding payment statuses',
             'blocks' => [
                 ['type' => 'bullets', 'items' => [
-                    'Pending — awaiting payment confirmation or admin review',
-                    'Approved / Completed — funds credited or order paid successfully',
-                    'Rejected / Failed — not credited; check notes or contact support',
+                    'Pending: awaiting payment confirmation or admin review',
+                    'Approved / Completed: funds credited or order paid successfully',
+                    'Rejected / Failed: not credited; check notes or contact support',
                 ]],
             ],
         ],
@@ -134,7 +134,7 @@ return [
                 [
                     'type' => 'faq',
                     'items' => [
-                        ['q' => 'How long do bank deposits take?', 'a' => 'Usually after admin confirms your transfer — timing depends on banking and review queue.'],
+                        ['q' => 'How long do bank deposits take?', 'a' => 'Usually after admin confirms your transfer. Timing depends on banking and review queue.'],
                         ['q' => 'Why was my deposit rejected?', 'a' => 'Mismatched amount, missing proof, or incorrect reference are common causes. Resubmit with correct details or contact support.'],
                         ['q' => 'Can I pay checkout with card directly?', 'a' => 'Checkout uses your platform wallet balance. Fund the wallet first, then pay.'],
                     ],

@@ -198,7 +198,7 @@
                     <template x-for="variant in (selectedProduct?.variants || [])" :key="variant.id">
                         <option
                             :value="variant.id"
-                            x-text="variant.label + ' — ₦' + Number(variant.price).toLocaleString() + (variant.duration_months ? (' · ' + variant.duration_months + ' mo') : '')"
+                            x-text="variant.label + ': ₦' + Number(variant.price).toLocaleString() + (variant.duration_months ? (' · ' + variant.duration_months + ' mo') : '')"
                         ></option>
                     </template>
                 </select>
@@ -216,7 +216,7 @@
                     placeholder="shop.example.com"
                     class="w-full rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm"
                 />
-                <p class="text-xs text-text-muted">Connect an existing domain or subdomain (e.g. example.com, shop.example.com). No availability check — enter what the customer already owns.</p>
+                <p class="text-xs text-text-muted">Connect an existing domain or subdomain (e.g. example.com, shop.example.com). No availability check. Enter what the customer already owns.</p>
             </div>
 
             <div>

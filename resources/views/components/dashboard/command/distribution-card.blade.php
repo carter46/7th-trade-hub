@@ -1,6 +1,6 @@
 @props([
     'title' => 'Distribution',
-    'centerValue' => '—',
+    'centerValue' => 'N/A',
     'centerLabel' => null,
     'slices' => [],
     'id' => null,

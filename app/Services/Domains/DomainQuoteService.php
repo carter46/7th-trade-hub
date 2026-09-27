@@ -719,7 +719,7 @@ class DomainQuoteService
 
                 return [
                     'tld' => $tld,
-                    'label' => '.'.$tld.' — ₦'.$amount,
+                    'label' => '.'.$tld.': ₦'.$amount,
                     'retail_price' => number_format((float) $row->retail_price, 2, '.', ''),
                 ];
             })

@@ -35,7 +35,7 @@
             </div>
             <div>
                 <dt class="text-text-muted">Provider key</dt>
-                <dd class="font-medium text-text-primary">{{ $registration->provider_key ?: '—' }}</dd>
+                <dd class="font-medium text-text-primary">{{ $registration->provider_key ?: 'N/A' }}</dd>
             </div>
             @if($registration->order)
                 <div>
@@ -49,7 +49,7 @@
             @endif
             <div>
                 <dt class="text-text-muted">Registered at</dt>
-                <dd class="font-medium text-text-primary">{{ $registration->registered_at?->format('j M Y H:i') ?? '—' }}</dd>
+                <dd class="font-medium text-text-primary">{{ $registration->registered_at?->format('j M Y H:i') ?? 'N/A' }}</dd>
             </div>
             @if($registration->provider_reference)
                 <div>
@@ -90,9 +90,9 @@
                 <p class="text-xs font-semibold uppercase tracking-wider text-text-muted mb-2">Registrant</p>
                 <dl class="grid gap-1 sm:grid-cols-2 text-xs">
                     <div><span class="text-text-muted">Name:</span> {{ trim(($registration->registrant_contact['first_name'] ?? $registration->registrant_contact['firstName'] ?? '').' '.($registration->registrant_contact['last_name'] ?? $registration->registrant_contact['lastName'] ?? '')) }}</div>
-                    <div><span class="text-text-muted">Email:</span> {{ $registration->registrant_contact['email'] ?? '—' }}</div>
-                    <div><span class="text-text-muted">Phone:</span> {{ $registration->registrant_contact['phone'] ?? '—' }}</div>
-                    <div><span class="text-text-muted">Country:</span> {{ $registration->registrant_contact['country'] ?? '—' }}</div>
+                    <div><span class="text-text-muted">Email:</span> {{ $registration->registrant_contact['email'] ?? 'N/A' }}</div>
+                    <div><span class="text-text-muted">Phone:</span> {{ $registration->registrant_contact['phone'] ?? 'N/A' }}</div>
+                    <div><span class="text-text-muted">Country:</span> {{ $registration->registrant_contact['country'] ?? 'N/A' }}</div>
                 </dl>
             </div>
         @endif
@@ -152,7 +152,7 @@
         <div class="mt-6 grid gap-6 lg:grid-cols-2">
             <x-dashboard.card class="space-y-4">
                 <h3 class="text-sm font-semibold text-text-primary">Approve domain</h3>
-                <p class="text-xs text-text-muted">Confirm you have registered this domain offline, then approve. If the requested name was taken, enter the closely related domain you registered instead — it replaces the FQDN everywhere (order, tools, Website URL setup).</p>
+                <p class="text-xs text-text-muted">Confirm you have registered this domain offline, then approve. If the requested name was taken, enter the closely related domain you registered instead. It replaces the FQDN everywhere (order, tools, Website URL setup).</p>
                 <form method="POST" action="{{ route('admin.users.domains.registrations.approve', [$user, $registration]) }}" class="space-y-3">
                     @csrf
                     <x-dashboard.input name="provider_reference" label="Registrar reference (optional)" :value="old('provider_reference')" hint="Included in the customer confirmation email when provided." />
@@ -195,7 +195,7 @@
         </x-dashboard.card>
     @elseif($registration->isRejected())
         <x-dashboard.card class="mt-6">
-            <p class="text-sm text-text-secondary">Waiting for the customer to submit a free replacement domain — or use <strong>Replace domain</strong> above to set one yourself.</p>
+            <p class="text-sm text-text-secondary">Waiting for the customer to submit a free replacement domain, or use <strong>Replace domain</strong> above to set one yourself.</p>
         </x-dashboard.card>
     @endif
 
@@ -205,7 +205,7 @@
             <ul class="space-y-2 text-sm">
                 @foreach(array_reverse($registration->replacementHistory()) as $row)
                     <li class="rounded-lg border border-border-subtle px-3 py-2">
-                        <span class="font-mono font-medium">{{ $row['fqdn'] ?? '—' }}</span>
+                        <span class="font-mono font-medium">{{ $row['fqdn'] ?? 'N/A' }}</span>
                         <span class="text-text-muted"> · {{ $row['rejected_at'] ?? '' }}</span>
                         <p class="mt-1 text-text-secondary">{{ $row['reason'] ?? '' }}</p>
                     </li>

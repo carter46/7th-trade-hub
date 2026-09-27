@@ -16,7 +16,7 @@
         <x-dashboard.card variant="solid">
             <ul class="space-y-2">
                 @foreach ($items as $item)
-                    <li class="text-text-primary text-sm">{{ $item->name ?? $item['name'] ?? '—' }}</li>
+                    <li class="text-text-primary text-sm">{{ $item->name ?? $item['name'] ?? 'N/A' }}</li>
                 @endforeach
             </ul>
         </x-dashboard.card>

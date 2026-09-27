@@ -23,7 +23,7 @@ return [
         'short_name' => '7thHub',
         'background_color' => '#FFFFFF',
         'display' => 'standalone',
-        'description' => '7th Trade Hub — digital services hub (VPN, domains, websites, social growth, receipts, documents).',
+        'description' => '7th Trade Hub is a digital commerce platform for digital services, website solutions, templates and other digital products.',
         'theme_color' => '#0B6A39',
         'start_url' => '/',
         'scope' => '/',

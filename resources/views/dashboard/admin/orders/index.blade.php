@@ -35,13 +35,13 @@
                     <a href="{{ route('admin.orders.show', $order) }}" class="underline">{{ $order->reference }}</a>
                 </x-dashboard.td>
                 <x-dashboard.td>{{ \App\Models\User::labelFor($order->user) }}</x-dashboard.td>
-                <x-dashboard.td>{{ str_replace('_', ' ', $order->payment_method ?? '—') }}</x-dashboard.td>
+                <x-dashboard.td>{{ str_replace('_', ' ', $order->payment_method ?? 'N/A') }}</x-dashboard.td>
                 <x-dashboard.td>₦{{ number_format((float) $order->total_amount, 2) }}</x-dashboard.td>
                 <x-dashboard.td>
                     <x-dashboard.badge :status="$order->status" />
                     @if($order->isAwaitingManualBankTransfer())
                         @if($order->payment_submitted_at)
-                            <span class="mt-1 block text-xs font-medium text-amber-700">Proof submitted — review</span>
+                            <span class="mt-1 block text-xs font-medium text-amber-700">Proof submitted, review</span>
                         @else
                             <span class="mt-1 block text-xs font-medium text-amber-700">Awaiting bank transfer</span>
                         @endif

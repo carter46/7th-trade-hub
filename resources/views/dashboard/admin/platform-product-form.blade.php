@@ -75,8 +75,8 @@
             @method('PUT')
 
             <p class="text-xs text-text-muted">
-                Service: {{ $product->productType?->name ?? '—' }}
-                · Category: {{ $product->productType?->serviceCategory?->name ?? '—' }}
+                Service: {{ $product->productType?->name ?? 'N/A' }}
+                · Category: {{ $product->productType?->serviceCategory?->name ?? 'N/A' }}
                 · Slug frozen: <span class="font-mono">{{ $product->slug }}</span>
             </p>
 
@@ -121,7 +121,7 @@
                 <div class="space-y-3 rounded-xl border border-border-subtle px-4 py-4">
                     <div>
                         <p class="text-sm font-medium text-text-primary">Tutorials</p>
-                        <p class="mt-1 text-xs text-text-muted">Shown as a <strong>Watch tutorial</strong> button next to View Demo on the product page, and on My Tools after purchase. Set once here — not per user.</p>
+                        <p class="mt-1 text-xs text-text-muted">Shown as a <strong>Watch tutorial</strong> button next to View Demo on the product page, and on My Tools after purchase. Set once here, not per user.</p>
                     </div>
                     <x-dashboard.input
                         label="Tutorial video URL"

@@ -628,7 +628,7 @@ class PwaBrandingSync
         }
 
         if ($entries === []) {
-            throw new \RuntimeException('Unable to build favicon.ico — no PNG sources.');
+            throw new \RuntimeException('Unable to build favicon.ico: no PNG sources.');
         }
 
         $count = count($entries);

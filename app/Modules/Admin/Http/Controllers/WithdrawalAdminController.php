@@ -174,7 +174,7 @@ class WithdrawalAdminController extends Controller
         $withdrawal->refresh();
         $msg = $withdrawal->status === 'completed'
             ? __('Monnify transfer authorized and withdrawal completed.')
-            : __('Monnify OTP accepted. Payout is processing — status will update when the provider confirms.');
+            : __('Monnify OTP accepted. Payout is processing. Status will update when the provider confirms.');
 
         return redirect()
             ->route('admin.withdrawals.show', $withdrawal)

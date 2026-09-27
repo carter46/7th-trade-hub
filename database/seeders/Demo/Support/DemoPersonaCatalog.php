@@ -67,7 +67,7 @@ class DemoPersonaCatalog
                 'kyc_level' => 0,
                 'kyc_status' => 'none',
                 'role' => 'empty',
-                'bio' => 'Brand new user — empty dashboards by design.',
+                'bio' => 'Brand new user with empty dashboards by design.',
             ],
         ];
     }

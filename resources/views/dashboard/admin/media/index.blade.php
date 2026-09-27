@@ -174,7 +174,7 @@
                             class="h-12 w-12 rounded-lg object-cover"
                         >
                     @else
-                        <span class="text-text-muted text-xs">—</span>
+                        <span class="text-text-muted text-xs">N/A</span>
                     @endif
                 </x-dashboard.td>
                 <x-dashboard.td>
@@ -189,7 +189,7 @@
                     @if ($asset->width && $asset->height)
                         {{ $asset->width }}×{{ $asset->height }}
                     @else
-                        —
+                        N/A
                     @endif
                 </x-dashboard.td>
                 <x-dashboard.td>

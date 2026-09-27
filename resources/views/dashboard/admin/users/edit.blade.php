@@ -27,7 +27,7 @@
             <x-dashboard.textarea name="bio" label="Bio">{{ old('bio', $user->bio) }}</x-dashboard.textarea>
 
             <x-dashboard.select label="KYC level" name="kyc_level">
-                @foreach ([0 => '0 — None', 1 => '1 — Basic', 2 => '2 — Identity', 3 => '3 — Address', 4 => '4 — Enhanced'] as $value => $label)
+                @foreach ([0 => '0: None', 1 => '1: Basic', 2 => '2: Identity', 3 => '3: Address', 4 => '4: Enhanced'] as $value => $label)
                     <option value="{{ $value }}" @selected((string) old('kyc_level', $user->kyc_level) === (string) $value)>{{ $label }}</option>
                 @endforeach
             </x-dashboard.select>

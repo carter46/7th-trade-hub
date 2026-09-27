@@ -159,7 +159,7 @@ class ReportingService
                 'id' => $tx->id,
                 'reference' => $tx->reference,
                 'type' => $tx->type,
-                'user_name' => $tx->user?->name ?? '—',
+                'user_name' => $tx->user?->name ?? 'N/A',
                 'user_initials' => $this->initials($tx->user?->name),
                 'avatar_tone' => $this->avatarTone($tx->user?->name),
                 'amount' => (float) $tx->amount,

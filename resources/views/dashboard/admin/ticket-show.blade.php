@@ -5,7 +5,7 @@
 @section('content')
 <x-layout.page
     :title="$ticket->subject"
-    :subtitle="$ticket->category . ' — ' . \App\Models\User::labelFor($ticket->user) . ' — opened ' . $ticket->created_at->format('M j, Y H:i')"
+    :subtitle="$ticket->category . ' · ' . \App\Models\User::labelFor($ticket->user) . ' · opened ' . $ticket->created_at->format('M j, Y H:i')"
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
@@ -61,7 +61,7 @@
                 @if ($reply->is_staff)
                     <span class="text-primary font-medium">(Staff)</span>
                 @endif
-                — {{ $reply->created_at->format('M j, H:i') }}
+                · {{ $reply->created_at->format('M j, H:i') }}
             </p>
             <p class="text-text-secondary text-sm whitespace-pre-wrap">{{ $reply->body }}</p>
             @include('dashboard.user.support._attachments', [

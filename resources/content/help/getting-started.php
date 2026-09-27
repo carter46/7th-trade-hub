@@ -30,7 +30,7 @@ return [
                     'alignment' => 'center',
                     'alt' => 'Registration page screenshot',
                 ],
-                ['type' => 'tip', 'title' => 'Quick tip', 'content' => 'Use an email you can access immediately — you will need it for verification before using many wallet features.'],
+                ['type' => 'tip', 'title' => 'Quick tip', 'content' => 'Use an email you can access immediately. You will need it for verification before using many wallet features.'],
             ],
         ],
         [
@@ -135,9 +135,9 @@ return [
             'blocks' => [
                 ['type' => 'paragraph', 'content' => 'Use this Help Center for guides, open support tickets from your dashboard, or visit Contact Us for live chat, phone, and email.'],
                 ['type' => 'bullets', 'items' => [
-                    'Help Center — searchable guides and FAQs',
-                    'My tickets — track conversations with support',
-                    'Contact Us — live chat and direct contact details',
+                    'Help Center: searchable guides and FAQs',
+                    'My tickets: track conversations with support',
+                    'Contact Us: live chat and direct contact details',
                 ]],
             ],
         ],

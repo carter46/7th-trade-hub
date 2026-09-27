@@ -41,8 +41,8 @@
                             </span>
                         </div>
                         <dl class="space-y-1 text-text-secondary">
-                            <div class="flex justify-between gap-2"><dt>Last success</dt><dd>{{ $health['row']->last_success_at?->diffForHumans() ?? '—' }}</dd></div>
-                            <div class="flex justify-between gap-2"><dt>Last error</dt><dd>{{ $health['row']->last_error_at?->diffForHumans() ?? '—' }}</dd></div>
+                            <div class="flex justify-between gap-2"><dt>Last success</dt><dd>{{ $health['row']->last_success_at?->diffForHumans() ?? 'N/A' }}</dd></div>
+                            <div class="flex justify-between gap-2"><dt>Last error</dt><dd>{{ $health['row']->last_error_at?->diffForHumans() ?? 'N/A' }}</dd></div>
                             @if($health['row']->last_error)
                                 <p class="text-danger text-xs mt-2 break-words">{{ $health['row']->last_error }}</p>
                             @endif
@@ -57,7 +57,7 @@
                     <p class="text-sm text-text-secondary">For notification delivery attempts, see <a href="{{ route('admin.audit-logs') }}" class="text-primary hover:underline">Audit Logs</a>.</p>
                     @foreach($recentEmailFailures as $attempt)
                         <div class="text-sm text-text-secondary border-t border-border-subtle pt-2 first:border-0 first:pt-0">
-                            <p class="text-text-primary">{{ $attempt->created_at?->diffForHumans() }} · {{ $attempt->provider }} · {{ $attempt->recipient ?? '—' }}@if($attempt->http_status) · HTTP {{ $attempt->http_status }}@endif</p>
+                            <p class="text-text-primary">{{ $attempt->created_at?->diffForHumans() }} · {{ $attempt->provider }} · {{ $attempt->recipient ?? 'N/A' }}@if($attempt->http_status) · HTTP {{ $attempt->http_status }}@endif</p>
                             <p class="text-danger break-words">{{ $attempt->error_message ?: 'Unknown error' }}</p>
                         </div>
                     @endforeach
@@ -170,7 +170,7 @@
                 @csrf
                 <h3 class="font-semibold text-text-primary">Send test email</h3>
                 <x-dashboard.input name="test_email" type="email" label="Send test to" :value="old('test_email', auth()->user()->email)" required />
-                <x-dashboard.input name="test_subject" label="Subject (optional)" :value="old('test_subject', $siteName.' — test email')" />
+                <x-dashboard.input name="test_subject" label="Subject (optional)" :value="old('test_subject', $siteName.' test email')" />
                 <p
                     x-show="status"
                     x-text="status"

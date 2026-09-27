@@ -59,7 +59,7 @@
         @foreach ($integrations as $integration)
             <tr>
                 <x-dashboard.td class="font-medium">{{ $integration->name }}</x-dashboard.td>
-                <x-dashboard.td>{{ $integration->product?->title ?? '—' }}</x-dashboard.td>
+                <x-dashboard.td>{{ $integration->product?->title ?? 'N/A' }}</x-dashboard.td>
                 <x-dashboard.td class="max-w-[14rem] truncate text-xs">{{ $integration->base_url }}</x-dashboard.td>
                 <x-dashboard.td><x-dashboard.badge :status="$integration->status->value" /></x-dashboard.td>
                 <x-dashboard.td class="text-xs">{{ $integration->connection_status ?? 'unchecked' }}</x-dashboard.td>

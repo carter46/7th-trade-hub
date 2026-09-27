@@ -19,7 +19,7 @@
                 <ul class="mt-2 list-disc space-y-1 pl-5 text-sm">
                     @foreach ($duplicateConflicts as $conflict)
                         <li>
-                            “{{ $conflict['script_name'] }}” — {{ $conflict['message'] }}
+                            “{{ $conflict['script_name'] }}”: {{ $conflict['message'] }}
                         </li>
                     @endforeach
                 </ul>

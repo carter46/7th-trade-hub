@@ -361,11 +361,11 @@ class MonnifyWebhookProcessor
 
         if ($status === 'REVERSED') {
             if ($withdrawal->internal_status === 'completed' || $withdrawal->status === 'completed') {
-                Log::critical('Monnify payout reversed after completion — admin review required', [
+                Log::critical('Monnify payout reversed after completion, admin review required', [
                     'withdrawal_id' => $withdrawal->id,
                     'reference' => $reference,
                 ]);
-                PaymentTimelineEvent::record($withdrawal, 'reversed_alert', 'Reversed after completion — admin review required');
+                PaymentTimelineEvent::record($withdrawal, 'reversed_alert', 'Reversed after completion, admin review required');
                 $this->paymentAlerts->disbursementReversed($reference, ['withdrawal_id' => $withdrawal->id]);
                 \App\Events\WithdrawalPayoutFailed::dispatch(
                     (int) $withdrawal->id,

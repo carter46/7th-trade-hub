@@ -187,7 +187,7 @@ return [
                 'Works alongside your domain setup',
             ],
             'faq' => [
-                ['q' => 'Can I use my own domain?', 'a' => 'Yes on eligible plans — see product requirements for DNS setup.'],
+                ['q' => 'Can I use my own domain?', 'a' => 'Yes, on eligible plans. See the product requirements for DNS setup.'],
             ],
         ],
         'social_service' => [
@@ -262,7 +262,7 @@ return [
             'card_image' => 'assets/images/Website_Services.jpg',
             'short_description' => 'Hosted packages and domain services.',
             'hero_title' => 'Website Services',
-            'hero_subtitle' => 'From hosted packages to domains — build your web presence.',
+            'hero_subtitle' => 'From hosted packages to domains, build your web presence.',
             'benefits' => [
                 'Packages and domains together',
                 'Demos on eligible packages',

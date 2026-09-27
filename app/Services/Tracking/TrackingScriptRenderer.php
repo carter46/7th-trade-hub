@@ -221,7 +221,7 @@ class TrackingScriptRenderer
         $inventory['body_end'][] = [
             'label' => $chatEnabled
                 ? 'Live chat widget ('.$chat['label'].', marketing pages only)'
-                : 'Live chat widget (disabled — Settings → Contact)',
+                : 'Live chat widget (disabled in Settings → Contact)',
             'source' => 'system:live_chat',
             'location' => TrackingScript::LOCATION_BODY_END,
             'enabled' => $chatEnabled,

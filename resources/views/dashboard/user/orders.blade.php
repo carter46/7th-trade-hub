@@ -41,7 +41,7 @@
                 $item = $order->items->first();
                 $title = ($item?->options['product_title'] ?? null)
                     ?? ($item ? ucfirst(str_replace('_', ' ', $item->item_type)).' #'.$item->item_id : null)
-                    ?? '—';
+                    ?? 'N/A';
                 $meta = [];
                 if ($item && $item->quantity > 1) {
                     $meta[] = 'Qty '.$item->quantity;

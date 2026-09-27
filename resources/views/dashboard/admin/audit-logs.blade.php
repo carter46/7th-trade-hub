@@ -105,16 +105,16 @@
                         </div>
                     </x-dashboard.td>
                     <x-dashboard.td>
-                        <div class="text-sm break-all">{{ $log->admin?->email ?? '—' }}</div>
+                        <div class="text-sm break-all">{{ $log->admin?->email ?? 'N/A' }}</div>
                     </x-dashboard.td>
-                    <x-dashboard.td class="text-sm text-text-muted">{{ $log->module ?? '—' }}</x-dashboard.td>
+                    <x-dashboard.td class="text-sm text-text-muted">{{ $log->module ?? 'N/A' }}</x-dashboard.td>
                     <x-dashboard.td>
                         <div class="space-y-1">
                             <div class="font-mono text-xs text-text-primary break-all">{{ $log->action }}</div>
                             <div class="text-xs text-text-muted">
-                                {{ $log->device ? trim($log->device.($log->browser ? ' / '.$log->browser : '')) : '—' }}
+                                {{ $log->device ? trim($log->device.($log->browser ? ' / '.$log->browser : '')) : 'N/A' }}
                             </div>
-                            <div class="text-xs text-text-muted font-mono">{{ $log->ip ?: '—' }}</div>
+                            <div class="text-xs text-text-muted font-mono">{{ $log->ip ?: 'N/A' }}</div>
                         </div>
                     </x-dashboard.td>
                 </tr>
@@ -123,9 +123,9 @@
                         <div class="grid gap-3 md:grid-cols-2">
                             <div>
                                 <div class="font-medium text-text-primary mb-1">Reason / correlation</div>
-                                <p>Reason: {{ $log->reason ?: '—' }}</p>
-                                <p>Correlation: {{ $log->correlation_id ?: '—' }}</p>
-                                <p>Request: {{ $log->request_id ?: '—' }}</p>
+                                <p>Reason: {{ $log->reason ?: 'N/A' }}</p>
+                                <p>Correlation: {{ $log->correlation_id ?: 'N/A' }}</p>
+                                <p>Request: {{ $log->request_id ?: 'N/A' }}</p>
                             </div>
                             <div>
                                 <div class="font-medium text-text-primary mb-1">Changes</div>

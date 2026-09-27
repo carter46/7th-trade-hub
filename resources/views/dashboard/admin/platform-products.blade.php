@@ -5,7 +5,7 @@
 @section('content')
 <x-layout.page
     title="Products"
-    subtitle="Fixed platform products. Edit title, description, price, image, sort, and status — you cannot add or delete."
+    subtitle="Fixed platform products. Edit title, description, price, image, sort, and status. You cannot add or delete."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
@@ -94,12 +94,12 @@
                                 <x-dashboard.badge status="warning">Featured</x-dashboard.badge>
                             @endif
                         </div>
-                        <p class="mt-0.5 font-mono text-[10px] leading-tight text-text-muted" title="Catalog slug — fixed in code, not changed when you edit the title">
+                        <p class="mt-0.5 font-mono text-[10px] leading-tight text-text-muted" title="Catalog slug, fixed in code, not changed when you edit the title">
                             {{ $product->slug }}
                         </p>
                     </div>
                 </x-dashboard.td>
-                <x-dashboard.td>{{ $product->productType?->name ?? ($product->product_type?->label() ?? '—') }}</x-dashboard.td>
+                <x-dashboard.td>{{ $product->productType?->name ?? ($product->product_type?->label() ?? 'N/A') }}</x-dashboard.td>
                 <x-dashboard.td>{{ $product->sort_order }}</x-dashboard.td>
                 <x-dashboard.td>
                     <x-dashboard.badge :status="$product->status->value === 'published' ? 'success' : 'neutral'">

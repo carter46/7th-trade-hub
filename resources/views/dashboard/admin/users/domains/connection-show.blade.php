@@ -41,7 +41,7 @@
             @endif
             <div>
                 <dt class="text-text-muted">Verified at</dt>
-                <dd class="font-medium text-text-primary">{{ $connection->verified_at?->format('j M Y H:i') ?? '—' }}</dd>
+                <dd class="font-medium text-text-primary">{{ $connection->verified_at?->format('j M Y H:i') ?? 'N/A' }}</dd>
             </div>
             @if($connection->userTool)
                 <div>

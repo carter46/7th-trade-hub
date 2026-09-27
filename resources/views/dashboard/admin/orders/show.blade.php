@@ -33,7 +33,7 @@
             <dl class="space-y-2">
                 <div class="flex justify-between gap-4"><dt class="text-text-muted">User</dt><dd>{{ \App\Models\User::labelFor($order->user) }}</dd></div>
                 <div class="flex justify-between gap-4"><dt class="text-text-muted">Amount</dt><dd class="font-semibold">₦{{ number_format((float) $order->total_amount, 2) }}</dd></div>
-                <div class="flex justify-between gap-4"><dt class="text-text-muted">Payment</dt><dd>{{ str_replace('_', ' ', $order->payment_method ?? '—') }}</dd></div>
+                <div class="flex justify-between gap-4"><dt class="text-text-muted">Payment</dt><dd>{{ str_replace('_', ' ', $order->payment_method ?? 'N/A') }}</dd></div>
                 <div class="flex justify-between gap-4"><dt class="text-text-muted">Status</dt><dd><x-dashboard.badge :status="$order->status" /></dd></div>
                 @if ($order->payment_submitted_at)
                     <div class="flex justify-between gap-4"><dt class="text-text-muted">Proof submitted</dt><dd>{{ $order->payment_submitted_at->format('M j, Y g:i A') }}</dd></div>
@@ -130,9 +130,9 @@
             @if ($order->payment_method === \App\Models\Order::PAYMENT_MANUAL_BANK_TRANSFER)
                 <h3 class="text-sm font-semibold text-text-primary pt-2">Bank details (company)</h3>
                 <dl class="space-y-1">
-                    <div class="flex justify-between gap-4"><dt class="text-text-muted">Bank</dt><dd>{{ $bankDetails['bank_name'] ?: '—' }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt class="text-text-muted">Account</dt><dd class="font-mono">{{ $bankDetails['account_number'] ?: '—' }}</dd></div>
-                    <div class="flex justify-between gap-4"><dt class="text-text-muted">Name</dt><dd>{{ $bankDetails['account_name'] ?: '—' }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="text-text-muted">Bank</dt><dd>{{ $bankDetails['bank_name'] ?: 'N/A' }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="text-text-muted">Account</dt><dd class="font-mono">{{ $bankDetails['account_number'] ?: 'N/A' }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="text-text-muted">Name</dt><dd>{{ $bankDetails['account_name'] ?: 'N/A' }}</dd></div>
                 </dl>
 
                 @if (! empty($meta['payer_bank_name']) || ! empty($meta['transfer_reference']))
@@ -194,7 +194,7 @@
                     @if (is_array($registration->registrant_contact))
                         <dl class="grid gap-1 sm:grid-cols-2 text-xs">
                             <div><span class="text-text-muted">Name:</span> {{ trim(($registration->registrant_contact['first_name'] ?? $registration->registrant_contact['firstName'] ?? '').' '.($registration->registrant_contact['last_name'] ?? $registration->registrant_contact['lastName'] ?? '')) }}</div>
-                            <div><span class="text-text-muted">Email:</span> {{ $registration->registrant_contact['email'] ?? '—' }}</div>
+                            <div><span class="text-text-muted">Email:</span> {{ $registration->registrant_contact['email'] ?? 'N/A' }}</div>
                         </dl>
                     @endif
                     @if ($order->user)

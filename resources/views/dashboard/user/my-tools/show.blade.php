@@ -17,7 +17,7 @@
     $paidAmount = $tool->orderItem?->line_total
         ?? $tool->order?->total_amount
         ?? $tool->variant?->price;
-    $planLabel = $tool->variant?->displayLabel() ?? ($tool->duration_months ? $tool->duration_months.' months' : '—');
+    $planLabel = $tool->variant?->displayLabel() ?? ($tool->duration_months ? $tool->duration_months.' months' : 'N/A');
     $pendingLabel = 'Pending';
 @endphp
 <x-layout.page
@@ -72,13 +72,13 @@
                                 @if ($paidAmount !== null)
                                     ₦{{ number_format((float) $paidAmount, 2) }}
                                 @else
-                                    —
+                                    N/A
                                 @endif
                             </dd>
                         </div>
                         <div>
                             <dt class="text-text-muted">Purchased</dt>
-                            <dd class="font-medium text-text-primary">{{ $tool->purchased_at?->format('j M Y') ?? '—' }}</dd>
+                            <dd class="font-medium text-text-primary">{{ $tool->purchased_at?->format('j M Y') ?? 'N/A' }}</dd>
                         </div>
                         <div>
                             <dt class="text-text-muted">Status</dt>
@@ -139,7 +139,7 @@
                             <dt class="text-text-muted">Password</dt>
                             <dd class="font-medium text-text-primary">
                                 @if ($tool->admin_password)
-                                    <span class="text-text-secondary">Saved securely — use Copy password below</span>
+                                    <span class="text-text-secondary">Saved securely. Use Copy password below.</span>
                                 @else
                                     <span class="text-text-muted">{{ $pendingLabel }}</span>
                                 @endif
@@ -200,7 +200,7 @@
                             <dt class="text-text-muted">Password</dt>
                             <dd class="font-medium text-text-primary">
                                 @if ($tool->livechat_password)
-                                    <span class="text-text-secondary">Saved securely — use Copy password below</span>
+                                    <span class="text-text-secondary">Saved securely. Use Copy password below.</span>
                                 @else
                                     <span class="text-text-muted">{{ $pendingLabel }}</span>
                                 @endif
@@ -243,7 +243,7 @@
                     </div>
                     <div>
                         <dt class="text-text-muted">Purchased</dt>
-                        <dd class="font-medium text-text-primary">{{ $tool->purchased_at?->format('j M Y') ?? '—' }}</dd>
+                        <dd class="font-medium text-text-primary">{{ $tool->purchased_at?->format('j M Y') ?? 'N/A' }}</dd>
                     </div>
                     <div>
                         <dt class="text-text-muted">Expires</dt>
@@ -257,7 +257,7 @@
                             @elseif ($isPending)
                                 <span class="text-text-muted">Starts after setup</span>
                             @else
-                                —
+                                N/A
                             @endif
                         </dd>
                     </div>

@@ -134,9 +134,9 @@
                     <x-dashboard.card class="space-y-4 h-fit">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wider text-text-muted">Selected plan</p>
-                            <p class="mt-1 text-lg font-semibold text-text-primary" x-text="selected ? selected.label : '—'"></p>
+                            <p class="mt-1 text-lg font-semibold text-text-primary" x-text="selected ? selected.label : 'Choose a plan'"></p>
                             <p class="text-3xl font-bold text-primary mt-2">
-                                <span x-text="selected ? ('₦' + Number(selected.price).toLocaleString('en-NG')) : '—'"></span>
+                                <span x-text="selected ? ('₦' + Number(selected.price).toLocaleString('en-NG')) : ''"></span>
                             </p>
                             <p class="mt-1 text-xs text-text-muted">From ₦{{ number_format($product->displayPrice(), 0) }}</p>
                         </div>

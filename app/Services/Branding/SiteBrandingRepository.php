@@ -13,7 +13,7 @@ class SiteBrandingRepository
 
     public const DEFAULT_TAGLINE = 'Digital services for people and businesses.';
 
-    public const DEFAULT_META_DESCRIPTION = 'Digital services hub. Fund your NGN wallet and buy VPN, domains, website packages, business documents and more.';
+    public const DEFAULT_META_DESCRIPTION = 'Digital commerce platform offering digital services, website solutions, templates and other digital products. Browse, order and pay securely online.';
 
     /**
      * @return array{

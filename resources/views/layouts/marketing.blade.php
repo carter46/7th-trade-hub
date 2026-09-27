@@ -8,7 +8,7 @@
         @php
             $siteName = $siteName ?? config('app.name', '7th Trade Hub');
             $defaultDescription = ($siteBranding['meta_description'] ?? null)
-                ?: ($siteName.' — '.\App\Services\Branding\SiteBrandingRepository::DEFAULT_META_DESCRIPTION);
+                ?: ($siteName.': '.\App\Services\Branding\SiteBrandingRepository::DEFAULT_META_DESCRIPTION);
             $defaultOgDescription = \App\Services\Branding\SiteBrandingRepository::DEFAULT_META_DESCRIPTION;
             $pageTitle = trim($__env->yieldContent('title') ?: '');
             $resolvedTitle = $pageTitle !== '' ? ($pageTitle.' | '.$siteName) : $siteName;

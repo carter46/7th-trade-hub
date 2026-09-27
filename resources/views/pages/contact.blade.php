@@ -63,7 +63,7 @@
                 <p class="text-[11px] font-semibold uppercase tracking-wider text-accent mb-2">Get in touch</p>
                 <h2 class="font-display text-2xl sm:text-3xl font-semibold text-white mb-2">Talk to a real person</h2>
                 <p class="text-sm sm:text-base text-text-secondary max-w-2xl leading-relaxed">
-                    Pick the channel that fits — email for records, WhatsApp or phone for quick questions, tickets for tracked cases.
+                    Pick the channel that fits: email for records, WhatsApp or phone for quick questions, tickets for tracked cases.
                 </p>
             </div>
 

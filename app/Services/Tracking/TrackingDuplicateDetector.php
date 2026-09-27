@@ -70,7 +70,7 @@ class TrackingDuplicateDetector
                 'provider' => IntegrationProvider::GOOGLE_ANALYTICS,
                 'provider_label' => 'Google Analytics',
                 'official_enabled' => true,
-                'message' => __('Google Tag Manager and Google Analytics are both enabled. If your GTM container already loads GA, events may fire twice — prefer GTM alone for GA tags.'),
+                'message' => __('Google Tag Manager and Google Analytics are both enabled. If your GTM container already loads GA, events may fire twice. Prefer GTM alone for GA tags.'),
             ];
         }
 

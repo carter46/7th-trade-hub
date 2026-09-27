@@ -30,7 +30,7 @@
     $ownedDocsSubtitle = $tool->hasAdminAuth()
         ? 'Give these values to the merchant developer for this customer-owned site. '
             .'<a href="'.route('developers.integrations.show', ['path' => 'MERCHANT-GUIDE']).'" class="text-primary hover:underline" target="_blank" rel="noopener">Integration docs</a>'
-        : 'Non-authenticated site — install the gate sample with these credentials (no admin email). '
+        : 'Non-authenticated site: install the gate sample with these credentials (no admin email). '
             .'<a href="'.route('developers.integrations.show', ['path' => 'NON-AUTHENTICATED-SITE']).'" class="text-primary hover:underline" target="_blank" rel="noopener">Non-authenticated site guide</a>';
 @endphp
 <x-layout.page
@@ -99,7 +99,7 @@
                 </div>
                 <div>
                     <dt class="text-text-muted">Verified at</dt>
-                    <dd class="font-medium text-text-primary">{{ $dc->verified_at?->format('j M Y H:i') ?? '—' }}</dd>
+                    <dd class="font-medium text-text-primary">{{ $dc->verified_at?->format('j M Y H:i') ?? 'N/A' }}</dd>
                 </div>
             </dl>
             <x-dashboard.button
@@ -171,7 +171,7 @@
                     >
                     <span>
                         <span class="font-medium text-text-primary">This website has admin authentication</span>
-                        <span class="mt-0.5 block text-xs text-text-muted">Uncheck for non-authenticated sites (brochure, marketing, landing pages). Those sites only need the gate script — no admin email or Auto Login.</span>
+                        <span class="mt-0.5 block text-xs text-text-muted">Uncheck for non-authenticated sites (brochure, marketing, landing pages). Those sites only need the gate script, with no admin email or Auto Login.</span>
                     </span>
                 </label>
 
@@ -199,7 +199,7 @@
     @else
         @if (! $integration)
             <x-dashboard.alert type="warning" class="mb-6">
-                This tool is active but provisioning credentials are missing. Re-run setup or contact engineering — the merchant cannot install integration keys until this is fixed.
+                This tool is active but provisioning credentials are missing. Re-run setup or contact engineering. The merchant cannot install integration keys until this is fixed.
             </x-dashboard.alert>
         @elseif ($credentialRows !== [])
             <x-dashboard.integration-credentials-card
@@ -300,13 +300,13 @@
                                             <span class="font-medium text-text-primary">{{ $reason->label() }}</span>
                                             <span class="mt-0.5 block text-xs text-text-muted">
                                                 @if ($reason === \App\Enums\UserToolStatus::Suspended)
-                                                    Temporary hold — can be re-enabled later.
+                                                    Temporary hold. Can be re-enabled later.
                                                 @elseif ($reason === \App\Enums\UserToolStatus::Cancelled)
-                                                    Subscription cancelled — site stays offline until re-enabled.
+                                                    Subscription cancelled. Site stays offline until re-enabled.
                                                 @elseif ($reason === \App\Enums\UserToolStatus::Inactive)
-                                                    Shut down for inactivity — site stays offline until re-enabled.
+                                                    Shut down for inactivity. Site stays offline until re-enabled.
                                                 @else
-                                                    Mark as expired now — same expired status as natural expiry; Enable can still restore a saved date.
+                                                    Mark as expired now. Same expired status as natural expiry; Enable can still restore a saved date.
                                                 @endif
                                             </span>
                                         </span>
@@ -318,7 +318,7 @@
                             @enderror
                             <x-dashboard.button type="submit" variant="danger">Shutdown Site</x-dashboard.button>
                         </form>
-                        <p class="mt-2 text-xs text-text-muted">Immediately deactivates the external website via subscription sync. Does not rotate API keys. The current expiry is saved — <strong>Enable</strong> restores that date if it is still in the future.</p>
+                        <p class="mt-2 text-xs text-text-muted">Immediately deactivates the external website via subscription sync. Does not rotate API keys. The current expiry is saved, and <strong>Enable</strong> restores that date if it is still in the future.</p>
                     @elseif ($canResumeShutdown)
                         <form
                             method="POST"
@@ -333,7 +333,7 @@
                             @if ($tool->status instanceof \App\Enums\UserToolStatus)
                                 ({{ $tool->status->label() }})
                             @endif
-                            paused this site. Enabling restores the previous expiry <strong>{{ $tool->shutdown_resume_expires_at->format('j M Y') }}</strong> — no new date needed.
+                            paused this site. Enabling restores the previous expiry <strong>{{ $tool->shutdown_resume_expires_at->format('j M Y') }}</strong>, no new date needed.
                         </p>
                     @else
                         <form method="POST" action="{{ route('admin.users.tools.enable', [$user, $tool]) }}" class="space-y-3" onsubmit="return confirm('Reopen this external website as active with the new expiry date? The merchant will be notified via subscription sync.');">
@@ -355,7 +355,7 @@
 
             <x-dashboard.card class="lg:col-span-2">
                 <h3 class="mb-4 text-sm font-semibold text-text-primary">Livechat logins</h3>
-                <p class="mb-4 text-xs text-text-muted">Visible on the customer’s My Tools page. Password is never shown in plain text — they can copy it like the site password.</p>
+                <p class="mb-4 text-xs text-text-muted">Visible on the customer’s My Tools page. Password is never shown in plain text. They can copy it like the site password.</p>
                 <form method="POST" action="{{ route('admin.users.tools.livechat', [$user, $tool]) }}" class="grid gap-4 sm:grid-cols-2">
                     @csrf
                     <x-dashboard.input name="livechat_name" label="Livechat name" type="text" :value="old('livechat_name', $tool->livechat_name)" />

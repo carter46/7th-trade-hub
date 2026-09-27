@@ -9,7 +9,7 @@
         $faqs = [
             [
                 'q' => 'What is '.$brandName.'?',
-                'a' => $brandName.' is a digital services hub. Browse VPN, domains, website packages, receipts, business documents, social tools, and more.',
+                'a' => $brandName.' is a digital commerce platform offering digital services, website solutions, templates, and other digital products to customers online. Customers can browse available products and services, place orders, and make secure online payments through the platform. The platform also provides tools for managing digital purchases, orders, and related services.',
             ],
             [
                 'q' => 'What services can I browse?',
@@ -24,8 +24,8 @@
                 'a' => 'Yes. Register .com, .io, and .co domains, and download ready-to-edit receipts and business documents from the Documents & Receipts section.',
             ],
             [
-                'q' => 'Do you offer VPN, proxy, and email services?',
-                'a' => 'Yes. Network and Communication categories include plans like Dedicated IP VPN, ISP Proxy Bundle, Dedicated SMTP IP, business email, and virtual phone numbers.',
+                'q' => 'What kind of products do you offer?',
+                'a' => 'Digital services, website solutions, templates, and other digital products. Open Services to see every category with its current products and prices.',
             ],
             [
                 'q' => 'How do I find the right plan?',
@@ -88,7 +88,7 @@
                     {{ $siteHeading ?? \App\Services\Branding\SiteBrandingRepository::DEFAULT_HEADING }}
                 </h1>
                 <p class="mx-auto max-w-xl text-slate-400 text-sm sm:text-base lg:text-lg mb-8 sm:mb-10 leading-relaxed">
-                    Get VPN and proxy plans, domains, websites, social growth, and ready-made business documents — all in one hub, paid from your Naira wallet.
+                    A digital commerce platform for digital services, website solutions, templates and other digital products. Browse, order and pay securely in one place.
                 </p>
                 <div class="mx-auto grid max-w-[14rem] grid-cols-1 gap-3">
                     <a class="px-3 py-3 text-center text-sm sm:text-base bg-primary hover:bg-accent text-white font-bold rounded-xl shadow-xl transition-all hover:scale-[1.02] animate-glow" href="{{ route('services') }}">
@@ -103,7 +103,10 @@
         <div class="max-w-marketing mx-auto px-5 sm:px-6">
             <div class="text-center mb-10 sm:mb-14">
                 <h2 class="text-3xl sm:text-4xl font-bold mb-3 font-display">What we do</h2>
-                <p class="text-slate-400 text-base sm:text-lg max-w-xl mx-auto">Browse each service in our catalog for plans, packages, and pricing.</p>
+                <p class="text-slate-400 text-base sm:text-lg max-w-3xl mx-auto leading-relaxed">
+                    {{ $brandName }} is a digital commerce platform offering digital services, website solutions, templates, and other digital products to customers online. Customers can browse available products and services, place orders, and make secure online payments through the platform. The platform also provides tools for managing digital purchases, orders, and related services.
+                </p>
+                <p class="mt-8 text-sm font-bold uppercase tracking-widest text-accent">Explore our services</p>
             </div>
 
             <div x-data="ecosystemSlider" class="relative">
@@ -162,7 +165,7 @@
                         <p class="text-accent text-xs sm:text-sm font-bold uppercase tracking-widest mb-3">Mobile &amp; desktop app</p>
                         <h2 class="text-3xl sm:text-4xl font-bold mb-4 font-display">Your hub, anywhere</h2>
                         <p class="text-slate-400 text-sm sm:text-base leading-relaxed mb-8 max-w-lg mx-auto lg:mx-0">
-                            Install {{ $brandName }} on your phone or computer for quick access to services, wallet checkout, and your dashboard — right from your home screen or desktop. No APK file required.
+                            Install {{ $brandName }} on your phone or computer for quick access to services, wallet checkout, and your dashboard, right from your home screen or desktop. No APK file required.
                         </p>
                         <div class="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
                             {{-- Mobile CTA: phones/tablets only (PWA install JS must not fight wrapper visibility) --}}

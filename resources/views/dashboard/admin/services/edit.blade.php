@@ -25,7 +25,7 @@
             @method('PUT')
             <x-dashboard.input label="Public name" name="name" :value="old('name', $service->name)" required />
             <p class="text-xs text-text-muted">
-                Category: {{ $service->serviceCategory?->name ?? '—' }}
+                Category: {{ $service->serviceCategory?->name ?? 'N/A' }}
                 · Slug frozen: <span class="font-mono">{{ $service->slug }}</span>
                 · Hero title on the public page uses this name automatically.
             </p>

@@ -11,7 +11,7 @@ return [
         'terms' => [
             'label' => 'Terms of Service',
             'eyebrow' => 'Compliance & Legal',
-            'intro' => 'Please review the rules for using 7th Trade Hub — the Naira wallet and platform services.',
+            'intro' => 'Please review the rules for using 7th Trade Hub and its digital services and products.',
             'summary' => 'By using 7th Trade Hub you agree to our platform rules, KYC requirements where applicable, and wallet and checkout terms. This document was last updated September 2026.',
             'sections' => [
                 [

@@ -302,7 +302,7 @@ class DashboardController extends Controller
             } else {
                 $items[] = [
                     'label' => 'Visitors',
-                    'value' => '—',
+                    'value' => 'N/A',
                     'accent' => 'blue',
                     'hint' => $visitors['hint'] ?? 'Google Analytics disabled',
                     'description' => 'Connect GA for live traffic',

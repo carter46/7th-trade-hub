@@ -84,7 +84,7 @@ class DemoConversationScripts
             'category' => 'technical',
             'replies' => [
                 ['role' => 'admin', 'body' => 'Clearing cache and retrying on the latest build usually fixes this. Which iOS version are you on?'],
-                ['role' => 'user', 'body' => 'iOS 17.5 — retry worked after logout.'],
+                ['role' => 'user', 'body' => 'iOS 17.5. Retry worked after logout.'],
             ],
         ];
     }

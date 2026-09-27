@@ -22,7 +22,7 @@
             @if($product->activeVariants->isNotEmpty())
                 <ul class="text-sm text-slate-300 mb-4 space-y-1">
                     @foreach($product->activeVariants as $variant)
-                        <li>{{ $variant->displayLabel() }} — ₦{{ number_format($variant->price, 2) }}</li>
+                        <li>{{ $variant->displayLabel() }}: ₦{{ number_format($variant->price, 2) }}</li>
                     @endforeach
                 </ul>
             @endif

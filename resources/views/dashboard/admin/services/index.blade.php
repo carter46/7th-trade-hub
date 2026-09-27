@@ -5,7 +5,7 @@
 @section('content')
 <x-layout.page
     title="Services"
-    subtitle="Fixed platform services under categories. Sort is a unique global position (1–N). Rename, reorder, or activate/deactivate — you cannot add or delete."
+    subtitle="Fixed platform services under categories. Sort is a unique global position (1–N). Rename, reorder, or activate/deactivate. You cannot add or delete."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
@@ -64,7 +64,7 @@
                     @endif
                 </x-dashboard.td>
                 <x-dashboard.td class="font-medium">{{ $service->name }}</x-dashboard.td>
-                <x-dashboard.td>{{ $service->serviceCategory?->name ?? '—' }}</x-dashboard.td>
+                <x-dashboard.td>{{ $service->serviceCategory?->name ?? 'N/A' }}</x-dashboard.td>
                 <x-dashboard.td>{{ $service->sort_order }}</x-dashboard.td>
                 <x-dashboard.td>{{ number_format($service->products_count) }}</x-dashboard.td>
                 <x-dashboard.td>

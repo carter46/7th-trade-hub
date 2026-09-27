@@ -13,7 +13,7 @@
             <span class="text-accent font-bold tracking-[0.2em] uppercase text-xs mb-6 block">Pioneering the Digital Frontier</span>
             <h2 class="text-5xl md:text-7xl font-display font-extrabold mb-8 leading-[1.1] text-text-primary">Digital Services for People and Businesses</h2>
             <p class="text-lg md:text-xl text-text-secondary max-w-2xl mx-auto leading-relaxed">
-                At {{ $siteName ?? config('app.name') }}, we bring the digital tools you need — connectivity, domains, websites, social growth and business documents — into one simple, secure hub.
+                {{ $siteName ?? config('app.name') }} is a digital commerce platform offering digital services, website solutions, templates and other digital products to customers online.
             </p>
         </div>
     </section>
@@ -24,7 +24,7 @@
                 <h3 class="text-accent font-bold text-xs uppercase tracking-widest mb-4">Our Mission</h3>
                 <h2 class="text-4xl md:text-5xl font-display font-bold mb-8 leading-tight">Making digital services simple to buy and use.</h2>
                 <p class="text-lg text-text-secondary mb-10 leading-relaxed">
-                    We are on a journey to make reliable digital services accessible to everyone. Fund your Naira wallet once, then buy VPN plans, domains, website packages, social growth and ready-made documents — with clear pricing and real support.
+                    Customers can browse available products and services, place orders and make secure online payments through the platform. We also provide tools for managing digital purchases, orders and related services, with clear pricing and real support.
                 </p>
                 <div class="space-y-6">
                     <div class="flex items-start gap-5 p-6 rounded-2xl bg-card-dark/40 border border-white/5 backdrop-blur-sm hover:border-accent/30 transition-all duration-300">

@@ -111,7 +111,7 @@ class NotificationEmailRenderer
 
         if ($domainMode === 'connect' && $fqdn !== '') {
             return [
-                'title' => $productTitle.($variantLabel ? ' — '.$variantLabel : ''),
+                'title' => $productTitle.($variantLabel ? ' ('.$variantLabel.')' : ''),
                 'subtitle' => 'Connect existing domain: '.$fqdn,
                 'meta' => 'No domain registration charge',
                 'quantity' => (int) $item->quantity,
@@ -121,7 +121,7 @@ class NotificationEmailRenderer
 
         $title = $productTitle;
         if ($variantLabel) {
-            $title .= ' — '.$variantLabel;
+            $title .= ' ('.$variantLabel.')';
         }
 
         $subtitle = null;
@@ -146,7 +146,7 @@ class NotificationEmailRenderer
             'wallet' => 'Wallet',
             'gateway' => 'Card / bank gateway',
             'manual_bank_transfer', 'bank_transfer' => 'Bank transfer',
-            default => $method ? ucfirst(str_replace('_', ' ', $method)) : '—',
+            default => $method ? ucfirst(str_replace('_', ' ', $method)) : 'N/A',
         };
     }
 }

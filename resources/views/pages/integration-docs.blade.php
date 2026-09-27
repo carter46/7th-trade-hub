@@ -15,7 +15,7 @@
         ['label' => $document['title'] ?? 'Documentation'],
     ],
     'title' => 'Site Integration Documentation',
-    'subtitle' => 'Protocol v1 — integrate independent websites with 7th Trade Hub.',
+    'subtitle' => 'Protocol v1: integrate independent websites with 7th Trade Hub.',
 ])
 
 <section class="max-w-marketing mx-auto px-5 sm:px-6 pb-16 sm:pb-20">

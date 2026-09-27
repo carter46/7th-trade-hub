@@ -1,6 +1,6 @@
 @extends('layouts.dashboard-user')
 
-@section('title', 'Bank transfer — '.$order->reference)
+@section('title', 'Bank transfer: '.$order->reference)
 
 @section('content')
 @php
@@ -32,7 +32,7 @@
                     <p class="mt-1 text-sm">{{ session('status') ?: 'Your payment is being processed. We will review your transfer and confirm your order shortly.' }}</p>
                 </x-dashboard.alert>
                 <x-dashboard.button :href="route('dashboard')" variant="primary" class="w-full sm:w-auto">
-                    Done — back to dashboard
+                    Done, back to dashboard
                 </x-dashboard.button>
             @else
                 <div
@@ -176,7 +176,7 @@
                             <p class="mt-1 text-sm" x-text="statusMessage || @js(session('status') ?: 'Your payment is being processed. We will review your transfer and confirm your order shortly.')"></p>
                         </x-dashboard.alert>
                         <x-dashboard.button type="button" variant="primary" class="w-full sm:w-auto" x-on:click="goToDashboard()">
-                            Done — back to dashboard
+                            Done, back to dashboard
                         </x-dashboard.button>
                     </div>
 

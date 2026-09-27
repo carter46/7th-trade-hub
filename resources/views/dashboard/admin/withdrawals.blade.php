@@ -35,7 +35,7 @@
         <x-dashboard.alert type="info" class="mb-4">
             Merchant disbursement balance: <strong>₦{{ number_format($merchantBalance, 2) }}</strong>
             @if ($monnifyEnv === 'sandbox')
-                <span class="block mt-1 text-xs">Sandbox mode — payouts use Monnify test disbursements. Status should move to processing or completed after approve; errors appear above.</span>
+                <span class="block mt-1 text-xs">Sandbox mode: payouts use Monnify test disbursements. Status should move to processing or completed after approve; errors appear above.</span>
             @endif
         </x-dashboard.alert>
     @endif

@@ -39,7 +39,7 @@
                     </div>
                     <div>
                         <dt class="text-text-muted">Fallback</dt>
-                        <dd>{{ $provider->fallback_priority ?? '—' }}</dd>
+                        <dd>{{ $provider->fallback_priority ?? 'N/A' }}</dd>
                     </div>
                     <div>
                         <dt class="text-text-muted">Sandbox</dt>

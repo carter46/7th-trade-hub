@@ -78,7 +78,7 @@ class KycController extends Controller
 
         return back()->with('status', $enabled
             ? __('KYC is now required for wallet creation.')
-            : __('KYC is optional — users can create wallets without verification.'));
+            : __('KYC is optional. Users can create wallets without verification.'));
     }
 
     public function approve(KycSubmission $submission, Request $request): RedirectResponse

@@ -10,7 +10,7 @@
 >
     <x-dashboard.command.page-toolbar
         :greeting="($greeting ?? 'Hello').', '.($adminName ?? 'Admin')"
-        subtitle="Command center — platform alerts and quick actions."
+        subtitle="Command center: platform alerts and quick actions."
         :breadcrumb="[['Admin'], ['Overview']]"
         :range="$rangeKey ?? '24h'"
     />

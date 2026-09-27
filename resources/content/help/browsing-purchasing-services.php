@@ -5,7 +5,7 @@ return [
     'category_key' => 'services',
     'title' => 'Browsing and Purchasing Platform Services',
     'intro' => 'Explore service categories, filter products, choose variants, and check out with your wallet.',
-    'summary' => 'Platform services cover network tools, social growth, websites, documents, and more — purchased from your funded Naira wallet.',
+    'summary' => 'Browse digital services, website solutions, templates and other digital products, then pay from your funded Naira wallet.',
     'updated_at' => '2026-09-27',
     'hero_image' => 'assets/images/services_1.jpg',
     'printable' => true,
@@ -21,7 +21,7 @@ return [
             'nav' => 'What services are available',
             'title' => 'What services are available',
             'blocks' => [
-                ['type' => 'paragraph', 'content' => 'The Services catalog groups products such as VPN/VPS, proxies, social services, virtual numbers, email, websites, and related digital offerings. Categories on the Services page reflect what is currently published.'],
+                ['type' => 'paragraph', 'content' => 'The Services catalog groups our digital services, website solutions, templates and other digital products into categories. The Services page always shows what is currently available.'],
             ],
         ],
         [
@@ -78,7 +78,7 @@ return [
             'title' => 'Choosing variants',
             'blocks' => [
                 ['type' => 'paragraph', 'content' => 'Some products offer plans or variants (duration, capacity, or tier). Select the option that matches your need before clicking Buy Now.'],
-                ['type' => 'tip', 'title' => 'Compare carefully', 'content' => 'Higher tiers usually cost more but include more capacity or longer validity — check the product copy.'],
+                ['type' => 'tip', 'title' => 'Compare carefully', 'content' => 'Higher tiers usually cost more but include more capacity or longer validity, so check the product copy.'],
             ],
         ],
         [

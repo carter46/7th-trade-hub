@@ -81,9 +81,9 @@
         <x-dashboard.card class="space-y-3 text-sm">
             <h2 class="text-lg font-semibold text-text-primary">Payment provider</h2>
             <dl class="space-y-2">
-                <div class="flex justify-between gap-4"><dt class="text-text-muted">Provider</dt><dd>{{ $withdrawal->provider ?? '—' }}</dd></div>
-                <div class="flex justify-between gap-4"><dt class="text-text-muted">Payout reference</dt><dd class="font-mono text-xs break-all">{{ $withdrawal->provider_payout_reference ?? '—' }}</dd></div>
-                <div class="flex justify-between gap-4"><dt class="text-text-muted">Provider status</dt><dd>{{ $withdrawal->provider_status ?? '—' }}</dd></div>
+                <div class="flex justify-between gap-4"><dt class="text-text-muted">Provider</dt><dd>{{ $withdrawal->provider ?? 'N/A' }}</dd></div>
+                <div class="flex justify-between gap-4"><dt class="text-text-muted">Payout reference</dt><dd class="font-mono text-xs break-all">{{ $withdrawal->provider_payout_reference ?? 'N/A' }}</dd></div>
+                <div class="flex justify-between gap-4"><dt class="text-text-muted">Provider status</dt><dd>{{ $withdrawal->provider_status ?? 'N/A' }}</dd></div>
                 @if ($fee !== null)
                     <div class="flex justify-between gap-4"><dt class="text-text-muted">Fee</dt><dd>₦{{ number_format((float) $fee, 2) }}</dd></div>
                 @endif
@@ -112,7 +112,7 @@
 
             @if ($withdrawal->isProviderAuthorizationExpired())
                 <x-dashboard.alert type="warning">
-                    This payout authorization has expired on Monnify. Do not submit an old OTP — use <strong>Retry payout</strong> to generate a new transfer reference.
+                    This payout authorization has expired on Monnify. Do not submit an old OTP. Use <strong>Retry payout</strong> to generate a new transfer reference.
                 </x-dashboard.alert>
             @elseif ($canAuthorize)
                 <form method="POST" action="{{ route('admin.withdrawals.authorize-provider', $withdrawal) }}" class="flex flex-wrap items-end gap-3">

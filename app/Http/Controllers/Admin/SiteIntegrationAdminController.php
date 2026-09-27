@@ -77,7 +77,7 @@ class SiteIntegrationAdminController extends Controller
 
         return redirect()
             ->route('admin.site-integrations.show', $result['integration'])
-            ->with('status', 'Demo integration created. Copy credentials now — the secret is shown once.')
+            ->with('status', 'Demo integration created. Copy credentials now. The secret is shown once.')
             ->with('fresh_credentials', $result['credentials']);
     }
 

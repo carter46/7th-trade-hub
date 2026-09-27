@@ -20,7 +20,7 @@
     <div class="space-y-6">
         <x-dashboard.card variant="solid">
             <h2 class="text-lg font-semibold text-text-primary mb-1">Monnify (payments & payouts)</h2>
-            <p class="text-sm text-text-secondary mb-4">Checkout deposits, reserved accounts, name enquiry, and disbursements. Credentials are stored here — not in <code>.env</code>.</p>
+            <p class="text-sm text-text-secondary mb-4">Checkout deposits, reserved accounts, name enquiry, and disbursements. Credentials are stored here, not in <code>.env</code>.</p>
             @error('monnify_test')
                 <p class="mb-4 text-sm text-danger">{{ $message }}</p>
             @enderror
@@ -131,7 +131,7 @@
         <x-dashboard.card variant="solid">
             <h2 class="text-lg font-semibold text-text-primary mb-1">Manual bank transfer (order payments)</h2>
             <p class="text-sm text-text-secondary mb-4">
-                Let customers pay for platform services by bank transfer at checkout. Not used for wallet funding — wallet top-ups are gateway-only.
+                Let customers pay for platform services by bank transfer at checkout. Not used for wallet funding. Wallet top-ups are gateway-only.
             </p>
             @if(empty($manualBankTransferSaveUrl))
                 <x-dashboard.alert type="warning">

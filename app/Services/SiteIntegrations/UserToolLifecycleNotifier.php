@@ -41,7 +41,7 @@ class UserToolLifecycleNotifier
                     'user_tool_id' => $tool->id,
                     'action_label' => __('View tool'),
                 ],
-                emailSubject: __(':product — setup complete', ['product' => $productName]),
+                emailSubject: __(':product setup complete', ['product' => $productName]),
                 dedupeKey: 'tool.setup_complete.'.$tool->id,
             ),
             ['database', 'mail']
@@ -71,7 +71,7 @@ class UserToolLifecycleNotifier
                     'user_tool_id' => $tool->id,
                     'action_label' => __('View tool'),
                 ],
-                emailSubject: __(':product — subscription expired', ['product' => $productName]),
+                emailSubject: __(':product subscription expired', ['product' => $productName]),
                 dedupeKey: 'tool.subscription_expired.'.$tool->id.'.'.$tool->expires_at?->timestamp,
             ),
             ['database', 'mail']
@@ -106,7 +106,7 @@ class UserToolLifecycleNotifier
                     'expires_at' => $tool->expires_at?->toIso8601String(),
                     'action_label' => __('View tool'),
                 ],
-                emailSubject: __(':product — subscription extended', ['product' => $productName]),
+                emailSubject: __(':product subscription extended', ['product' => $productName]),
                 dedupeKey: 'tool.subscription_extended.'.$tool->id.'.'.$tool->expires_at?->timestamp,
             ),
             ['database', 'mail']

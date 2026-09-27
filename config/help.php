@@ -22,7 +22,7 @@ return [
             'key' => 'services',
             'article' => 'browsing-purchasing-services',
             'title' => 'Service Management',
-            'description' => 'Browse and buy platform services — network, social, websites, documents, and more.',
+            'description' => 'How to browse, order and pay for digital services and products.',
             'icon' => 'grid',
             'cta' => 'Read guide',
             'tone' => 'warning',

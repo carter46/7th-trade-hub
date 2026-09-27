@@ -120,14 +120,14 @@ class SettingsController extends Controller
             || (int) ($validated['logo_dark_media_id'] ?? 0) > 0;
 
         if (! $synced && $hasBrandingMedia) {
-            return back()->with('error', __('Site information was saved, but favicon/PWA icons could not be regenerated from your branding media. Icons were not left as the letter fallback intentionally — fix PHP GD / storage paths / public write access, then run: php artisan branding:sync-pwa'));
+            return back()->with('error', __('Site information was saved, but favicon/PWA icons could not be regenerated from your branding media. Icons were not left as the letter fallback intentionally. Fix PHP GD / storage paths / public write access, then run: php artisan branding:sync-pwa'));
         }
 
         if (! $synced) {
             return back()->with('warning', __('Site information saved, but favicon/PWA icons could not be regenerated. Ensure PHP GD is enabled and public/ is writable, then run: php artisan branding:sync-pwa'));
         }
 
-        return back()->with('status', __('Site information saved. Favicon, Apple touch, and PWA icons were refreshed from your branding — reinstall the app / request indexing if Google still shows the old icon.'));
+        return back()->with('status', __('Site information saved. Favicon, Apple touch, and PWA icons were refreshed from your branding. Reinstall the app / request indexing if Google still shows the old icon.'));
     }
 
     public function updateContact(Request $request): RedirectResponse
@@ -351,7 +351,7 @@ class SettingsController extends Controller
 
         $to = $validated['test_email'];
         $siteName = $this->branding->siteName();
-        $subject = $validated['test_subject'] ?: $siteName.' — test email';
+        $subject = $validated['test_subject'] ?: $siteName.' test email';
         $wantsJson = $request->expectsJson() || $request->ajax();
 
         try {

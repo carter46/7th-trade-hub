@@ -32,9 +32,9 @@
                 <x-dashboard.td class="font-medium text-sm">{{ $row['reference'] }}</x-dashboard.td>
                 <x-dashboard.td class="text-sm">{{ $row['user'] }}</x-dashboard.td>
                 <x-dashboard.td>₦{{ number_format($row['amount'], 2) }}</x-dashboard.td>
-                <x-dashboard.td>{{ $row['monnify_status'] ?: '—' }}</x-dashboard.td>
+                <x-dashboard.td>{{ $row['monnify_status'] ?: 'N/A' }}</x-dashboard.td>
                 <x-dashboard.td>{{ $row['ledger_status'] }}</x-dashboard.td>
-                <x-dashboard.td>{{ $row['webhook'] ?: '—' }}</x-dashboard.td>
+                <x-dashboard.td>{{ $row['webhook'] ?: 'N/A' }}</x-dashboard.td>
                 <x-dashboard.td class="text-sm">{{ $row['difference'] }}</x-dashboard.td>
                 <x-dashboard.td>
                     @if ($row['type'] === 'funding' && $row['difference'] !== 'OK')
@@ -48,7 +48,7 @@
                             <x-dashboard.button type="submit" size="sm" variant="secondary">Sync</x-dashboard.button>
                         </form>
                     @else
-                        —
+                        N/A
                     @endif
                 </x-dashboard.td>
             </tr>

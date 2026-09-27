@@ -191,7 +191,7 @@ class EmailService
         }
         $parts[] = (string) $result->error;
 
-        return mb_substr(implode(' — ', array_filter($parts)), 0, 2000);
+        return mb_substr(implode(' | ', array_filter($parts)), 0, 2000);
     }
 
     private function rememberFallback(?string $brevoError): void
@@ -219,7 +219,7 @@ class EmailService
                 new NotificationMessage(
                     type: 'email.delivery_failed',
                     title: 'Email delivery failed',
-                    body: mb_substr('Subject: '.$email->subject.' — '.$error, 0, 2000),
+                    body: mb_substr('Subject: '.$email->subject.' | '.$error, 0, 2000),
                     actionUrl: route('admin.settings.email-settings'),
                     meta: [
                         'template' => $email->templateKey,

@@ -15,7 +15,7 @@
     <x-dashboard.stat-grid>
         <x-dashboard.stats-card
             label="Disk used"
-            :value="isset($disk['used_pct']) ? $disk['used_pct'] . '%' : '—'"
+            :value="isset($disk['used_pct']) ? $disk['used_pct'] . '%' : 'N/A'"
             :hint="isset($disk['free_gb']) ? $disk['free_gb'] . ' GB free of ' . ($disk['total_gb'] ?? '?') . ' GB' : null"
             icon="settings"
         />
@@ -37,13 +37,13 @@
         <x-dashboard.stats-card
             label="Queue"
             :value="$queueStatus ?? 'N/A'"
-            :hint="'Driver: ' . ($queueConnection ?? '—')"
+            :hint="'Driver: ' . ($queueConnection ?? 'N/A')"
             icon="settings"
         />
         <x-dashboard.stats-card
             label="Mail"
             :value="$mailStatus ?? 'N/A'"
-            :hint="'Mailer: ' . ($mailMailer ?? '—')"
+            :hint="'Mailer: ' . ($mailMailer ?? 'N/A')"
             icon="settings"
         />
         <x-dashboard.stats-card
@@ -91,7 +91,7 @@
             @foreach ($heartbeats as $heartbeat)
                 <tr>
                     <x-dashboard.td class="font-mono text-xs">{{ $heartbeat->key }}</x-dashboard.td>
-                    <x-dashboard.td class="text-xs text-text-muted">{{ $heartbeat->recorded_at?->format('M j, Y H:i:s') ?? '—' }}</x-dashboard.td>
+                    <x-dashboard.td class="text-xs text-text-muted">{{ $heartbeat->recorded_at?->format('M j, Y H:i:s') ?? 'N/A' }}</x-dashboard.td>
                     <x-dashboard.td class="text-xs text-text-muted">{{ \Illuminate\Support\Str::limit(json_encode($heartbeat->payload), 120) }}</x-dashboard.td>
                 </tr>
             @endforeach

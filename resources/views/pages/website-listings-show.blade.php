@@ -82,7 +82,7 @@
 
                 <div class="space-y-4">
                     <p class="text-sm text-slate-400">Selected plan</p>
-                    <p class="text-xl font-semibold" x-text="selected ? selected.label : '—'"></p>
+                    <p class="text-xl font-semibold" x-text="selected ? selected.label : 'Choose a plan'"></p>
                     <p class="text-3xl font-bold">
                         <span x-text="selected ? ('₦' + Number(selected.price).toLocaleString('en-NG')) : ('From ₦{{ number_format($product->displayPrice(), 0) }}')"></span>
                     </p>

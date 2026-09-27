@@ -224,11 +224,11 @@
                 </div>
                 <div class="rounded-xl border border-border-subtle p-3">
                     <p class="text-xs text-text-secondary">Last success</p>
-                    <p class="mt-1 text-sm text-text-primary">{{ $googleIdentity->last_success_at?->diffForHumans() ?? '—' }}</p>
+                    <p class="mt-1 text-sm text-text-primary">{{ $googleIdentity->last_success_at?->diffForHumans() ?? 'N/A' }}</p>
                 </div>
                 <div class="rounded-xl border border-border-subtle p-3">
                     <p class="text-xs text-text-secondary">Last error</p>
-                    <p class="mt-1 text-sm text-text-primary break-words">{{ $googleIdentity->last_error ? \Illuminate\Support\Str::limit($googleIdentity->last_error, 120) : '—' }}</p>
+                    <p class="mt-1 text-sm text-text-primary break-words">{{ $googleIdentity->last_error ? \Illuminate\Support\Str::limit($googleIdentity->last_error, 120) : 'N/A' }}</p>
                 </div>
             </div>
 

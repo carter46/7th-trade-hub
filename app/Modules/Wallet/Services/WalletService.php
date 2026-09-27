@@ -391,7 +391,7 @@ class WalletService
                 'user_id' => $withdrawal->user_id,
                 'withdrawal_id' => $withdrawal->id,
                 'type' => TransactionType::WithdrawalUnlock->value,
-                'label' => 'Withdrawal failed — funds returned',
+                'label' => 'Withdrawal failed, funds returned',
                 'amount' => (float) $amountStr,
                 'currency' => 'NGN',
                 'status' => 'completed',
@@ -404,7 +404,7 @@ class WalletService
                 'admin_notes' => $adminNotes ?? $withdrawal->admin_notes,
             ]);
 
-            PaymentTimelineEvent::record($withdrawal, 'failed', 'Payout failed — funds unlocked');
+            PaymentTimelineEvent::record($withdrawal, 'failed', 'Payout failed, funds unlocked');
 
             $outcome = match (strtoupper((string) ($withdrawal->provider_status ?? ''))) {
                 'EXPIRED' => 'expired',
@@ -467,7 +467,7 @@ class WalletService
                 'user_id' => $withdrawal->user_id,
                 'withdrawal_id' => $withdrawal->id,
                 'type' => TransactionType::WithdrawalUnlock->value,
-                'label' => 'Withdrawal rejected — funds returned',
+                'label' => 'Withdrawal rejected, funds returned',
                 'amount' => (float) $amountStr,
                 'currency' => 'NGN',
                 'status' => 'completed',
@@ -479,7 +479,7 @@ class WalletService
                 'admin_notes' => $adminNotes,
             ]);
 
-            PaymentTimelineEvent::record($withdrawal, 'rejected', 'Rejected — funds returned');
+            PaymentTimelineEvent::record($withdrawal, 'rejected', 'Rejected, funds returned');
         });
     }
 
