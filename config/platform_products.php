@@ -19,6 +19,12 @@ return [
         'online-banking-v1',
         'online-banking-v2',
         'online-banking-v3',
+        'shipment-and-logistics-website',
+        'investment-broker-website',
+        'real-estate-website',
+        'law-firm-website',
+        'celebrity-management-website',
+        'pet-website',
     ],
     'vpn' => [
         'dedicated-ip-vpn',

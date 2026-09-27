@@ -43,6 +43,12 @@ class PlatformCatalogSeeder extends Seeder
                 'Online banking v1',
                 'Online banking v2',
                 'Online banking v3',
+                'Shipment and logistics website',
+                'Investment broker website',
+                'Real estate website',
+                'Law firm website',
+                'Celebrity management website',
+                'Pet website',
             ],
             PlatformProductType::Receipt->value => [
                 'Invoice & Receipt Set', 'Payment Receipt Template', 'Sales Receipt Pack',
@@ -53,7 +59,7 @@ class PlatformCatalogSeeder extends Seeder
         ];
 
         $categoryMap = [
-            PlatformProductType::WebsitePackage->value => ['wp-starter', 'wp-starter', 'wp-starter'],
+            PlatformProductType::WebsitePackage->value => array_fill(0, 9, 'wp-starter'),
             PlatformProductType::Receipt->value => ['rc-invoice', 'rc-payment', 'rc-sales'],
             PlatformProductType::Document->value => ['doc-hr', 'doc-legal', 'doc-contract'],
             PlatformProductType::Vpn->value => ['vpn-dedicated'],
@@ -63,6 +69,14 @@ class PlatformCatalogSeeder extends Seeder
             PlatformProductType::Email->value => ['email-business'],
             PlatformProductType::SocialService->value => ['social-growth', 'social-engagement', 'social-growth', 'social-engagement', 'social-growth'],
             PlatformProductType::Domain->value => ['domain-registration'],
+        ];
+
+        $websiteIndustries = [
+            'shipment-and-logistics-website' => 'Logistics',
+            'real-estate-website' => 'Real Estate',
+            'law-firm-website' => 'Legal',
+            'celebrity-management-website' => 'Entertainment',
+            'pet-website' => 'Pets',
         ];
 
         foreach ($catalog as $type => $titles) {
@@ -95,10 +109,10 @@ class PlatformCatalogSeeder extends Seeder
                     'demo_url' => $type === PlatformProductType::WebsitePackage->value ? 'https://example.com/demo/'.$slug : null,
                     'demo_username' => $type === PlatformProductType::WebsitePackage->value ? 'demo@7thtrade.local' : null,
                     'demo_password' => $type === PlatformProductType::WebsitePackage->value ? 'DemoPass123!' : null,
-                    'industry' => $type === PlatformProductType::WebsitePackage->value ? 'Finance' : null,
-                    'framework' => $type === PlatformProductType::WebsitePackage->value
-                        ? ['Laravel', 'Laravel', 'Laravel'][$i] ?? 'Laravel'
+                    'industry' => $type === PlatformProductType::WebsitePackage->value
+                        ? ($websiteIndustries[$slug] ?? 'Finance')
                         : null,
+                    'framework' => $type === PlatformProductType::WebsitePackage->value ? 'Laravel' : null,
                     'is_responsive' => true,
                     'is_seo_ready' => $type === PlatformProductType::WebsitePackage->value,
                     'support_period' => $type === PlatformProductType::WebsitePackage->value ? '30 days' : null,
