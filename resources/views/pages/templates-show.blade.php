@@ -45,38 +45,5 @@
         </div>
     </div>
 
-    <div class="max-w-marketing mx-auto px-5 sm:px-6 mt-14 grid md:grid-cols-2 gap-8">
-        @foreach([
-            'Features' => $product->features,
-            'Requirements' => $product->requirements,
-            "What's included" => $product->whats_included,
-        ] as $heading => $items)
-            <div class="glassmorphism rounded-2xl p-6">
-                <h2 class="font-bold text-lg mb-3">{{ $heading }}</h2>
-                <ul class="space-y-2 text-sm text-slate-300">
-                    @forelse(($items ?? []) as $item)
-                        <li class="flex gap-2"><span class="text-accent">•</span>{{ $item }}</li>
-                    @empty
-                        <li class="text-slate-500">No details yet.</li>
-                    @endforelse
-                </ul>
-            </div>
-        @endforeach
-        <div class="glassmorphism rounded-2xl p-6 md:col-span-2">
-            <h2 class="font-bold text-lg mb-3">Support</h2>
-            <p class="text-sm text-slate-300 mb-6">{{ $product->support_text }}</p>
-            <h2 class="font-bold text-lg mb-3">FAQs</h2>
-            <div class="space-y-3">
-                @forelse(($product->faqs ?? []) as $faq)
-                    <details class="rounded-xl border border-white/10 p-4" @if(! empty($faq['open'])) open @endif>
-                        <summary class="font-semibold cursor-pointer">{{ $faq['q'] ?? '' }}</summary>
-                        <p class="text-sm text-slate-400 mt-2">{{ $faq['a'] ?? '' }}</p>
-                    </details>
-                @empty
-                    <p class="text-slate-500 text-sm">No FAQs yet.</p>
-                @endforelse
-            </div>
-        </div>
-    </div>
 </section>
 @endsection

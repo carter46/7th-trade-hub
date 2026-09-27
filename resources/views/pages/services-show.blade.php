@@ -60,36 +60,6 @@
             ?? $variants->firstWhere('is_default', true)
     )->id;
 
-    $featureIcons = ['rocket', 'wallet', 'support', 'lock', 'verified', 'grid'];
-    $includeIcons = ['check', 'listings', 'support'];
-
-    $features = collect($product->features ?? [])->map(function ($item) {
-        if (is_array($item)) {
-            return [
-                'title' => $item['title'] ?? $item['label'] ?? '',
-                'blurb' => $item['blurb'] ?? $item['description'] ?? $item['a'] ?? null,
-            ];
-        }
-
-        return ['title' => (string) $item, 'blurb' => null];
-    })->filter(fn ($f) => $f['title'] !== '');
-
-    $requirements = collect($product->requirements ?? [])->map(fn ($item) => is_array($item)
-        ? (string) ($item['title'] ?? $item['label'] ?? $item['text'] ?? '')
-        : (string) $item
-    )->filter();
-
-    $included = collect($product->whats_included ?? [])->map(fn ($item) => is_array($item)
-        ? (string) ($item['title'] ?? $item['label'] ?? $item['text'] ?? '')
-        : (string) $item
-    )->filter();
-
-    $faqs = collect($product->faqs ?? [])->filter(fn ($f) => is_array($f) && ! empty($f['q']));
-
-    $supportHref = auth()->check()
-        ? route('dashboard.support.index')
-        : route('login');
-
     $heroBg = $product->hero_image ?: null;
 @endphp
 
@@ -251,16 +221,11 @@
     </div>
 </section>
 
-{{-- Extra product information: only sections with admin data, each on its own grey card --}}
+{{-- Extra product information: description and pricing tiers only, each on its own grey card --}}
 @php
     $showAbout = filled($product->description) && (! $subtitle || trim((string) $product->description) !== trim((string) $subtitle));
     $showTiers = $variants->count() > 1;
-    $showRequirements = $requirements->isNotEmpty();
-    $showFeatures = $features->isNotEmpty();
-    $showIncluded = $included->isNotEmpty();
-    $showFaqs = $faqs->isNotEmpty();
-    $showSupport = filled($product->support_text);
-    $hasDetailSections = $showAbout || $showTiers || $showRequirements || $showFeatures || $showIncluded || $showFaqs || $showSupport;
+    $hasDetailSections = $showAbout || $showTiers;
     $cardClass = 'rounded-xl border border-slate-200 bg-slate-100 p-5 sm:p-6';
 @endphp
 
@@ -324,97 +289,6 @@
             </div>
         @endif
 
-        @if($showRequirements)
-            <div class="{{ $cardClass }}">
-                <h2 class="font-display text-lg sm:text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                    <span class="text-warning"><x-ui.icon name="warning" class="w-5 h-5" /></span>
-                    Requirements
-                </h2>
-                <ul class="space-y-3">
-                    @foreach($requirements as $req)
-                        <li class="flex gap-2.5 items-start text-sm text-slate-700">
-                            <span class="text-primary mt-0.5 shrink-0"><x-ui.icon name="check" class="w-4 h-4" /></span>
-                            {{ $req }}
-                        </li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
-        @if($showFeatures)
-            <div class="{{ $cardClass }}">
-                <h2 class="font-display text-lg sm:text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                    <span class="text-primary"><x-ui.icon name="rocket" class="w-5 h-5" /></span>
-                    Features
-                </h2>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    @foreach($features as $i => $feature)
-                        <div class="rounded-lg border border-slate-200 bg-white p-4 flex items-start gap-3">
-                            <span class="text-primary p-2 bg-primary/10 rounded-lg shrink-0">
-                                <x-ui.icon :name="$featureIcons[$i % count($featureIcons)]" class="w-4 h-4" />
-                            </span>
-                            <div>
-                                <div class="font-semibold text-sm text-slate-900">{{ $feature['title'] }}</div>
-                                @if(! empty($feature['blurb']))
-                                    <div class="text-xs text-slate-500 mt-0.5">{{ $feature['blurb'] }}</div>
-                                @endif
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-        @endif
-
-        @if($showIncluded)
-            <div class="{{ $cardClass }}">
-                <h2 class="font-display text-lg sm:text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                    <span class="text-primary"><x-ui.icon name="inventory" class="w-5 h-5" /></span>
-                    What's included
-                </h2>
-                <div class="space-y-2">
-                    @foreach($included as $i => $item)
-                        <div class="flex items-center gap-3 p-3 border-l-2 border-primary bg-white rounded-r-lg">
-                            <span class="text-primary shrink-0">
-                                <x-ui.icon :name="$includeIcons[$i % count($includeIcons)]" class="w-4 h-4" />
-                            </span>
-                            <span class="font-semibold text-sm text-slate-900">{{ $item }}</span>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-        @endif
-
-        @if($showFaqs)
-            <div class="{{ $cardClass }}">
-                <h2 class="font-display text-lg sm:text-xl font-semibold text-slate-900 mb-2">Frequently asked questions</h2>
-                <p class="text-sm text-slate-500 mb-5">About {{ $product->title }}</p>
-                <div class="space-y-3">
-                    @foreach($faqs as $faq)
-                        <details class="group rounded-xl border border-slate-200 bg-white overflow-hidden [&_summary::-webkit-details-marker]:hidden" @if(! empty($faq['open'])) open @endif>
-                            <summary class="flex justify-between items-center gap-4 p-4 sm:p-5 cursor-pointer hover:bg-slate-50 transition-colors">
-                                <h3 class="font-semibold text-sm sm:text-base text-slate-900 text-left">{{ $faq['q'] }}</h3>
-                                <span class="text-slate-400 transition-transform group-open:rotate-180 shrink-0">
-                                    <x-ui.icon name="chevron-down" class="w-5 h-5" />
-                                </span>
-                            </summary>
-                            <div class="px-4 sm:px-5 pb-4 sm:pb-5 text-sm text-slate-600 leading-relaxed">
-                                {{ $faq['a'] ?? '' }}
-                            </div>
-                        </details>
-                    @endforeach
-                </div>
-            </div>
-        @endif
-
-        @if($showSupport)
-            <div class="{{ $cardClass }} text-center">
-                <p class="text-sm text-slate-700 mb-3">{{ $product->support_text }}</p>
-                <a href="{{ $supportHref }}" class="inline-flex items-center gap-2 text-primary font-bold hover:text-accent hover:underline text-sm">
-                    <x-ui.icon name="support" class="w-5 h-5" />
-                    Open a support ticket from your dashboard
-                </a>
-            </div>
-        @endif
     </div>
 </section>
 @endif

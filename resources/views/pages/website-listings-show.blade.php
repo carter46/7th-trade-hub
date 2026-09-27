@@ -48,14 +48,6 @@
                     @elseif(filled($product->short_description))
                         <p class="text-slate-400 mb-4">{{ $product->short_description }}</p>
                     @endif
-                    <div class="flex flex-wrap gap-3 text-xs text-slate-300 mb-6">
-                        @if($product->industry)<span class="px-2 py-1 rounded-lg bg-white/5">{{ $product->industry }}</span>@endif
-                        @if($product->framework)<span class="px-2 py-1 rounded-lg bg-white/5">{{ $product->framework }}</span>@endif
-                        @if($product->is_responsive)<span class="px-2 py-1 rounded-lg bg-white/5">Responsive</span>@endif
-                        @if($product->is_seo_ready)<span class="px-2 py-1 rounded-lg bg-white/5">SEO ready</span>@endif
-                        @if($product->support_period)<span class="px-2 py-1 rounded-lg bg-white/5">Support {{ $product->support_period }}</span>@endif
-                    </div>
-
                     @if($variants->isNotEmpty())
                         <div class="space-y-3 mb-6">
                             <p class="text-sm font-semibold text-slate-200">Choose a plan</p>
@@ -107,35 +99,6 @@
             </div>
         </div>
 
-        <div class="grid md:grid-cols-2 gap-6">
-            @foreach([
-                'Features' => $product->features,
-                'Requirements' => $product->requirements,
-                "What's included" => $product->whats_included,
-            ] as $heading => $items)
-                <div class="glassmorphism rounded-2xl p-6">
-                    <h2 class="font-bold mb-3">{{ $heading }}</h2>
-                    <ul class="space-y-2 text-sm text-slate-300">
-                        @foreach(($items ?? []) as $item)
-                            <li>• {{ $item }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endforeach
-            <div class="glassmorphism rounded-2xl p-6">
-                <h2 class="font-bold mb-3">Support</h2>
-                <p class="text-sm text-slate-300">{{ $product->support_text }}</p>
-            </div>
-            <div class="glassmorphism rounded-2xl p-6 md:col-span-2">
-                <h2 class="font-bold mb-3">FAQs</h2>
-                @foreach(($product->faqs ?? []) as $faq)
-                    <details class="border-b border-white/10 py-3" @if(! empty($faq['open'])) open @endif>
-                        <summary class="cursor-pointer font-semibold">{{ $faq['q'] ?? '' }}</summary>
-                        <p class="text-sm text-slate-400 mt-2">{{ $faq['a'] ?? '' }}</p>
-                    </details>
-                @endforeach
-            </div>
-        </div>
     </div>
 </section>
 @endsection
