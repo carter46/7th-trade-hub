@@ -2,25 +2,25 @@
 
 ## Vision
 
-A real marketplace and investment platform where users hold a **platform wallet (NGN)**, **deposit** funds, buy services and products through **escrow**, and **withdraw** to bank. Crypto is one deposit method (OTC sell), not the financial center.
+A digital services hub where users hold a **platform wallet (NGN)**, **deposit** funds, buy admin-curated platform services (VPN and proxy plans, domains, websites, social growth, receipts and business documents), and **withdraw** to bank.
+
+The crypto exchange (Sell Crypto / OTC), escrow and the peer-to-peer marketplace (listings, sales, watchlist, messages, reviews, platform fee) were permanently removed on 2026-09-27. Historical ledger rows from those features stay as read-only history with "Legacy" labels.
 
 ## Naming
 
 | User sees | System uses internally |
 |-----------|------------------------|
 | Deposit Money, Deposit History | WalletFunding, wallet_fundings |
+| My Orders | orders with `source = 'platform'` |
 
 ## Module boundaries
 
-- **Marketplace** — listings, orders, reviews, categories, search, messages
-- **Catalog** — admin-owned platform products (services, templates, website packages), exchange rates, platform checkout
-- **Wallet** — wallet, fundings (deposits), withdrawals, ledger, escrows, crypto sell OTC, KYC
-- **Admin** — users, approvals, reports, settings, audit, platform catalog CRUD
+- **Catalog** — admin-owned platform products (service categories → services → products → variants), Website Listings, platform checkout
+- **Wallet** — wallet, fundings (deposits), withdrawals, holds, ledger, KYC
+- **Admin** — users, approvals, orders, reports, settings, audit, platform catalog edits
 - **Support** — tickets (categorized), replies, notifications
 
-Modules interact via services and events only.
-
-**Two catalogs:** Platform Products ≠ Marketplace Listings. See [TWO-CATALOG.md](TWO-CATALOG.md).
+Modules interact via services and events only. See [TWO-CATALOG.md](TWO-CATALOG.md) for the catalog structure.
 
 ## Core user journey (v1)
 
@@ -28,13 +28,12 @@ Modules interact via services and events only.
 2. Complete profile → submit KYC Level 1
 3. Admin approves KYC
 4. User clicks **Create Wallet** (payment provider subaccount provisioned)
-5. **Deposit** via bank transfer (proof) or crypto sell (OTC quote, 15 min validity)
-6. Admin approves funding → NGN credited to wallet
-7. Browse marketplace → buy listing → escrow locks NGN
-8. Seller delivers → buyer confirms or admin resolves → escrow released
-9. Seller creates listing (draft version → admin review → publish)
-10. View transaction history → withdraw to bank
-11. Open support ticket (category required)
+5. **Deposit** via Monnify checkout, reserved account or bank transfer
+6. NGN credited to wallet (automatically for Monnify, after admin approval for manual transfers)
+7. Browse services → buy with wallet, payment gateway or manual bank transfer
+8. Admin / provider fulfils the order → it appears in My Orders and My Tools
+9. View transaction history → withdraw to bank
+10. Open support ticket (category required)
 
 ## KYC levels
 
@@ -50,37 +49,35 @@ Modules interact via services and events only.
 
 | UI | Internal method | v1 |
 |----|-----------------|-----|
+| Card / bank checkout | monnify_checkout | Yes |
+| Reserved account | monnify_reserved | Yes |
 | Bank Transfer | bank | Yes |
-| Sell Crypto | crypto | Yes (OTC) |
-| Card | card | Future |
-| Paystack | paystack | Future |
-| Flutterwave | flutterwave | Future |
+| *(legacy)* Sell Crypto | crypto | Removed — existing rows display as "Legacy credit" |
 
 ## Financial rules
 
 - Wallet holds **NGN only** (balance + locked_balance)
 - All balance changes via ledger; **never edit or delete** ledger rows — use reversal entries
-- Escrow is mandatory for platform-mediated purchases
-- Crypto sell quotes expire after 15 minutes
+- `locked_balance` equals the sum of active holds (withdrawal / compliance)
+- Legacy transaction types (`escrow_lock`, `escrow_release`, `refund`, `platform_fee`, `listing_hold`, `listing_hold_release`) are never created any more
 - Funding approvals record approver, IP, device, reason
 
 ## Support ticket categories
 
-payment, withdrawal, wallet, marketplace, listing, order, kyc, crypto_sell, technical, other
+payment, withdrawal, wallet, order, kyc, technical, other
 
 ## Launch phases
 
 0. Product + technical spec documents  
 1. Production infrastructure  
 2. Production security  
-3. Core marketplace flow (money loop)  
+3. Wallet money loop (deposit, purchase, withdrawal)  
 4. Admin platform  
-5. Marketplace features (draft versions, search, notifications)  
+5. Platform catalog + checkout  
 6. Operations (backups, monitoring, SEO)  
 7. Testing (full journeys, CI)
 
-## Out of scope for v1
+## Out of scope
 
-- Order book / crypto matching engine
-- Crypto balances on wallet row
-- Automated blockchain custody
+- Crypto trading, OTC or custody of any kind
+- Peer-to-peer listings, escrow or seller payouts

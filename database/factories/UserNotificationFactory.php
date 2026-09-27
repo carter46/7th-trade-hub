@@ -17,7 +17,7 @@ class UserNotificationFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
-            'type' => fake()->randomElement(['kyc', 'order', 'escrow', 'support', 'wallet', 'listing']),
+            'type' => fake()->randomElement(['kyc', 'order', 'support', 'wallet']),
             'title' => fake()->sentence(4),
             'body' => fake()->sentence(12),
             'action_url' => '/dashboard',

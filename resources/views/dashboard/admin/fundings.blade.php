@@ -26,7 +26,7 @@
             <tr>
                 <x-dashboard.td class="font-medium">{{ $f->reference }}</x-dashboard.td>
                 <x-dashboard.td>{{ \App\Models\User::labelFor($f->user) }}</x-dashboard.td>
-                <x-dashboard.td>{{ $f->method }}</x-dashboard.td>
+                <x-dashboard.td>{{ $f->methodLabel() }}</x-dashboard.td>
                 <x-dashboard.td>₦{{ number_format($f->amount, 2) }}</x-dashboard.td>
                 <x-dashboard.td><x-dashboard.badge :status="$f->status" /></x-dashboard.td>
                 <x-dashboard.td>

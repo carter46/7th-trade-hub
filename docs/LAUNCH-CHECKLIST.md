@@ -3,7 +3,7 @@
 ## Infrastructure
 
 - [ ] `composer install --no-dev` on server (or commit vendor for no-SSH hosts)
-- [ ] Import/update `database/sql/migration.sql` in phpMyAdmin
+- [ ] New database: import `database/sql/migration.sql` in phpMyAdmin. Existing database: verified backup, then `php artisan migrate --force`
 - [ ] Configure `.env` per [PRODUCTION-ENV-CHECKLIST.md](PRODUCTION-ENV-CHECKLIST.md)
 - [ ] Create admin via `ProductionSeeder` or phpMyAdmin
 - [ ] PWA icons in `public/icons/`
@@ -27,8 +27,8 @@ Manual verification on staging:
 - [ ] KYC submit → admin approve
 - [ ] Create wallet
 - [ ] Bank deposit → admin approve → balance credited
-- [ ] Buy listing → escrow locked
-- [ ] Confirm delivery / admin release escrow
+- [ ] Buy a platform service with the wallet → order in My Orders
+- [ ] Admin fulfils the order (or confirms a manual bank transfer order)
 - [ ] Withdrawal → admin approve
 
 ## Monnify disbursements (withdrawals)

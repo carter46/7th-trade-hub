@@ -49,4 +49,16 @@ class WalletFunding extends Model
     {
         return $this->checkout_expires_at !== null && $this->checkout_expires_at->isPast();
     }
+
+    /** Display label for the funding method; `crypto` rows are read-only history from the retired exchange. */
+    public function methodLabel(): string
+    {
+        return match ((string) $this->method) {
+            'crypto' => 'Legacy credit',
+            'monnify_checkout' => 'Card / bank checkout',
+            'monnify_reserved' => 'Reserved account',
+            'bank', 'bank_transfer' => 'Bank transfer',
+            default => ucfirst(str_replace('_', ' ', (string) $this->method)),
+        };
+    }
 }

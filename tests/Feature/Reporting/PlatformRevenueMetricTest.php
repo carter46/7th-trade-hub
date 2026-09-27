@@ -56,17 +56,6 @@ class PlatformRevenueMetricTest extends TestCase
             'status' => 'completed',
         ]);
 
-        Transaction::query()->create([
-            'user_id' => $user->id,
-            'wallet_id' => $userWallet->id,
-            'reference' => 'TXN-REL1',
-            'type' => TransactionType::EscrowRelease->value,
-            'label' => 'Release',
-            'amount' => 20000,
-            'currency' => 'NGN',
-            'status' => 'completed',
-        ]);
-
         $sum = app(PlatformRevenueMetric::class)->sum(ReportingRange::preset('30d'));
 
         $this->assertEqualsWithDelta(6000.0, $sum, 0.01);

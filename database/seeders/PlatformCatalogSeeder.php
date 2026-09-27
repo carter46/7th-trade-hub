@@ -39,10 +39,6 @@ class PlatformCatalogSeeder extends Seeder
             PlatformProductType::Domain->value => [
                 'Domain Registration',
             ],
-            PlatformProductType::EscrowService->value => [
-                'Standard Escrow Trade', 'High-Value Escrow', 'Website Sale Escrow',
-                'Account Transfer Escrow', 'Milestone Escrow', 'Express Escrow',
-            ],
             PlatformProductType::WebsitePackage->value => [
                 'Online banking v1',
                 'Online banking v2',
@@ -67,15 +63,10 @@ class PlatformCatalogSeeder extends Seeder
             PlatformProductType::Email->value => ['email-business'],
             PlatformProductType::SocialService->value => ['social-growth', 'social-engagement', 'social-growth', 'social-engagement', 'social-growth'],
             PlatformProductType::Domain->value => ['domain-registration'],
-            PlatformProductType::EscrowService->value => ['escrow-standard', 'escrow-high-value', 'escrow-high-value', 'escrow-standard', 'escrow-standard', 'escrow-standard'],
         ];
 
         foreach ($catalog as $type => $titles) {
             foreach ($titles as $i => $title) {
-                if ($type === PlatformProductType::EscrowService->value) {
-                    continue;
-                }
-
                 $slug = $type === PlatformProductType::Domain->value
                     ? 'domain-registration'
                     : Str::slug($title);

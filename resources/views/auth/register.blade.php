@@ -9,7 +9,7 @@
                     <h1 class="text-3xl font-bold text-white tracking-tight group-hover:text-accent transition-colors">{{ $siteName ?? config('app.name') }}</h1>
                 @endif
             </a>
-            <p class="text-text-secondary mt-2">{{ $siteTagline ?? 'Connecting markets, empowering traders.' }}</p>
+            <p class="text-text-secondary mt-2">{{ $siteTagline ?? \App\Services\Branding\SiteBrandingRepository::DEFAULT_TAGLINE }}</p>
         </div>
 
         <x-ui.card class="p-8">

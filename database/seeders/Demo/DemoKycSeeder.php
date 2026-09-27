@@ -64,7 +64,7 @@ class DemoKycSeeder extends Seeder
             }
 
             $level = max(1, (int) ($row['kyc_level'] ?: 1));
-            if ($status === 'pending' && ($row['role'] ?? '') === 'seller') {
+            if ($status === 'pending' && ($row['role'] ?? '') === 'power') {
                 $level = 2;
             }
 

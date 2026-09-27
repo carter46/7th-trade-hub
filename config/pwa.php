@@ -23,7 +23,7 @@ return [
         'short_name' => '7thHub',
         'background_color' => '#FFFFFF',
         'display' => 'standalone',
-        'description' => '7th Trade Hub — digital services marketplace (crypto exchange, social growth, receipts, documents, listings).',
+        'description' => '7th Trade Hub — digital services hub (VPN, domains, websites, social growth, receipts, documents).',
         'theme_color' => '#0B6A39',
         'start_url' => '/',
         'scope' => '/',

@@ -27,3 +27,7 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Production database dumps (never commit)
+/database/*.sql
+!/database/7th_trade_hub.sql

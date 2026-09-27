@@ -16,7 +16,8 @@ Use this before production launch and after major auth/wallet changes.
 
 - [ ] Dashboard routes: `auth` + `verified`
 - [ ] Admin routes: `auth` + `verified` + `role:admin`
-- [ ] Policies enforce ownership on orders, listings, tickets
+- [ ] Policies enforce ownership on orders, tools, tickets
+- [ ] Retired crypto / marketplace / escrow URLs redirect only inside their original middleware group (guests hit login, non-admins get 403 on old `/admin/*` paths)
 - [ ] Suspended users blocked (`EnsureNotSuspended` middleware)
 - [ ] Wallet financial routes require existing wallet (`has_wallet` middleware)
 - [ ] KYC Level 1 required before wallet creation
@@ -28,7 +29,7 @@ Use this before production launch and after major auth/wallet changes.
 - [ ] Deposit approvals record `approved_by`, `approved_ip`, `approved_device`, `approved_reason`
 - [ ] Reversals use `reverseTransaction()` — never edit ledger rows
 - [ ] Withdrawal bank account numbers stored encrypted
-- [ ] Crypto sell quotes expire (`quoted_at` / `expires_at`)
+- [ ] Legacy escrow/listing/crypto ledger rows are read-only history — nothing creates them (`LegacyRecordsGuardTest`)
 
 ## HTTP / transport
 
@@ -48,4 +49,4 @@ Use this before production launch and after major auth/wallet changes.
 2. Non-admin gets 403 on `/admin`
 3. Suspended user redirected to login
 4. User A cannot open User B's support ticket
-5. User cannot buy own listing
+5. User A cannot open User B's manual payment page

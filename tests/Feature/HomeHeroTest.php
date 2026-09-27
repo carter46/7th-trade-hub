@@ -29,7 +29,8 @@ class HomeHeroTest extends TestCase
         $response = $this->get(route('home'));
 
         $response->assertOk()
-            ->assertSee('Crypto Cash Exchange', false)
+            ->assertDontSee('Crypto Cash Exchange', false)
+            ->assertDontSee('Marketplace', false)
             ->assertSee('Website Packages', false)
             ->assertSee('Hosted website packages with demos and support windows.', false)
             ->assertDontSee('Website Listings', false)
@@ -59,7 +60,7 @@ class HomeHeroTest extends TestCase
             strpos($html, 'Email Services'),
             strpos($html, 'VPN')
         );
-        $this->assertStringContainsString('Crypto Cash Exchange', $html);
+        $this->assertStringNotContainsString('Crypto Cash Exchange', $html);
     }
 
     public function test_home_shows_pwa_install_section(): void

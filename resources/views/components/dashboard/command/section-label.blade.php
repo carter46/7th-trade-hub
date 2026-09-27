@@ -1,7 +1,7 @@
 {{--
   Command-center accents (map to dashboard theme, not a second design system):
   emerald = revenue / positive · blue = traffic · amber = KYC / warning
-  indigo = escrows · orange = support · red = alerts
+  indigo = orders · orange = support · red = alerts
 --}}
 @props([
     'title',

@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\Branding\SiteBrandingRepository;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Crypt;
@@ -160,9 +161,9 @@ return new class extends Migration
             $brandingDefaults = [
                 'site_name' => config('app.name', '7th Trade Hub'),
                 'site_short_name' => 'Trade Hub',
-                'site_heading' => 'The Ultimate Digital Service Marketplace',
-                'site_tagline' => 'Connecting markets, empowering traders.',
-                'site_meta_description' => 'NGN wallet marketplace. Deposit, buy with escrow, sell digital products and services.',
+                'site_heading' => SiteBrandingRepository::DEFAULT_HEADING,
+                'site_tagline' => SiteBrandingRepository::DEFAULT_TAGLINE,
+                'site_meta_description' => SiteBrandingRepository::DEFAULT_META_DESCRIPTION,
                 'favicon_media_id' => '',
                 'logo_light_media_id' => '',
                 'logo_dark_media_id' => '',

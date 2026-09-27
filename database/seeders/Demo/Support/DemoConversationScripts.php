@@ -42,17 +42,16 @@ class DemoConversationScripts
     /**
      * @return array{subject: string, body: string, category: string, replies: list<array{role: string, body: string}>}
      */
-    public static function marketplaceDispute(): array
+    public static function orderDelivery(): array
     {
         return [
-            'subject' => 'Seller has not delivered access',
-            'body' => 'I paid for the listing and escrow is locked, but I still do not have access credentials.',
+            'subject' => 'Service not delivered yet',
+            'body' => 'I paid for a VPN plan from my wallet, but I have not received the access details.',
             'category' => 'order',
             'replies' => [
-                ['role' => 'user', 'body' => 'Buyer: Still waiting after 48 hours.'],
-                ['role' => 'seller', 'body' => 'Seller: Buyer already received access via the order message thread.'],
-                ['role' => 'admin', 'body' => 'Reviewing evidence from both sides. Escrow remains locked until resolved.'],
-                ['role' => 'admin', 'body' => 'Delivery evidence confirmed. Buyer should confirm or escalate with proof of non-delivery.'],
+                ['role' => 'user', 'body' => 'Still waiting after 48 hours.'],
+                ['role' => 'admin', 'body' => 'Thanks for your patience. We are checking the fulfilment status of your order.'],
+                ['role' => 'admin', 'body' => 'Access details have been sent to your email and are now visible on the order page.'],
             ],
         ];
     }
@@ -96,7 +95,7 @@ class DemoConversationScripts
         return [
             self::payment(),
             self::kyc(),
-            self::marketplaceDispute(),
+            self::orderDelivery(),
             self::withdrawal(),
             self::technical(),
         ];

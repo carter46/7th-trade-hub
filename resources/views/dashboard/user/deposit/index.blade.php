@@ -13,7 +13,6 @@
 >
     <x-slot:actions>
         <x-dashboard.button :href="route('dashboard.deposit.create-checkout')" icon="deposit">Fund wallet</x-dashboard.button>
-        <x-dashboard.button :href="route('dashboard.crypto-sell.create')" variant="secondary" icon="bitcoin">Sell Crypto</x-dashboard.button>
     </x-slot:actions>
 
     <x-dashboard.table
@@ -35,7 +34,7 @@
                 <x-dashboard.td class="font-medium">
                     <a href="{{ route('dashboard.deposit.show', $f) }}" class="underline">{{ $f->reference }}</a>
                 </x-dashboard.td>
-                <x-dashboard.td>{{ $f->method }}</x-dashboard.td>
+                <x-dashboard.td>{{ $f->methodLabel() }}</x-dashboard.td>
                 <x-dashboard.td>₦{{ number_format($f->amount, 2) }}</x-dashboard.td>
                 <x-dashboard.td><x-dashboard.badge :status="$f->status" /></x-dashboard.td>
             </tr>

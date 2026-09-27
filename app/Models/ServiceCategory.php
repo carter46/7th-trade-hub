@@ -103,9 +103,4 @@ class ServiceCategory extends Model
     {
         return $query->where('is_active', true);
     }
-
-    public function isMarketplaceLink(): bool
-    {
-        return $this->mode === 'marketplace_link';
-    }
 }

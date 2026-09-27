@@ -33,7 +33,7 @@
             <x-dashboard.empty
                 icon="notifications"
                 title="No notifications yet"
-                description="Order updates, listing decisions, and message alerts will show up here."
+                description="Order updates, wallet activity, and support replies will show up here."
             />
         @else
             <div class="divide-y divide-border-default">

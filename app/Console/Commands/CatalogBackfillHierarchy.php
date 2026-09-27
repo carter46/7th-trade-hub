@@ -78,10 +78,6 @@ class CatalogBackfillHierarchy extends Command
                 continue;
             }
 
-            $mode = ! empty($group['route']) || ($slug === 'trust-escrow')
-                ? 'marketplace_link'
-                : 'catalog';
-
             $category = new ServiceCategory;
             $label = $group['label'] ?? str_replace('-', ' ', ucfirst($slug));
             $category->forceFill([
@@ -96,8 +92,8 @@ class CatalogBackfillHierarchy extends Command
                 'hero_subtitle' => $group['short_description'] ?? null,
                 'benefits' => [],
                 'faq' => $group['faq'] ?? [],
-                'mode' => $mode,
-                'cta_label' => $group['cta'] ?? ($mode === 'marketplace_link' ? 'Open marketplace' : null),
+                'mode' => 'catalog',
+                'cta_label' => $group['cta'] ?? null,
             ]);
             if (Schema::hasColumn('service_categories', 'key')) {
                 $category->key = $key;
@@ -118,10 +114,6 @@ class CatalogBackfillHierarchy extends Command
         $retiredServices = config('platform_products.retired_services', []);
 
         foreach (PlatformProductType::cases() as $case) {
-            if ($case === PlatformProductType::EscrowService) {
-                continue;
-            }
-
             if (in_array($case->value, $retiredServices, true)) {
                 continue;
             }

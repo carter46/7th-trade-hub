@@ -124,8 +124,8 @@
                 <x-ui.empty
                     icon="orders"
                     title="No orders yet"
-                    description="When you purchase listings, your orders and escrow status will appear here."
-                    :action="['label' => 'Browse marketplace', 'href' => '#']"
+                    description="When you purchase a service, your orders and their status will appear here."
+                    :action="['label' => 'Browse services', 'href' => '#']"
                     :secondary="['label' => 'Deposit funds', 'href' => '#']"
                 />
             </x-ui.card>

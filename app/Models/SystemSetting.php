@@ -41,7 +41,7 @@ class SystemSetting extends Model
 
     /**
      * Minimum KYC level for a feature when platform KYC is enabled.
-     * Keys: kyc_required_level_{feature} (deposit, withdrawal, reserved_account, marketplace_sell).
+     * Keys: kyc_required_level_{feature} (deposit, withdrawal, reserved_account).
      */
     public static function kycRequiredLevel(string $feature, int $default = 1): int
     {

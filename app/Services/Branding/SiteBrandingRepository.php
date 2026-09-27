@@ -9,6 +9,12 @@ class SiteBrandingRepository
 {
     public const CACHE_KEY = 'platform.site_branding';
 
+    public const DEFAULT_HEADING = 'Your Digital Services Hub';
+
+    public const DEFAULT_TAGLINE = 'Digital services for people and businesses.';
+
+    public const DEFAULT_META_DESCRIPTION = 'Digital services hub. Fund your NGN wallet and buy VPN, domains, website packages, business documents and more.';
+
     /**
      * @return array{
      *   site_name: string,
@@ -27,12 +33,9 @@ class SiteBrandingRepository
             return [
                 'site_name' => (string) SystemSetting::get('site_name', config('app.name', '7th Trade Hub')),
                 'site_short_name' => (string) SystemSetting::get('site_short_name', 'Trade Hub'),
-                'heading' => (string) SystemSetting::get('site_heading', 'The Ultimate Digital Service Marketplace'),
-                'tagline' => (string) SystemSetting::get('site_tagline', 'Connecting markets, empowering traders.'),
-                'meta_description' => (string) SystemSetting::get(
-                    'site_meta_description',
-                    'NGN wallet marketplace. Deposit, buy with escrow, sell digital products and services.'
-                ),
+                'heading' => (string) SystemSetting::get('site_heading', self::DEFAULT_HEADING),
+                'tagline' => (string) SystemSetting::get('site_tagline', self::DEFAULT_TAGLINE),
+                'meta_description' => (string) SystemSetting::get('site_meta_description', self::DEFAULT_META_DESCRIPTION),
                 'favicon_media_id' => $this->nullableInt(SystemSetting::get('favicon_media_id')),
                 'logo_light_media_id' => $this->nullableInt(SystemSetting::get('logo_light_media_id')),
                 'logo_dark_media_id' => $this->nullableInt(SystemSetting::get('logo_dark_media_id')),

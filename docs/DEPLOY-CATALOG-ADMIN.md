@@ -9,7 +9,7 @@
    - `3` → `social-media`
    - `4` → `website-services`
    - `5` → `business-documents`
-   - `6` → `trust-escrow`  
+   - `6` → `trust-escrow` (only needed for this historic key migration; Trust & Escrow was retired on 2026-09-27; its row may still exist but is hidden by code, so only five categories are shown)  
    If anything differs, **STOP** — do not run the key migration.
 3. Run migrations (adds `service_categories.key` and backfills only; aborts on mismatch):
    ```bash
@@ -34,7 +34,7 @@
 - Products: edit title, short/long description, base price, hero image, status (published↔draft), sort position, and **existing variant prices only**.
 - Public + user browse hide products unless category **and** service are active and product is published.
 - **Sort:** categories, services, and products each use a **unique global** 1..N position. Changing a position shifts neighbors; values above the list count are rejected. Run `catalog:backfill-hierarchy` after deploy to clear duplicate/zero ranks.
-- Marketplace and Crypto/OTC are unchanged.
+- The peer marketplace, escrow and Crypto/OTC exchange were removed on 2026-09-27 (see `database/sql/README.md`).
 
 **Do not run `php artisan db:seed` or `ProductionSeeder` on Hostinger production.** Seeders are for fresh/local installs. Variant seeding is non-destructive (`firstOrCreate`), but production content should only change via admin + migrate/backfill.
 
@@ -42,7 +42,7 @@
 
 - Platform catalog: `service_categories` → `product_types` (admin label **Services**) → `platform_products` (+ variants).
 - Legacy `platform_categories` removed after cleanup migration.
-- Admin nav: Operations / Platform Catalog / Marketplace / Crypto Exchange / Finance / System.
+- Admin nav: Operations / Platform Catalog / Finance / System (Marketplace and Crypto Exchange groups removed 2026-09-27).
 
 ## Rollback note
 

@@ -39,12 +39,7 @@ class DemoSupportSeeder extends Seeder
 
             $replyAt = $opened->copy()->addHours(3);
             foreach ($script['replies'] as $rIdx => $reply) {
-                $authorId = match ($reply['role']) {
-                    'admin' => $support->id,
-                    'seller' => $ctx->members()->first(fn ($u, $k) => in_array($k, ['michael', 'sarah'], true))?->id
-                        ?? $user->id,
-                    default => $user->id,
-                };
+                $authorId = $reply['role'] === 'admin' ? $support->id : $user->id;
 
                 $row = SupportTicketReply::query()->create([
                     'support_ticket_id' => $ticket->id,

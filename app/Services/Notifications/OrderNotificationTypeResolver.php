@@ -11,10 +11,6 @@ class OrderNotificationTypeResolver
 {
     public function resolve(Order $order): string
     {
-        if ($order->source === 'marketplace') {
-            return 'order.marketplace_purchase';
-        }
-
         $order->loadMissing('items');
 
         $hasDomain = false;

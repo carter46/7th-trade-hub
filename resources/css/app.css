@@ -165,10 +165,6 @@ html[data-theme] .dashboard-card {
         animation: glow 3s ease-in-out infinite;
     }
 
-    .crypto-ticker {
-        animation: ticker 30s linear infinite;
-    }
-
     .scrollbar-hide {
         -ms-overflow-style: none;
         scrollbar-width: none;
@@ -248,15 +244,6 @@ html[data-theme] .dashboard-card {
     }
     50% {
         box-shadow: 0 0 40px rgba(22, 163, 74, 0.4);
-    }
-}
-
-@keyframes ticker {
-    0% {
-        transform: translateX(0);
-    }
-    100% {
-        transform: translateX(-50%);
     }
 }
 

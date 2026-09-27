@@ -8,7 +8,6 @@ use App\Http\Requests\Admin\UpdateUserRequest;
 use App\Enums\PlatformProductType;
 use App\Enums\UserToolStatus;
 use App\Models\AuditLog;
-use App\Models\Escrow;
 use App\Models\Order;
 use App\Models\PlatformProduct;
 use App\Models\PlatformProductVariant;
@@ -160,7 +159,6 @@ class UserManagementController extends Controller
             'wallet' => $user->wallet,
             'recentTransactions' => $user->transactions()->orderByDesc('created_at')->limit(5)->get(),
             'orderCount' => $user->orders()->count(),
-            'listingCount' => $user->listings()->count(),
             'ticketCount' => $user->supportTickets()->count(),
         ]);
     }
@@ -189,7 +187,7 @@ class UserManagementController extends Controller
         $this->ensureMember($user);
 
         return $this->userTabView($request, $user, 'orders', [
-            'orders' => $user->orders()->with('listing')->orderByDesc('created_at')->paginate(20),
+            'orders' => $user->orders()->where('source', 'platform')->orderByDesc('created_at')->paginate(20),
         ]);
     }
 
@@ -471,6 +469,7 @@ class UserManagementController extends Controller
         $serviceId = $request->integer('product_type_id') ?: null;
 
         $categories = ServiceCategory::query()
+            ->system()
             ->where('is_active', true)
             ->orderBy('sort_order')
             ->get(['id', 'name']);
@@ -811,38 +810,6 @@ class UserManagementController extends Controller
         return $redirect->with('status', $statusMessage);
     }
 
-    public function listings(User $user, Request $request): View
-    {
-        $this->ensureMember($user);
-
-        return $this->userTabView($request, $user, 'listings', [
-            'listings' => $user->listings()->orderByDesc('created_at')->paginate(20),
-        ]);
-    }
-
-    public function escrows(User $user, Request $request): View
-    {
-        $this->ensureMember($user);
-
-        $walletIds = $user->wallet()->pluck('id');
-
-        $escrows = Escrow::query()
-            ->where(function ($q) use ($user, $walletIds) {
-                $q->whereHas('order', fn ($order) => $order->where('user_id', $user->id));
-                if ($walletIds->isNotEmpty()) {
-                    $q->orWhereIn('buyer_wallet_id', $walletIds)
-                        ->orWhereIn('seller_wallet_id', $walletIds);
-                }
-            })
-            ->with('order')
-            ->orderByDesc('created_at')
-            ->paginate(20);
-
-        return $this->userTabView($request, $user, 'escrows', [
-            'escrows' => $escrows,
-        ]);
-    }
-
     public function tickets(User $user, Request $request): View
     {
         $this->ensureMember($user);
@@ -1148,7 +1115,7 @@ class UserManagementController extends Controller
                     'ref' => $order->reference,
                     'amount' => number_format((float) ($order->total_amount ?? $order->amount), 2),
                 ]),
-                actionUrl: Route::has('dashboard.orders') ? route('dashboard.orders') : null,
+                actionUrl: route('dashboard.service-orders'),
                 meta: [
                     'order_id' => $order->id,
                     'email_context' => $context,

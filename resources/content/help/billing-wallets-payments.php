@@ -5,14 +5,14 @@ return [
     'category_key' => 'billing',
     'title' => 'Billing, Wallets and Payments',
     'intro' => 'Fund your Naira wallet, understand deposits and withdrawals, and follow payment statuses through checkout and history.',
-    'summary' => 'Wallet top-ups use Monnify checkout or reserved accounts (plus crypto sells). Platform service orders can also be paid by bank transfer at checkout when enabled.',
-    'updated_at' => '2026-07-20',
-    'hero_image' => 'assets/images/crytpo_exchange.jpg',
+    'summary' => 'Wallet top-ups use Monnify checkout or reserved accounts. Platform service orders can also be paid by bank transfer at checkout when enabled.',
+    'updated_at' => '2026-09-27',
+    'hero_image' => 'assets/images/Business_Documents.jpg',
     'printable' => true,
-    'related' => ['selling-cryptocurrency', 'getting-started', 'buying-selling-marketplace'],
+    'related' => ['getting-started', 'browsing-purchasing-services', 'keeping-account-secure'],
     'platform_actions' => [
         ['label' => 'Wallet', 'route' => 'dashboard.wallet', 'auth' => true],
-        ['label' => 'Exchange', 'route' => 'exchange'],
+        ['label' => 'Services', 'route' => 'services'],
         ['label' => 'Support', 'route' => 'contact'],
     ],
     'sections' => [
@@ -21,7 +21,7 @@ return [
             'nav' => 'Funding the Naira wallet',
             'title' => 'Funding the Naira wallet',
             'blocks' => [
-                ['type' => 'paragraph', 'content' => 'Fund your wallet via Monnify checkout or your reserved account (when available). Crypto sells also credit NGN after admin review. Manual bank transfer is not used for wallet top-ups — it is only for paying platform service orders at checkout when the admin enables it.'],
+                ['type' => 'paragraph', 'content' => 'Fund your wallet via Monnify checkout or your reserved account (when available). Manual bank transfer is not used for wallet top-ups — it is only for paying platform service orders at checkout when the admin enables it.'],
                 [
                     'type' => 'screenshot',
                     'title' => 'Wallet page',
@@ -37,7 +37,7 @@ return [
             'nav' => 'Wallet funding',
             'title' => 'Wallet funding',
             'blocks' => [
-                ['type' => 'paragraph', 'content' => 'Use Dashboard → Wallet → Fund wallet for Monnify card/transfer checkout or your dedicated reserved account. Crypto sells are a separate OTC flow. Bank transfer at checkout is for platform service orders only, not wallet deposits.'],
+                ['type' => 'paragraph', 'content' => 'Use Dashboard → Wallet → Fund wallet for Monnify card/transfer checkout or your dedicated reserved account. Bank transfer at checkout is for platform service orders only, not wallet deposits.'],
                 [
                     'type' => 'screenshot',
                     'title' => 'Deposit page',
@@ -50,20 +50,11 @@ return [
             ],
         ],
         [
-            'id' => 'crypto-sells',
-            'nav' => 'Crypto sells',
-            'title' => 'Crypto sells',
-            'blocks' => [
-                ['type' => 'paragraph', 'content' => 'Crypto sells convert supported assets to NGN after admin approval. See the Selling Cryptocurrency guide for rates, addresses, and delays.'],
-                ['type' => 'tip', 'title' => 'Related guide', 'content' => 'Read Selling Cryptocurrency on 7th Trade Hub for the full exchange flow.'],
-            ],
-        ],
-        [
             'id' => 'balances',
             'nav' => 'Wallet balances',
             'title' => 'Wallet balances',
             'blocks' => [
-                ['type' => 'paragraph', 'content' => 'Your available balance can be used for service checkout, marketplace escrow, and eligible withdrawals. Pending deposits do not spend until approved.'],
+                ['type' => 'paragraph', 'content' => 'Your available balance can be used for service checkout and eligible withdrawals. Pending deposits do not spend until approved.'],
             ],
         ],
         [
@@ -71,7 +62,7 @@ return [
             'nav' => 'Checkout payments',
             'title' => 'Checkout payments',
             'blocks' => [
-                ['type' => 'paragraph', 'content' => 'At checkout you can pay from wallet balance, via the payment gateway, or by bank transfer to the company account (when enabled). Marketplace escrow still uses wallet balance.'],
+                ['type' => 'paragraph', 'content' => 'At checkout you can pay from wallet balance, via the payment gateway, or by bank transfer to the company account (when enabled).'],
                 [
                     'type' => 'screenshot',
                     'title' => 'Checkout',
@@ -104,7 +95,7 @@ return [
             'nav' => 'Transaction history',
             'title' => 'Transaction history',
             'blocks' => [
-                ['type' => 'paragraph', 'content' => 'History lists deposits, sells, purchases, escrow moves, and withdrawals with timestamps and statuses.'],
+                ['type' => 'paragraph', 'content' => 'History lists deposits, purchases, refunds, and withdrawals with timestamps and statuses.'],
                 [
                     'type' => 'screenshot',
                     'title' => 'Payment history',
@@ -129,10 +120,9 @@ return [
             'title' => 'Understanding payment statuses',
             'blocks' => [
                 ['type' => 'bullets', 'items' => [
-                    'Pending — awaiting payment proof, blockchain confirmations, or admin review',
+                    'Pending — awaiting payment confirmation or admin review',
                     'Approved / Completed — funds credited or order paid successfully',
                     'Rejected / Failed — not credited; check notes or contact support',
-                    'Escrow held — marketplace funds locked until delivery confirmation',
                 ]],
             ],
         ],

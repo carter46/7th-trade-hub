@@ -71,7 +71,7 @@ class FixedPlatformCatalogLockTest extends TestCase
             'slug' => 'website-services',
             'key' => 'website',
         ]);
-        $this->assertSame(6, ServiceCategory::query()->system()->count());
+        $this->assertSame(5, ServiceCategory::query()->system()->count());
     }
 
     public function test_admin_cannot_create_or_delete_category(): void
@@ -514,12 +514,15 @@ class FixedPlatformCatalogLockTest extends TestCase
         $migration->up();
     }
 
-    public function test_trust_escrow_redirects_to_marketplace_when_active(): void
+    public function test_retired_trust_escrow_segment_permanently_redirects_to_services(): void
     {
         Artisan::call('catalog:backfill-hierarchy');
 
+        $this->assertDatabaseMissing('service_categories', ['slug' => 'trust-escrow']);
+
         $this->get(route('services.segment', 'trust-escrow'))
-            ->assertRedirect(route('marketplace'));
+            ->assertStatus(301)
+            ->assertRedirect(route('services'));
     }
 
     public function test_mass_assignment_ignores_locked_identity_fields(): void

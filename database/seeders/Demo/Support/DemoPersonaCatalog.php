@@ -22,7 +22,7 @@ class DemoPersonaCatalog
                 'kyc_level' => 2,
                 'kyc_status' => 'approved',
                 'role' => 'buyer',
-                'bio' => 'Active marketplace buyer and wallet funder.',
+                'bio' => 'Active service buyer and wallet funder.',
             ],
             [
                 'key' => 'michael',
@@ -32,8 +32,8 @@ class DemoPersonaCatalog
                 'months_ago' => 6,
                 'kyc_level' => 0,
                 'kyc_status' => 'pending',
-                'role' => 'seller',
-                'bio' => 'Heavy marketplace seller with escrow history.',
+                'role' => 'power',
+                'bio' => 'Frequent buyer of network and social services.',
             ],
             [
                 'key' => 'sarah',
@@ -43,8 +43,8 @@ class DemoPersonaCatalog
                 'months_ago' => 7,
                 'kyc_level' => 2,
                 'kyc_status' => 'approved',
-                'role' => 'seller',
-                'bio' => 'Sells templates and completed payouts.',
+                'role' => 'power',
+                'bio' => 'Buys website packages and has completed payouts.',
             ],
             [
                 'key' => 'john',
@@ -103,7 +103,7 @@ class DemoPersonaCatalog
                 'months_ago' => max(0, 7 - (int) floor($i / 2)),
                 'kyc_level' => $status === 'approved' ? (($i % 2) + 1) : 0,
                 'kyc_status' => $status,
-                'role' => $i % 3 === 0 ? 'seller' : 'buyer',
+                'role' => $i % 3 === 0 ? 'power' : 'buyer',
                 'bio' => 'Demo filler persona '.$n,
             ];
         }

@@ -1,6 +1,6 @@
 @extends('layouts.marketing')
 
-@section('title', $siteHeading ?? 'The Ultimate Digital Service Marketplace')
+@section('title', $siteHeading ?? \App\Services\Branding\SiteBrandingRepository::DEFAULT_HEADING)
 
 @section('content')
     @php
@@ -9,7 +9,7 @@
         $faqs = [
             [
                 'q' => 'What is '.$brandName.'?',
-                'a' => $brandName.' is a digital services hub. Browse VPN, domains, website packages, receipts, business documents, social tools, and more — plus a standalone crypto-to-cash exchange.',
+                'a' => $brandName.' is a digital services hub. Browse VPN, domains, website packages, receipts, business documents, social tools, and more.',
             ],
             [
                 'q' => 'What services can I browse?',
@@ -24,20 +24,12 @@
                 'a' => 'Yes. Register .com, .io, and .co domains, and download ready-to-edit receipts and business documents from the Documents & Receipts section.',
             ],
             [
-                'q' => 'What is Crypto Cash Exchange?',
-                'a' => 'It is a separate tool on the platform for swapping crypto to cash. It is not part of the main services catalog — open Exchange from the home page or main menu.',
-            ],
-            [
                 'q' => 'Do you offer VPN, proxy, and email services?',
                 'a' => 'Yes. Network and Communication categories include plans like Dedicated IP VPN, ISP Proxy Bundle, Dedicated SMTP IP, business email, and virtual phone numbers.',
             ],
             [
                 'q' => 'How do I find the right plan?',
                 'a' => 'Start from Services, open a category, then choose the service that matches your need. Each service page lists available products with descriptions and prices.',
-            ],
-            [
-                'q' => 'Is the marketplace open yet?',
-                'a' => 'The public marketplace for third-party listings is coming soon. Register or sign in if you want to get ready to sell when it launches.',
             ],
             [
                 'q' => 'How do I get help with an order or service?',
@@ -93,17 +85,14 @@
         <div class="relative z-10 w-full max-w-marketing mx-auto px-5 sm:px-6">
             <div class="mx-auto max-w-3xl text-center">
                 <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold mb-5 sm:mb-7 tracking-tight text-white leading-[1.15] font-display">
-                    {{ $siteHeading ?? 'The Ultimate Digital Service Marketplace' }}
+                    {{ $siteHeading ?? \App\Services\Branding\SiteBrandingRepository::DEFAULT_HEADING }}
                 </h1>
                 <p class="mx-auto max-w-xl text-slate-400 text-sm sm:text-base lg:text-lg mb-8 sm:mb-10 leading-relaxed">
-                    Buy and sell digital services, swap crypto to cash, grow social accounts, and get ready-made templates — all in one hub.
+                    Get VPN and proxy plans, domains, websites, social growth, and ready-made business documents — all in one hub, paid from your Naira wallet.
                 </p>
-                <div class="mx-auto grid max-w-sm grid-cols-2 gap-3">
+                <div class="mx-auto grid max-w-[14rem] grid-cols-1 gap-3">
                     <a class="px-3 py-3 text-center text-sm sm:text-base bg-primary hover:bg-accent text-white font-bold rounded-xl shadow-xl transition-all hover:scale-[1.02] animate-glow" href="{{ route('services') }}">
                         Get Started
-                    </a>
-                    <a class="px-3 py-3 text-center text-sm sm:text-base glassmorphism hover:bg-white/10 text-white font-bold rounded-xl border border-white/20 transition-all" href="{{ route('marketplace') }}">
-                        Marketplace
                     </a>
                 </div>
             </div>
@@ -114,7 +103,7 @@
         <div class="max-w-marketing mx-auto px-5 sm:px-6">
             <div class="text-center mb-10 sm:mb-14">
                 <h2 class="text-3xl sm:text-4xl font-bold mb-3 font-display">What we do</h2>
-                <p class="text-slate-400 text-base sm:text-lg max-w-xl mx-auto">Swap crypto to cash, then browse each service in our catalog for plans, packages, and pricing.</p>
+                <p class="text-slate-400 text-base sm:text-lg max-w-xl mx-auto">Browse each service in our catalog for plans, packages, and pricing.</p>
             </div>
 
             <div x-data="ecosystemSlider" class="relative">
@@ -271,7 +260,7 @@
                 <div class="absolute -bottom-24 -right-24 w-64 h-64 bg-accent/20 blur-3xl rounded-full"></div>
                 <div class="relative z-10">
                     <h2 class="text-3xl lg:text-5xl font-bold mb-6 sm:mb-8 font-display">Ready to elevate your trade?</h2>
-                    <p class="text-slate-400 mb-8 sm:mb-10 max-w-xl mx-auto text-lg">Join thousands of entrepreneurs and traders leveraging the {{ $brandName }} ecosystem for their digital growth.</p>
+                    <p class="text-slate-400 mb-8 sm:mb-10 max-w-xl mx-auto text-lg">Join thousands of entrepreneurs and businesses leveraging the {{ $brandName }} ecosystem for their digital growth.</p>
                     <a class="px-10 py-5 bg-white text-dark font-bold rounded-2xl hover:bg-slate-200 transition-all shadow-xl font-display inline-block" href="{{ route('register') }}">
                         Create Your Free Account
                     </a>

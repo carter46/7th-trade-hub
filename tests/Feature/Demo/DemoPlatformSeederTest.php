@@ -4,7 +4,6 @@ namespace Tests\Feature\Demo;
 
 use App\Models\AnalyticsKpiSnapshot;
 use App\Models\AuditLog;
-use App\Models\Escrow;
 use App\Models\KycSubmission;
 use App\Models\Order;
 use App\Models\SupportTicketReply;
@@ -13,7 +12,8 @@ use App\Models\User;
 use App\Models\UserActivity;
 use App\Models\Wallet;
 use Database\Seeders\Demo\DemoPlatformSeeder;
-use Database\Seeders\MarketplaceListingSeeder;
+use Database\Seeders\PlatformCatalogSeeder;
+use Database\Seeders\PlatformWalletSeeder;
 use Database\Seeders\SystemSettingSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use RuntimeException;
@@ -29,7 +29,8 @@ class DemoPlatformSeederTest extends TestCase
 
         $this->seed([
             SystemSettingSeeder::class,
-            MarketplaceListingSeeder::class,
+            PlatformCatalogSeeder::class,
+            PlatformWalletSeeder::class,
             DemoPlatformSeeder::class,
         ]);
 
@@ -46,17 +47,13 @@ class DemoPlatformSeederTest extends TestCase
         $this->assertGreaterThanOrEqual(1, KycSubmission::query()->where('status', 'approved')->count());
         $this->assertGreaterThanOrEqual(1, SupportTicketReply::query()->count());
 
-        $this->assertGreaterThanOrEqual(1, Escrow::query()->where('status', 'locked')->count());
-        $this->assertGreaterThanOrEqual(1, Escrow::query()->where('status', 'released')->count());
-        $this->assertGreaterThanOrEqual(1, Escrow::query()->where('status', 'refunded')->count());
-        $this->assertGreaterThanOrEqual(1, Escrow::query()->where('status', 'disputed')->count());
-
-        $this->assertGreaterThanOrEqual(1, Transaction::query()
-            ->where('type', 'platform_fee')
-            ->where('amount', '>', 0)
+        $this->assertSame(0, Order::query()->where('source', '!=', 'platform')->count());
+        $this->assertSame(0, Transaction::query()
+            ->whereIn('type', ['escrow_lock', 'escrow_release', 'platform_fee', 'listing_hold', 'listing_hold_release'])
             ->count());
 
-        $this->assertGreaterThanOrEqual(1, UserActivity::query()->where('context_key', 'dashboard.marketplace.view')->count());
+        $this->assertGreaterThanOrEqual(1, UserActivity::query()->where('context_key', 'dashboard.services.view')->count());
+        $this->assertSame(0, UserActivity::query()->where('context_key', 'like', '%marketplace%')->count());
         $this->assertGreaterThanOrEqual(1, UserActivity::query()->where('context_key', 'dashboard.wallet.view')->count());
         $this->assertGreaterThanOrEqual(1, AuditLog::query()->count());
         $this->assertGreaterThanOrEqual(1, AnalyticsKpiSnapshot::query()->where('period', 'daily')->count());
@@ -110,7 +107,8 @@ class DemoPlatformSeederTest extends TestCase
 
         $this->seed([
             SystemSettingSeeder::class,
-            MarketplaceListingSeeder::class,
+            PlatformCatalogSeeder::class,
+            PlatformWalletSeeder::class,
             DemoPlatformSeeder::class,
         ]);
 

@@ -69,10 +69,6 @@ class PlatformCategorySeeder extends Seeder
                 ['name' => 'Registration', 'slug' => 'domain-registration'],
                 ['name' => 'Transfer', 'slug' => 'domain-transfer'],
             ],
-            PlatformProductType::EscrowService->value => [
-                ['name' => 'Standard', 'slug' => 'escrow-standard'],
-                ['name' => 'High Value', 'slug' => 'escrow-high-value'],
-            ],
         ];
 
         foreach ($trees as $type => $children) {

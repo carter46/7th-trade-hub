@@ -1,6 +1,6 @@
-# Deployment on cPanel (Git, no Node / no artisan on server)
+# Deployment on cPanel (Git, no Node on server)
 
-This project is deployed on **shared hosting** using **cPanel Git Version Control**. The server runs **PHP only**; it does not run Node.js, npm, or `artisan migrate`.
+This project is deployed on **shared hosting** using **cPanel Git Version Control**. The server runs **PHP only**; it does not run Node.js or npm. Schema changes on an existing database are applied with `php artisan migrate --force` after a verified backup (never by hand-running `database/sql/migration.sql`, which is for brand-new databases only).
 
 ## Deployment workflow
 
@@ -34,9 +34,9 @@ php artisan db:seed --class=ProductionSeeder
 
 Requires `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env` only if you still create an admin via a separate seeder step. **Never** run full `db:seed` in production (demo dashboard data).
 
-`ProductionSeeder` loads marketplace/platform category trees, platform catalog products (≈6 per type), exchange rates, and **10 sample marketplace vendors** (5 published listings each). Catalog seeders use `firstOrCreate` by slug so re-runs do not overwrite admin edits. Sample vendor password is `password` (delete or change via admin as needed).
+`ProductionSeeder` loads roles, system settings, platform catalog products (≈6 per type) and the platform wallet, then runs `catalog:backfill-hierarchy`. Catalog seeders use `firstOrCreate` by slug so re-runs do not overwrite admin edits. (The crypto exchange, escrow and peer marketplace were removed on 2026-09-27; there are no exchange rates or sample vendors any more.)
 
-After a **schema upgrade** on an existing DB, run new migrations (or the upgrade notes in `database/sql/migration.sql`), then re-run `ProductionSeeder` if needed:
+After a **schema upgrade** on an existing DB, back it up, run new migrations, then re-run `ProductionSeeder` if needed:
 
 ```bash
 php artisan migrate --force
@@ -52,7 +52,7 @@ See [PRODUCTION-ENV-CHECKLIST.md](PRODUCTION-ENV-CHECKLIST.md) and [LAUNCH-CHECK
 - **`public/build/`** is **committed** to the repo (it is **not** in `.gitignore`). The server serves these files as-is.
 - **PWA / favicon files** under `public/` (`favicon-*.png`, `favicon.ico`, `apple-touch-icon.png`, `logo.png`, `public/icons/*.png`, `manifest.json`) are **committed** as baselines. After each pull, you may run `php artisan branding:sync-pwa` to regenerate them from admin branding — run it **only after** a successful pull.
 - **`.env`** is **not** committed. Configure environment variables on the server manually (copy from `.env.example` and set values in cPanel or via file manager).
-- **Database schema** is in **`database/sql/migration.sql`**. When the schema changes, update this file and commit it. Import or re-import it in phpMyAdmin as needed.
+- **Database schema** for brand-new databases is in **`database/sql/migration.sql`**. When the schema changes, update this file and commit it. Existing databases are upgraded with `php artisan migrate --force` after a backup.
 - **Legacy `analytics_providers`:** Superseded by `integration_providers`. The SQL still creates the old table for one-time cutover copy only; the app does not write to it. After all environments have migrated, you may `DROP TABLE IF EXISTS analytics_providers;`. Re-run `PermissionSeeder` (or grant `fees.manage`) on existing DBs after fees moved out of Settings.
 
 ## One-time server setup
@@ -104,11 +104,34 @@ php artisan route:cache
 **Correct order every deploy:**
 
 1. **Pull** (cPanel Git or `git pull`)
-2. **`php artisan migrate --force`** (if you use migrations on server)
-3. **`php artisan branding:sync-pwa`** (optional — refreshes favicon/PWA from admin settings)
-4. **Cache** (`config:cache`, `route:cache`) if you use them
+2. **`php artisan migrate --force`** (after a verified backup when migrations are pending)
+3. **`php artisan optimize:clear`** (drops cached routes/config/views that may point at deleted classes)
+4. **`php artisan branding:sync-pwa`** (optional — refreshes favicon/PWA from admin settings)
+5. **Cache** (`config:cache`, `route:cache`) if you use them
 
-Never run step 3 before step 1.
+Never run step 4 before step 1.
+
+## Crypto exchange, escrow and marketplace removal (2026-09-27)
+
+The two removal migrations permanently drop the crypto, escrow and marketplace tables and cannot be rolled back (`down()` throws). They never change or delete user data: users, wallets, wallet holds, fundings, transactions, orders, notifications and support tickets are left exactly as they are, and `orders.listing_id` / `transactions.escrow_id` keep their values (only their foreign keys are dropped). No row in any remaining table is changed either: the retired Trust & Escrow category stays in `service_categories` but is hidden by code, and site settings (tagline, headings) keep whatever text they have until an admin edits them. Before pulling this release:
+
+1. **Back up** the production database and confirm the backup restores (import it into a scratch database).
+2. **Read-only pre-checks** in phpMyAdmin; every result should be empty or all-terminal:
+   - `SELECT status, COUNT(*), SUM(wallet_funding_id IS NULL) FROM crypto_sell_requests GROUP BY status;`
+   - `SELECT status, COUNT(*) FROM incoming_crypto_transactions GROUP BY status;`
+   - `SELECT status, COUNT(*) FROM escrows GROUP BY status;`
+   - `SELECT reason_type, status, COUNT(*) FROM wallet_holds GROUP BY reason_type, status;`
+   - `SELECT source, status, COUNT(*) FROM orders GROUP BY source, status;`
+   - `SELECT type, COUNT(*) FROM user_notifications GROUP BY type;` (and the same for `admin_notifications`)
+3. Pull, then `php artisan migrate --force`. If a guard fails, the migration stops **before** changing anything and lists the record IDs to resolve. If it fails later (for example a lost connection), re-run it: every step is safe to repeat.
+4. `php artisan optimize:clear`, then `php artisan branding:sync-pwa`, then `php artisan content:scan-legacy-copy` (read-only report of old wording in admin-edited content).
+
+## Secrets exposed by the old SQL dump
+
+`database/u502532383_tradehub.sql` (a production dump with users, sessions, settings and integration rows) was committed to the public GitHub repository on 2026-08-29. It is now untracked, ignored and removed from local git history (GitHub only loses it after that rewritten history is force-pushed and the repository is made private), but anything in it must be treated as leaked:
+
+- **Admin passwords:** force a password reset for every admin/staff account (password hashes were in the dump).
+- **`APP_KEY`:** rotate it. Put the old key in `APP_PREVIOUS_KEYS` so values encrypted with it (integration credentials, encrypted settings) still decrypt, re-save those settings in the admin so they are re-encrypted with the new key, then remove the old key from `APP_PREVIOUS_KEYS`. Rotating logs every user out.
 
 ## Local workflow summary
 
@@ -116,7 +139,7 @@ Never run step 3 before step 1.
 |------|--------|
 | You change PHP/Blade/config | Commit and push. Server pulls. |
 | You change `resources/css` or `resources/js` | Run **`npm run build`**, then commit (including `public/build/`) and push. |
-| You add or change DB tables (migrations) | Run migrations locally, update **`database/sql/migration.sql`** (e.g. from `php artisan schema:dump` or by hand), commit and push. On the server, import the new schema in phpMyAdmin or run the new statements. |
+| You add or change DB tables (migrations) | Run migrations locally, update **`database/sql/migration.sql`** (e.g. from `php artisan schema:dump` or by hand), commit and push. On the server, back up the database, pull, then run `php artisan migrate --force`. |
 
 ## Queue worker (optional)
 

@@ -62,10 +62,10 @@ class SupportTicketFactory extends Factory
         ]);
     }
 
-    public function marketplace(): static
+    public function order(): static
     {
         return $this->state(fn () => [
-            'category' => 'marketplace',
+            'category' => 'order',
             'subject' => 'Order not delivered',
         ]);
     }

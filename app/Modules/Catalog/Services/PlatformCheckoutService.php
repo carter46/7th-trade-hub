@@ -135,7 +135,7 @@ class PlatformCheckoutService
             $this->fulfillTools($locked);
 
             DB::afterCommit(function () use ($locked) {
-                OrderCompleted::dispatch($locked->id, $locked->user_id, null);
+                OrderCompleted::dispatch($locked->id, $locked->user_id);
             });
 
             return $locked;
@@ -409,7 +409,6 @@ class PlatformCheckoutService
                 $order = Order::create([
                     'source' => 'platform',
                     'user_id' => $buyer->id,
-                    'listing_id' => null,
                     'reference' => 'PLT-'.strtoupper(Str::random(8)),
                     'amount' => $checkout['total'],
                     'total_amount' => $checkout['total'],
@@ -439,7 +438,7 @@ class PlatformCheckoutService
                 $this->fulfillTools($order, $checkout['renew_tool'], $checkout['variant']);
 
                 DB::afterCommit(function () use ($order, $buyer) {
-                    OrderCompleted::dispatch($order->id, $buyer->id, null);
+                    OrderCompleted::dispatch($order->id, $buyer->id);
                 });
 
                 return $order;
@@ -513,7 +512,6 @@ class PlatformCheckoutService
                 $order = Order::create([
                     'source' => 'platform',
                     'user_id' => $buyer->id,
-                    'listing_id' => null,
                     'reference' => 'PLT-'.strtoupper(Str::random(8)),
                     'amount' => $checkout['total'],
                     'total_amount' => $checkout['total'],
@@ -617,7 +615,6 @@ class PlatformCheckoutService
                 $order = Order::create([
                     'source' => 'platform',
                     'user_id' => $buyer->id,
-                    'listing_id' => null,
                     'reference' => 'PLT-'.strtoupper(Str::random(8)),
                     'amount' => $checkout['total'],
                     'total_amount' => $checkout['total'],

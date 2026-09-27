@@ -6,7 +6,7 @@ return [
     'title' => 'Browsing and Purchasing Platform Services',
     'intro' => 'Explore service categories, filter products, choose variants, and check out with your wallet.',
     'summary' => 'Platform services cover network tools, social growth, websites, documents, and more — purchased from your funded Naira wallet.',
-    'updated_at' => '2026-07-20',
+    'updated_at' => '2026-09-27',
     'hero_image' => 'assets/images/services_1.jpg',
     'printable' => true,
     'related' => ['billing-wallets-payments', 'getting-started'],
@@ -106,7 +106,7 @@ return [
                 [
                     'type' => 'screenshot',
                     'title' => 'Orders page',
-                    'caption' => 'Dashboard orders list for services and marketplace buys.',
+                    'caption' => 'Dashboard orders list for your service purchases.',
                     'size' => 'large',
                     'alignment' => 'center',
                     'alt' => 'Orders page screenshot',
@@ -130,7 +130,7 @@ return [
                 [
                     'type' => 'faq',
                     'items' => [
-                        ['q' => 'Do I need a wallet balance to buy?', 'a' => 'Not always. You can pay with wallet, gateway checkout, or bank transfer for services when enabled. Marketplace purchases still use wallet balance.'],
+                        ['q' => 'Do I need a wallet balance to buy?', 'a' => 'Not always. You can pay with wallet, gateway checkout, or bank transfer for services when enabled.'],
                         ['q' => 'Can guests browse services?', 'a' => 'Yes. Checkout requires an account and sufficient wallet balance.'],
                         ['q' => 'Where do I get help with a failed order?', 'a' => 'Open a support ticket or use Contact Us with your order reference.'],
                     ],

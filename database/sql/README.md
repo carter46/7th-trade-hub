@@ -1,6 +1,8 @@
 # Database SQL for phpMyAdmin (cPanel)
 
-This folder holds the schema file for deployment when the server **does not run** `php artisan migrate`.
+This folder holds the schema file for creating a **brand-new, empty** database in phpMyAdmin.
+
+**Existing databases are upgraded with migrations, not with this file:** take a verified backup, pull, then run `php artisan migrate --force`. Migrations contain safety guards and data cleanup that the SQL below does not.
 
 ## migration.sql
 
@@ -17,15 +19,17 @@ This folder holds the schema file for deployment when the server **does not run*
 When you add or change tables (new migrations locally):
 
 1. Run `php artisan migrate` locally so your local DB is up to date.
-2. Update `database/sql/migration.sql` to match (or run new statements from migrations in phpMyAdmin on existing DBs).
+2. Update `database/sql/migration.sql` so fresh imports match.
 3. Commit the updated SQL file.
-4. On the server, re-import on a fresh database, or run only the new `CREATE` / `ALTER` statements.
+4. On the server, back up the database, then run `php artisan migrate --force` after pulling.
 
 **Default roles** are seeded at the end of `migration.sql` (`admin`, `user`). Registration requires these rows.
 
 **Production admin:** use `php artisan db:seed --class=ProductionSeeder` or `seed_production_admin.sql.example` in phpMyAdmin.
 
-**Two-catalog Phase 1** tables (`platform_*`, `exchange_rates`, `order_items`, `favorites`, `product_reviews`) and enriched `orders` / `categories` columns are included in `migration.sql`. Catalog seed data comes from `ProductionSeeder` — see `docs/TWO-CATALOG.md`.
+**Two-catalog Phase 1** tables (`platform_*`, `order_items`, `favorites`, `product_reviews`) and enriched `orders` columns are included in `migration.sql`.
+
+**Removed features (2026-09-27):** the crypto exchange (`crypto_*`, `exchange_rates`, `exchange_rate_history`, `otc_pricing_settings`, `incoming_crypto_transactions`, `wallet_balance_history`), escrow and the peer marketplace (`escrows`, `listings`, `listing_versions`, `categories`, `marketplace_products`, `messages`, `reviews`, `watchlists`) are no longer in `migration.sql`. Existing databases drop them via `php artisan migrate --force` after a verified backup — see the note at the end of `migration.sql`. The migrations drop tables only: user rows are never changed, and existing `orders.listing_id` / `transactions.escrow_id` columns keep their values (only their foreign keys go). Fresh imports simply don't have those two unused columns. Catalog seed data comes from `ProductionSeeder` — see `docs/TWO-CATALOG.md`.
 
 ## Reference
 

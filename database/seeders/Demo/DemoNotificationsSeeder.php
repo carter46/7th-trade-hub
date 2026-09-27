@@ -14,10 +14,8 @@ class DemoNotificationsSeeder extends Seeder
     {
         $types = [
             ['type' => 'wallet.funded', 'title' => 'Wallet funded', 'body' => 'Your wallet credit was approved.'],
-            ['type' => 'order', 'title' => 'Order update', 'body' => 'Your marketplace order status changed.'],
-            ['type' => 'escrow', 'title' => 'Escrow update', 'body' => 'Escrow status changed on your order.'],
+            ['type' => 'order.completed', 'title' => 'Order update', 'body' => 'Your service order status changed.'],
             ['type' => 'ticket.replied', 'title' => 'Support replied', 'body' => 'A staff member replied to your ticket.'],
-            ['type' => 'listing', 'title' => 'Listing update', 'body' => 'Your listing moderation status changed.'],
             ['type' => 'kyc', 'title' => 'KYC update', 'body' => 'Your KYC submission was reviewed.'],
         ];
 
@@ -41,10 +39,9 @@ class DemoNotificationsSeeder extends Seeder
         }
 
         $adminTypes = [
-            ['type' => 'escrow.disputed', 'title' => 'Escrow dispute opened', 'body' => 'A buyer opened a dispute.'],
             ['type' => 'ticket.opened', 'title' => 'New support ticket', 'body' => 'A customer opened a ticket.'],
             ['type' => 'wallet.funded', 'title' => 'Wallet funded', 'body' => 'A funding was approved.'],
-            ['type' => 'listing.rejected', 'title' => 'Listing rejected', 'body' => 'A listing was rejected in review.'],
+            ['type' => 'withdrawal.requested', 'title' => 'Withdrawal requested', 'body' => 'A member requested a payout.'],
         ];
 
         foreach ($adminTypes as $i => $t) {

@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'updated_at' => '2026-07-01',
+    'updated_at' => '2026-09-27',
 
     'contact' => [
         'email' => env('LEGAL_CONTACT_EMAIL'),
@@ -11,8 +11,8 @@ return [
         'terms' => [
             'label' => 'Terms of Service',
             'eyebrow' => 'Compliance & Legal',
-            'intro' => 'Please review the rules for using 7th Trade Hub — wallet, marketplace, services, and crypto exchange.',
-            'summary' => 'By using 7th Trade Hub you agree to our platform rules, KYC requirements where applicable, escrow marketplace policies, and wallet / exchange terms. This document was last updated July 2026.',
+            'intro' => 'Please review the rules for using 7th Trade Hub — the Naira wallet and platform services.',
+            'summary' => 'By using 7th Trade Hub you agree to our platform rules, KYC requirements where applicable, and wallet and checkout terms. This document was last updated September 2026.',
             'sections' => [
                 [
                     'id' => 'acceptance',
@@ -20,7 +20,7 @@ return [
                     'title' => 'Acceptance of Terms',
                     'number' => '01',
                     'paragraphs' => [
-                        'By accessing or using 7th Trade Hub (“the Platform”), including the marketplace, digital services catalog, Naira wallet, and crypto-to-cash exchange, you confirm that you have read, understood, and agree to these Terms of Service.',
+                        'By accessing or using 7th Trade Hub (“the Platform”), including the digital services catalog and Naira wallet, you confirm that you have read, understood, and agree to these Terms of Service.',
                         'If you do not agree, you must stop using the Platform. We may update these terms from time to time; continued use after changes are posted means you accept the updated terms.',
                     ],
                 ],
@@ -39,18 +39,14 @@ return [
                     ],
                 ],
                 [
-                    'id' => 'marketplace',
-                    'nav' => '3. Marketplace & Services',
-                    'title' => 'Marketplace & Digital Services',
+                    'id' => 'services',
+                    'nav' => '3. Platform Services',
+                    'title' => 'Platform Services',
                     'number' => '03',
                     'paragraphs' => [
-                        'The Platform lets users list and purchase digital goods and services, and browse platform-operated service products. Eligible marketplace purchases may use escrow until delivery is confirmed.',
+                        'The Platform lets you browse and purchase digital services operated by 7th Trade Hub.',
                     ],
                     'cards' => [
-                        [
-                            'title' => 'Marketplace escrow',
-                            'body' => 'Funds for eligible orders are held until the buyer confirms delivery. Misuse of escrow or false delivery claims may lead to account action.',
-                        ],
                         [
                             'title' => 'Platform services',
                             'body' => 'Catalog products (network, social, websites, documents, and related plans) are fulfilled according to the product description and checkout terms shown at purchase.',
@@ -63,12 +59,11 @@ return [
                     'title' => 'Financial Transactions',
                     'number' => '04',
                     'paragraphs' => [
-                        'Wallet funding, withdrawals, marketplace checkout, and crypto sell requests are subject to verification, admin review where required, and applicable fees or network costs.',
+                        'Wallet funding, withdrawals, and checkout are subject to verification, admin review where required, and applicable fees.',
                     ],
                     'bullets' => [
-                        'Sell rates shown on the Exchange page are estimates; the confirmed rate applies when your sell request is processed.',
-                        'You are responsible for providing correct bank or crypto destination details. We are not liable for losses from incorrect details you supply.',
-                        'Deposits, withdrawals, and crypto sells may take from minutes up to longer review windows depending on method and compliance checks.',
+                        'You are responsible for providing correct bank details. We are not liable for losses from incorrect details you supply.',
+                        'Deposits and withdrawals may take from minutes up to longer review windows depending on method and compliance checks.',
                     ],
                 ],
                 [
@@ -81,9 +76,9 @@ return [
                         'You must not use the Platform for:',
                     ],
                     'blocks' => [
-                        'Fraud, phishing, or fake listings',
+                        'Fraud, phishing, or impersonation',
                         'Money laundering or illegal payments',
-                        'Abuse of escrow or chargeback fraud',
+                        'Payment abuse or chargeback fraud',
                         'Scraping, attacks, or account takeover',
                     ],
                 ],
@@ -102,7 +97,7 @@ return [
                     'title' => 'Limitation of Liability',
                     'number' => '07',
                     'paragraphs' => [
-                        'To the fullest extent permitted by law, 7th Trade Hub is not liable for indirect, incidental, or consequential damages arising from use of the Platform, including delays in funding, exchange processing, or third-party network issues.',
+                        'To the fullest extent permitted by law, 7th Trade Hub is not liable for indirect, incidental, or consequential damages arising from use of the Platform, including delays in funding, order fulfilment, or third-party network issues.',
                     ],
                 ],
                 [
@@ -121,8 +116,8 @@ return [
         'privacy' => [
             'label' => 'Privacy Policy',
             'eyebrow' => 'Compliance & Legal',
-            'intro' => 'How 7th Trade Hub collects, uses, and protects personal data across wallet, KYC, marketplace, and support workflows.',
-            'summary' => 'We collect account, transaction, and KYC data needed to run the Platform, prevent fraud, and meet legal obligations. We do not sell your personal data. This policy was last updated July 2026.',
+            'intro' => 'How 7th Trade Hub collects, uses, and protects personal data across wallet, KYC, orders, and support workflows.',
+            'summary' => 'We collect account, transaction, and KYC data needed to run the Platform, prevent fraud, and meet legal obligations. We do not sell your personal data. This policy was last updated September 2026.',
             'sections' => [
                 [
                     'id' => 'collect',
@@ -135,7 +130,7 @@ return [
                     'bullets' => [
                         'Account details such as name, email, username, and contact information.',
                         'KYC documents and verification status when required for wallet or compliance features.',
-                        'Transaction records (deposits, withdrawals, orders, crypto sells, and support tickets).',
+                        'Transaction records (deposits, withdrawals, orders, and support tickets).',
                         'Technical logs such as IP address, device/browser data, and security events.',
                     ],
                 ],
@@ -145,7 +140,7 @@ return [
                     'title' => 'How We Use Data',
                     'number' => '02',
                     'paragraphs' => [
-                        'We use personal data to operate and secure the Platform, process payments and escrow, complete KYC, respond to support requests, improve services, and comply with applicable law.',
+                        'We use personal data to operate and secure the Platform, process payments, complete KYC, respond to support requests, improve services, and comply with applicable law.',
                     ],
                 ],
                 [
@@ -154,7 +149,7 @@ return [
                     'title' => 'Sharing',
                     'number' => '03',
                     'paragraphs' => [
-                        'We share data only as needed with infrastructure and service providers (for example hosting, email, and payment processors), with counterparties as required to complete a trade you initiate, or when required by law or to protect the Platform and users.',
+                        'We share data only as needed with infrastructure and service providers (for example hosting, email, domain registrars, and payment processors) as needed to fulfil an order you place, or when required by law or to protect the Platform and users.',
                     ],
                 ],
                 [

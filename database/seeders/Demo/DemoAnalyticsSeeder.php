@@ -15,12 +15,11 @@ class DemoAnalyticsSeeder extends Seeder
     public function run(DemoContext $ctx, DemoTimeline $timeline): void
     {
         $routeKeys = [
-            'dashboard.marketplace.view',
+            'dashboard.services.view',
             'dashboard.wallet.view',
             'dashboard.orders.view',
             'dashboard.kyc.view',
             'dashboard.support.view',
-            'discover.marketplace',
             'discover.services',
         ];
 
@@ -36,7 +35,7 @@ class DemoAnalyticsSeeder extends Seeder
                 UserActivity::query()->create([
                     'user_id' => $user->id,
                     'action' => 'viewed',
-                    'context_key' => 'dashboard.marketplace.view',
+                    'context_key' => 'dashboard.services.view',
                     'occurred_at' => $timeline->daysAgo(0, 18),
                 ]);
 
@@ -61,9 +60,9 @@ class DemoAnalyticsSeeder extends Seeder
 
                 $at = $timeline->daysAgo($d, 10 + ($d % 8));
                 $route = $routeKeys[($d + $user->id) % count($routeKeys)];
-                // Marketplace-heavy bias for traders/sellers
+                // Services-heavy bias for frequent buyers
                 if ($bias > 1 && $d % 2 === 0) {
-                    $route = 'dashboard.marketplace.view';
+                    $route = 'dashboard.services.view';
                 }
 
                 UserActivity::query()->create([

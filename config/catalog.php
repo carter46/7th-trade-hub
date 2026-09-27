@@ -102,7 +102,7 @@ return [
             'benefits' => [
                 'Multiple plan tiers',
                 'Clear duration and pricing',
-                'Escrow-backed platform checkout',
+                'Secure platform checkout',
             ],
             'faq' => [
                 ['q' => 'Which VPN should I pick?', 'a' => 'Use category filters (Residential, Gaming, Business) or compare featured plans below.'],
@@ -206,22 +206,6 @@ return [
                 ['q' => 'How do I choose Growth vs Engagement?', 'a' => 'Use the category filter: Growth focuses on audience size; Engagement focuses on interaction.'],
             ],
         ],
-        'escrow_service' => [
-            'label' => 'Escrow Service',
-            'icon' => 'lock',
-            'default_route' => 'services',
-            'short_description' => 'Protected trade escrow for high-value digital deals.',
-            'hero_title' => 'Escrow Services',
-            'hero_subtitle' => 'Add trust to peer deals with platform-backed escrow options.',
-            'benefits' => [
-                'Standard and high-value tiers',
-                'Clear fee structure on each product',
-                'Aligned with marketplace escrow flows',
-            ],
-            'faq' => [
-                ['q' => 'Is escrow automatic on marketplace buys?', 'a' => 'Eligible marketplace purchases use escrow by default. These products cover additional escrow needs.'],
-            ],
-        ],
     ],
 
     /*
@@ -302,22 +286,6 @@ return [
             'faq' => [],
             'types' => ['receipt', 'document'],
         ],
-        'trust-escrow' => [
-            'label' => 'Trust & Escrow',
-            'banner_image' => 'assets/images/flat-lay-real-estate-concept.jpg',
-            'card_image' => 'assets/images/flat-lay-real-estate-concept.jpg',
-            'short_description' => 'Buy and sell digital products with marketplace escrow protection.',
-            'hero_title' => 'Trust & Escrow',
-            'hero_subtitle' => 'Explore escrow-protected purchases in the marketplace.',
-            'benefits' => [
-                'Aligned with marketplace protection',
-                'Funds held until delivery confirmation',
-            ],
-            'faq' => [],
-            'types' => [],
-            'route' => 'marketplace',
-            'cta' => 'Open marketplace',
-        ],
     ],
 
     /*
@@ -338,11 +306,6 @@ return [
             'label' => 'Documents & Receipts',
             'description' => 'Receipt templates and editable business documents.',
             'types' => ['receipt', 'document'],
-        ],
-        'trust-protection' => [
-            'label' => 'Trust & Protection',
-            'description' => 'Escrow and protected trade services.',
-            'types' => ['escrow_service'],
         ],
     ],
 ];

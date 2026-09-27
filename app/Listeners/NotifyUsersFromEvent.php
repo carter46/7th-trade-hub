@@ -17,8 +17,6 @@ use Illuminate\Support\Facades\Route;
 
 /**
  * User-facing notifications from domain events (mail + in-app).
- * Listing approve/reject also notify from admin controllers for immediate UX;
- * this listener covers events that have no controller notification path.
  */
 class NotifyUsersFromEvent
 {
@@ -160,7 +158,7 @@ class NotifyUsersFromEvent
                     'ref' => $order->reference,
                     'amount' => number_format((float) ($order->total_amount ?? $order->amount), 2),
                 ]),
-                actionUrl: Route::has('dashboard.orders') ? route('dashboard.orders') : null,
+                actionUrl: Route::has('dashboard.service-orders') ? route('dashboard.service-orders') : null,
                 meta: [
                     'order_id' => $order->id,
                     'email_context' => $context,

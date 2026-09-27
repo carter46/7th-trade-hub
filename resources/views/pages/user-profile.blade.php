@@ -21,7 +21,7 @@
                         <div>
                             <div class="flex items-center gap-2">
                                 <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-white">{{ $username }}</h1>
-                                <span class="bg-primary/10 text-primary text-xs font-bold px-2.5 py-1 rounded-full border border-primary/20">TRADER</span>
+                                <span class="bg-primary/10 text-primary text-xs font-bold px-2.5 py-1 rounded-full border border-primary/20">MEMBER</span>
                             </div>
                             <p class="text-slate-400 mt-1 flex items-center gap-1">
                                 <x-ui.icon name="user" class="w-4 h-4" />
@@ -30,7 +30,7 @@
                         </div>
                         @auth
                             <div class="flex gap-3">
-                                <a href="{{ route('dashboard.marketplace') }}" class="px-6 py-2.5 bg-primary text-white font-bold rounded-xl hover:bg-accent transition-all shadow-md">Marketplace</a>
+                                <a href="{{ route('dashboard.services') }}" class="px-6 py-2.5 bg-primary text-white font-bold rounded-xl hover:bg-accent transition-all shadow-md">Browse services</a>
                             </div>
                         @endauth
                     </div>
@@ -38,7 +38,7 @@
             </div>
         </section>
         <div class="glassmorphism rounded-xl p-8 border border-white/10">
-            <p class="text-slate-400">Profile and listings for <strong class="text-white">{{ $username }}</strong> will appear here. This page is static until user profiles are fully connected to the database.</p>
+            <p class="text-slate-400">Profile details for <strong class="text-white">{{ $username }}</strong> will appear here. This page is static until user profiles are fully connected to the database.</p>
         </div>
     </div>
 </section>

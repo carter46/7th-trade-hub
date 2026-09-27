@@ -13,10 +13,10 @@ use App\Services\Communications\Email\EmailProfile;
  * For user audience mail, the profile is the From identity.
  *
  * Intended inbox mapping (configure notify_to on each identity in Email settings):
- * - general  → info / platform ops (signups, domain fulfillment, listings)
- * - sales    → orders, tools, marketplace purchases
+ * - general  → info / platform ops (signups, domain fulfillment)
+ * - sales    → orders, tools
  * - support  → tickets
- * - billing  → wallet, crypto, payments, escrow, bank-transfer proofs
+ * - billing  → wallet, payments, withdrawals, bank-transfer proofs
  * - security → auth / security alerts (and direct OutboundMail Security OTPs)
  * - noreply  → pure transactional fallbacks
  */
@@ -33,16 +33,11 @@ class EmailIdentityResolver
             // General / info — platform ops (not Sales)
             str_starts_with($type, 'domain.'),
             str_starts_with($type, 'user.'),
-            str_starts_with($type, 'listing.'),
-            $type === 'listing',
             $type === 'order.domain_replacement_requested' => EmailProfile::General,
 
             // Billing — money movement + payment ops (before order.* catch-all)
             str_starts_with($type, 'wallet.'),
-            str_starts_with($type, 'crypto.'),
-            str_starts_with($type, 'treasury.'),
             str_starts_with($type, 'payment.'),
-            str_starts_with($type, 'escrow.'),
             str_starts_with($type, 'withdrawal.'),
             $type === 'wallet',
             $type === 'order.manual_bank_transfer_proof',
@@ -59,8 +54,6 @@ class EmailIdentityResolver
             str_starts_with($type, 'email.delivery_failed') => EmailProfile::Security,
 
             // NoReply — lightweight transactional
-            $type === 'message',
-            $type === 'review',
             str_starts_with($type, 'verification.'),
             str_starts_with($type, 'password.'),
             str_starts_with($type, 'bank.') => EmailProfile::NoReply,

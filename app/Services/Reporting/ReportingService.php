@@ -38,7 +38,6 @@ class ReportingService
 
         $kycSlices = $this->ops->kycStatusSlices();
         $supportSlices = $this->ops->supportStatusSlices();
-        $escrowSlices = $this->ops->escrowStatusSlices();
         $orderSlices = $this->ops->orderStatusSlices($range);
 
         return [
@@ -50,7 +49,7 @@ class ReportingService
                     'delta' => $revenueDelta,
                     'delta_label' => 'vs prior period',
                     'sparkline' => $revenueSeries['values'],
-                    'description' => 'Platform fees + catalog sales',
+                    'description' => 'Catalog sales',
                 ],
                 'visitors' => array_merge($this->visitorsPulse(), [
                     'description' => 'Sessions from Google Analytics',
@@ -74,11 +73,8 @@ class ReportingService
                 ],
                 'pending_kyc' => $this->ops->pendingKyc(),
                 'pending_withdrawals' => $this->ops->pendingWithdrawals(),
-                'pending_escrows' => $this->ops->pendingEscrows(),
                 'pending_platform_orders' => $this->ops->pendingPlatformOrders(),
-                'escrow_locked_ngn' => $this->ops->lockedEscrowVolume(),
                 'support_waiting' => $this->ops->supportWaiting(),
-                'pending_listings' => $this->ops->pendingListings(),
             ],
             'growth' => [
                 'revenue' => $revenueSeries,
@@ -89,10 +85,8 @@ class ReportingService
             'distributions' => [
                 'kyc' => $kycSlices,
                 'support' => $supportSlices,
-                'escrows' => $escrowSlices,
                 'orders' => $orderSlices,
             ],
-            'gmv' => $this->ops->gmv($range),
         ];
     }
 
@@ -107,7 +101,6 @@ class ReportingService
             'by_type' => $this->revenue->byType($range),
             'delta_percent' => $this->revenue->deltaPercent($range),
             'series' => $this->revenue->dailySeries($range),
-            'gmv' => $this->ops->gmv($range),
         ];
     }
 

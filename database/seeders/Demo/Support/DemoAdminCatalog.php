@@ -43,7 +43,7 @@ class DemoAdminCatalog
             ],
             [
                 'key' => 'moderator',
-                'name' => 'Marketplace Moderator',
+                'name' => 'Catalog Moderator',
                 'email' => 'moderator@example.com',
                 'username' => 'moderator',
                 'permissions' => ['catalog.manage'],

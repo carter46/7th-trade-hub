@@ -11,9 +11,7 @@ class AnalyticsService implements AnalyticsServiceInterface
     public const SECTION_PERMISSIONS = [
         'traffic' => 'analytics.view',
         'revenue' => 'finance.manage',
-        'marketplace' => 'catalog.manage',
         'services' => 'catalog.manage',
-        'escrows' => 'finance.manage',
         'users' => 'users.manage',
         'support' => 'support.manage',
         'kyc' => 'compliance.manage',
@@ -21,6 +19,9 @@ class AnalyticsService implements AnalyticsServiceInterface
         'products' => 'catalog.manage',
         'marketing' => 'analytics.view',
     ];
+
+    /** @var list<string> */
+    public const REPORT_SECTIONS = ['traffic', 'revenue', 'services', 'users', 'support', 'kyc'];
 
     public function __construct(
         private InternalBusinessProvider $business,
@@ -49,10 +50,6 @@ class AnalyticsService implements AnalyticsServiceInterface
             $kpis = $this->business->kpis();
             $overview['kpis']['sales_total_ngn'] = $kpis['sales_total_ngn'];
             $overview['kpis']['transactions_total'] = $kpis['transactions_total'];
-        }
-
-        if ($user->can('catalog.manage') || $user->can('analytics.view')) {
-            $overview['kpis']['listings_active'] = $this->business->kpis()['listings_active'];
         }
 
         if ($user->can('support.manage') || $user->can('analytics.view')) {
@@ -86,7 +83,7 @@ class AnalyticsService implements AnalyticsServiceInterface
         $range = $this->parseRange($filters);
         $days = $range['days'];
 
-        if (in_array($section, ['traffic', 'revenue', 'marketplace', 'services', 'escrows', 'users', 'support', 'kyc'], true)) {
+        if (in_array($section, self::REPORT_SECTIONS, true)) {
             return [
                 'section' => $section,
                 'range' => $range,
@@ -120,7 +117,7 @@ class AnalyticsService implements AnalyticsServiceInterface
     public function allowedSections(User $user): array
     {
         $sections = [];
-        foreach (['traffic', 'revenue', 'marketplace', 'services', 'escrows', 'users', 'support', 'kyc'] as $section) {
+        foreach (self::REPORT_SECTIONS as $section) {
             $permission = self::SECTION_PERMISSIONS[$section];
             if ($user->can($permission)) {
                 $sections[] = $section;

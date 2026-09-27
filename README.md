@@ -1,6 +1,6 @@
 # 7th Trade Hub
 
-Laravel + Blade + PWA digital services marketplace (crypto exchange, social growth, receipts, documents, website listings).
+Laravel + Blade + PWA digital services hub (VPN, domains, websites, social growth, receipts, documents, website listings).
 
 ## Current state
 
@@ -24,7 +24,7 @@ Laravel + Blade + PWA digital services marketplace (crypto exchange, social grow
 4. **Add PWA**
    - Follow [docs/PWA-CACHING-RULES.md](docs/PWA-CACHING-RULES.md)
 5. **Deploy (cPanel Git)**
-   - See [docs/DEPLOYMENT-CPANEL.md](docs/DEPLOYMENT-CPANEL.md). Build frontend locally (`npm run build`), commit `public/build/`, push; server only pulls. No Node or `artisan migrate` on server. Use `database/sql/migration.sql` in phpMyAdmin for schema.
+   - See [docs/DEPLOYMENT-CPANEL.md](docs/DEPLOYMENT-CPANEL.md). Build frontend locally (`npm run build`), commit `public/build/`, push; the server never runs Node. Schema changes on an existing database: take a verified backup, pull, then `php artisan migrate --force`. `database/sql/migration.sql` is only for importing a brand-new empty database in phpMyAdmin.
 
 ## Docs
 

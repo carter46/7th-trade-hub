@@ -76,7 +76,8 @@ class CatalogHierarchyTest extends TestCase
 
         $this->assertSame($first, ServiceCategory::count());
         $this->assertSame($services, ProductType::count());
-        $this->assertGreaterThanOrEqual(6, $first);
+        $this->assertGreaterThanOrEqual(5, $first);
+        $this->assertFalse(ServiceCategory::where('slug', 'trust-escrow')->exists());
         $this->assertFalse(ProductType::where('slug', 'escrow_service')->exists());
 
         $product = PlatformProduct::where('slug', 'legacy-vpn-link')->first();

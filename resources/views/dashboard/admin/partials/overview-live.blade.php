@@ -55,7 +55,7 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
         <x-dashboard.command.mini-chart
             title="Wallet Fundings"
             subtitle="Approved fundings in range"
@@ -81,22 +81,12 @@
             :slices="$distributions['support'] ?? []"
             id="overview-support-donut"
         />
-    </div>
-
-    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
         <x-dashboard.command.distribution-card
             title="KYC Status"
             :center-value="number_format(collect($distributions['kyc'] ?? [])->sum('value'))"
             center-label="Submissions"
             :slices="$distributions['kyc'] ?? []"
             id="overview-kyc-donut"
-        />
-        <x-dashboard.command.distribution-card
-            title="Escrow Status"
-            :center-value="number_format(collect($distributions['escrows'] ?? [])->sum('value'))"
-            center-label="Escrows"
-            :slices="$distributions['escrows'] ?? []"
-            id="overview-escrow-donut"
         />
     </div>
 </section>

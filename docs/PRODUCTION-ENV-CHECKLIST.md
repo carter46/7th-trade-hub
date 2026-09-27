@@ -21,7 +21,6 @@
 ## Optional
 
 - `ADMIN_EMAIL` / `ADMIN_PASSWORD` for one-time `ProductionSeeder`
-- `WALLET_PLATFORM_CRYPTO_ADDRESS` for crypto sell instructions
 - `SENTRY_LARAVEL_DSN` — install `sentry/sentry-laravel` first
 - `LOG_SLACK_WEBHOOK_URL` — critical error alerts
 - Cron: `* * * * * php artisan schedule:run` (see [OPERATIONS.md](OPERATIONS.md))

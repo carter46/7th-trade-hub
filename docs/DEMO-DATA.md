@@ -45,7 +45,7 @@ php artisan migrate --force
 php artisan demo:seed --force
 ```
 
-Overview should then show KYC, tickets, escrows, charts.
+Overview should then show KYC, tickets, platform orders, charts.
 
 ### Launch day cleanup
 
@@ -65,20 +65,18 @@ Each `demo:seed` / `DemoPlatformSeeder` run creates a `demo_batches` row and tra
 | Entity | Target |
 |--------|--------|
 | Members + ACL admins | ~20–30 |
-| Listings | ~100 |
-| Orders | ~100 |
-| Escrows | ~50 (successful / waiting / disputed / refunded / expired) |
+| Platform orders | ≥45 (needs a published platform catalog) |
 | Support tickets | ~40 |
 | KYC | ~20 |
-| Transactions | ~300 |
+| Transactions | ≥200 completed |
 
 ## Member personas (password `password`)
 
 | Email | Arc |
 |-------|-----|
-| `alice@example.com` | Buyer journey |
-| `michael@example.com` | Seller-heavy |
-| `sarah.design@example.com` | Seller + payouts |
+| `alice@example.com` | Buyer journey (platform orders) |
+| `michael@example.com` | Deposits + payouts |
+| `sarah.design@example.com` | Deposits + payouts (pending withdrawal) |
 | `john@example.com` | Rejected KYC + appeal |
 | `emily@example.com` | Empty new user |
 | `memberN@example.com` | Fillers |
@@ -97,8 +95,8 @@ Each `demo:seed` / `DemoPlatformSeeder` run creates a `demo_batches` row and tra
 
 ```
 database/seeders/Demo/DemoPlatformSeeder.php   # orchestrator
-  DemoUsers / Admins / Kyc / Wallet / Marketplace /
-  OrdersEscrow / Support / Notifications / Audit / Analytics
+  DemoUsers / Admins / Kyc / Wallet / PlatformOrders /
+  Support / Notifications / Audit / Analytics
 app/Support/Demo/DemoGate.php                  # ALLOW_DEMO_DATA checks
 app/Support/Demo/DemoBatchTracker.php          # tagging + clear
 ```

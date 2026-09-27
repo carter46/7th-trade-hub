@@ -82,17 +82,10 @@ class AdminEmailRoutingTest extends TestCase
             'user.verified' => EmailProfile::General,
             'domain.replacement_requested' => EmailProfile::General,
             'domain.pending_manual' => EmailProfile::General,
-            'listing.approved' => EmailProfile::General,
-            'listing.rejected' => EmailProfile::General,
-            'listing.submitted' => EmailProfile::General,
-            'listing' => EmailProfile::General,
             // Billing
             'wallet.deposit_submitted' => EmailProfile::Billing,
             'wallet.withdrawal_requested' => EmailProfile::Billing,
-            'crypto.deposit_detected' => EmailProfile::Billing,
             'payment.gateway_unmatched' => EmailProfile::Billing,
-            'escrow.disputed' => EmailProfile::Billing,
-            'treasury.unexpected_increase' => EmailProfile::Billing,
             'order.manual_bank_transfer_proof' => EmailProfile::Billing,
             'order.manual_bank_transfer_failed' => EmailProfile::Billing,
             // Sales
@@ -106,7 +99,6 @@ class AdminEmailRoutingTest extends TestCase
             'email.delivery_failed' => EmailProfile::Security,
             'auth.login_alert' => EmailProfile::Security,
             // NoReply
-            'message' => EmailProfile::NoReply,
             'verification.otp' => EmailProfile::NoReply,
             'password.reset' => EmailProfile::NoReply,
         ];
@@ -161,9 +153,6 @@ class AdminEmailRoutingTest extends TestCase
         ]);
 
         $this->assertSame('order.domain_purchased', $resolver->resolve($domainOrder->fresh('items')));
-
-        $marketplaceOrder = Order::factory()->create(['source' => 'marketplace', 'status' => 'paid']);
-        $this->assertSame('order.marketplace_purchase', $resolver->resolve($marketplaceOrder));
     }
 
     public function test_notify_admins_creates_distinct_types_for_deposit_lifecycle(): void

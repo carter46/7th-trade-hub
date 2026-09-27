@@ -19,7 +19,7 @@ These describe 7th Trade Hub itself — catalog, wallet, deploy, design — **no
 | --- | ------- |
 | [PRODUCT-ARCHITECTURE-SPEC.md](PRODUCT-ARCHITECTURE-SPEC.md) | Product vision and module boundaries |
 | [TECHNICAL-IMPLEMENTATION-SPEC.md](TECHNICAL-IMPLEMENTATION-SPEC.md) | Technical implementation notes |
-| [TWO-CATALOG.md](TWO-CATALOG.md) | Platform catalog vs marketplace |
+| [TWO-CATALOG.md](TWO-CATALOG.md) | Platform catalog structure (marketplace removed 2026-09-27) |
 | [CATALOG-MIGRATION-MAP.md](CATALOG-MIGRATION-MAP.md) | Catalog migration map |
 | [DEPLOYMENT-CPANEL.md](DEPLOYMENT-CPANEL.md) | Shared hosting / cPanel deploy |
 | [DEPLOY-CATALOG-ADMIN.md](DEPLOY-CATALOG-ADMIN.md) | Catalog admin deploy notes |

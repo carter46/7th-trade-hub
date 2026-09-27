@@ -13,8 +13,8 @@ class SupportTicket extends Model
     use HasFactory;
 
     public const CATEGORIES = [
-        'payment', 'withdrawal', 'wallet', 'marketplace', 'listing',
-        'order', 'kyc', 'crypto_sell', 'technical', 'other',
+        'payment', 'withdrawal', 'wallet',
+        'order', 'kyc', 'technical', 'other',
     ];
 
     protected $fillable = [

@@ -45,7 +45,7 @@
                     @endif
                 </x-dashboard.td>
                 <x-dashboard.td class="font-medium">{{ $category->name }}</x-dashboard.td>
-                <x-dashboard.td>{{ $category->mode === 'marketplace_link' ? 'Marketplace link' : 'Catalog' }}</x-dashboard.td>
+                <x-dashboard.td>Catalog</x-dashboard.td>
                 <x-dashboard.td>{{ $category->sort_order }}</x-dashboard.td>
                 <x-dashboard.td>{{ number_format($category->services_count) }}</x-dashboard.td>
                 <x-dashboard.td>

@@ -185,7 +185,6 @@ class ThemeManager
             'logo' => $this->asset('logo', $theme),
             'empty.default' => $assets['empty.default'] ?? null,
             'empty.wallet' => $assets['empty.wallet'] ?? null,
-            'empty.marketplace' => $assets['empty.marketplace'] ?? null,
             'empty.dashboard' => $assets['empty.dashboard'] ?? null,
         ];
     }

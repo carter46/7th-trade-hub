@@ -12,6 +12,5 @@ class OrderCompleted
     public function __construct(
         public int $orderId,
         public ?int $buyerId = null,
-        public ?int $sellerId = null,
     ) {}
 }

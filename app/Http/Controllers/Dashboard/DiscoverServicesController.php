@@ -73,14 +73,14 @@ class DiscoverServicesController extends Controller
     {
         $user = $request->user();
 
+        if (in_array($segment, ['trust-escrow', 'trust-protection', 'escrow_service'], true)) {
+            return redirect()->route('dashboard.services', status: 301);
+        }
+
         if ($this->browse->isGroup($segment)) {
             $category = $this->browse->usesDbHierarchy()
                 ? $this->browse->findServiceCategory($segment)
                 : null;
-
-            if ($category?->isMarketplaceLink()) {
-                return redirect()->route('dashboard.marketplace');
-            }
 
             $resolved = $this->content->forGroup($segment);
             $typeKeys = $resolved['types'] ?? config('catalog.groups.'.$segment.'.types', []);
@@ -506,12 +506,7 @@ class DiscoverServicesController extends Controller
                 return $group;
             }
 
-            $isMarketplace = ($group['mode'] ?? null) === 'marketplace_link'
-                || str_contains((string) ($group['href'] ?? ''), 'marketplace');
-
-            $group['href'] = $isMarketplace
-                ? route('dashboard.marketplace')
-                : route('dashboard.services.browse', $slug);
+            $group['href'] = route('dashboard.services.browse', $slug);
 
             return $group;
         });

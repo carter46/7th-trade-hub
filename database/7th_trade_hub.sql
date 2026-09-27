@@ -16,7 +16,7 @@ SET time_zone = "+00:00";
 -- Platform tables (reference)
 -- --------------------------------------------------------
 -- Signin/Signup: users, password_reset_tokens, sessions
--- User/Admin app: wallets, transactions, orders, listings, support_tickets, email_verification_codes
+-- User/Admin app: wallets, transactions, orders, support_tickets, email_verification_codes
 -- Spatie Laravel Permission: permissions, roles, model_has_permissions, model_has_roles, role_has_permissions
 -- Laravel system: cache, cache_locks, jobs, job_batches, failed_jobs
 -- --------------------------------------------------------
@@ -129,31 +129,14 @@ SET time_zone = "+00:00";
 -- CREATE TABLE `wallets` (
 --   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
 --   `user_id` bigint unsigned NOT NULL,
---   `balance_usd` decimal(14,2) NOT NULL DEFAULT 0.00,
---   `crypto_btc` decimal(18,8) NOT NULL DEFAULT 0.00000000,
---   `crypto_eth` decimal(18,8) NOT NULL DEFAULT 0.00000000,
---   `balance_change_label` varchar(100) DEFAULT NULL,
+--   `balance` decimal(14,2) NOT NULL DEFAULT 0.00,
+--   `locked_balance` decimal(14,2) NOT NULL DEFAULT 0.00,
+--   `currency` varchar(3) NOT NULL DEFAULT 'NGN',
 --   `created_at` timestamp NULL DEFAULT NULL,
 --   `updated_at` timestamp NULL DEFAULT NULL,
 --   PRIMARY KEY (`id`),
 --   UNIQUE KEY `wallets_user_id_unique` (`user_id`),
 --   CONSTRAINT `wallets_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
--- ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Listings
--- CREATE TABLE `listings` (
---   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
---   `title` varchar(255) NOT NULL,
---   `slug` varchar(255) NOT NULL,
---   `description` text,
---   `price` decimal(12,2) NOT NULL,
---   `category` varchar(80) DEFAULT NULL,
---   `icon_class` varchar(80) DEFAULT NULL,
---   `is_active` tinyint(1) NOT NULL DEFAULT 1,
---   `created_at` timestamp NULL DEFAULT NULL,
---   `updated_at` timestamp NULL DEFAULT NULL,
---   PRIMARY KEY (`id`),
---   UNIQUE KEY `listings_slug_unique` (`slug`)
 -- ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Transactions
@@ -177,8 +160,8 @@ SET time_zone = "+00:00";
 -- Orders
 -- CREATE TABLE `orders` (
 --   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+--   `source` varchar(20) NOT NULL DEFAULT 'platform',
 --   `user_id` bigint unsigned NOT NULL,
---   `listing_id` bigint unsigned DEFAULT NULL,
 --   `reference` varchar(32) NOT NULL,
 --   `amount` decimal(12,2) NOT NULL,
 --   `status` varchar(20) NOT NULL DEFAULT 'pending',
@@ -186,8 +169,7 @@ SET time_zone = "+00:00";
 --   `updated_at` timestamp NULL DEFAULT NULL,
 --   PRIMARY KEY (`id`),
 --   UNIQUE KEY `orders_reference_unique` (`reference`),
---   CONSTRAINT `orders_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
---   CONSTRAINT `orders_listing_id_foreign` FOREIGN KEY (`listing_id`) REFERENCES `listings` (`id`) ON DELETE SET NULL
+--   CONSTRAINT `orders_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 -- ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Support tickets

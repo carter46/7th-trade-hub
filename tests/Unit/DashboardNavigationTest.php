@@ -145,22 +145,18 @@ class DashboardNavigationTest extends TestCase
 
         $entries = collect(DashboardNavigation::for('user', $user))->keyBy('id');
 
-        $this->assertArrayHasKey('services', $entries);
-        $this->assertArrayHasKey('marketplace', $entries);
-        $this->assertArrayHasKey('wallet', $entries);
-        $this->assertArrayHasKey('exchange', $entries);
-        $this->assertArrayHasKey('support', $entries);
-        $this->assertArrayHasKey('settings', $entries);
+        $this->assertSame(
+            ['dashboard', 'services', 'my-tools', 'service-orders', 'wallet', 'support', 'settings'],
+            $entries->keys()->all()
+        );
+        $this->assertArrayNotHasKey('marketplace', $entries);
+        $this->assertArrayNotHasKey('exchange', $entries);
         $this->assertArrayNotHasKey('discover', $entries);
         $this->assertArrayNotHasKey('inbox', $entries);
 
-        $serviceLabels = collect($entries['services']['children'])->pluck('label')->all();
-        $this->assertContains('Browse', $serviceLabels);
-        $this->assertContains('Orders', $serviceLabels);
-
-        $marketLabels = collect($entries['marketplace']['children'])->pluck('label')->all();
-        $this->assertContains('Escrow Conversations', $marketLabels);
-        $this->assertContains('My Listings', $marketLabels);
-        $this->assertNotContains('Sell Crypto', collect($entries['wallet']['children'])->pluck('label')->all());
+        $labels = $entries->pluck('label')->all();
+        foreach (['Marketplace', 'Sell Crypto', 'Escrow Conversations', 'My Listings', 'Crypto Exchange'] as $removed) {
+            $this->assertNotContains($removed, $labels);
+        }
     }
 }

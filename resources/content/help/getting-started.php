@@ -6,10 +6,10 @@ return [
     'title' => 'Getting Started with 7th Trade Hub',
     'intro' => 'Create your account, verify your email, set up your profile and wallet, and learn how to navigate the dashboard.',
     'summary' => 'This guide walks you from registration through your first transaction and where to find support.',
-    'updated_at' => '2026-07-20',
+    'updated_at' => '2026-09-27',
     'hero_image' => 'assets/images/ai-powered-device-concept copy.jpg',
     'printable' => true,
-    'related' => ['billing-wallets-payments', 'buying-selling-marketplace', 'keeping-account-secure'],
+    'related' => ['billing-wallets-payments', 'browsing-purchasing-services', 'keeping-account-secure'],
     'platform_actions' => [
         ['label' => 'Create account', 'route' => 'register'],
         ['label' => 'Open dashboard', 'route' => 'dashboard', 'auth' => true],
@@ -76,7 +76,7 @@ return [
             'nav' => 'Wallet creation',
             'title' => 'Wallet creation',
             'blocks' => [
-                ['type' => 'paragraph', 'content' => '7th Trade Hub uses a Naira (NGN) wallet for deposits, marketplace escrow, service checkout, and withdrawals. Your wallet is provisioned with your account so you can fund it from the Wallet area.'],
+                ['type' => 'paragraph', 'content' => '7th Trade Hub uses a Naira (NGN) wallet for deposits, service checkout, and withdrawals. Your wallet is provisioned with your account so you can fund it from the Wallet area.'],
                 [
                     'type' => 'screenshot',
                     'title' => 'Wallet page',
@@ -92,7 +92,7 @@ return [
             'nav' => 'Dashboard overview',
             'title' => 'Dashboard overview',
             'blocks' => [
-                ['type' => 'paragraph', 'content' => 'Your dashboard summarizes wallet balance, recent activity, orders, and shortcuts to listings, support, and KYC.'],
+                ['type' => 'paragraph', 'content' => 'Your dashboard summarizes wallet balance, recent activity, orders, and shortcuts to services, support, and KYC.'],
                 [
                     'type' => 'screenshot',
                     'title' => 'Dashboard',
@@ -108,7 +108,7 @@ return [
             'nav' => 'Understanding navigation',
             'title' => 'Understanding the navigation',
             'blocks' => [
-                ['type' => 'paragraph', 'content' => 'Marketing pages use the top nav: Home, Services, Marketplace, Exchange, and Help. Inside the dashboard, the sidebar covers Services, Marketplace (listings, sales, watchlist, escrow conversations, orders), Wallet, Exchange, Support, and Settings.'],
+                ['type' => 'paragraph', 'content' => 'Marketing pages use the top nav: Home, Services, About, and Help. Inside the dashboard, the sidebar covers Services, My Tools, My Orders, My Wallet, Support, and Settings.'],
                 [
                     'type' => 'screenshot',
                     'title' => 'Navigation menu',
@@ -124,7 +124,7 @@ return [
             'nav' => 'Your first transaction',
             'title' => 'Your first transaction',
             'blocks' => [
-                ['type' => 'paragraph', 'content' => 'Fund your wallet with a bank deposit or crypto sell, then buy a service or marketplace listing. Always confirm amounts and statuses in Transaction history.'],
+                ['type' => 'paragraph', 'content' => 'Fund your wallet through Monnify checkout or your reserved account, then buy a service from the catalog. Always confirm amounts and statuses in Transaction history.'],
                 ['type' => 'success', 'title' => 'Good first steps', 'content' => 'Start with a small bank deposit or a small service purchase so you can learn statuses (pending, approved, completed) safely.'],
             ],
         ],

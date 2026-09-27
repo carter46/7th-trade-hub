@@ -5,7 +5,7 @@
 @section('content')
 <x-layout.page
     title="Fees & Limits"
-    subtitle="Operational fee and amount limits for deposits, withdrawals, and escrow releases."
+    subtitle="Amount limits for wallet deposits and withdrawals."
     width="full"
     :breadcrumb="[
         ['Admin', route('admin')],
@@ -16,17 +16,6 @@
         <form method="POST" action="{{ route('admin.fees-limits.update') }}" class="w-full space-y-6" x-data="{ submitting: false }" @submit="submitting = true">
             @csrf
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                <div class="w-full">
-                    <x-dashboard.input
-                        name="platform_fee_percent"
-                        type="number"
-                        label="Platform fee (%)"
-                        step="0.01"
-                        :value="old('platform_fee_percent', $platformFeePercent)"
-                        hint="Deducted from escrow release to seller."
-                        required
-                    />
-                </div>
                 <div class="w-full">
                     <x-dashboard.input
                         name="deposit_min_amount"

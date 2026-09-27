@@ -19,8 +19,10 @@ class ServiceController extends Controller
     private const DIVISION_TO_GROUP = [
         'digital-services' => 'network-services',
         'web-solutions' => 'website-services',
-        'trust-protection' => 'trust-escrow',
     ];
+
+    /** Retired segments that permanently redirect to the services hub. */
+    private const RETIRED_SEGMENTS = ['trust-escrow', 'trust-protection', 'escrow_service'];
 
     public function __construct(
         private CatalogBrowseService $browse,
@@ -349,6 +351,10 @@ class ServiceController extends Controller
      */
     public function segment(string $segment): View|RedirectResponse
     {
+        if (in_array($segment, self::RETIRED_SEGMENTS, true)) {
+            return redirect()->route('services', status: 301);
+        }
+
         if (isset(self::DIVISION_TO_GROUP[$segment])) {
             $target = self::DIVISION_TO_GROUP[$segment];
             if ($target !== $segment) {
@@ -357,18 +363,6 @@ class ServiceController extends Controller
         }
 
         if ($this->browse->isGroup($segment)) {
-            if ($this->browse->usesDbHierarchy()) {
-                $category = $this->browse->findServiceCategory($segment);
-                if ($category?->isMarketplaceLink()) {
-                    return redirect()->route('marketplace', status: 301);
-                }
-            } else {
-                $routeName = config('catalog.groups.'.$segment.'.route');
-                if ($routeName) {
-                    return redirect()->route($routeName, status: 301);
-                }
-            }
-
             return $this->group(request(), $segment);
         }
 

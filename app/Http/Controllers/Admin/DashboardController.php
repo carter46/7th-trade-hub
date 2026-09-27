@@ -88,7 +88,7 @@ class DashboardController extends Controller
                 'marketing' => [],
             ];
 
-            if ($sec === 'marketplace' && $user?->can('catalog.manage')) {
+            if ($sec === 'services' && $user?->can('catalog.manage')) {
                 $bundle['productMetrics'] = app(\App\Services\Analytics\ProductAnalyticsProvider::class)
                     ->topMetrics((int) ($range['days'] ?? 30));
             }
@@ -189,7 +189,7 @@ class DashboardController extends Controller
 
         $pulse = $overview['pulse'] ?? [];
         $growth = $overview['growth'] ?? [];
-        $pendingListings = (int) ($pulse['pending_listings'] ?? 0);
+        $pendingOrders = (int) ($pulse['pending_platform_orders'] ?? 0);
 
         // Align prior series length to current for Chart.js compare line.
         if (isset($growth['revenue']['values'], $growth['revenue_prior']['values'])) {
@@ -230,8 +230,7 @@ class DashboardController extends Controller
             'recentTransactions' => $canFinance ? $this->reporting->recentTransactions(5) : [],
             'recentAudit' => $canSystem ? $this->reporting->recentAudit(5) : [],
             'health' => $canSystem ? app(\App\Services\Reporting\SystemHealthService::class)->snapshot() : ['rings' => [], 'metrics' => []],
-            'quickActions' => $this->quickActions($pendingListings),
-            'pendingListings' => $pendingListings,
+            'quickActions' => $this->quickActions($pendingOrders),
         ];
     }
 
@@ -379,14 +378,6 @@ class DashboardController extends Controller
                     : ['label' => 'Queue', 'class' => 'bg-orange-50 text-orange-700'],
                 'href' => route('admin.tickets'),
             ];
-        } elseif ($canCatalog && count($items) < 6) {
-            $items[] = [
-                'label' => 'Pending Listings',
-                'value' => number_format((int) ($pulse['pending_listings'] ?? 0)),
-                'accent' => 'amber',
-                'description' => 'Review queue',
-                'href' => route('admin.listings', ['status' => 'pending']),
-            ];
         }
 
         return array_slice($items, 0, 6);
@@ -441,7 +432,7 @@ class DashboardController extends Controller
     /**
      * @return list<array{title: string, subtitle: string|null, href: string, icon: string, accent: string}>
      */
-    private function quickActions(int $pendingListings): array
+    private function quickActions(int $pendingOrders): array
     {
         $user = auth()->user();
 
@@ -455,14 +446,14 @@ class DashboardController extends Controller
                 'permission' => 'catalog.manage',
             ],
             [
-                'title' => 'Approve Listings',
-                'subtitle' => $pendingListings > 0
-                    ? "{$pendingListings} listing(s) awaiting review."
-                    : 'Review marketplace submissions.',
-                'href' => route('admin.listings', ['status' => 'pending']),
+                'title' => 'Confirm Payments',
+                'subtitle' => $pendingOrders > 0
+                    ? "{$pendingOrders} bank transfer(s) awaiting confirmation."
+                    : 'Bank transfer proofs for platform orders.',
+                'href' => route('admin.orders', ['filter' => 'awaiting_bank']),
                 'icon' => 'inventory',
                 'accent' => 'blue',
-                'permission' => 'catalog.manage',
+                'permission' => 'finance.manage',
             ],
             [
                 'title' => 'Review KYC',
@@ -473,9 +464,9 @@ class DashboardController extends Controller
                 'permission' => 'compliance.manage',
             ],
             [
-                'title' => 'Review Escrows',
-                'subtitle' => 'Held funds awaiting release.',
-                'href' => route('admin.escrows'),
+                'title' => 'Review Withdrawals',
+                'subtitle' => 'Payout requests awaiting approval.',
+                'href' => route('admin.withdrawals'),
                 'icon' => 'lock',
                 'accent' => 'indigo',
                 'permission' => 'finance.manage',

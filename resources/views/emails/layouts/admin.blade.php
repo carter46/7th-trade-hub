@@ -2,7 +2,7 @@
     $siteName = $branding['site_name'] ?? config('app.name');
     $logoMediaId = $branding['logo_dark_media_id'] ?? $branding['logo_light_media_id'] ?? null;
     $logoUrl = email_branding_logo_url($logoMediaId ? (int) $logoMediaId : null);
-    $adminUrl = \Illuminate\Support\Facades\Route::has('admin.dashboard') ? route('admin.dashboard') : config('app.url');
+    $adminUrl = \Illuminate\Support\Facades\Route::has('admin') ? route('admin') : config('app.url');
     $preheader = \Illuminate\Support\Str::limit(trim(strip_tags((string) ($message->body ?? ''))), 140, '…');
     $headerTitle = $message->title ?? 'Admin alert';
 @endphp

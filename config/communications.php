@@ -8,8 +8,6 @@ return [
         'support' => 'emails.notification',
         'ticket' => 'emails.notification',
         'order' => 'emails.notification',
-        'escrow' => 'emails.notification',
-        'marketplace' => 'emails.notification',
         'wallet' => 'emails.notification',
         'newsletter' => 'emails.notification',
         'security' => 'emails.notification',

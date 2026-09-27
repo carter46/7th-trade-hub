@@ -16,7 +16,6 @@ enum PlatformProductType: string
     case Domain = 'domain';
     case Email = 'email';
     case SocialService = 'social_service';
-    case EscrowService = 'escrow_service';
 
     public function label(): string
     {

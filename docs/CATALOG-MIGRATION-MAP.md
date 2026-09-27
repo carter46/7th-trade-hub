@@ -11,7 +11,7 @@ Maps legacy layers → Service Categories / Services (`product_types`) / Product
 | `social-media` | Social Media | catalog |
 | `website-services` | Website Services | catalog |
 | `business-documents` | Documents & Receipts | catalog |
-| `trust-escrow` | Trust & Escrow | marketplace_link |
+| `trust-escrow` | Trust & Escrow | *(removed 2026-09-27; URL 301-redirects to `/services`)* |
 
 ## Services ← `PlatformProductType` enum (under groups)
 
@@ -28,7 +28,7 @@ Maps legacy layers → Service Categories / Services (`product_types`) / Product
 | `website_package` | Website Packages | website-services |
 | `domain` | Domains | website-services |
 | `document_template` | Document Templates | business-documents |
-| `escrow_service` | *(skip — no products; Trust & Escrow is marketplace_link)* | — |
+| `escrow_service` | *(removed 2026-09-27 with Trust & Escrow)* | — |
 
 ## Legacy `platform_categories` handling
 

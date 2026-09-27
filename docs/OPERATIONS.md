@@ -51,19 +51,27 @@ Add this cron entry (cPanel → Cron Jobs):
 | Task | Frequency | Command |
 |------|-----------|---------|
 | Prune expired OTP codes | Daily | inline |
-| Expire crypto sell quotes | Hourly | `app:expire-crypto-quotes` |
 | Prune old read notifications | Weekly (Sun 03:00) | `app:prune-notifications` |
-| Warm crypto price cache | Every 5 min | `app:warm-crypto-prices` |
+| Prune expired support attachments | Hourly | `support:prune-attachments` |
 | Prune stale cache tags | Daily | `cache:prune-stale-tags` |
+| Monnify reconciliation | Every 5 min | `monnify:reconcile` |
+| Roll up analytics KPIs | Hourly | `analytics:rollup-kpis` |
+| Prune analytics activity | Daily 04:00 | `analytics:prune-activity` |
+| Sync Google Analytics | Daily 05:00 | `analytics:sync-ga` |
+| Monitoring heartbeat | Every 5 min | `monitoring:heartbeat` |
+| Purge anonymized users | Hourly | `users:purge-anonymized` |
+| Expire user tools | Every 5 min | `site-integrations:expire-user-tools` |
+| Refresh sitemap cache | Daily 02:30 | inline |
 | Database backup (optional) | Daily 02:00 | `app:backup-database` |
+
+The crypto exchange, escrow and peer marketplace were removed on 2026-09-27. If cPanel still has separate cron jobs calling `crypto:*`, `app:expire-crypto-quotes`, `app:warm-crypto-prices` or `wallet:expire-listing-holds`, delete them — those commands no longer exist.
 
 Run manually:
 
 ```bash
-php artisan app:expire-crypto-quotes
 php artisan app:prune-notifications --days=90
-php artisan app:warm-crypto-prices
 php artisan app:backup-database
+php artisan content:scan-legacy-copy   # read-only report of DB copy still mentioning crypto/escrow/marketplace
 ```
 
 ## Backups
@@ -95,7 +103,6 @@ Backups are written to `storage/backups/` (not web-accessible).
 ## Cache
 
 - Production default: `CACHE_STORE=database` (works on shared hosting)
-- Crypto prices cached 60 seconds via `CryptoPriceService`
 - After deploy with terminal access:
 
 ```bash
@@ -107,7 +114,7 @@ php artisan view:cache
 ## SEO
 
 - `public/robots.txt` — blocks `/dashboard`, `/admin`, `/api`
-- Dynamic sitemap: `GET /sitemap.xml` (includes published listings)
+- Dynamic sitemap: `GET /sitemap.xml` (static pages, service groups/types, help articles, Website Listings)
 - Marketing pages include meta description, canonical URL, and Open Graph tags
 
 Verify after deploy:

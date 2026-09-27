@@ -26,8 +26,4 @@ return [
         'slug' => 'business-documents',
         'expected_id' => 5,
     ],
-    'trust_escrow' => [
-        'slug' => 'trust-escrow',
-        'expected_id' => 6,
-    ],
 ];

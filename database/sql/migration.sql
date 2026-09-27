@@ -124,31 +124,6 @@ CREATE TABLE IF NOT EXISTS `wallets` (
   CONSTRAINT `wallets_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `listings` (
-  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `user_id` bigint unsigned DEFAULT NULL,
-  `category_id` bigint unsigned DEFAULT NULL,
-  `marketplace_product_id` bigint unsigned DEFAULT NULL,
-  `title` varchar(255) NOT NULL,
-  `slug` varchar(255) NOT NULL,
-  `description` text,
-  `price` decimal(12,2) NOT NULL,
-  `category` varchar(80) DEFAULT NULL,
-  `icon_class` varchar(80) DEFAULT NULL,
-  `is_active` tinyint(1) NOT NULL DEFAULT 1,
-  `status` varchar(20) NOT NULL DEFAULT 'published',
-  `featured` tinyint(1) NOT NULL DEFAULT 0,
-  `deleted_at` timestamp NULL DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `listings_slug_unique` (`slug`),
-  KEY `listings_user_id_foreign` (`user_id`),
-  KEY `listings_category_id_foreign` (`category_id`),
-  KEY `listings_marketplace_product_id_foreign` (`marketplace_product_id`),
-  KEY `listings_deleted_at_index` (`deleted_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS `transactions` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `user_id` bigint unsigned NOT NULL,
@@ -156,7 +131,6 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   `wallet_funding_id` bigint unsigned DEFAULT NULL,
   `order_id` bigint unsigned DEFAULT NULL,
   `withdrawal_id` bigint unsigned DEFAULT NULL,
-  `escrow_id` bigint unsigned DEFAULT NULL,
   `reverses_transaction_id` bigint unsigned DEFAULT NULL,
   `reference` varchar(32) NOT NULL,
   `type` varchar(40) NOT NULL,
@@ -175,9 +149,8 @@ CREATE TABLE IF NOT EXISTS `transactions` (
 
 CREATE TABLE IF NOT EXISTS `orders` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `source` varchar(20) NOT NULL DEFAULT 'marketplace',
+  `source` varchar(20) NOT NULL DEFAULT 'platform',
   `user_id` bigint unsigned NOT NULL,
-  `listing_id` bigint unsigned DEFAULT NULL,
   `reference` varchar(32) NOT NULL,
   `idempotency_key` varchar(64) DEFAULT NULL,
   `amount` decimal(18,2) NOT NULL,
@@ -189,8 +162,7 @@ CREATE TABLE IF NOT EXISTS `orders` (
   UNIQUE KEY `orders_reference_unique` (`reference`),
   UNIQUE KEY `orders_idempotency_key_unique` (`idempotency_key`),
   KEY `orders_source_index` (`source`),
-  CONSTRAINT `orders_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `orders_listing_id_foreign` FOREIGN KEY (`listing_id`) REFERENCES `listings` (`id`) ON DELETE SET NULL
+  CONSTRAINT `orders_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `support_tickets` (
@@ -246,29 +218,6 @@ CREATE TABLE IF NOT EXISTS `wallet_fundings` (
   CONSTRAINT `wallet_fundings_wallet_id_foreign` FOREIGN KEY (`wallet_id`) REFERENCES `wallets` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `crypto_sell_requests` (
-  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `user_id` bigint unsigned NOT NULL,
-  `wallet_id` bigint unsigned NOT NULL,
-  `coin` varchar(10) NOT NULL,
-  `network` varchar(20) DEFAULT NULL,
-  `amount_crypto` decimal(18,8) NOT NULL,
-  `quoted_rate_ngn` decimal(18,2) NOT NULL,
-  `expected_ngn` decimal(14,2) NOT NULL,
-  `quoted_at` timestamp NOT NULL,
-  `expires_at` timestamp NOT NULL,
-  `status` varchar(20) NOT NULL DEFAULT 'pending',
-  `tx_hash` varchar(255) DEFAULT NULL,
-  `platform_address` varchar(255) DEFAULT NULL,
-  `wallet_funding_id` bigint unsigned DEFAULT NULL,
-  `admin_notes` text DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  CONSTRAINT `crypto_sell_requests_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `crypto_sell_requests_wallet_id_foreign` FOREIGN KEY (`wallet_id`) REFERENCES `wallets` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS `withdrawals` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `user_id` bigint unsigned NOT NULL,
@@ -307,62 +256,6 @@ CREATE TABLE IF NOT EXISTS `kyc_submissions` (
   CONSTRAINT `kyc_submissions_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `categories` (
-  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `parent_id` bigint unsigned DEFAULT NULL,
-  `name` varchar(255) NOT NULL,
-  `slug` varchar(255) NOT NULL,
-  `type` varchar(30) NOT NULL DEFAULT 'marketplace',
-  `is_active` tinyint(1) NOT NULL DEFAULT 1,
-  `sort_order` int unsigned NOT NULL DEFAULT 0,
-  `created_at` timestamp NULL DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `categories_slug_unique` (`slug`),
-  KEY `categories_parent_id_foreign` (`parent_id`),
-  CONSTRAINT `categories_parent_id_foreign` FOREIGN KEY (`parent_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS `listing_versions` (
-  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `listing_id` bigint unsigned NOT NULL,
-  `version_number` int unsigned NOT NULL,
-  `title` varchar(255) NOT NULL,
-  `description` text DEFAULT NULL,
-  `price` decimal(12,2) NOT NULL,
-  `images` json DEFAULT NULL,
-  `status` varchar(20) NOT NULL DEFAULT 'draft',
-  `submitted_at` timestamp NULL DEFAULT NULL,
-  `reviewed_by` bigint unsigned DEFAULT NULL,
-  `reviewed_at` timestamp NULL DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  CONSTRAINT `listing_versions_listing_id_foreign` FOREIGN KEY (`listing_id`) REFERENCES `listings` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS `escrows` (
-  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `order_id` bigint unsigned NOT NULL,
-  `buyer_wallet_id` bigint unsigned NOT NULL,
-  `seller_wallet_id` bigint unsigned DEFAULT NULL,
-  `amount` decimal(14,2) NOT NULL,
-  `status` varchar(20) NOT NULL DEFAULT 'locked',
-  `released_at` timestamp NULL DEFAULT NULL,
-  `released_by` bigint unsigned DEFAULT NULL,
-  `refunded_at` timestamp NULL DEFAULT NULL,
-  `refund_amount` decimal(14,2) DEFAULT NULL,
-  `reason` text DEFAULT NULL,
-  `admin_notes` text DEFAULT NULL,
-  `evidence_paths` json DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `escrows_order_id_unique` (`order_id`),
-  CONSTRAINT `escrows_order_id_foreign` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `escrows_buyer_wallet_id_foreign` FOREIGN KEY (`buyer_wallet_id`) REFERENCES `wallets` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS `support_ticket_replies` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `support_ticket_id` bigint unsigned NOT NULL,
@@ -394,20 +287,6 @@ CREATE TABLE IF NOT EXISTS `support_attachments` (
   CONSTRAINT `support_attachments_ticket_id_foreign` FOREIGN KEY (`support_ticket_id`) REFERENCES `support_tickets` (`id`) ON DELETE CASCADE,
   CONSTRAINT `support_attachments_reply_id_foreign` FOREIGN KEY (`support_ticket_reply_id`) REFERENCES `support_ticket_replies` (`id`) ON DELETE SET NULL,
   CONSTRAINT `support_attachments_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS `messages` (
-  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `from_user_id` bigint unsigned NOT NULL,
-  `to_user_id` bigint unsigned NOT NULL,
-  `order_id` bigint unsigned DEFAULT NULL,
-  `subject` varchar(255) NOT NULL,
-  `body` text NOT NULL,
-  `read_at` timestamp NULL DEFAULT NULL,
-  `folder` varchar(20) NOT NULL DEFAULT 'inbox',
-  `created_at` timestamp NULL DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `audit_logs` (
@@ -452,35 +331,6 @@ CREATE TABLE IF NOT EXISTS `system_settings` (
   UNIQUE KEY `system_settings_key_unique` (`key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `reviews` (
-  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `user_id` bigint unsigned NOT NULL,
-  `listing_id` bigint unsigned NOT NULL,
-  `order_id` bigint unsigned NOT NULL,
-  `rating` tinyint unsigned NOT NULL,
-  `comment` text DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `reviews_order_id_unique` (`order_id`),
-  KEY `reviews_listing_id_created_at_index` (`listing_id`,`created_at`),
-  CONSTRAINT `reviews_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `reviews_listing_id_foreign` FOREIGN KEY (`listing_id`) REFERENCES `listings` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `reviews_order_id_foreign` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS `watchlists` (
-  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `user_id` bigint unsigned NOT NULL,
-  `listing_id` bigint unsigned NOT NULL,
-  `created_at` timestamp NULL DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `watchlists_user_id_listing_id_unique` (`user_id`,`listing_id`),
-  CONSTRAINT `watchlists_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `watchlists_listing_id_foreign` FOREIGN KEY (`listing_id`) REFERENCES `listings` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS `user_notifications` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `user_id` bigint unsigned NOT NULL,
@@ -496,16 +346,7 @@ CREATE TABLE IF NOT EXISTS `user_notifications` (
   CONSTRAINT `user_notifications_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `categories` (`name`, `slug`, `type`, `is_active`, `created_at`, `updated_at`) VALUES
-  ('Web Services', 'web-services', 'marketplace', 1, NOW(), NOW()),
-  ('Digital Products', 'digital-products', 'marketplace', 1, NOW(), NOW()),
-  ('Templates', 'templates', 'marketplace', 1, NOW(), NOW()),
-  ('Code', 'code', 'marketplace', 1, NOW(), NOW()),
-  ('Documents', 'documents', 'marketplace', 1, NOW(), NOW())
-ON DUPLICATE KEY UPDATE `name` = `name`;
-
 INSERT INTO `system_settings` (`key`, `value`, `created_at`, `updated_at`) VALUES
-  ('platform_fee_percent', '2.5', NOW(), NOW()),
   ('withdrawal_min_amount', '100', NOW(), NOW()),
   ('withdrawal_max_amount', '1000000', NOW(), NOW()),
   ('deposit_min_amount', '100', NOW(), NOW())
@@ -677,23 +518,6 @@ CREATE TABLE IF NOT EXISTS `platform_product_variants` (
   CONSTRAINT `platform_product_variants_platform_product_id_foreign` FOREIGN KEY (`platform_product_id`) REFERENCES `platform_products` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `exchange_rates` (
-  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `asset` varchar(20) NOT NULL,
-  `buy_rate_ngn` decimal(18,2) NOT NULL,
-  `sell_rate_ngn` decimal(18,2) NOT NULL,
-  `minimum_amount` decimal(18,8) DEFAULT NULL,
-  `maximum_amount` decimal(18,8) DEFAULT NULL,
-  `processing_time` varchar(255) DEFAULT NULL,
-  `is_featured` tinyint(1) NOT NULL DEFAULT 0,
-  `is_active` tinyint(1) NOT NULL DEFAULT 1,
-  `sort_order` int unsigned NOT NULL DEFAULT 0,
-  `created_at` timestamp NULL DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `exchange_rates_asset_unique` (`asset`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS `order_items` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `order_id` bigint unsigned NOT NULL,
@@ -761,9 +585,7 @@ CREATE TABLE IF NOT EXISTS `catalog_page_contents` (
 
 -- ---------- Phase 1.1 upgrade (existing DBs that already imported older schema) ----------
 -- Safe to run on live DBs; ignore duplicate column/index errors if already applied.
--- ALTER TABLE `categories` ADD COLUMN `parent_id` bigint unsigned DEFAULT NULL AFTER `id`;
--- ALTER TABLE `categories` ADD COLUMN `sort_order` int unsigned NOT NULL DEFAULT 0 AFTER `is_active`;
--- ALTER TABLE `orders` ADD COLUMN `source` varchar(20) NOT NULL DEFAULT 'marketplace' AFTER `id`;
+-- ALTER TABLE `orders` ADD COLUMN `source` varchar(20) NOT NULL DEFAULT 'platform' AFTER `id`;
 -- ALTER TABLE `orders` ADD COLUMN `total_amount` decimal(18,2) DEFAULT NULL AFTER `amount`;
 -- ALTER TABLE `orders` ADD COLUMN `idempotency_key` varchar(64) DEFAULT NULL AFTER `reference`;
 -- ALTER TABLE `orders` MODIFY `amount` decimal(18,2) NOT NULL;
@@ -794,65 +616,6 @@ CREATE TABLE IF NOT EXISTS `catalog_page_contents` (
 -- ALTER TABLE `users` ADD COLUMN `suspended_by` bigint unsigned NULL DEFAULT NULL AFTER `suspended_at`;
 -- ALTER TABLE `users` ADD COLUMN `anonymized_at` timestamp NULL DEFAULT NULL AFTER `suspended_by`;
 -- ALTER TABLE `users` ADD CONSTRAINT `users_suspended_by_foreign` FOREIGN KEY (`suspended_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
-
--- ---------- Marketplace products + listing taxonomy (2026-07-23) ----------
--- Prefer: php artisan migrate --force
--- Or apply manually on Hostinger/phpMyAdmin (ignore duplicate errors):
-
-CREATE TABLE IF NOT EXISTS `marketplace_products` (
-  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `category_id` bigint unsigned NOT NULL,
-  `name` varchar(255) NOT NULL,
-  `slug` varchar(255) NOT NULL,
-  `sort_order` int unsigned NOT NULL DEFAULT 0,
-  `is_active` tinyint(1) NOT NULL DEFAULT 1,
-  `short_description` varchar(500) DEFAULT NULL,
-  `hero_title` varchar(255) DEFAULT NULL,
-  `hero_subtitle` varchar(500) DEFAULT NULL,
-  `benefits` json DEFAULT NULL,
-  `faq` json DEFAULT NULL,
-  `banner_image` varchar(255) DEFAULT NULL,
-  `card_image` varchar(255) DEFAULT NULL,
-  `banner_media_id` bigint unsigned DEFAULT NULL,
-  `card_media_id` bigint unsigned DEFAULT NULL,
-  `icon` varchar(80) DEFAULT NULL,
-  `seo_title` varchar(255) DEFAULT NULL,
-  `seo_description` text,
-  `og_title` varchar(255) DEFAULT NULL,
-  `og_description` text,
-  `og_image` varchar(255) DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `marketplace_products_slug_unique` (`slug`),
-  KEY `marketplace_products_category_id_is_active_index` (`category_id`,`is_active`),
-  KEY `marketplace_products_banner_media_id_index` (`banner_media_id`),
-  KEY `marketplace_products_card_media_id_index` (`card_media_id`),
-  CONSTRAINT `marketplace_products_category_id_foreign` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Existing DBs created before SoftDeletes / marketplace product FK (run once if column missing):
--- ALTER TABLE `listings` ADD COLUMN `marketplace_product_id` bigint unsigned DEFAULT NULL AFTER `category_id`;
--- ALTER TABLE `listings` ADD COLUMN `deleted_at` timestamp NULL DEFAULT NULL;
--- ALTER TABLE `listings` ADD KEY `listings_marketplace_product_id_foreign` (`marketplace_product_id`);
--- ALTER TABLE `listings` ADD CONSTRAINT `listings_marketplace_product_id_foreign` FOREIGN KEY (`marketplace_product_id`) REFERENCES `marketplace_products` (`id`) ON DELETE SET NULL;
--- ALTER TABLE `listings` ADD KEY `listings_browse_product_index` (`status`,`is_active`,`marketplace_product_id`);
--- ALTER TABLE `listings` ADD KEY `listings_browse_created_index` (`status`,`is_active`,`created_at`);
--- ALTER TABLE `categories` ADD COLUMN `short_description` varchar(500) DEFAULT NULL;
--- ALTER TABLE `categories` ADD COLUMN `hero_title` varchar(255) DEFAULT NULL;
--- ALTER TABLE `categories` ADD COLUMN `hero_subtitle` varchar(500) DEFAULT NULL;
--- ALTER TABLE `categories` ADD COLUMN `benefits` json DEFAULT NULL;
--- ALTER TABLE `categories` ADD COLUMN `faq` json DEFAULT NULL;
--- ALTER TABLE `categories` ADD COLUMN `banner_image` varchar(255) DEFAULT NULL;
--- ALTER TABLE `categories` ADD COLUMN `card_image` varchar(255) DEFAULT NULL;
--- ALTER TABLE `categories` ADD COLUMN `banner_media_id` bigint unsigned DEFAULT NULL;
--- ALTER TABLE `categories` ADD COLUMN `card_media_id` bigint unsigned DEFAULT NULL;
--- ALTER TABLE `categories` ADD COLUMN `icon` varchar(80) DEFAULT NULL;
--- ALTER TABLE `categories` ADD COLUMN `seo_title` varchar(255) DEFAULT NULL;
--- ALTER TABLE `categories` ADD COLUMN `seo_description` text;
--- ALTER TABLE `categories` ADD COLUMN `og_title` varchar(255) DEFAULT NULL;
--- ALTER TABLE `categories` ADD COLUMN `og_description` text;
--- ALTER TABLE `categories` ADD COLUMN `og_image` varchar(255) DEFAULT NULL;
 
 -- ---------- Analytics platform + monitoring (2026-07-23) ----------
 -- LEGACY: `analytics_providers` is superseded by `integration_providers`.
@@ -1076,6 +839,23 @@ WHERE NOT EXISTS (SELECT 1 FROM `permissions` WHERE `name` = 'fees.manage' AND `
 -- ALTER TABLE `orders` ADD COLUMN `payment_confirmed_at` timestamp NULL DEFAULT NULL AFTER `payment_submitted_at`;
 -- ALTER TABLE `orders` ADD COLUMN `payment_confirmed_by` bigint unsigned DEFAULT NULL AFTER `payment_confirmed_at`;
 -- ALTER TABLE `orders` ADD COLUMN `payment_metadata` json DEFAULT NULL AFTER `payment_confirmed_by`;
+
+-- ---------- Crypto exchange, escrow and peer marketplace removed (2026-09-27) ----------
+-- Fresh imports of this file no longer create those tables.
+-- Existing DBs: take a verified backup, then run `php artisan migrate --force`
+-- (2026_09_27_000001_remove_crypto_exchange + 2026_09_27_000002_remove_escrow_and_marketplace).
+-- Those migrations refuse to run while open or uncredited crypto sells, unhandled incoming
+-- crypto deposits, unsettled escrows, active escrow/listing wallet holds, open marketplace
+-- orders exist. They only drop tables and never change or delete any row in the remaining tables;
+-- orders.listing_id and transactions.escrow_id keep their values (only the FKs are dropped).
+-- Do not hand-run the statements below unless the migrations cannot be used; they skip
+-- every guard. Drop each FOREIGN KEY only if it exists on your database:
+--   ALTER TABLE `orders` DROP FOREIGN KEY `orders_listing_id_foreign`;
+--   ALTER TABLE `transactions` DROP FOREIGN KEY `transactions_escrow_id_foreign`;
+--   DROP TABLE IF EXISTS `wallet_balance_history`, `incoming_crypto_transactions`, `crypto_sell_requests`,
+--     `crypto_deposit_wallets`, `exchange_rate_history`, `otc_pricing_settings`, `exchange_rates`;
+--   DROP TABLE IF EXISTS `reviews`, `watchlists`, `messages`, `escrows`, `listing_versions`, `listings`,
+--     `marketplace_products`, `categories`;
 
 COMMIT;
 

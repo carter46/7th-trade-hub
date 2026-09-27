@@ -1,7 +1,5 @@
 <?php
 
-use App\Models\Listing;
-use App\Models\MarketplaceProduct;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -22,12 +20,12 @@ return new class extends Migration
             return;
         }
 
-        MarketplaceProduct::query()
+        DB::table('marketplace_products')
             ->select(['id', 'category_id'])
             ->orderBy('id')
             ->chunkById(200, function ($products) {
                 foreach ($products as $product) {
-                    Listing::query()
+                    DB::table('listings')
                         ->where('marketplace_product_id', $product->id)
                         ->where(function ($q) use ($product) {
                             $q->whereNull('category_id')

@@ -49,15 +49,6 @@ class TransactionFactory extends Factory
         ]);
     }
 
-    public function escrowLock(): static
-    {
-        return $this->state(fn () => [
-            'type' => TransactionType::EscrowLock->value,
-            'label' => 'Escrow lock',
-            'amount' => -abs(fake()->randomFloat(2, 1000, 50000)),
-        ]);
-    }
-
     public function completed(): static
     {
         return $this->state(fn () => ['status' => 'completed']);

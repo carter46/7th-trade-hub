@@ -15,23 +15,19 @@ CI runs on every push/PR via `.github/workflows/tests.yml` (Composer, npm build,
 
 | Area | Test file(s) |
 |------|----------------|
-| Full money loop (HTTP) | `FullJourneyTest` |
 | Funding idempotency | `FundingIdempotencyTest` |
 | Withdrawal reject guard | `WithdrawalRejectTest` |
-| Checkout atomicity | `CheckoutAtomicityTest` |
-| KYC → wallet gate | `KycWalletGateTest` |
-| Bank deposit | `DepositFlowTest` |
-| Crypto quote expiry | `CryptoSellQuoteExpiryTest`, `ExpireCryptoQuotesCommandTest` |
-| Crypto sell admin | `CryptoSellApprovalTest`, `CryptoSellRejectTest` |
-| Checkout + escrow release | `CheckoutEscrowFlowTest` |
-| Escrow refund | `EscrowRefundTest` |
-| Withdrawal | `WithdrawalFlowTest` |
+| KYC → wallet gate | `Wallet\KycWalletGateTest` |
+| Bank deposit | `Wallet\DepositFlowTest` |
+| Withdrawal | `Wallet\WithdrawalFlowTest` |
 | Deposit reverse | `FundingApprovalTest` |
-| Listing review flow | `ListingReviewFlowTest`, `ListingVersionEditTest` |
-| Reviews, watchlist, messages | `ReviewFlowTest`, `WatchlistTest`, `MessageFlowTest` |
+| Platform checkout (wallet / gateway / manual bank) | `MarketplaceRemovalTest`, `CatalogGatewayCheckoutGatingTest`, `ManualBankTransferOrderTest` |
+| Removed features stay removed | `CryptoRemovalTest`, `MarketplaceRemovalTest`, `LegacyRecordsGuardTest` |
 | Authorization | `AuthorizationPolicyTest`, `AdminAccessTest` |
 | Operations | `SitemapTest`, `HealthCheckTest`, `PruneNotificationsCommandTest` |
 | Auth | `RegistrationTest`, `EmailVerificationTest`, etc. |
+
+The crypto exchange, escrow and peer marketplace were removed on 2026-09-27. `CryptoRemovalTest` and `MarketplaceRemovalTest` check the 301 redirects, that no routes or menu entries remain, and that public pages carry no crypto/escrow copy. `LegacyRecordsGuardTest` makes sure nothing creates the legacy transaction types or `method = crypto` fundings, and that historical rows still render with "Legacy" labels.
 
 ## Manual QA (pre-launch)
 
@@ -41,13 +37,13 @@ Run in **staging** with real SMTP before production.
 
 - [ ] Chrome — register, OTP, dashboard, buy flow
 - [ ] Firefox — wallet, deposit form, admin approvals
-- [ ] Safari / Edge — marketplace browse, listing detail
+- [ ] Safari / Edge — services browse, product detail, Website Listings
 
 ### Mobile
 
-- [ ] Responsive layout on dashboard sidebar and marketplace
+- [ ] Responsive layout on dashboard sidebar and services pages
 - [ ] PWA install prompt (if icons present)
-- [ ] Touch targets on Buy / Confirm delivery buttons
+- [ ] Touch targets on Buy / Checkout buttons
 
 ### Core journey (manual)
 
@@ -55,33 +51,28 @@ Run in **staging** with real SMTP before production.
 2. Submit KYC → admin approves
 3. Create wallet
 4. Bank deposit → admin approves → balance updates
-5. Seller publishes listing → appears on `/marketplace`
-6. Buyer purchases → escrow locked
-7. Buyer confirms delivery → seller credited (minus fee)
-8. Buyer leaves review
-9. Seller requests withdrawal → admin approves
+5. Buy a platform service from `/dashboard/services` with the wallet → order appears in My Orders
+6. Admin fulfils the order → user sees it in My Tools / My Orders
+7. User requests withdrawal → admin approves
 
 ### Admin
 
-- [ ] Reject listing with notes → seller can edit and resubmit
-- [ ] Reject crypto sell → user sees rejected status
+- [ ] Confirm / reject a manual bank transfer order
 - [ ] Reverse approved deposit → balance debited
-- [ ] Refund escrow → buyer balance restored
 - [ ] Audit logs show all actions
 
 ### Edge cases
 
-- [ ] Buy own listing → 403
 - [ ] Purchase without balance → redirect to deposit
-- [ ] Expired crypto quote → cannot approve
+- [ ] Old `/marketplace`, `/exchange`, `/dashboard/orders` URLs → 301 redirect
 - [ ] Suspended user → logged out on next request
 
 ## Load testing (optional)
 
 For launch traffic expectations, use a tool like [k6](https://k6.io/) or Apache Bench against:
 
-- `GET /` (homepage + crypto ticker)
-- `GET /marketplace`
+- `GET /` (homepage)
+- `GET /services`
 - `GET /up` (health)
 
 Example:

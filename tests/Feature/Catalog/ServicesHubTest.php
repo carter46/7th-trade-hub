@@ -65,7 +65,7 @@ class ServicesHubTest extends TestCase
             ->assertSee('assets/images/Social_Media.jpg', false)
             ->assertSee('assets/images/Website_Services.jpg', false)
             ->assertSee('assets/images/Business_Documents.jpg', false)
-            ->assertSee('assets/images/flat-lay-real-estate-concept.jpg', false)
+            ->assertDontSee('Trust & Escrow')
             ->assertDontSee('Residential VPN Demo');
     }
 
@@ -137,12 +137,13 @@ class ServicesHubTest extends TestCase
             ->assertRedirect('/services/network-services');
     }
 
-    public function test_trust_and_escrow_routes_to_marketplace(): void
+    public function test_retired_trust_and_escrow_segment_redirects_to_services(): void
     {
         Artisan::call('catalog:backfill-hierarchy');
 
         $this->get('/services/trust-escrow')
-            ->assertRedirect(route('marketplace'));
+            ->assertStatus(301)
+            ->assertRedirect(route('services'));
     }
 
     public function test_wrong_type_in_product_url_redirects_to_canonical(): void

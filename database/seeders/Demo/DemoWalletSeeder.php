@@ -3,7 +3,6 @@
 namespace Database\Seeders\Demo;
 
 use App\Enums\TransactionType;
-use App\Models\CryptoSellRequest;
 use App\Models\Transaction;
 use App\Models\Wallet;
 use App\Models\WalletFunding;
@@ -28,7 +27,7 @@ class DemoWalletSeeder extends Seeder
             $wallet = Wallet::query()->where('user_id', $user->id)->firstOrFail();
             $months = max(1, (int) ($user->created_at?->diffInMonths(now()) ?: 3));
 
-            // Large base deposit so later escrow locks stay solvent.
+            // Large base deposit so later platform purchases stay solvent.
             $baseAt = $timeline->monthsAgo(max(0, $months - 1), 8, 11);
             $baseAmount = in_array($key, ['alice', 'sarah', 'filler1', 'filler2', 'filler3'], true) ? 400000 : 250000;
             $baseFunding = WalletFunding::query()->create([
@@ -60,11 +59,11 @@ class DemoWalletSeeder extends Seeder
             $ctx->stamp($baseTxn, $baseAt->copy()->addHours(2));
             $txCount++;
 
-            // Smaller follow-up fundings for timeline charts
-            $fundings = min(3, $months);
+            // Roughly monthly top-ups for timeline charts
+            $fundings = min(6, $months);
             for ($i = 0; $i < $fundings; $i++) {
                 $at = $timeline->monthsAgo(max(0, $months - $i - 2), 10 + $i, 13);
-                $amount = [25000, 50000, 75000, 15000][$i % 4];
+                $amount = [25000, 50000, 75000, 15000, 30000, 20000][$i % 6];
                 $ref = $ctx->ref('DEP');
 
                 $funding = WalletFunding::query()->create([
@@ -162,23 +161,6 @@ class DemoWalletSeeder extends Seeder
                 $ctx->stamp($pendingWd, $at);
             }
 
-            // Alice: pending crypto quote (admin can approve live).
-            if ($key === 'alice') {
-                $at = $timeline->daysAgo(1, 16);
-                $crypto = CryptoSellRequest::query()->create([
-                    'user_id' => $user->id,
-                    'wallet_id' => $wallet->id,
-                    'coin' => 'USDT',
-                    'network' => 'tron',
-                    'amount_crypto' => 50,
-                    'quoted_rate_ngn' => 1600,
-                    'expected_ngn' => 80000,
-                    'status' => 'pending',
-                    'expires_at' => now()->addHours(6),
-                    'quoted_at' => $at,
-                ]);
-                $ctx->track($crypto);
-            }
         }
 
         // Reversed funding with matching ledger (funding + reversal).
@@ -235,28 +217,7 @@ class DemoWalletSeeder extends Seeder
         $reversed->forceFill(['reversal_transaction_id' => $reversal->id])->save();
         $txCount++;
 
-        // Pad toward ~300 completed txs with small admin adjustments.
-        $padMembers = $ctx->members()->filter(fn ($u, $k) => $k !== 'emily')->values();
-        for ($i = 0; $i < 40; $i++) {
-            $user = $padMembers[$i % $padMembers->count()];
-            $wallet = Wallet::query()->where('user_id', $user->id)->firstOrFail();
-            $at = $timeline->daysAgo(10 + ($i % 50), 9);
-            $adj = Transaction::query()->create([
-                'user_id' => $user->id,
-                'wallet_id' => $wallet->id,
-                'reference' => $ctx->ref('TXN'),
-                'type' => TransactionType::AdminAdjustment->value,
-                'label' => 'Admin adjustment',
-                'description' => 'Demo goodwill credit',
-                'amount' => 500,
-                'currency' => 'NGN',
-                'status' => 'completed',
-            ]);
-            $ctx->stamp($adj, $at);
-            $txCount++;
-        }
-
         $ctx->transactionCount += $txCount;
-        $ctx->note('✓ Wallet fundings / withdrawals / crypto sells seeded');
+        $ctx->note('✓ Wallet fundings / withdrawals seeded');
     }
 }

@@ -15,17 +15,10 @@ class DemoAuditSeeder extends Seeder
         $actions = [
             [
                 'admin' => 'moderator',
-                'action' => 'listing.approved',
+                'action' => 'catalog.product.updated',
                 'module' => 'catalog',
-                'reason' => 'Listing meets marketplace quality guidelines.',
+                'reason' => 'Refreshed platform product copy and pricing.',
                 'months' => 4,
-            ],
-            [
-                'admin' => 'moderator',
-                'action' => 'listing.suspended',
-                'module' => 'catalog',
-                'reason' => 'Fraudulent claims detected in description.',
-                'months' => 2,
             ],
             [
                 'admin' => 'compliance',
@@ -50,9 +43,9 @@ class DemoAuditSeeder extends Seeder
             ],
             [
                 'admin' => 'finance',
-                'action' => 'escrow.released',
+                'action' => 'withdrawal.approved',
                 'module' => 'finance',
-                'reason' => 'Buyer confirmed delivery.',
+                'reason' => 'Payout details verified.',
                 'months' => 3,
             ],
             [
@@ -73,7 +66,7 @@ class DemoAuditSeeder extends Seeder
                 'admin' => 'super',
                 'action' => 'settings.updated',
                 'module' => 'system',
-                'reason' => 'Adjusted platform fee percent for demo realism.',
+                'reason' => 'Adjusted withdrawal limits for demo realism.',
                 'months' => 0,
             ],
         ];
@@ -106,8 +99,8 @@ class DemoAuditSeeder extends Seeder
 
         // Ensure a settings value exists for the settings audit story
         SystemSetting::query()->updateOrCreate(
-            ['key' => 'platform_fee_percent'],
-            ['value' => '2.5']
+            ['key' => 'withdrawal_max_amount'],
+            ['value' => '1000000']
         );
 
         $ctx->note('✓ Admin audit narrative created');

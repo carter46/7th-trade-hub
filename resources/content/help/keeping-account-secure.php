@@ -4,12 +4,12 @@ return [
     'slug' => 'keeping-account-secure',
     'category_key' => 'security',
     'title' => 'Keeping Your Account Secure',
-    'intro' => 'Verify your email, strengthen passwords, complete KYC when needed, and use escrow-aware buying practices.',
-    'summary' => 'Security on 7th Trade Hub combines account hygiene, KYC, escrow protection, and scam awareness.',
-    'updated_at' => '2026-07-20',
+    'intro' => 'Verify your email, strengthen passwords, complete KYC when needed, and pay safely through platform checkout.',
+    'summary' => 'Security on 7th Trade Hub combines account hygiene, KYC, safe payments, and scam awareness.',
+    'updated_at' => '2026-09-27',
     'hero_image' => 'assets/images/Network Services_1.jpg',
     'printable' => true,
-    'related' => ['getting-started', 'buying-selling-marketplace', 'billing-wallets-payments'],
+    'related' => ['getting-started', 'browsing-purchasing-services', 'billing-wallets-payments'],
     'platform_actions' => [
         ['label' => 'KYC', 'route' => 'dashboard.account.kyc', 'auth' => true],
         ['label' => 'Contact us', 'route' => 'contact'],
@@ -69,30 +69,6 @@ return [
             ],
         ],
         [
-            'id' => 'secure-purchases',
-            'nav' => 'Secure marketplace purchases',
-            'title' => 'Secure marketplace purchases',
-            'blocks' => [
-                ['type' => 'paragraph', 'content' => 'Prefer in-platform checkout with escrow. Avoid off-platform payment requests from sellers or buyers.'],
-            ],
-        ],
-        [
-            'id' => 'escrow',
-            'nav' => 'Escrow protection',
-            'title' => 'Escrow protection',
-            'blocks' => [
-                ['type' => 'paragraph', 'content' => 'Eligible marketplace orders hold buyer funds until delivery is confirmed, reducing risk of non-delivery or unpaid work.'],
-                [
-                    'type' => 'screenshot',
-                    'title' => 'Escrow checkout',
-                    'caption' => 'Checkout screen showing escrow-protected payment.',
-                    'size' => 'large',
-                    'alignment' => 'center',
-                    'alt' => 'Escrow checkout screenshot',
-                ],
-            ],
-        ],
-        [
             'id' => 'scams',
             'nav' => 'Recognizing scams',
             'title' => 'Recognizing scams',
@@ -111,10 +87,10 @@ return [
             'title' => 'Safe buying practices',
             'blocks' => [
                 ['type' => 'checklist', 'items' => [
-                    'Read listing details and seller reputation',
+                    'Read the service details and plan limits before buying',
                     'Pay only through platform checkout',
-                    'Confirm delivery before releasing escrow',
-                    'Leave an honest review after completion',
+                    'Check the order status in My Orders after payment',
+                    'Contact support from your dashboard if a delivery looks wrong',
                 ]],
             ],
         ],
@@ -139,7 +115,7 @@ return [
             'nav' => 'Best practices',
             'title' => 'Security best practices',
             'blocks' => [
-                ['type' => 'success', 'title' => 'Stay protected', 'content' => 'Verify email, use a strong unique password, complete KYC when required, keep delivery credentials private, and never bypass escrow.'],
+                ['type' => 'success', 'title' => 'Stay protected', 'content' => 'Verify email, use a strong unique password, complete KYC when required, keep delivery credentials private, and never pay outside platform checkout.'],
             ],
         ],
     ],

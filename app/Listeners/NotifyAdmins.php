@@ -2,10 +2,6 @@
 
 namespace App\Listeners;
 
-use App\Events\EscrowDisputed;
-use App\Events\ListingApproved;
-use App\Events\ListingRejected;
-use App\Events\ListingSubmitted;
 use App\Events\OrderCompleted;
 use App\Events\OrderManualBankTransferPaymentFailed;
 use App\Events\OrderManualBankTransferSubmitted;
@@ -41,15 +37,6 @@ class NotifyAdmins
     public function handle(object $event): void
     {
         $payload = match ($event::class) {
-            EscrowDisputed::class => [
-                'type' => 'escrow.disputed',
-                'title' => 'Escrow dispute opened',
-                'body' => 'Order #'.$event->orderId.' has a new dispute.',
-                'actionUrl' => Route::has('admin.escrows') ? route('admin.escrows') : null,
-                'meta' => ['order_id' => $event->orderId, 'event' => $event::class],
-                'permission' => 'finance.manage',
-                'dedupeKey' => 'escrow.disputed.'.$event->orderId.'.'.now()->toDateString(),
-            ],
             TicketOpened::class => [
                 'type' => 'ticket.opened',
                 'title' => 'New support ticket',
@@ -67,39 +54,6 @@ class NotifyAdmins
                 'meta' => ['ticket_id' => $event->ticketId, 'replier_id' => $event->replierId, 'event' => $event::class],
                 'permission' => 'support.manage',
                 'dedupeKey' => 'ticket.replied.'.$event->ticketId.'.'.$event->replierId,
-            ],
-            ListingRejected::class => [
-                'type' => 'listing.rejected',
-                'title' => 'Listing rejected',
-                'body' => 'Listing #'.$event->listingId.' was rejected during review.',
-                'actionUrl' => Route::has('admin.listings') ? route('admin.listings') : null,
-                'meta' => ['listing_id' => $event->listingId, 'event' => $event::class],
-                'permission' => 'catalog.manage',
-                'dedupeKey' => null,
-            ],
-            ListingApproved::class => [
-                'type' => 'listing.approved',
-                'title' => 'Listing approved',
-                'body' => 'Listing #'.$event->listingId.' was approved.',
-                'actionUrl' => Route::has('admin.listings') ? route('admin.listings') : null,
-                'meta' => ['listing_id' => $event->listingId, 'event' => $event::class],
-                'permission' => 'catalog.manage',
-                'dedupeKey' => null,
-            ],
-            ListingSubmitted::class => [
-                'type' => 'listing.submitted',
-                'title' => 'Listing submitted for review',
-                'body' => 'Listing #'.$event->listingId.' was submitted and needs review.',
-                'actionUrl' => Route::has('admin.listings')
-                    ? route('admin.listings', ['status' => 'pending'])
-                    : null,
-                'meta' => [
-                    'listing_id' => $event->listingId,
-                    'user_id' => $event->userId,
-                    'event' => $event::class,
-                ],
-                'permission' => 'catalog.manage',
-                'dedupeKey' => 'listing.submitted.'.$event->listingId.'.'.now()->format('YmdHi'),
             ],
             UserRegistered::class => $this->userRegisteredPayload($event),
             UserVerified::class => $this->userVerifiedPayload($event),
@@ -122,7 +76,6 @@ class NotifyAdmins
         $channels = match (true) {
             str_starts_with($payload['type'], 'ticket.') => AdminNotificationChannels::SUPPORT,
             str_starts_with($payload['type'], 'user.'),
-            str_starts_with($payload['type'], 'listing.'),
             str_starts_with($payload['type'], 'domain.') => AdminNotificationChannels::GENERAL,
             str_starts_with($payload['type'], 'order.manual_bank_transfer_') => AdminNotificationChannels::FINANCE,
             str_starts_with($payload['type'], 'order.') => AdminNotificationChannels::SALES,

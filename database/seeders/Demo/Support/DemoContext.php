@@ -21,11 +21,7 @@ class DemoContext
     /** @var list<string> */
     public array $checklist = [];
 
-    public int $listingCount = 0;
-
     public int $orderCount = 0;
-
-    public int $escrowCount = 0;
 
     public int $ticketCount = 0;
 

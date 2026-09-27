@@ -28,8 +28,6 @@ class IntegrationProvider extends Model
 
     public const MONNIFY = 'monnify';
 
-    public const BLOCKCHAIN_MONITORING = 'blockchain_monitoring';
-
     protected $fillable = [
         'provider',
         'enabled',
