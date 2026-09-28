@@ -206,7 +206,13 @@ class MarketplaceRemovalTest extends TestCase
         ]);
 
         $this->get(route('website-listings'))->assertOk()->assertSee('Corporate Starter Site');
-        $this->get(route('website-listings.show', $product->slug))->assertOk()->assertSee('Corporate Starter Site');
+        $canonical = route('services.nested.show', [
+            'category' => 'website-services',
+            'service' => 'website_package',
+            'productSlug' => $product->slug,
+        ]);
+        $this->get(route('website-listings.show', $product->slug))->assertRedirect($canonical);
+        $this->get($canonical)->assertOk()->assertSee('Corporate Starter Site');
 
         Cache::forget('sitemap.xml.v2');
         $this->get(route('sitemap'))->assertOk()->assertSee(route('website-listings'), false);

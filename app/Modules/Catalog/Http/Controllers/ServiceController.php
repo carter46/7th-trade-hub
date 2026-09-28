@@ -320,7 +320,7 @@ class ServiceController extends Controller
                 return redirect()->route('dashboard.services.product', $product->slug);
             }
 
-            return redirect()->route('website-listings.show', $product->slug);
+            $product->loadMissing('siteIntegration');
         }
 
         $groupSlug = $product->productType?->serviceCategory?->slug
@@ -405,8 +405,6 @@ class ServiceController extends Controller
             if (auth()->check()) {
                 return redirect()->route('dashboard.services.product', $product->slug);
             }
-
-            return redirect()->route('website-listings.show', $product->slug, 301);
         }
 
         return redirect()->to($this->browse->productUrl($product), 301);

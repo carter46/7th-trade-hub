@@ -6,6 +6,7 @@ use App\Enums\PlatformProductType;
 use App\Http\Controllers\Controller;
 use App\Models\PlatformCategory;
 use App\Models\PlatformProduct;
+use App\Modules\Catalog\Services\CatalogBrowseService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -61,7 +62,7 @@ class WebsiteListingController extends Controller
         ]);
     }
 
-    public function show(string $slug): View|RedirectResponse
+    public function show(string $slug, CatalogBrowseService $browse): RedirectResponse
     {
         if (auth()->check()) {
             return redirect()->route('dashboard.services.product', $slug);
@@ -71,12 +72,9 @@ class WebsiteListingController extends Controller
             ->visibleToPublic()
             ->ofType(PlatformProductType::WebsitePackage)
             ->where('slug', $slug)
-            ->with(['productType', 'images', 'activeVariants', 'heroMedia.variants', 'siteIntegration'])
+            ->with(['productType.serviceCategory'])
             ->firstOrFail();
 
-        return view('pages.website-listings-show', [
-            'product' => $product,
-            'isFavorited' => false,
-        ]);
+        return redirect()->to($browse->productUrl($product), 301);
     }
 }

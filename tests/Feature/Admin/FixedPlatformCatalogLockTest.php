@@ -660,6 +660,7 @@ class FixedPlatformCatalogLockTest extends TestCase
         $response = $this->get(route('services'));
         $response->assertOk();
         $html = $response->getContent();
+        $html = substr($html, (int) strpos($html, '<main'));
         $posNetwork = strpos($html, 'Network Services');
         $posWebsite = strpos($html, 'Website Services');
         $this->assertNotFalse($posNetwork);
