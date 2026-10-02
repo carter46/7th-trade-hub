@@ -267,6 +267,126 @@ class DomainConnectionService
         return $connection->fresh();
     }
 
+    /**
+     * Admin replaces the FQDN on a connection (pending, verified or failed).
+     * The new domain starts pending until its nameservers are checked or an admin approves it.
+     */
+    public function adminReplace(DomainConnection $connection, string $newFqdn): DomainConnection
+    {
+        try {
+            $normalized = DomainFqdn::normalizeFqdn($newFqdn, apexOnly: false);
+        } catch (InvalidArgumentException $e) {
+            throw new InvalidArgumentException('New domain is invalid: '.$e->getMessage(), 0, $e);
+        }
+
+        try {
+            return DB::transaction(function () use ($connection, $normalized) {
+                /** @var DomainConnection $locked */
+                $locked = DomainConnection::query()->whereKey($connection->id)->lockForUpdate()->firstOrFail();
+                $previous = strtolower((string) $locked->fqdn);
+
+                if (strcasecmp($normalized, $previous) === 0) {
+                    throw new InvalidArgumentException('Enter a different domain name.');
+                }
+
+                DomainConnection::query()
+                    ->activeClaim()
+                    ->where('fqdn', $normalized)
+                    ->lockForUpdate()
+                    ->get();
+
+                if ($this->isActivelyClaimed($normalized, $locked->order_item_id ? (int) $locked->order_item_id : null)) {
+                    throw new InvalidArgumentException('That domain is already connected or registered on 7th Trade Hub. Choose a different name.');
+                }
+
+                DomainConnection::query()
+                    ->where('id', '!=', $locked->id)
+                    ->whereRaw('LOWER(claim_key) = ?', [$normalized])
+                    ->whereNotIn('verification_status', [DomainConnection::STATUS_PENDING, DomainConnection::STATUS_VERIFIED])
+                    ->update(['claim_key' => null]);
+
+                $required = $this->dns->platformNameservers();
+
+                $locked->update([
+                    'fqdn' => $normalized,
+                    'claim_key' => $normalized,
+                    'nameservers_at_scan' => [],
+                    'nameservers_last_seen' => [],
+                    'required_nameservers' => count($required) >= 2 ? $required : $locked->requiredNameserverList(),
+                    'verification_status' => DomainConnection::STATUS_PENDING,
+                    'verified_at' => null,
+                    'last_checked_at' => null,
+                ]);
+
+                $this->syncReplacedFqdnReferences($locked, $previous, $normalized);
+
+                return $locked->fresh(['order', 'orderItem', 'userTool']);
+            });
+        } catch (UniqueConstraintViolationException) {
+            throw new InvalidArgumentException('That domain is already connected on 7th Trade Hub. Choose a different name.');
+        }
+    }
+
+    private function syncReplacedFqdnReferences(DomainConnection $connection, string $previous, string $next): void
+    {
+        $item = $connection->order_item_id ? OrderItem::query()->find($connection->order_item_id) : null;
+        if ($item) {
+            $options = $item->options ?? [];
+            foreach (['domain_fqdn', 'domain_name'] as $key) {
+                if (isset($options[$key]) && strcasecmp((string) $options[$key], $previous) === 0) {
+                    $options[$key] = $next;
+                }
+            }
+            if (empty($options['domain_fqdn'])) {
+                $options['domain_fqdn'] = $next;
+            }
+            if (str_contains($next, '.')) {
+                $options['domain_tld'] = substr($next, strpos($next, '.') + 1);
+            }
+            $item->update(['options' => $options]);
+        }
+
+        $tools = \App\Models\UserTool::query()
+            ->where(function ($q) use ($connection) {
+                $q->where('id', $connection->user_tool_id ?? 0);
+                if ($connection->order_item_id) {
+                    $q->orWhere('order_item_id', $connection->order_item_id);
+                }
+            })
+            ->get();
+
+        foreach ($tools as $tool) {
+            $changes = [];
+            $siteHost = strtolower((string) (parse_url((string) $tool->site_url, PHP_URL_HOST) ?: ''));
+            if (! filled($tool->site_url) || $siteHost === $previous) {
+                $changes['site_url'] = 'https://'.$next;
+            }
+
+            if (filled($tool->admin_login_url)) {
+                $parts = parse_url((string) $tool->admin_login_url);
+                if (strtolower((string) ($parts['host'] ?? '')) === $previous) {
+                    $changes['admin_login_url'] = 'https://'.$next
+                        .($parts['path'] ?? '/')
+                        .(isset($parts['query']) ? '?'.$parts['query'] : '')
+                        .(isset($parts['fragment']) ? '#'.$parts['fragment'] : '');
+                }
+            }
+
+            if ($changes === []) {
+                continue;
+            }
+
+            $tool->update($changes);
+
+            \App\Models\UserToolIntegration::query()
+                ->where('user_tool_id', $tool->id)
+                ->update([
+                    'connection_status' => 'unchecked',
+                    'last_error' => 'Domain was replaced. Reconfigure the site on the new domain, install Hub credentials, then run Check connection.',
+                ]);
+        }
+    }
+
     public function attachUserTool(OrderItem $item, int $userToolId): void
     {
         DomainConnection::query()

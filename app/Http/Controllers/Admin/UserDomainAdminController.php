@@ -240,6 +240,47 @@ class UserDomainAdminController extends Controller
             ->with('status', 'Domain connection approved.');
     }
 
+    public function replaceConnection(Request $request, User $user, DomainConnection $connection): RedirectResponse
+    {
+        $this->ensureMember($user);
+        abort_unless((int) $connection->user_id === (int) $user->id, 404);
+
+        $data = $request->validate([
+            'fqdn' => ['required', 'string', 'max:255'],
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $from = (string) $connection->fqdn;
+        $previousStatus = (string) $connection->verification_status;
+
+        try {
+            $updated = $this->domainConnections->adminReplace($connection, $data['fqdn']);
+        } catch (InvalidArgumentException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        } catch (\Illuminate\Database\QueryException $e) {
+            report($e);
+
+            return back()->withInput()->with(
+                'error',
+                'Could not replace the domain because it conflicts with another record. Choose a different name.'
+            );
+        }
+
+        $this->audit->log(
+            $request->user()?->id,
+            'domains.connection_admin_replaced',
+            $updated,
+            ['fqdn' => $from, 'verification_status' => $previousStatus],
+            ['fqdn' => $updated->fqdn, 'verification_status' => $updated->verification_status, 'note' => $data['note'] ?? null],
+            $request->ip(),
+        );
+
+        return redirect()
+            ->route('admin.users.domains.connections.show', [$user, $updated])
+            ->with('status', 'Domain replaced: '.$from.' → '.$updated->fqdn
+                .'. It is now pending until its nameservers point to us, or you approve it below. Order lines and Website URLs were updated; reconfigure the site on the new domain, then run Check connection.');
+    }
+
     private function ensureMember(User $user): void
     {
         abort_if($user->isAnonymized(), 404);

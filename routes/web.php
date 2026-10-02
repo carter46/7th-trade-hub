@@ -344,6 +344,7 @@ Route::middleware(['auth', 'verified', 'role:admin|demo_finance|demo_compliance|
         Route::post('/users/{user}/domains/registrations/{registration}/replace', [\App\Http\Controllers\Admin\UserDomainAdminController::class, 'replaceRegistration'])->name('.users.domains.registrations.replace');
         Route::get('/users/{user}/domains/connections/{connection}', [\App\Http\Controllers\Admin\UserDomainAdminController::class, 'showConnection'])->name('.users.domains.connections.show');
         Route::post('/users/{user}/domains/connections/{connection}/approve', [\App\Http\Controllers\Admin\UserDomainAdminController::class, 'approveConnection'])->name('.users.domains.connections.approve');
+        Route::post('/users/{user}/domains/connections/{connection}/replace', [\App\Http\Controllers\Admin\UserDomainAdminController::class, 'replaceConnection'])->name('.users.domains.connections.replace');
         Route::post('/users/{user}/domain-connections/{connection}/approve', [UserManagementController::class, 'approveDomainConnection'])->name('.users.domain-connections.approve');
         Route::get('/users/{user}/listings', fn (\App\Models\User $user) => redirect()->route('admin.users.show', $user, 301))->name('.users.legacy.listings');
         Route::get('/users/{user}/escrows', fn (\App\Models\User $user) => redirect()->route('admin.users.show', $user, 301))->name('.users.legacy.escrows');

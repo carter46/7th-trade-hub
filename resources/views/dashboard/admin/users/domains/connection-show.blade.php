@@ -56,7 +56,7 @@
         </dl>
 
         <x-dashboard.alert type="info">
-            Connection domains use the existing DNS / verify workflow. Manual registration reject/replace does not apply.
+            Connection domains use the DNS / verify workflow. You can replace the domain at any time, even after it is verified.
         </x-dashboard.alert>
 
         @if($connection->verification_status !== 'verified')
@@ -65,6 +65,44 @@
                 <x-dashboard.button type="submit" variant="secondary">Approve domain connection</x-dashboard.button>
             </form>
         @endif
+    </x-dashboard.card>
+
+    <x-dashboard.card class="mt-6 space-y-4" x-data="{ open: {{ (old('fqdn') !== null || $errors->has('fqdn')) ? 'true' : 'false' }} }">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <h3 class="text-sm font-semibold text-text-primary">Replace domain</h3>
+                <p class="mt-1 text-xs text-text-muted">
+                    Change the domain whether it is pending or already verified. Updates the order line, the tool Website URL and admin login URL. The new domain starts as pending until its nameservers point to us, or you approve it. If the website was already integrated, re-install credentials on the new host and run Check connection.
+                </p>
+            </div>
+            <x-dashboard.button type="button" variant="secondary" size="sm" x-on:click="open = !open" x-text="open ? 'Hide' : 'Replace domain'">
+                Replace domain
+            </x-dashboard.button>
+        </div>
+        <form
+            method="POST"
+            action="{{ route('admin.users.domains.connections.replace', [$user, $connection]) }}"
+            class="space-y-3 border-t border-border-subtle pt-4"
+            x-show="open"
+            x-cloak
+        >
+            @csrf
+            <x-dashboard.input
+                name="fqdn"
+                label="New domain"
+                :value="old('fqdn')"
+                placeholder="example.com"
+                required
+            />
+            @error('fqdn')
+                <p class="text-xs text-danger">{{ $message }}</p>
+            @enderror
+            <div>
+                <label for="replace_note" class="mb-1 block text-xs text-text-muted">Internal note (optional)</label>
+                <textarea id="replace_note" name="note" rows="2" maxlength="500" class="w-full rounded-lg border border-border-default bg-elevated px-3 py-2 text-sm" placeholder="Why this domain was changed…">{{ old('note') }}</textarea>
+            </div>
+            <x-dashboard.button type="submit" variant="primary">Save new domain</x-dashboard.button>
+        </form>
     </x-dashboard.card>
 </x-layout.page>
 @endsection
