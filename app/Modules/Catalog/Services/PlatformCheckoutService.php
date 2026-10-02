@@ -694,7 +694,8 @@ class PlatformCheckoutService
         } else {
             $domainContext = null;
             if ($product->product_type === PlatformProductType::WebsitePackage) {
-                $domainContext = $this->domainCheckout->validateWebsitePackageDomain($buyer, $product, $data, $deferDomainConsumption);
+                $domainContext = $this->renewalDomainContext($buyer, $product, $data)
+                    ?? $this->domainCheckout->validateWebsitePackageDomain($buyer, $product, $data, $deferDomainConsumption);
             }
 
             [$variant, $renewTool, $mainLine] = $this->prepareMainLine($buyer, $product, $data, $domainContext);
@@ -732,6 +733,37 @@ class PlatformCheckoutService
             'renew_tool' => null,
             'variant' => null,
             'pending_domain_quotes' => $pendingDomainQuotes,
+        ];
+    }
+
+    /**
+     * Renewals keep the domain already attached to the tool, so no buy/connect step is required.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{mode: string, fqdn: ?string, tld: ?string}|null
+     */
+    private function renewalDomainContext(User $buyer, PlatformProduct $product, array $data): ?array
+    {
+        $renewToolId = isset($data['renew_user_tool_id']) ? (int) $data['renew_user_tool_id'] : 0;
+        if ($renewToolId < 1) {
+            return null;
+        }
+
+        $tool = UserTool::query()
+            ->where('id', $renewToolId)
+            ->where('user_id', $buyer->id)
+            ->where('platform_product_id', $product->id)
+            ->first();
+        if (! $tool) {
+            throw new InvalidArgumentException('Renewal tool not found for this product.');
+        }
+
+        $fqdn = $tool->connectedDomainFqdn();
+
+        return [
+            'mode' => 'existing',
+            'fqdn' => $fqdn,
+            'tld' => $fqdn !== null && str_contains($fqdn, '.') ? substr($fqdn, strpos($fqdn, '.') + 1) : null,
         ];
     }
 

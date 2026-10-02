@@ -180,6 +180,18 @@
                         </div>
                     @endif
 
+                    @if(($renewTool ?? null) && ($isWebsitePackage ?? false))
+                        <div class="rounded-xl border border-border-default bg-muted/20 px-4 py-3 space-y-1">
+                            <p class="text-xs font-semibold uppercase tracking-wider text-text-muted">Domain</p>
+                            @if(filled($renewDomain ?? null))
+                                <p class="text-lg font-semibold text-text-primary">{{ $renewDomain }}</p>
+                                <p class="text-sm text-text-secondary">Your current domain stays connected. No new domain is needed to renew.</p>
+                            @else
+                                <p class="text-sm text-text-secondary">Your website keeps its current setup. No new domain is needed to renew.</p>
+                            @endif
+                        </div>
+                    @endif
+
                     @if($requireDomainChoice ?? false)
                         <div class="space-y-3">
                             <div>

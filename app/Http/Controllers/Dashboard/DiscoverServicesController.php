@@ -245,7 +245,16 @@ class DiscoverServicesController extends Controller
             ->with('activeVariants')
             ->firstOrFail();
 
-        if ($product->product_type === PlatformProductType::WebsitePackage && ! $request->filled('variant')) {
+        $renewTool = null;
+        if ($request->filled('renew')) {
+            $renewTool = \App\Models\UserTool::query()
+                ->where('public_id', $request->string('renew')->toString())
+                ->where('user_id', $request->user()->id)
+                ->where('platform_product_id', $product->id)
+                ->first();
+        }
+
+        if ($product->product_type === PlatformProductType::WebsitePackage && ! $request->filled('variant') && ! $renewTool) {
             return redirect()
                 ->route('dashboard.services.product', $product->slug)
                 ->with('error', 'Choose a plan before checkout.');
@@ -255,7 +264,7 @@ class DiscoverServicesController extends Controller
         $requestedVariantId = $request->integer('variant') ?: null;
         $defaultVariant = $requestedVariantId
             ? ($variants->firstWhere('id', $requestedVariantId) ?? $variants->first())
-            : $variants->first();
+            : ($variants->firstWhere('id', $renewTool?->platform_product_variant_id) ?? $variants->first());
 
         if ($requestedVariantId && (int) $defaultVariant?->id !== $requestedVariantId) {
             return redirect()
@@ -268,15 +277,6 @@ class DiscoverServicesController extends Controller
         $showPlanSummary = $requestedVariantId !== null || $isDomainProduct;
 
         $this->activity->record($request->user()->id, 'viewed', $product, 'service.checkout');
-
-        $renewTool = null;
-        if ($request->filled('renew')) {
-            $renewTool = \App\Models\UserTool::query()
-                ->where('public_id', $request->string('renew')->toString())
-                ->where('user_id', $request->user()->id)
-                ->where('platform_product_id', $product->id)
-                ->first();
-        }
 
         if ($isDomainProduct && ! $request->filled('quote_token')) {
             return redirect()
@@ -296,7 +296,7 @@ class DiscoverServicesController extends Controller
             'showPlanSummary' => $showPlanSummary,
             'isWebsitePackage' => $isWebsitePackage,
             'isDomainProduct' => $isDomainProduct,
-            'requireDomainChoice' => $isWebsitePackage,
+            'requireDomainChoice' => $isWebsitePackage && ! $renewTool,
             'domainTlds' => $domainTldBundles['featured'],
             'domainTldsAdvanced' => $domainTldBundles['advanced'],
             'quoteToken' => $request->string('quote_token')->toString() ?: null,
@@ -305,6 +305,7 @@ class DiscoverServicesController extends Controller
             'idempotencyKey' => (string) Str::uuid(),
             'wallet' => $request->user()->wallet,
             'renewTool' => $renewTool,
+            'renewDomain' => $isWebsitePackage ? $renewTool?->connectedDomainFqdn() : null,
             'gatewayEnabled' => $this->checkoutService->gatewayEnabled(),
             'manualBankTransferEnabled' => $this->checkoutService->manualBankTransferEnabledForCheckout(),
             'domainCommerceMode' => $this->domainCommerceMode->current()->value,

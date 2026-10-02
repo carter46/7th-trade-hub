@@ -218,6 +218,77 @@ class DomainCheckoutTest extends TestCase
         $this->assertDatabaseCount('domain_registrations', 0);
     }
 
+    public function test_website_renewal_keeps_current_domain_without_domain_step(): void
+    {
+        config(['domains.default_nameservers' => ['ns1.platform.test', 'ns2.platform.test']]);
+
+        $this->app->instance(
+            \App\Services\Domains\DomainDnsLookupService::class,
+            new \App\Services\Domains\DomainDnsLookupService(fn () => [
+                ['target' => 'ns1.oldhost.test'],
+                ['target' => 'ns2.oldhost.test'],
+            ]),
+        );
+        $this->app->forgetInstance(\App\Services\Domains\DomainConnectionService::class);
+        $this->app->forgetInstance(\App\Services\Domains\DomainCheckoutValidator::class);
+
+        $product = $this->seedWebsiteProduct();
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $user->assignRole('user');
+        Wallet::factory()->create([
+            'user_id' => $user->id,
+            'balance' => 100000,
+            'locked_balance' => 0,
+        ]);
+
+        $variant = $product->activeVariants->first();
+
+        $this->actingAs($user)
+            ->post(route('dashboard.services.purchase', $product->slug), [
+                'variant_id' => $variant->id,
+                'quantity' => 1,
+                'domain_mode' => 'connect',
+                'domain_fqdn' => 'mysite.com',
+                'domain_connect_acknowledged' => '1',
+                'idempotency_key' => (string) Str::uuid(),
+            ])
+            ->assertRedirect();
+
+        $tool = \App\Models\UserTool::query()->where('user_id', $user->id)->firstOrFail();
+        $expiresAt = now()->addDays(3)->startOfSecond();
+        $tool->forceFill([
+            'status' => \App\Enums\UserToolStatus::Active,
+            'expires_at' => $expiresAt,
+        ])->save();
+
+        $this->actingAs($user)
+            ->get(route('dashboard.services.checkout', ['slug' => $product->slug, 'renew' => $tool->public_id]))
+            ->assertOk()
+            ->assertSee('mysite.com')
+            ->assertSee('Your current domain stays connected')
+            ->assertDontSee('Connect existing domain')
+            ->assertDontSee('Buy a new domain');
+
+        $this->actingAs($user)
+            ->post(route('dashboard.services.purchase', $product->slug), [
+                'variant_id' => $variant->id,
+                'quantity' => 1,
+                'renew_user_tool_id' => $tool->id,
+                'idempotency_key' => (string) Str::uuid(),
+            ])
+            ->assertRedirect(route('dashboard.my-tools.show', $tool))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseCount('orders', 2);
+        $this->assertDatabaseCount('user_tools', 1);
+        $this->assertDatabaseCount('domain_connections', 1);
+        $this->assertTrue($tool->fresh()->expires_at->equalTo($expiresAt->copy()->addMonths(3)));
+
+        $renewalItem = \App\Models\OrderItem::query()->latest('id')->firstOrFail();
+        $this->assertSame('existing', $renewalItem->options['domain_mode']);
+        $this->assertSame('mysite.com', $renewalItem->options['domain_fqdn']);
+    }
+
     public function test_website_checkout_connect_requires_acknowledgment(): void
     {
         config(['domains.default_nameservers' => ['ns1.platform.test', 'ns2.platform.test']]);
