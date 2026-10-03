@@ -135,7 +135,7 @@
                 :value="old('fqdn')"
                 placeholder="example.com"
                 required
-                hint="Apex domain only (e.g. example.com)."
+                hint="Domain or subdomain (e.g. example.com or shop.example.com)."
             />
             @error('fqdn')
                 <p class="text-xs text-danger">{{ $message }}</p>

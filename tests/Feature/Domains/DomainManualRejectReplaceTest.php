@@ -470,6 +470,29 @@ class DomainManualRejectReplaceTest extends TestCase
         $this->assertSame('brand-new.com', $item->options['domain_fqdn'] ?? null);
     }
 
+    public function test_admin_can_replace_registered_domain_with_subdomain(): void
+    {
+        [$user, $registration] = $this->seedManualPendingRegistration();
+        $admin = User::factory()->create(['email_verified_at' => now()]);
+        $admin->assignRole('admin');
+        $admin->givePermissionTo('users.manage');
+
+        [$registered] = app(DomainRegistrationFulfillmentService::class)
+            ->markManualRegistered($registration, 'REF-1', null, $admin->id);
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.domains.registrations.replace', [$user, $registered]), [
+                'fqdn' => 'shop.external-brand.com',
+            ])
+            ->assertRedirect(route('admin.users.domains.registrations.show', [$user, $registered]))
+            ->assertSessionHas('status', fn (string $s) => str_contains($s, 'shop.external-brand.com'));
+
+        $registered->refresh();
+        $this->assertSame('shop.external-brand.com', $registered->fqdn);
+        $this->assertSame(DomainRegistration::STATUS_REGISTERED, $registered->status);
+        $this->assertSame('shop.external-brand.com', $registered->orderItem()->first()->options['domain_fqdn'] ?? null);
+    }
+
     public function test_email_from_name_never_uses_raw_address(): void
     {
         EmailIdentity::query()->updateOrCreate(

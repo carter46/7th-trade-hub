@@ -248,13 +248,15 @@ class UserDomainAdminController extends Controller
         $data = $request->validate([
             'fqdn' => ['required', 'string', 'max:255'],
             'note' => ['nullable', 'string', 'max:500'],
+            'mark_verified' => ['nullable', 'boolean'],
         ]);
 
         $from = (string) $connection->fqdn;
         $previousStatus = (string) $connection->verification_status;
+        $markVerified = $request->boolean('mark_verified');
 
         try {
-            $updated = $this->domainConnections->adminReplace($connection, $data['fqdn']);
+            $updated = $this->domainConnections->adminReplace($connection, $data['fqdn'], $markVerified);
         } catch (InvalidArgumentException $e) {
             return back()->withInput()->with('error', $e->getMessage());
         } catch (\Illuminate\Database\QueryException $e) {
@@ -278,7 +280,10 @@ class UserDomainAdminController extends Controller
         return redirect()
             ->route('admin.users.domains.connections.show', [$user, $updated])
             ->with('status', 'Domain replaced: '.$from.' → '.$updated->fqdn
-                .'. It is now pending until its nameservers point to us, or you approve it below. Order lines and Website URLs were updated; reconfigure the site on the new domain, then run Check connection.');
+                .($markVerified
+                    ? '. Marked as verified.'
+                    : '. It is now pending until its nameservers point to us, or you approve it below.')
+                .' Order lines and Website URLs were updated; reconfigure the site on the new domain, then run Check connection.');
     }
 
     private function ensureMember(User $user): void

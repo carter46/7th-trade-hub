@@ -562,7 +562,7 @@ class DomainRegistrationFulfillmentService
         ?string $note = null,
     ): DomainRegistration {
         try {
-            $normalized = DomainFqdn::normalizeFqdn($newFqdn, true);
+            $normalized = DomainFqdn::normalizeFqdn($newFqdn, apexOnly: false);
         } catch (InvalidArgumentException $e) {
             throw new InvalidArgumentException('New domain is invalid: '.$e->getMessage(), 0, $e);
         }
@@ -732,7 +732,7 @@ class DomainRegistrationFulfillmentService
         $legacyHosts = array_values(array_unique(array_filter([$previousFqdn, $unavailableFqdn])));
         $tld = null;
         try {
-            $tld = DomainFqdn::fromFqdn($newFqdn, true)['tld'];
+            $tld = DomainFqdn::fromFqdn($newFqdn, apexOnly: false)['tld'];
         } catch (\Throwable) {
             // Keep previous tld if parse fails.
         }

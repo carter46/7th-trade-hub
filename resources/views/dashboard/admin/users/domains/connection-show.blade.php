@@ -72,7 +72,7 @@
             <div>
                 <h3 class="text-sm font-semibold text-text-primary">Replace domain</h3>
                 <p class="mt-1 text-xs text-text-muted">
-                    Change the domain whether it is pending or already verified. Updates the order line, the tool Website URL and admin login URL. The new domain starts as pending until its nameservers point to us, or you approve it. If the website was already integrated, re-install credentials on the new host and run Check connection.
+                    Change the domain whether it is pending or already verified. Subdomains are allowed (e.g. shop.example.com). Updates the order line, the tool Website URL and admin login URL. If the website was already integrated, re-install credentials on the new host and run Check connection.
                 </p>
             </div>
             <x-dashboard.button type="button" variant="secondary" size="sm" x-on:click="open = !open" x-text="open ? 'Hide' : 'Replace domain'">
@@ -91,12 +91,20 @@
                 name="fqdn"
                 label="New domain"
                 :value="old('fqdn')"
-                placeholder="example.com"
+                placeholder="example.com or shop.example.com"
                 required
             />
             @error('fqdn')
                 <p class="text-xs text-danger">{{ $message }}</p>
             @enderror
+            <input type="hidden" name="mark_verified" value="0">
+            <label class="flex items-start gap-2 text-sm text-text-primary">
+                <input type="checkbox" name="mark_verified" value="1" class="mt-1 accent-primary" @checked(old('mark_verified', '1') === '1')>
+                <span>
+                    This domain is already verified
+                    <span class="block text-xs text-text-muted">Keep it verified after the replace (for example, DNS is managed on another platform and already points to the site). Untick to set it to pending until its nameservers are checked.</span>
+                </span>
+            </label>
             <div>
                 <label for="replace_note" class="mb-1 block text-xs text-text-muted">Internal note (optional)</label>
                 <textarea id="replace_note" name="note" rows="2" maxlength="500" class="w-full rounded-lg border border-border-default bg-elevated px-3 py-2 text-sm" placeholder="Why this domain was changed…">{{ old('note') }}</textarea>

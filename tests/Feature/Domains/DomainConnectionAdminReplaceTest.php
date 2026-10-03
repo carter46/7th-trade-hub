@@ -140,6 +140,38 @@ class DomainConnectionAdminReplaceTest extends TestCase
         $this->assertSame(DomainConnection::STATUS_VERIFIED, $connection->fresh()->verification_status);
     }
 
+    public function test_admin_can_replace_with_subdomain_and_keep_it_verified(): void
+    {
+        [$user, $admin, $connection, $tool, $item] = $this->seedVerifiedConnection();
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.domains.connections.replace', [$user, $connection]), [
+                'fqdn' => 'https://Shop.Example-Brand.co.uk/',
+                'mark_verified' => '1',
+            ])
+            ->assertRedirect(route('admin.users.domains.connections.show', [$user, $connection]))
+            ->assertSessionHas('status', fn (string $s) => str_contains($s, 'Marked as verified'));
+
+        $connection->refresh();
+        $this->assertSame('shop.example-brand.co.uk', $connection->fqdn);
+        $this->assertSame(DomainConnection::STATUS_VERIFIED, $connection->verification_status);
+        $this->assertNotNull($connection->verified_at);
+
+        $this->assertSame('shop.example-brand.co.uk', $item->fresh()->options['domain_fqdn']);
+        $this->assertSame('https://shop.example-brand.co.uk', $tool->fresh()->site_url);
+
+        // External DNS: the customer's NS check must not downgrade an admin-verified domain.
+        $this->app->instance(
+            \App\Services\Domains\DomainDnsLookupService::class,
+            new \App\Services\Domains\DomainDnsLookupService(fn () => []),
+        );
+        $this->app->forgetInstance(\App\Services\Domains\DomainConnectionService::class);
+
+        $result = app(\App\Services\Domains\DomainConnectionService::class)->checkStatus($connection);
+        $this->assertTrue($result['ok']);
+        $this->assertSame(DomainConnection::STATUS_VERIFIED, $connection->fresh()->verification_status);
+    }
+
     public function test_replace_rejects_domain_connected_elsewhere(): void
     {
         [$user, $admin, $connection] = $this->seedVerifiedConnection('first-site.com', 'PLT-CONN1');

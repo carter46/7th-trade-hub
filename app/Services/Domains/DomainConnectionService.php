@@ -220,20 +220,32 @@ class DomainConnectionService
         $required = $connection->requiredNameserverList() ?: $this->dns->platformNameservers();
         $matched = $lookup['registered'] && $this->dns->matchesPlatformDefaults($detected, $required);
 
-        DB::transaction(function () use ($connection, $detected, $matched) {
+        $wasVerified = false;
+        DB::transaction(function () use ($connection, $detected, $matched, &$wasVerified) {
             $connection->refresh();
+            // Verified domains (incl. admin-approved external DNS) are never downgraded by a failed NS check.
+            $wasVerified = $connection->isVerified();
+            $keepVerified = $matched || $wasVerified;
             $connection->update([
                 'nameservers_last_seen' => $detected,
                 'last_checked_at' => now(),
-                'verification_status' => $matched
+                'verification_status' => $keepVerified
                     ? DomainConnection::STATUS_VERIFIED
                     : DomainConnection::STATUS_PENDING,
                 'claim_key' => $connection->fqdn,
-                'verified_at' => $matched ? now() : null,
+                'verified_at' => $matched ? now() : ($wasVerified ? $connection->verified_at : null),
             ]);
         });
 
         $connection = $connection->fresh();
+
+        if (! $matched && $wasVerified) {
+            return [
+                'ok' => true,
+                'message' => 'This domain is verified.',
+                'connection' => $connection,
+            ];
+        }
 
         if ($matched) {
             return [
@@ -269,9 +281,10 @@ class DomainConnectionService
 
     /**
      * Admin replaces the FQDN on a connection (pending, verified or failed).
-     * The new domain starts pending until its nameservers are checked or an admin approves it.
+     * Subdomains are allowed. With $markVerified the admin vouches for the external DNS,
+     * otherwise the new domain stays pending until its nameservers are checked.
      */
-    public function adminReplace(DomainConnection $connection, string $newFqdn): DomainConnection
+    public function adminReplace(DomainConnection $connection, string $newFqdn, bool $markVerified = false): DomainConnection
     {
         try {
             $normalized = DomainFqdn::normalizeFqdn($newFqdn, apexOnly: false);
@@ -280,7 +293,7 @@ class DomainConnectionService
         }
 
         try {
-            return DB::transaction(function () use ($connection, $normalized) {
+            return DB::transaction(function () use ($connection, $normalized, $markVerified) {
                 /** @var DomainConnection $locked */
                 $locked = DomainConnection::query()->whereKey($connection->id)->lockForUpdate()->firstOrFail();
                 $previous = strtolower((string) $locked->fqdn);
@@ -313,9 +326,9 @@ class DomainConnectionService
                     'nameservers_at_scan' => [],
                     'nameservers_last_seen' => [],
                     'required_nameservers' => count($required) >= 2 ? $required : $locked->requiredNameserverList(),
-                    'verification_status' => DomainConnection::STATUS_PENDING,
-                    'verified_at' => null,
-                    'last_checked_at' => null,
+                    'verification_status' => $markVerified ? DomainConnection::STATUS_VERIFIED : DomainConnection::STATUS_PENDING,
+                    'verified_at' => $markVerified ? now() : null,
+                    'last_checked_at' => $markVerified ? now() : null,
                 ]);
 
                 $this->syncReplacedFqdnReferences($locked, $previous, $normalized);
